@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T14:43-07:00
+Updated: 2026-09-25T15:56-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,15 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02f1 — differential run and attribution](L02f1.md)
+Entries: 2026-09-25T15:06-07:00 through 2026-09-25T15:56-07:00
+Outcome: complete; reference 10/10 PASS, candidate fails every scenario at probe (one cause).
+- QEMU hard-wires EECD.EE_GNT = 1; the candidate enforces spec E1 (manual §13.4.4) and aborts.
+- Labeled `benign`, model limitation; secondary spec gap: no bound or fallback in E1.
+- The model also reads EECD.FWE = 00b, which the manual forbids; both drivers write it back.
+- The run store was not on the test host; now a per-user setting (`docs/run-store-config`).
+- Nothing after probe has run: L02f2 must repair before any real comparison.
 
 ### [L02d3 — check qualification](L02d3.md)
 Entries: 2026-09-25T14:23-07:00 through 2026-09-25T14:43-07:00
@@ -61,5 +70,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   code review.
   [L02d3](L02d3.md) — qualified 22 of 26 claims with planted defects; the 1 µs reset rule
   stays unqualified.
+- **Model departures from the manual:** [L02d2](L02d2.md) — no overrun drops, TX drains with
+  the link down; [L02f1](L02f1.md) — EE_GNT always 1 and FWE = 00b in EECD.
 - **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
   error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.

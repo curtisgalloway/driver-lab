@@ -286,3 +286,27 @@ Prevention: in evidence tables, state only what the run's verdicts or captures s
 reason rests on a packet or register fact, look it up in the run before writing it.
 Fix belongs in: project instructions (AGENTS.md, evidence-writing rule)
 Status: open
+
+### 2026-09-25T15:48-07:00 — instruction gap: run store missing from the test host (recurrence)
+Chapter: [L02f1](notebook/L02f1.md)
+What happened: attributing the first candidate failure needed spec revision 4 and the manual,
+which are only in the run store; it was not on the test host and nothing a session reads says
+where it is. Searches here and on a second machine found nothing; the user named a third,
+where it was.
+Cost: about 15 tool calls and three user round trips.
+Prevention: the per-user run-store setting (branch `docs/run-store-config`), plus copying
+the inputs a unit needs onto the test host when the unit is planned.
+Fix belongs in: AGENTS.md (done on that branch); the plan's next-session notes
+Status: open until that branch merges
+
+### 2026-09-25T15:48-07:00 — surprise: SSH from the test host offers every forwarded key
+Chapter: [L02f1](notebook/L02f1.md)
+What happened: the test host's ssh config pins only the bench host, so connecting to other
+homelab machines offered all forwarded agent keys and was cut off at the server's attempt
+limit; the workstation was also unreachable directly and had to be reached through a jump
+host, with its host key accepted on first use.
+Cost: four tool calls.
+Prevention: pin `IdentitiesOnly` with the one public key per target (`-i <key>.pub`), as the
+`homelab-ssh` skill describes; the skill's notes assume the workstation's ssh config.
+Fix belongs in: the `homelab-ssh` skill (note that other hosts lack the workstation's pinning)
+Status: open

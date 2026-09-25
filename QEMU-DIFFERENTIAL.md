@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 Status: **approved design**, 2026-09-22 (user approved; decisions D1–D4 resolved below). At
 approval, no source had been pinned, no spec written, and nothing had run; for progress since,
 see the [implementation plan](IMPLEMENTATION-PLAN.md), whose milestone L02 this design governs.
-A proposed amendment to A6 is recorded there (L02d3); A6 below is unchanged until it is approved.
+A6 was amended 2026-09-25 (user approved; see below and the plan's L02d3).
 
 ## Terms
 
@@ -200,7 +200,7 @@ the workstation. The QEMU model and the reference driver are read only by the ev
 | A3 | The harness runs every scenario unattended on the test host against both drivers, and stores traces, captures, and verdicts per run. |
 | A4 | The reference driver passes the scenarios. Any reference failure is explained by the manual before the candidate is judged. |
 | A5 | Every candidate scenario result is recorded; failures are repaired within an agreed repair cap or recorded as open findings. |
-| A6 | Each planted defect is detected by at least one scenario or trace check. |
+| A6 | Each validated non-equivalent planted defect is detected by at least one scenario or trace check; equivalent mutations are reported separately as valid controls. (Amended 2026-09-25, user approved. Originally: "Each planted defect is detected by at least one scenario or trace check." L02d2's m1 showed that a planted change can be legal under the manual.) |
 | A7 | The spec working copy records every spec gap and `[emulated]` result, and the evidence file separates spec gaps, spec errors, implementation errors, and model limitations. |
 
 ## Verification strategy

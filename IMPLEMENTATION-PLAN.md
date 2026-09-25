@@ -356,10 +356,10 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
     completeness against every violation.
   - **Review:** `review-swarm` on any harness change, plus a fresh reviewer (Codex through
     `consult`, fresh session) reading the raw valid and defective runs, not only the table.
-  - **Proposed A6 amendment (needs design approval):** "Each validated non-equivalent planted
-    defect is detected by at least one scenario or trace check; equivalent mutations are
-    reported separately as valid controls." Until approved, report m1 against the literal A6
-    as a discrepancy; do not reinterpret it.
+  - **A6 amended 2026-09-25 (user approved):** "Each validated non-equivalent planted defect
+    is detected by at least one scenario or trace check; equivalent mutations are reported
+    separately as valid controls." m1 is reported as an equivalent mutation under the amended
+    criterion; the original wording is kept in the design.
 
 ### L02e — Implement, build, and review the candidate
 

@@ -54,6 +54,8 @@ evaluation; add other terms as the documents that use them are updated.
 | Planted defect | One deliberate defect used in a mutation check; in the QEMU harness, an edit to a disposable copy of the reference driver. An *equivalent mutation* breaks no rule the manual states, so no test should fail on it. |
 | Phase | In the QEMU harness, the guest command or host action (a link toggle, a wait) during which a register access happened; "idle" when none was running. |
 | Deferred check | In the QEMU harness, a check a scenario registers and the harness evaluates after QEMU exits, from the register trace or the packet captures. |
+| Claim (L02) | A harness check whose PASS the differential run will cite as evidence about the candidate driver. Checks that only confirm a scenario's stimulus happened (a flood ran, a ring wrapped) are *preconditions*, not claims. |
+| Qualified check | A claim whose check was made to fail by a planted defect that violates it, for that reason, while the unmodified reference passed the same scenario on the same harness. Qualification is specific to that defect and those conditions, not proof the check catches every violation. |
 | Acceptance gate | A predefined condition that must be met before an artifact advances or is accepted. |
 | Milestone | A bounded deliverable with dependencies, acceptance criteria, verification, review, and a recorded checkpoint. |
 | Validation contract | A test's requirements, independently supported expected observations, decision rule, setup, and limits. |

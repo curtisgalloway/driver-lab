@@ -38,7 +38,11 @@ python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --st
 uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
 uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
+python3 <public-skills>/plugins/agent-workflow/skills/agent-agnostic-skills/scripts/portability_scan.py \
+  skills/cleanroom-implementer/scripts
 ```
+
+The last one needs a public-skills checkout; CI pins the scanner to one of its commits.
 
 ## Rules the work runs under
 
@@ -53,10 +57,29 @@ python3 -m unittest discover -s evals/e1000/harness/tests
   blind requirement list stays private until its recall is measured.
 - **Privacy**: this repository is public. Files name the test host and other machines by role
   only: no addresses, host names, user names or home paths. Source under other licenses stays in
-  the private run store, which files cite by run ID only.
-- **Git**: a topic branch and a pull request per unit; push or open a pull request only on the
-  user's explicit "push"; merge only when told. Record subagent transcript paths in the run's
-  ledger; do not copy transcripts.
+  the private run store, which files cite by run ID only. The rule covers this project's own
+  machines and network, not third-party facts their owner already published: a vendor code name
+  from a public mailing-list post or a published device tree stays in a spec.
+- **Git**: a topic branch and a pull request per unit, and a separate branch for any unrelated
+  change. Fetch first and cut the branch from `origin/main`, not a local `main` that may be
+  stale. Push or open a pull request only on the user's explicit "push", and "push" never means
+  pushing `main`: branch protection exempts admins, so a direct push succeeds silently. Merge
+  only when told; deleting the merged branch, local and remote, is part of merging. Worktrees go
+  under `.claude/worktrees/<name>`; another session may be using the main checkout, so check
+  `git status` and `git reflog -3` before switching branches there.
+- **Transcripts**: record each subagent's transcript path in the run's ledger. Do not copy,
+  read or hash transcripts from the shell: they live in the harness's protected state
+  directory, and touching it stops an unattended run at a permission prompt.
+
+## Presenting the work
+
+The core test is rebuilding a Linux driver from the spec and running it differentially against
+the original (L01, L02). Lead with that result when explaining or reporting the work, not with
+reviewer pass counts. Human review of every spec costs about as much as writing the driver with
+AI help, so the design aims at automated checks with people handling exceptions
+([DRIVER-QUALITY.md](DRIVER-QUALITY.md)). Every current target has a working reference driver,
+which makes this the easy case; hardware with no existing driver is the open question
+([DESIGN.md](DESIGN.md#when-there-is-no-existing-driver)).
 
 ## Skills this work uses from elsewhere
 

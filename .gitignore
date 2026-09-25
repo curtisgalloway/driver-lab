@@ -6,3 +6,6 @@ __pycache__/
 *~
 .env
 .env.*
+
+# Agent worktrees (see AGENTS.md)
+.claude/worktrees/

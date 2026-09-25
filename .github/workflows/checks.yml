@@ -18,6 +18,21 @@ jobs:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      # The portability scanner lives in public-skills (agent-agnostic-skills), which points
+      # at cleanroom-implementer's scripts as its worked example. Pinned to a commit so an
+      # upstream edit cannot change what runs here unreviewed; bump the ref to take a new one.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: curtisgalloway/public-skills
+          ref: d63e3f141421fd92b89b20e6e03c321337951aa1
+          path: .public-skills
+          persist-credentials: false
+
+      - name: cleanroom-implementer portability
+        run: >-
+          python3 .public-skills/plugins/agent-workflow/skills/agent-agnostic-skills/scripts/portability_scan.py
+          skills/cleanroom-implementer/scripts
+
       # This repository is public and holds evidence files written from real runs.
       - name: No private paths
         run: python3 utilities/check-no-private-paths.py

@@ -24,32 +24,35 @@ to copy from:
 ### Claude Code
 
 ```
-/plugin marketplace add curtisgalloway/public-skills
-/plugin install driver-porting@curtisg-skills
+/plugin marketplace add curtisgalloway/driver-lab
+/plugin install driver-porting@driver-lab
 ```
 
-Add the marketplace once per machine. `curtisg-skills` is its name, set in
+Add the marketplace once per machine. `driver-lab` is its name, set in
 `.claude-plugin/marketplace.json`. Outside a session, run the same commands as `claude plugin
 marketplace add ...` and `claude plugin install ...`. For a local clone, pass its path to
-`marketplace add`. Update later with `/plugin marketplace update curtisg-skills`.
+`marketplace add`. Update later with `/plugin marketplace update driver-lab`.
+
+If you already use the `curtisg-skills` marketplace from
+[public-skills](https://github.com/curtisgalloway/public-skills),
+`/plugin install driver-porting@curtisg-skills` installs the same plugin from this repository;
+there is no need to add a second marketplace.
 
 ### Codex
 
 ```
-codex plugin marketplace add curtisgalloway/public-skills
-codex plugin add driver-porting@curtisg-skills
+codex plugin marketplace add curtisgalloway/driver-lab
+codex plugin add driver-porting@driver-lab
 ```
 
-Update later with `codex plugin marketplace upgrade curtisg-skills`.
+Update later with `codex plugin marketplace upgrade driver-lab`.
 
 ### Other agents
 
 For Antigravity and other harnesses that read skill directories, clone the repo and link each
 skill you want from `skills/<name>` into your skills root. The
-[top-level README](../../README.md#installing) has the paths for each harness.
-
-Skip all of this if you installed the `everything` plugin, which already includes these
-skills. Installing both loads every skill twice.
+[public-skills README](https://github.com/curtisgalloway/public-skills#installing) has the
+paths for each harness.
 
 ## Clean-room driver porting
 

@@ -38,7 +38,11 @@ python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --st
 uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
 uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
+python3 <public-skills>/plugins/agent-workflow/skills/agent-agnostic-skills/scripts/portability_scan.py \
+  skills/cleanroom-implementer/scripts
 ```
+
+The last one needs a public-skills checkout; CI pins the scanner to one of its commits.
 
 ## Rules the work runs under
 

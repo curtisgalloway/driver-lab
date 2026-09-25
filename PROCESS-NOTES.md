@@ -264,3 +264,25 @@ instead of trying passwords; for long host sessions, the safe-tier style dedicat
 the test host.
 Fix belongs in: user instructions or the test-host setup (a dedicated agent key)
 Status: open
+
+### 2026-09-25T14:28-07:00 — notebook timestamps estimated, not read
+Chapter: [L02d3](notebook/L02d3.md)
+What happened: two opening entries were stamped 14:40 while the clock said 14:26; the time
+was estimated while drafting instead of read with `date` first.
+Cost: a correction entry; no work lost.
+Prevention: run `date -Iminutes` in the same command that appends the entry, and use its
+output as the heading.
+Fix belongs in: `lab-notebook` (show the append-with-date idiom)
+Status: open
+
+### 2026-09-25T14:43-07:00 — a reason written from memory instead of the capture
+Chapter: [L02d3](notebook/L02d3.md)
+What happened: answering a review finding, I justified Q25 by "ARP frames are 60 bytes" without
+opening a capture; the reviewer parsed the reference capture and found peer ARP frames reach
+the DUT at 42 bytes. The same session had also written "pings passed" for a run whose scenario
+stopped before any ping.
+Cost: one extra review turn and two corrections.
+Prevention: in evidence tables, state only what the run's verdicts or captures show; when a
+reason rests on a packet or register fact, look it up in the run before writing it.
+Fix belongs in: project instructions (AGENTS.md, evidence-writing rule)
+Status: open

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Tests for `scripts/spec_check.py`
 
 ```bash
-python3 -m unittest discover -s plugins/driver-porting/skills/board-expert/tests -v
+python3 -m unittest discover -s skills/board-expert/tests -v
 ```
 
 ## Two parsers
@@ -19,7 +19,7 @@ Without PyYAML, both runs use the same parser (the checker's last line says `par
 To exercise the real second path, run the suite once under a Python that has it:
 
 ```bash
-uv run --with pyyaml python -m unittest discover -s plugins/driver-porting/skills/board-expert/tests -v
+uv run --with pyyaml python -m unittest discover -s skills/board-expert/tests -v
 ```
 
 ## Fixtures

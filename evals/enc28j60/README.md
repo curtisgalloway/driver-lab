@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 The calibration device for the driver-spec evaluation in `../../EVAL-PLAN.md`. The ENC28J60 is a
 small SPI Ethernet controller with fully public documentation. The pilot gets the ledger format,
 the scoring and the test quality right on something cheap before the method is pointed at a
-complex SoC. Shared terms are in the repository [glossary](../../../../GLOSSARY.md).
+complex SoC. Shared terms are in the repository [glossary](../../GLOSSARY.md).
 
 ## Status
 

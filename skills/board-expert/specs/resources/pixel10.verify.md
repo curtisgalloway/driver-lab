@@ -51,7 +51,7 @@ SPDX-License-Identifier: Apache-2.0
 
 **Terms:** A claim is one fact bullet or instance row. Carry-forward retains an earlier
 finding for unchanged text; it does not repeat the source review. A hash identifies exact
-bytes. See the [glossary](../../../../../../GLOSSARY.md).
+bytes. See the [glossary](../../../../GLOSSARY.md).
 
 ## Scope and retained evidence
 

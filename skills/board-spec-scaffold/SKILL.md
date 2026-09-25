@@ -127,13 +127,12 @@ of the Boot chain bullet.
 4. **Write the root marker, stub, overlay, and vendor skill** if wanted, from their templates.
    Placeholders only in the vendor templates: the real names belong in the vendor's private repo.
 5. **Register.** A spec needs no registration; a stub does. In this repo a stub goes under
-   `plugins/driver-porting/skills/<board>-expert/` and its name must appear, backtick-quoted, in:
-   the Themes table of the root `README.md` (the `driver-porting` row); the "Which one do I want?"
-   table and the "Board experts" list in `plugins/driver-porting/README.md`; and the `board-expert`
+   `skills/<board>-expert/` and its name must appear, backtick-quoted, in the "Which one do I
+   want?" table and the "Board experts" list in the root `README.md`, and the `board-expert`
    bullet's list of shipped specs in that README, for the new spec ids. The `plugin.json` and
    `.claude-plugin/marketplace.json` descriptions are curated prose that may enumerate the board
-   experts; the checker does not verify either, so read both by hand, add the new expert where the
-   others are listed, and keep the two consistent with each other.
+   experts; nothing checks either, so read both by hand, add the new expert where the others are
+   listed, and keep the two consistent with each other.
    `python3 utilities/check-skill-registration.py` confirms the two READMEs and CI runs it on every
    push. CI's checker step and the README's Tests block use `--stubs-from`, which finds every stub
    whose description says "stub over", so they need no edit. No skill description may enumerate

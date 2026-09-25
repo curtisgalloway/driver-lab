@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Disposition** — a reasoned decision to remove, retain, or continue investigating content.
 - **Scan control** — known matching or nonmatching input used to check a search expression.
 
-See the [glossary](../../../GLOSSARY.md), [export evidence](M02a-export.md), and
+See the [glossary](../GLOSSARY.md), [export evidence](M02a-export.md), and
 [implementation-input contract](../evals/enc28j60/reconstruction/M01-PREPARATION-v1.md).
 
 ## Status and scope

@@ -26,7 +26,7 @@ the reference driver and a candidate written from the spec can be compared
 - **Planted defect** — a deliberate bug in a disposable copy of the reference driver; the
   suite must fail on it.
 
-See the [glossary](../../../../../GLOSSARY.md).
+See the [glossary](../../../GLOSSARY.md).
 
 ## What it does
 

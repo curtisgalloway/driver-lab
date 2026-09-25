@@ -4,8 +4,8 @@
 """
 Tests for scripts/spec_check.py, run against wholly synthetic fixture roots.
 
-Run:  python3 -m unittest discover -s plugins/driver-porting/skills/board-expert/tests -v
-  or: python3 plugins/driver-porting/skills/board-expert/tests/test_spec_check.py
+Run:  python3 -m unittest discover -s skills/board-expert/tests -v
+  or: python3 skills/board-expert/tests/test_spec_check.py
 
 Every case runs twice, once per parser: with PyYAML if it is importable, and
 with --no-pyyaml so the stdlib subset parser is exercised on the same inputs.

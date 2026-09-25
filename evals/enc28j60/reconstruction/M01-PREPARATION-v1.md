@@ -12,7 +12,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Fixture** — the board, controller module, wiring, peer, and capture equipment.
 - **Qualification** — demonstrating a check works using reference cases and deliberate defects.
 
-See the [glossary](../../../../../GLOSSARY.md). This evaluator-only record implements
+See the [glossary](../../../GLOSSARY.md). This evaluator-only record implements
 [M01](../../../IMPLEMENTATION-PLAN.md#m01--make-trial-preparation-executable).
 Do not supply it, its pin inventory, or its evidence record to an implementer.
 

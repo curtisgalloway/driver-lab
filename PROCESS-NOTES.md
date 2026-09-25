@@ -31,7 +31,7 @@ under "Open" predate it and keep their form. Chapters of the lab notebook are in
 - **Antigravity** — Google's coding agent; several clean-room tools were written first for
   its file layout.
 
-See the [glossary](../../GLOSSARY.md).
+See the [glossary](GLOSSARY.md).
 
 ## Open
 

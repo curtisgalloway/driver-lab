@@ -18,7 +18,7 @@ SPDX-License-Identifier: Apache-2.0
   run store; paths such as `recall/…` and `docs/…` below are relative to that run, not to this
   repository.
 
-See the [glossary](../../../../GLOSSARY.md) and the [L02c evidence](../../evidence/L02c.md).
+See the [glossary](../../GLOSSARY.md) and the [L02c evidence](../../evidence/L02c.md).
 
 ## Measurement
 

@@ -49,7 +49,7 @@ used these tools cannot follow the plan without them.
   themselves. An adjudication item is not a pass and not a failure; it is a question waiting for a
   person.
 
-See the repository [glossary](../../GLOSSARY.md) for shared terms.
+See the repository [glossary](GLOSSARY.md) for shared terms.
 
 ## The documentary measurement, in four steps
 

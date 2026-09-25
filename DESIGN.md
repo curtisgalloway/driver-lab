@@ -113,8 +113,8 @@ document describes those repository rules, rather than deciding license compatib
 
 ## How the hardware map is organized
 
-The [repository README](../../README.md) and [repository instructions](../../AGENTS.md) describe
-skills as directories under `plugins/<theme>/skills/<name>/`. A skill contains instructions and may
+The [repository README](README.md) and [repository instructions](AGENTS.md) describe
+skills as directories under `skills/<name>/`. A skill contains instructions and may
 include scripts or templates. Installing this plugin makes those instructions available to the
 harness; it does not automatically install enforcement into a consuming OS project. Much of this
 system is a procedure agents follow, with deterministic scripts checking selected properties.

@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Consultation** — a persistent exchange with a read-only counterpart agent.
 - **Checkpoint** — the local commit preserving reviewed planning work.
 
-See the [glossary](../../../GLOSSARY.md). This is planning evidence, not evidence that any
+See the [glossary](../GLOSSARY.md). This is planning evidence, not evidence that any
 implementation milestone or experiment has run.
 
 ## Scope and starting state

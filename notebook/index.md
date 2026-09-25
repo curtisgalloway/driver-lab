@@ -10,7 +10,7 @@ Updated: 2026-09-24T20:40-07:00
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
 process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: a chapter is
-one unit's append-only notes; see the [glossary](../../../GLOSSARY.md) (lab notebook, process log).
+one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
 

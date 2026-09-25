@@ -10,7 +10,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Specification (`spec.md`)** — the supplied hardware description.
 - **Fixture-facts sheet** — the supplied board wiring and OS binding information.
 
-See the [glossary](../../../../../GLOSSARY.md) for preparation terminology; this link is outside
+See the [glossary](../../../GLOSSARY.md) for preparation terminology; this link is outside
 the exported task and does not grant an implementer access to the evaluator repository.
 
 Preparation status: do not launch with unresolved bracketed fields. Export only the Task section

@@ -47,7 +47,7 @@ companion skill's guidance and tools.
 - **Skill** — instructions and optional supporting tools that guide an agent through a task.
 - **Mutation check** — deliberately introduce a defect to see whether a test catches it.
 
-See the shared [glossary](../../GLOSSARY.md) for additional terminology.
+See the shared [glossary](GLOSSARY.md) for additional terminology.
 
 ## The problem
 

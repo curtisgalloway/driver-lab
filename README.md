@@ -45,7 +45,7 @@ Update later with `codex plugin marketplace upgrade curtisg-skills`.
 ### Other agents
 
 For Antigravity and other harnesses that read skill directories, clone the repo and link each
-skill you want from `plugins/driver-porting/skills/<name>` into your skills root. The
+skill you want from `skills/<name>` into your skills root. The
 [top-level README](../../README.md#installing) has the paths for each harness.
 
 Skip all of this if you installed the `everything` plugin, which already includes these
@@ -217,17 +217,17 @@ off to these by name.
   evaluation, test quality, companion-skill validation, and final verification, as
   session-sized milestones with explicit dependencies and review gates.
 
-Evaluation terms are defined in the repository [glossary](../../GLOSSARY.md).
+Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 
 ## Tests
 
 ```bash
-python3 -m unittest discover -s plugins/driver-porting/skills/os-investigator/tests -v
-python3 -m unittest discover -s plugins/driver-porting/skills/cleanroom-implementer/tests -v
-python3 -m unittest discover -s plugins/driver-porting/skills/board-expert/tests -v
-python3 plugins/driver-porting/skills/board-expert/scripts/spec_check.py \
-  plugins/driver-porting/skills/board-expert/specs \
-  --stubs-from plugins/driver-porting/skills
+python3 -m unittest discover -s skills/os-investigator/tests -v
+python3 -m unittest discover -s skills/cleanroom-implementer/tests -v
+python3 -m unittest discover -s skills/board-expert/tests -v
+python3 skills/board-expert/scripts/spec_check.py \
+  skills/board-expert/specs \
+  --stubs-from skills
 ```
 
 Add `--require-verified` to make a missing or stale verification record an error rather than
@@ -236,4 +236,4 @@ a warning (CI keeps the default). The checker's last line names the parser it ra
 CI has no PyYAML, so CI and the plain `python3` commands above exercise the checker's own
 subset parser. To exercise the PyYAML path as well, run the tests and the checker once under
 a Python that has it, for example
-`uv run --with pyyaml python -m unittest discover -s plugins/driver-porting/skills/board-expert/tests`.
+`uv run --with pyyaml python -m unittest discover -s skills/board-expert/tests`.

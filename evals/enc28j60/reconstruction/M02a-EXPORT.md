@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Inventory** — a list of every supplied file or symbolic link, its mode, size and digest.
 - **Tree identity** — Git's recursive digest of paths, executable modes and file/link bytes.
 
-See the [glossary](../../../../../GLOSSARY.md).
+See the [glossary](../../../GLOSSARY.md).
 
 ## Boundary
 

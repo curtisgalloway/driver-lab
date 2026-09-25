@@ -25,7 +25,7 @@ leans on that stays behind, where the work stands, and what to do first.
 - **Test host** — the x86-64 Linux machine that runs QEMU for the L02 units.
 - **Operator** — the coordinating agent session that runs a unit.
 
-See the [glossary](../../GLOSSARY.md) for the rest; it moves with the workstream (below).
+See the [glossary](GLOSSARY.md) for the rest; it moves with the workstream (below).
 
 ## What moves
 
@@ -51,12 +51,18 @@ with the workstream at its root and the glossary beside it. Then fix the relativ
 (next section) and the CI paths. Moving the files without history loses the record of which
 commit each evidence file certifies.
 
+Keeping history does not keep the citations working on its own: filter-repo gives every commit
+a new hash, so a hash such as `de2bb68` cited in an evidence file names nothing in the new
+repository. Keep filter-repo's commit map, and turn each prose citation into an absolute link
+to the public-skills commit, which keeps its history. (Done 2026-09-25: see
+[history/public-skills-commit-map.txt](history/public-skills-commit-map.txt).)
+
 ## What it leans on that stays behind
 
 | Dependency | Where it lives now | What to do |
 | --- | --- | --- |
 | The glossary | `GLOSSARY.md` at the repository root; 35 files link to it with `../../`-style paths. Rows added for this work include Blind requirement list, Operator, Lab notebook, Process log, Planted defect, Phase, Deferred check | Take a copy (the filter-repo command above does), trim rows that are only for other plugins, and rewrite the links for the new layout |
-| CI | 8 steps in `.github/workflows/checks.yml` run the workstream's tests: `os-investigator`, `cleanroom-implementer` and `board-expert` unit tests, the board spec checker, the ENC28J60 eval tests and author-manifest check (with `pyyaml`), and the e1000 harness tests | Copy those steps into the new repository's workflow; remove them here when the plugin is removed |
+| CI | 8 steps in `.github/workflows/checks.yml` run the workstream's tests: `os-investigator`, `cleanroom-implementer` and `board-expert` unit tests, the board spec checker, the ENC28J60 eval tests and author-manifest check (with `pyyaml`), and the e1000 harness tests | Copy those steps into the new repository's workflow, **plus** `utilities/check-no-private-paths.py`: a public repository that holds evidence files needs the privacy check. Remove the steps here when the plugin is removed |
 | Marketplace listing | `.claude-plugin/marketplace.json` lists `driver-porting`, and the "everything" plugin includes `./plugins/driver-porting/skills` | Give the new repository its own listing, then drop both entries here |
 | Repository README | Plugin table row, `/plugin install` and `codex plugin add` lines, an Antigravity symlink example, and a "Related" note that `fuchsia-skills` hands off to driver-porting skills by name | Update when the plugin leaves; the skill names must not change or `fuchsia-skills` breaks |
 | Skills from other plugins | The plan and briefs use `review-swarm` (dev-tools), and `consult`, `project-plan`, `lab-notebook`, `learn` and `handoff` (agent-workflow) | They stay in `public-skills`; install them alongside. Nothing is vendored |
@@ -85,9 +91,9 @@ before L02f's feedback. The plan's "Next session" section says the same.
 
 ## Branches and uncommitted state
 
-- `driver-porting/l02d2` — local only, not pushed: L02d2's early-stop checkpoint and this
-  document, on top of `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1). Push it or carry it into the new
-  repository's history; either way, its commits are the only copy of this session's work.
+- `driver-porting/l02d2` — L02d2's early-stop checkpoint and this document, on top of
+  `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1).
+  Pushed to public-skills 2026-09-25 and carried into this repository's history.
 - `driver-porting/pixel10-spec`, `-v2`, `-v3` — kept on purpose (user decision 2026-09-24);
   do not prune them in a branch cleanup.
 - No open pull requests for this work at the time of writing.
@@ -132,7 +138,9 @@ Carry these into the new repository's instruction file (`AGENTS.md`):
 
 ## Open decisions for the new repository
 
-- Its name, and whether it is public (this plugin is Apache-2.0 today; keep the SPDX headers).
+- Settled: it is `driver-lab`, and it is public (Apache-2.0, SPDX headers kept).
+- Not yet: `driver-lab` must not link into private repositories. Nothing does today; add a
+  check when that could change.
 - Whether `driver-porting` remains installable from the `curtisg-skills` marketplace (a
   pointer) or only from the new one.
 - Whether the deferred experimental plan (M02–M17, P01) moves as live plan or as archive.

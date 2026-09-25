@@ -19,7 +19,7 @@ No paired run has taken place. This is a protocol, not a result.
 - **Reconstruction** — implementing a driver from the frozen spec on the reference OS.
 - **Candidate** — the particular spec or driver being evaluated.
 
-See the repository [glossary](../../../../GLOSSARY.md).
+See the repository [glossary](../../GLOSSARY.md).
 
 ## What the practice run established about the design
 

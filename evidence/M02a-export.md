@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Transfer verification** — comparing every extracted file/link to the retained inventory.
 - **Semantic review** — reading content to decide whether it supplies forbidden device facts.
 
-See the [glossary](../../../GLOSSARY.md) and
+See the [glossary](../GLOSSARY.md) and
 [export procedure](../evals/enc28j60/reconstruction/M02a-EXPORT.md).
 
 ## Scope

@@ -25,7 +25,7 @@ source has been pinned, no spec written, and nothing has run. This is the design
 - **`[emulated]`** — proposed evidence class for a result observed on a QEMU device model.
 - **KVM / TCG** — hardware-assisted virtualization / QEMU's slower software emulation.
 
-See the [glossary](../../GLOSSARY.md), the [evidence model](DESIGN.md#evidence-model-what-we-trust-and-why),
+See the [glossary](GLOSSARY.md), the [evidence model](DESIGN.md#evidence-model-what-we-trust-and-why),
 and the [L01 result](evidence/L01.md).
 
 ## Problem and outcomes

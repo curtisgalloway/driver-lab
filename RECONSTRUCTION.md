@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Differential testing** — compare implementations under the same scenarios.
 - **Fixture** — the hardware and connections prepared for repeatable execution.
 
-See the repository [glossary](../../GLOSSARY.md) for shared terms.
+See the repository [glossary](GLOSSARY.md) for shared terms.
 
 ## Purpose and status
 

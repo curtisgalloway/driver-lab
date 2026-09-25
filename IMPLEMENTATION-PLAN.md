@@ -18,7 +18,7 @@ Revision: 2026-09-20. No experiment launched by this plan.
 - **Fixture** — the equipment and connections used for repeatable physical tests.
 - **Mutation** — a deliberate defect used to check that a test detects incorrect behavior.
 
-See the [glossary](../../GLOSSARY.md). Paths below are relative to this plugin unless stated
+See the [glossary](GLOSSARY.md). Paths below are relative to this plugin unless stated
 otherwise. Proposed files are explicitly labeled; their names are not working interfaces yet.
 
 ## Design authority and completion boundary
@@ -777,16 +777,16 @@ before pushing. Known commands include:
 ```sh
 python3 utilities/check-skill-registration.py
 python3 utilities/check-no-private-paths.py
-python3 -m unittest discover -s plugins/driver-porting/skills/os-investigator/tests
-python3 -m unittest discover -s plugins/driver-porting/skills/cleanroom-implementer/tests
-python3 -m unittest discover -s plugins/driver-porting/skills/board-expert/tests
-python3 plugins/driver-porting/skills/board-expert/scripts/spec_check.py plugins/driver-porting/skills/board-expert/specs --stubs-from plugins/driver-porting/skills
-uv run --with pyyaml python3 -m unittest discover -s plugins/driver-porting/evals/enc28j60/tests
-uv run --with pyyaml python3 plugins/driver-porting/evals/enc28j60/author_manifest.py --check plugins/driver-porting/evals/enc28j60/author-manifest.yaml
-uv run --with pyyaml python3 plugins/driver-porting/evals/enc28j60/ledger_check.py plugins/driver-porting/evals/enc28j60/ledger.yaml --lock plugins/driver-porting/evals/enc28j60/ledger.lock
+python3 -m unittest discover -s skills/os-investigator/tests
+python3 -m unittest discover -s skills/cleanroom-implementer/tests
+python3 -m unittest discover -s skills/board-expert/tests
+python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
+uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
+uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
+uv run --with pyyaml python3 evals/enc28j60/ledger_check.py evals/enc28j60/ledger.yaml --lock evals/enc28j60/ledger.lock
 ```
 
-Before generation, from `plugins/driver-porting/evals/enc28j60/`, run
+Before generation, from `evals/enc28j60/`, run
 `python3 corpus_check.py` with source access: require zero drifted pins. The other ARMS.md gates
 must pass too. Scoring commands and expected exit codes remain authoritative in
 [SCORING-RUN.md](evals/enc28j60/SCORING-RUN.md). A valid blocked result is not a tool failure or

@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Spec-only experiment** — test implementation from a spec under controlled input restrictions.
 - **Negative control** — a deliberately faulty case that a relevant check must reject.
 
-See the [glossary](../../../GLOSSARY.md) and [revised plan](../IMPLEMENTATION-PLAN.md).
+See the [glossary](../GLOSSARY.md) and [revised plan](../IMPLEMENTATION-PLAN.md).
 
 ## Decision
 

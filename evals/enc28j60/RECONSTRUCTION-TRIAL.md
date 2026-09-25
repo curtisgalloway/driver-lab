@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Fixture** — the controller, host, wiring, traffic peer, and measurement equipment.
 - **Mutation** — a deliberate defect used to establish that a check can detect incorrect behavior.
 
-See the [glossary](../../../../GLOSSARY.md), [run guide](RECONSTRUCTION-RUN.md), and
+See the [glossary](../../GLOSSARY.md), [run guide](RECONSTRUCTION-RUN.md), and
 [shared protocol](../../RECONSTRUCTION.md). This record is evaluator-only. Do not give it to
 an implementer: it contains requirement mappings and evaluation details.
 

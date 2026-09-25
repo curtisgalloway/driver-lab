@@ -286,3 +286,9 @@ Prevention: in evidence tables, state only what the run's verdicts or captures s
 reason rests on a packet or register fact, look it up in the run before writing it.
 Fix belongs in: project instructions (AGENTS.md, evidence-writing rule)
 Status: open
+
+### 2026-09-25T15:14-07:00 — instruction gap: resuming session had to search for the run store
+Status: fixed in AGENTS.md ("Run store location"): each user sets `run_store` in
+`~/.config/driver-lab/config.toml` (or `DRIVER_LAB_RUNS`), read by `utilities/run-store.py`;
+the path stays out of the repository, and an unconfigured store means asking the user, not
+searching. Recurred in L02f1, where the store was on another machine.

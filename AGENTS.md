@@ -60,6 +60,12 @@ The last one needs a public-skills checkout; CI pins the scanner to one of its c
   the private run store, which files cite by run ID only. The rule covers this project's own
   machines and network, not third-party facts their owner already published: a vendor code name
   from a public mailing-list post or a published device tree stays in a spec.
+- **Run store location**: each user chooses where their run store lives; the path is never
+  written into this repository and has no default. Set it as `run_store = "<path>"` in
+  `~/.config/driver-lab/config.toml` (under `$XDG_CONFIG_HOME` when that is set);
+  `DRIVER_LAB_RUNS` overrides it. `python3 utilities/run-store.py [<run ID>]` prints the store,
+  or a run's directory in it, and exits 1 when nothing is configured: then ask the user for the
+  location rather than searching the filesystem.
 - **Git**: a topic branch and a pull request per unit, and a separate branch for any unrelated
   change. Fetch first and cut the branch from `origin/main`, not a local `main` that may be
   stale. Push or open a pull request only on the user's explicit "push", and "push" never means

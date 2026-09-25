@@ -1257,12 +1257,31 @@ def overrun_events(p: Post, step: int) -> tuple[bool, str]:
     return n > 0, f"{n} e1000_receiver_overrun events"
 
 
-def stalled(t0: float, t1: float) -> Deferred:
-    """Between two host times the model accepted frames for the DUT and nothing wrote
-    the receive tail: the ring filled without being replenished. Backs up the dry-ring
-    read, which a device reset would also satisfy (both pointers 0)."""
+def stalled(t_before: float, t_after: float, t1: float) -> Deferred:
+    """While the harness had the DUT's interrupts masked, the model accepted frames for
+    the DUT and nothing wrote the receive tail: the ring filled without being
+    replenished. Backs up the dry-ring read, which a device reset would also satisfy
+    (both pointers 0).
+
+    The masked interval starts at the harness's IMC write, the last all-ones IMC write
+    between the host times taken just before and just after it, not at the host time
+    before it: tail writes the driver made before the mask took effect are legitimate.
+    It ends at t1, taken before the harness restores IMS."""
 
     def check(p: Post, _: int) -> tuple[bool, str]:
+        masks = [
+            a.t
+            for a in p.accesses
+            if a.t is not None
+            and t_before <= a.t <= t_after
+            and a.is_register
+            and a.rw == "w"
+            and a.reg == REG["IMC"]
+            and a.value == 0xFFFFFFFF
+        ]
+        if not masks:
+            return False, "no IMC write masking every cause found in the trace"
+        t0 = masks[-1]
         frames = unicast_frames(p.accesses, t0, t1)
         tails = sum(
             1
@@ -1299,6 +1318,7 @@ def scenario_rx_overrun(c: Ctx) -> None:
         return
     t_mask = time.time()
     devmem(c, base, "IMC", 0xFFFFFFFF)
+    t_masked = time.time()
     _, out = c.peer.run(f"{FLOOD} -c 1000 {DUT_IP}; true", timeout=30)
     c.observe("peer flood output", out)
     c.hold(1)
@@ -1312,7 +1332,7 @@ def scenario_rx_overrun(c: Ctx) -> None:
     devmem(c, base, "IMS", ims)
     c.defer(
         "while masked, the device accepted frames and the driver wrote no RDT",
-        stalled(t_mask, t_unmask),
+        stalled(t_mask, t_masked, t_unmask),
     )
     c.dut.run("sleep 2")
     both_ways(c, "after the overrun")
@@ -1492,17 +1512,38 @@ def itr_readback(p: Post, step: int) -> tuple[bool, str]:
     return got == last, f"read {got:#x}, last written {last:#x}"
 
 
-def itr_writes(p: Post, step: int) -> tuple[bool, str]:
-    """The ITR values written in the scenario after its last global reset."""
-    vals: list[int] = []
-    for a in p.during(step):
-        if not a.is_register or a.rw != "w" or a.reg is None:
-            continue
-        if a.reg == REG["CTRL"] and a.value & CTRL_RST:
-            vals = []
-        elif a.reg == REG["ITR"]:
-            vals.append(a.value)
-    return bool(vals), f"{len(vals)} writes, values {sorted(set(vals))}"
+def itr_writes(t_before: float, t_after: float) -> Deferred:
+    """The ITR values written in the scenario after its last global reset before the
+    harness's ITR read-back, the last ITR read between the host times taken just before
+    and just after it. Bounding at that read keeps teardown's reset from discarding the
+    values the driver used while it ran, and an earlier ITR read by the driver itself
+    from cutting the collection short."""
+
+    def check(p: Post, step: int) -> tuple[bool, str]:
+        reads = [
+            a.t
+            for a in p.during(step)
+            if a.t is not None
+            and t_before <= a.t <= t_after
+            and a.is_register
+            and a.rw == "r"
+            and a.reg == REG["ITR"]
+        ]
+        if not reads:
+            return False, "no harness ITR read found in the trace"
+        vals: list[int] = []
+        for a in p.during(step):
+            if a.t is not None and a.t >= reads[-1]:
+                break
+            if not a.is_register or a.rw != "w" or a.reg is None:
+                continue
+            if a.reg == REG["CTRL"] and a.value & CTRL_RST:
+                vals = []
+            elif a.reg == REG["ITR"]:
+                vals.append(a.value)
+        return bool(vals), f"{len(vals)} writes, values {sorted(set(vals))}"
+
+    return check
 
 
 def scenario_itr(c: Ctx) -> None:
@@ -1514,7 +1555,9 @@ def scenario_itr(c: Ctx) -> None:
     base = bar0(c)
     if base is None:
         return
+    t_read = time.time()
     v = devmem(c, base, "ITR")
+    t_read_done = time.time()
     if c.check("ITR read through the memory BAR", v is not None, f"{v}"):
         rate = round(1e9 / (v * 256)) if v else None
         c.observe("ITR", {"value": v, "interrupts_per_s": rate})
@@ -1523,7 +1566,11 @@ def scenario_itr(c: Ctx) -> None:
         " or 0 after a reset (SDM 13.4.18)",
         itr_readback,
     )
-    c.defer("ITR values the driver wrote after its last reset", itr_writes, check=False)
+    c.defer(
+        "ITR values the driver wrote after its last reset",
+        itr_writes(t_read, t_read_done),
+        check=False,
+    )
     tear_down(c)
 
 

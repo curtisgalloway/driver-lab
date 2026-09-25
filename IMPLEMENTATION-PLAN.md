@@ -321,14 +321,14 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   limitations: smoke does not check the kernel log; the EEPROM check shows use of the
   interface, not the MAC's source; `--accel tcg` untested; the late-connect fix not reproduced
   live.
-- **L02d2 — scenarios and mutations.** Status: `in_progress`, stopped early 2026-09-24
-  ([evidence](evidence/L02d2.md), [notebook](notebook/L02d2.md)). Built, run and reviewed:
-  ten suite scenarios, a kernel-log check after every scenario, trace decoding with
-  per-phase labels, manual-based trace rules, five planted defects (four detected; m1 an
-  equivalent mutation). Review fixes applied and unit-tested but **not yet run on the host
-  or reviewed**; the evidence file lists the four remaining steps. Open limitations there,
-  notably C9: most checks never shown able to fail. Finishing the unit means those four steps
-  only; C9 is L02d3's.
+- **L02d2 — scenarios and mutations.** Status: `complete` 2026-09-25
+  ([evidence](evidence/L02d2.md), [notebook](notebook/L02d2.md)). Ten suite scenarios, a
+  kernel-log check after every scenario, trace decoding with per-phase labels, manual-based
+  trace rules, five planted defects: m2–m5 detected, m1 an equivalent mutation. Three
+  reviews (review swarm, a scenario-coverage reviewer, then a Codex review of the fixes whose
+  three medium findings were fixed); the reference passes twice on the final harness. Open
+  limitations there, notably C9 (most checks never shown able to fail) and leftover frames
+  contaminating later scenarios; both are L02d3's inputs.
 - **L02d3 — check qualification.** Status: `pending`; added 2026-09-25 (user approved,
   reversing L02d2's decision not to take up C9). Needs L02d2 complete; must finish before any
   candidate run. Design §7: before trusting a test, a planted defect must make it fail. For
@@ -897,19 +897,13 @@ pretending the pilot plan completes an unspecified platform-wide system.
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e and L02d1 are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e, L02d1 and L02d2 are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
-[L02d1](evidence/L02d1.md)); L02d2 is in progress. Do not start two units in one session. Read
+[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md)). Do not start two units in one session. Read
 [notebook/index.md](notebook/index.md) first.
 
-- **L02d2 (resume first):** finish the four steps in the
-  [evidence file's Status](evidence/L02d2.md#status): host runs of the fixed harness
-  (reference twice, five defects), confirm the new checks, a fresh review of the fixes (Codex
-  through `consult` in a fresh session, given the fixes, the original findings and the
-  post-fix runs), then the checkpoint. Private run `e1000-l02d2-20260924-01`. Its early-stop
-  checkpoint is commit `d9ddf68` on `main`; the unit continues on a new topic branch from
-  `origin/main`.
-- **L02d3 (after L02d2, before any candidate run):** check qualification, as described in L02d.
+- **L02d3 (next; before any candidate run):** check qualification, as described in L02d. Start
+  from L02d2's open limitations, including leftover-frame contamination between scenarios.
 - **L02s (any time after L02e; may run alongside L02d3):** spec revision 5, PSCON bit 11.
 - **L02f1 → L02f2 → L02f3 (after L02d3):** the differential run of `e1000_l02` (run
   `e1000-l02e-20260924-01`, `candidate/`, SHA-256 `673e4787…402be74c`) against the reference.

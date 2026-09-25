@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-24T20:40-07:00
+Updated: 2026-09-25T13:45-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,9 +15,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [L02d2 — QEMU harness, scenarios and planted defects](L02d2.md)
-Entries: 2026-09-24T17:31-07:00 through 2026-09-24T20:37-07:00
-Outcome: open; stopped early before host runs of the review fixes (SSH refused; work moving
-to its own repository).
+Entries: 2026-09-24T17:31-07:00 through 2026-09-25T13:45-07:00
+Outcome: complete; the reference passes twice on the final harness, m2–m5 detected, m1 an
+equivalent mutation; a Codex review of the fixes found three more (R1, R2, R5), all fixed.
+- The test host was this checkout's own machine; no SSH was needed.
+- Frames left over from a stalled flood contaminate later scenarios, differently each round;
+  only ring-wrap detects m5 in every round.
 - busybox `nc` has no UDP mode; floods are `ping -i 0.001`; `ping -i 0` hangs the guest.
 - QEMU's e1000 pushes back instead of overrunning, and drains TX with the link down (L4
   not reproducible); packet-capture timestamps are about 8 h off the host clock.

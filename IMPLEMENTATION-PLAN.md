@@ -372,14 +372,15 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
 ### L02f — Differential run, repair, and feedback
 
 - **Outcome:** O4, O5, A5, A7. Split 2026-09-25 into three units, each one session.
-- **L02f1 — initial run and attribution.** Zero repair authority. Freeze and record the
-  candidate, harness, kernel, configuration and QEMU identities before execution, and keep the
-  first results before any repair. Run the L02d suite against the candidate; compare traces
-  with the reference by required operation and order; label each divergence with design §6's
-  labels (`bug`, `benign`, `suspect`, `ref-issue`), manual as tie-breaker, alongside its cause
-  (spec gap, spec error, implementation error, model limitation). Every scenario gets a
-  disposition, including not-run and error; an unexplained reference failure blocks judging
-  the affected candidate behavior (A4).
+- **L02f1 — initial run and attribution.** Status: `complete` 2026-09-25
+  ([evidence](evidence/L02f1.md), [notebook](notebook/L02f1.md)). Identities frozen before
+  any run; reference 10/10 PASS in isolated runs (A4). The candidate failed all ten scenarios,
+  twice isolated and once as a full suite, at probe, for one cause: QEMU always reports
+  EECD.EE_GNT set (the manual's initial value is 0b), and the candidate enforces spec E1 (the
+  manual's §13.4.4 note) by aborting probe. Labeled `benign`, model limitation, with a
+  secondary spec gap (E1 gives no bound or fallback when the grant stays set); five probe
+  divergences, all `benign`. Reviewed by a fresh subagent reading the raw runs, in two turns
+  (13 then 6 findings, all fixed). Open limitations: nothing after probe has run; neither L02f decision is met.
 - **L02f2 — bounded repair and retest.** Skipped if nothing needs repair. Gated on the user
   choosing the repair budget and the implementer (L02e's cap is spent). Clean-side repair
   briefs carry only permitted requirements and observations, never reference or QEMU source,
@@ -880,18 +881,21 @@ pretending the pilot plan completes an unspecified platform-wide system.
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e and L02d1–L02d3 are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e, L02d1–L02d3 and L02f1 are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
-[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md)). Do not start two units in one session. Read
+[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md)). Do not start two units in one session. Read
 [notebook/index.md](notebook/index.md) first.
 
 - **L02s (any time; before L02f3):** spec revision 5, PSCON bit 11.
-- **L02f1 → L02f2 → L02f3 (next):** the differential run of `e1000_l02` (run
-  `e1000-l02e-20260924-01`, `candidate/`, SHA-256 `673e4787…402be74c`) against the reference.
-  The candidate must be rebuilt against the harness kernel's tree (the L02e build tree is the
-  same one). L02f2 needs the user's repair budget and implementer choice.
-  Run each scenario as an isolated run (harness README) for results cited as qualified;
-  the claim IDs and their scopes are in [evidence/L02d3.md](evidence/L02d3.md).
+- **L02f2 (next; needs the user's repair budget and implementer choice):** repair the
+  candidate's E1 policy. The brief may carry only the observation "on the emulated device
+  EECD reads 0x188 at rest and after EE_REQ is written 0: EE_GNT never reads 0" and the spec
+  and manual; not reference or QEMU source. Then rerun every scenario isolated and compare
+  past probe for the first time ([evidence/L02f1.md](evidence/L02f1.md), "For L02f2"). Claim
+  IDs and scopes are in [evidence/L02d3.md](evidence/L02d3.md). The run store is each user's
+  own setting (AGENTS.md, "Run store location"); the inputs a unit needs must be reachable
+  from the test host before it starts.
+- **L02f3:** spec feedback, including V1's spec gap and the FWE observation, on top of L02s.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

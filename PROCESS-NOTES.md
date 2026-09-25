@@ -224,3 +224,43 @@ Prevention: rerunning every acceptance and failure-path run after review fixes, 
 project-plan already requires; it worked here. For guest scripts, prefer blocking reads.
 Fix belongs in: practice (no instruction change)
 Status: open
+
+### 2026-09-24T17:51-07:00 — surprise: a guest tool's options assumed, not checked
+Chapter: [L02d2](notebook/L02d2.md)
+What happened: three scenarios used `nc -u` for UDP floods; this busybox build has no `-u`.
+The foreground use printed a usage error that the scenario did not check; the two
+background uses failed silently, and those scenarios passed without the traffic they claim.
+Cost: one suite run (about 2 minutes), a redesign of the floods, and a new class of check.
+Prevention: run each guest command once by hand, in a guest, before building a scenario on
+it (the L02d1 entry on the trace prefix is the same lesson); and make a scenario prove its
+own precondition (a flood running, traffic in the trace) instead of trusting a command.
+Fix belongs in: practice; possibly the `review-swarm` or scenario-coverage reviewer brief
+("does each scenario prove the condition it claims to create?")
+Status: open
+
+### 2026-09-24T20:37-07:00 — a decision entry claimed more than the check did
+Chapter: [L02d2](notebook/L02d2.md)
+What happened: the notebook's ITR decision said the read-back tested the driver's write;
+it compared the model with its own write log. The scenario-coverage reviewer caught it,
+along with two probes (L4, M2) that never created their condition. The code-review swarm,
+which reads code rather than run artifacts, found none of the three.
+Cost: three rewrites of scenario claims after review.
+Prevention: for any check, write down one concrete driver defect that would make it fail
+before calling it a driver check; keep an artifact-reading coverage reviewer in every
+harness unit.
+Fix belongs in: `review-swarm` guidance (or the plan's review conventions) — pair code
+review with an artifact-based coverage review for test harnesses
+Status: open
+
+### 2026-09-24T20:37-07:00 — SSH agent refusal stopped the final runs
+Chapter: [L02d2](notebook/L02d2.md)
+What happened: after about three hours of working SSH, the 1Password desktop agent refused
+to sign for the test host (likely locked); rsync then fell back to password prompts, which
+were denied. The host's key is in the vault agents cannot read, so there is no agent-side
+recovery.
+Cost: the unit stopped before its final verification runs.
+Prevention: rsync and ssh with `-o BatchMode=yes` everywhere, so a refusal fails once
+instead of trying passwords; for long host sessions, the safe-tier style dedicated key on
+the test host.
+Fix belongs in: user instructions or the test-host setup (a dedicated agent key)
+Status: open

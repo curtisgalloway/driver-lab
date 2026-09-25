@@ -312,11 +312,13 @@ parallel with L02b–L02c.
   limitations: smoke does not check the kernel log; the EEPROM check shows use of the
   interface, not the MAC's source; `--accel tcg` untested; the late-connect fix not reproduced
   live.
-- **L02d2 — scenarios and mutations.** Status: `pending`. The rest of the design's §5
-  scenario list, the ITR read-back decision, the L02e open-item probes, a kernel-log check in
-  every scenario (warnings, call traces, transmit hangs; log taken after unload), per-phase
-  trace grouping for L02f's comparison, the planted defects, and the scenario-coverage
-  reviewer. Accept and review as L02d above.
+- **L02d2 — scenarios and mutations.** Status: `in_progress`, stopped early 2026-09-24
+  ([evidence](evidence/L02d2.md), [notebook](notebook/L02d2.md)). Built, run and reviewed:
+  ten suite scenarios, a kernel-log check after every scenario, trace decoding with
+  per-phase labels, manual-based trace rules, five planted defects (four detected; m1 an
+  equivalent mutation). Review fixes applied and unit-tested but **not yet run on the host
+  or reviewed**; the evidence file lists the four remaining steps. Open limitations there,
+  notably C9: most checks never shown able to fail.
 
 ### L02e — Implement, build, and review the candidate
 
@@ -830,18 +832,16 @@ pretending the pilot plan completes an unspecified platform-wide system.
 
 ## Next session
 
-L02a, L02b, L02c, L02e and L02d1 are complete ([L02a](evidence/L02a.md), [L02b](evidence/L02b.md),
-[L02c](evidence/L02c.md), [L02e](evidence/L02e.md), [L02d1](evidence/L02d1.md)). Resume
-whichever unit the user picks; do not start two in one session. Read
-[notebook/index.md](notebook/index.md) first.
+**The work is moving to its own repository (user, 2026-09-24): read
+[TRANSITION.md](TRANSITION.md) first.** L02a, L02b, L02c, L02e and L02d1 are complete
+([L02a](evidence/L02a.md), [L02b](evidence/L02b.md), [L02c](evidence/L02c.md),
+[L02e](evidence/L02e.md), [L02d1](evidence/L02d1.md)); L02d2 is in progress. Do not start two
+units in one session. Read [notebook/index.md](notebook/index.md) first.
 
-- **L02d2 (ready now; L02f needs it):** scenarios and planted defects on the L02d1 harness.
-  Start from [the harness README](evals/e1000/harness/README.md) and the L02d1 evidence's
-  open limitations. The harness runs on the test host from a synced copy; the private run
-  store holds every L02d1 run. Decide how the ITR scenario reads the value back (L02b finding
-  C-2; spec revision 4 allows ITR = 0). Scenarios should also exercise L02e's open items: the
-  DMA mask (reference review M2), the reset path (M3), transmits queued at link loss (L4),
-  and the post-reset timing gap. Add the kernel-log check to every scenario.
+- **L02d2 (resume first; L02f needs it):** finish the four steps in the
+  [evidence file's Status](evidence/L02d2.md#status): host runs of the fixed harness
+  (reference twice, five defects), confirm the new checks, a fresh review of the fixes, then
+  the checkpoint. Private run `e1000-l02d2-20260924-01`.
 - **L02f (after L02d2):** the differential run of `e1000_l02` (run `e1000-l02e-20260924-01`,
   `candidate/`, SHA-256 `673e4787…402be74c`) against the reference. The candidate must be
   rebuilt against the harness kernel's tree (the L02e build tree is the same one). The repair
@@ -851,6 +851,6 @@ whichever unit the user picks; do not start two in one session. Read
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).
-- Branches: L02d1 is on `driver-porting/l02d`, cut from `origin/main` at `a1a37be`; its
-  checkpoint commit is the one that adds this line. L02d2 can continue on the same branch
-  after its PR merges, or on a new branch from `origin/main`.
+- Branches: L02d2 is on `driver-porting/l02d2`, cut from `origin/main` at `d63e3f1`,
+  committed locally and not pushed; its early-stop checkpoint commit is the one that adds
+  this line.

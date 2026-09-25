@@ -140,5 +140,17 @@ driver whose DMA mask allows it. The reference never placed a ring there.
 
 A full suite run (`--scenario all`) takes a little over 2 minutes with KVM.
 
+**Isolated runs for qualified evidence.** In one boot, a driver that stalls a flood leaves
+frames queued at the peer that reach later scenarios. The checks were qualified (plan unit
+L02d3, [evidence](../../../evidence/L02d3.md)) with each scenario in its own run, on fresh
+guests; cite a result as qualified evidence only from such a run:
+
+```bash
+for s in smoke frame-sizes ring-wrap rx-overrun link-flap link-loss-tx stop-start \
+    down-during-traffic reload itr; do
+  python3 l02harness.py run --kernel ... --module ... --driver ... --scenario "$s" --out "runs/r001-$s"
+done
+```
+
 The unit tests cover the parts that need no QEMU:
 `python3 -m unittest discover -s tests -v`.

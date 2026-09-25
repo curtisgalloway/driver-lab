@@ -329,33 +329,16 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   three medium findings were fixed); the reference passes twice on the final harness. Open
   limitations there, notably C9 (most checks never shown able to fail) and leftover frames
   contaminating later scenarios; both are L02d3's inputs.
-- **L02d3 — check qualification.** Status: `pending`; added 2026-09-25 (user approved,
-  reversing L02d2's decision not to take up C9). Needs L02d2 complete; must finish before any
-  candidate run. Design §7: before trusting a test, a planted defect must make it fail. For
-  L02 this plan adopts the rule the deferred plan states for physical checks: **qualify checks
-  before inspecting candidate execution results**, so that the candidate's results cannot shape
-  which defects are chosen.
-  - **Steps:** freeze the claim set first, the checks whose PASS L02f will cite as evidence
-    about the candidate. Plant defects for those claims, starting from the ones L02d2's open
-    limitations name (pad bit cleared with no software padding, TDLEN one short, LSC left out
-    of IMS, ITR never written, no post-reset delay) and adding any needed for the rest. A
-    defect must violate the claim it tests: "ITR never written" is legal under the manual
-    (ITR = 0 disables throttling) and "LSC left out of IMS" can be masked by polling, so each
-    names its exact claim or is dropped from the defect set with the reason kept, as m1 was.
-  - **Record:** a short table in the evidence file: claim → the defect that made its check
-    fail → run ID, or `unqualified`, `unobservable` or `insensitive` with the reason. Each row
-    makes recoverable that the stimulus occurred and the named assertion failed for that reason
-    (not total loss of connectivity), that the valid control passed on the same harness
-    revision, and the module and harness identities. Existing run identities carry most of
-    this; no new framework. A timing check that no defect can fail is a finding, not a failure
-    of the unit.
-  - **Accept:** the claim set frozen before any candidate run; every claim qualified or
-    labeled with its reason; unqualified checks may be reported in L02f but not cited as
-    qualified evidence, and unsupported mandatory design claims stay shortfalls. Qualification
-    is claim-specific: it shows sensitivity to that defect under the recorded conditions, not
-    completeness against every violation.
-  - **Review:** `review-swarm` on any harness change, plus a fresh reviewer (Codex through
-    `consult`, fresh session) reading the raw valid and defective runs, not only the table.
+- **L02d3 — check qualification.** Status: `complete` 2026-09-25
+  ([evidence](evidence/L02d3.md), [notebook](notebook/L02d3.md)). 26 claims (24 frozen before
+  any defect run, 2 added after review, all before any candidate run); 22 qualified by a
+  planted defect in isolated runs (one scenario per fresh boot), most with a narrower scope
+  stated in the evidence; Q18 (1 µs after reset), Q24 (interface up, rmmod), Q25 (60/61-byte
+  receive) and Q26 (first load and bind) unqualified with reasons. 17 new defects; d09 an
+  equivalent mutation, d16 apparently inactive. No harness code change; the README now says
+  qualified evidence comes from isolated runs, which L02f must use. Reviewed by a fresh Codex
+  session reading the raw runs. Open limitations: Q09 detects receive corruption only as a
+  stalled transfer; transmit-ring tail rule and TDBAL-only alignment; see the evidence.
   - **A6 amended 2026-09-25 (user approved):** "Each validated non-equivalent planted defect
     is detected by at least one scenario or trace check; equivalent mutations are reported
     separately as valid controls." m1 is reported as an equivalent mutation under the amended
@@ -897,18 +880,18 @@ pretending the pilot plan completes an unspecified platform-wide system.
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e, L02d1 and L02d2 are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e and L02d1–L02d3 are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
-[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md)). Do not start two units in one session. Read
+[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md)). Do not start two units in one session. Read
 [notebook/index.md](notebook/index.md) first.
 
-- **L02d3 (next; before any candidate run):** check qualification, as described in L02d. Start
-  from L02d2's open limitations, including leftover-frame contamination between scenarios.
-- **L02s (any time after L02e; may run alongside L02d3):** spec revision 5, PSCON bit 11.
-- **L02f1 → L02f2 → L02f3 (after L02d3):** the differential run of `e1000_l02` (run
+- **L02s (any time; before L02f3):** spec revision 5, PSCON bit 11.
+- **L02f1 → L02f2 → L02f3 (next):** the differential run of `e1000_l02` (run
   `e1000-l02e-20260924-01`, `candidate/`, SHA-256 `673e4787…402be74c`) against the reference.
   The candidate must be rebuilt against the harness kernel's tree (the L02e build tree is the
   same one). L02f2 needs the user's repair budget and implementer choice.
+  Run each scenario as an isolated run (harness README) for results cited as qualified;
+  the claim IDs and their scopes are in [evidence/L02d3.md](evidence/L02d3.md).
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

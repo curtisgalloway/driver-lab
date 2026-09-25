@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T13:45-07:00
+Updated: 2026-09-25T14:43-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,16 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02d3 — check qualification](L02d3.md)
+Entries: 2026-09-25T14:23-07:00 through 2026-09-25T14:43-07:00
+Outcome: complete; 26 claims, 22 qualified by planted defects in isolated runs, 4 unqualified.
+- The reference pads short frames in software (`eth_skb_pad`), so a padding defect must drop
+  that as well as TCTL.PSP.
+- Dead end: d09 (ring indices not reset on clean) is equivalent: open re-zeroes them.
+- d16's checksum-gated corruption never ran; the model apparently never reports TCP-good.
+- Removing the reset wait leaves 13 µs gaps: the 1 µs rule cannot be failed this way.
+- The reviewer, reading captures, caught a reason written from memory (ARP at 42 bytes).
 
 ### [L02d2 — QEMU harness, scenarios and planted defects](L02d2.md)
 Entries: 2026-09-24T17:31-07:00 through 2026-09-25T13:45-07:00
@@ -49,5 +59,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **A check that cannot fail:** [L02d2](L02d2.md) — floods that never ran (r001), the ITR
   read-back, the L4 and M2 probes; caught by run artifacts and the coverage reviewer, not by
   code review.
+  [L02d3](L02d3.md) — qualified 22 of 26 claims with planted defects; the 1 µs reset rule
+  stays unqualified.
 - **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
   error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.

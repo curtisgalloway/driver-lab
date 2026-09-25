@@ -446,11 +446,23 @@ class DeferredMoreTest(unittest.TestCase):
         self.assertTrue(h.no_leftovers(5.0, 6.0)(self.post(acc), 1)[0])
 
     def test_stalled_needs_frames_and_no_tail_write(self):
-        acc = [self.ev(1.5), self.ev(1.6)]
-        self.assertTrue(h.stalled(1.0, 2.0)(self.post(acc), 1)[0])
+        mask = mmio(1.2, "w", "IMC", 0xFFFFFFFF)
+        acc = [mask, self.ev(1.5), self.ev(1.6)]
+        self.assertTrue(h.stalled(1.0, 1.3, 2.0)(self.post(acc), 1)[0])
         tail = acc + [mmio(1.7, "w", "RDT", 5)]
-        self.assertFalse(h.stalled(1.0, 2.0)(self.post(tail), 1)[0])
-        self.assertFalse(h.stalled(1.0, 2.0)(self.post([]), 1)[0])
+        self.assertFalse(h.stalled(1.0, 1.3, 2.0)(self.post(tail), 1)[0])
+        self.assertFalse(h.stalled(1.0, 1.3, 2.0)(self.post([mask]), 1)[0])
+
+    def test_stalled_starts_at_the_mask_write(self):
+        acc = [
+            mmio(1.1, "w", "RDT", 5),
+            mmio(1.2, "w", "IMC", 0xFFFFFFFF),
+            self.ev(1.5),
+        ]
+        self.assertTrue(h.stalled(1.0, 1.3, 2.0)(self.post(acc), 1)[0])
+        ok, detail = h.stalled(1.0, 1.3, 2.0)(self.post(acc[:1] + acc[2:]), 1)
+        self.assertFalse(ok)
+        self.assertIn("no IMC write", detail)
 
     def test_lsc_counts_only_after_the_toggle(self):
         acc = [mmio(1.0, "r", "ICR", h.ICR_LSC), mmio(5.0, "r", "ICR", 0x84)]
@@ -461,10 +473,26 @@ class DeferredMoreTest(unittest.TestCase):
             mmio(1.0, "w", "ITR", 976),
             mmio(2.0, "w", "CTRL", h.CTRL_RST),
             mmio(3.0, "w", "ITR", 195),
+            mmio(4.0, "r", "ITR", 195),
         ]
-        ok, detail = h.itr_writes(self.post(acc), 1)
+        ok, detail = h.itr_writes(3.5, 4.5)(self.post(acc), 1)
         self.assertTrue(ok)
         self.assertIn("[195]", detail)
+
+    def test_itr_writes_stop_at_the_harness_read_back(self):
+        acc = [
+            mmio(0.5, "r", "ITR", 0),
+            mmio(1.0, "w", "ITR", 195),
+            mmio(2.0, "w", "ITR", 976),
+            mmio(3.0, "r", "ITR", 976),
+            mmio(4.0, "w", "CTRL", h.CTRL_RST),
+        ]
+        ok, detail = h.itr_writes(2.5, 3.5)(self.post(acc), 1)
+        self.assertTrue(ok)
+        self.assertIn("2 writes, values [195, 976]", detail)
+        ok, detail = h.itr_writes(5.0, 6.0)(self.post(acc), 1)
+        self.assertFalse(ok)
+        self.assertIn("no harness ITR read", detail)
 
 
 class SetLinkTest(unittest.TestCase):

@@ -35,6 +35,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Provenance ledger | A record of where facts came from and what crossed the clean-room boundary; distinct from the evaluation answer key. |
 | Candidate | The generated specification or driver being evaluated. |
 | Reference driver | The existing driver selected as comparison evidence; it can contain defects. |
+| Corroborating implementation | Another OS's driver for the same device (Zephyr, NuttX, FreeBSD, …), used only as completeness evidence after its lineage and hardware version are checked; not an authority on the hardware. |
 | Evaluator | The preparation and testing side allowed to inspect reference material; separate from an isolated implementer. |
 | Guest | An operating system running inside a virtual machine or container environment, separate from the host. |
 | OCI image | A container image stored in the standardized Open Container Initiative format, with content identified by digests. |

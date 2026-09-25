@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # QEMU differential validation: an Intel e1000 driver from a spec
 
-Status: **approved design**, 2026-09-22 (user approved; decisions D1–D4 resolved below). No
-source has been pinned, no spec written, and nothing has run. This is the design for milestone L02 in the
-[implementation plan](IMPLEMENTATION-PLAN.md).
+Status: **approved design**, 2026-09-22 (user approved; decisions D1–D4 resolved below). At
+approval, no source had been pinned, no spec written, and nothing had run; for progress since,
+see the [implementation plan](IMPLEMENTATION-PLAN.md), whose milestone L02 this design governs.
+A proposed amendment to A6 is recorded there (L02d3); A6 below is unchanged until it is approved.
 
 ## Terms
 

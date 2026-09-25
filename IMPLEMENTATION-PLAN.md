@@ -5,7 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 # Driver specification and validation: remaining implementation plan
 
-Revision: 2026-09-20. No experiment launched by this plan.
+Revision: 2026-09-25 (L02 remaining units revised after a Claude–Codex consultation; the user
+approved the changes). Earlier revision: 2026-09-20. No experiment launched by this plan.
 
 ## Terms
 
@@ -61,6 +62,10 @@ separate, deferred outcomes. The current spec's incomplete documentary review re
 using it diagnostically cannot change its frozen acceptance result.
 
 ## Conventions and authorization
+
+The bullets below were written for L01 in the 2026-09-20 revision and are kept as written;
+branch, review and check rules for current work are in [AGENTS.md](AGENTS.md) and the L02
+conventions.
 
 - Name the working conversation after its active milestone: `L01 — Implement and verify the Linux driver`
   for the immediate engineering pass. If the harness offers no
@@ -248,7 +253,10 @@ From L02e on, each unit keeps a lab-notebook chapter at `notebook/<unit>.md`, in
 serves as that skill's process log.
 
 Dependencies: L02a → L02b → L02c → L02e → L02f → L02g; L02d needs only L02a and may run in
-parallel with L02b–L02c.
+parallel with L02b–L02c, and L02f also needs L02d (all of L02d1–L02d3). L02s (spec revision
+5) needs L02e and may run in parallel with L02d; L02f3's feedback builds on it.
+Revised 2026-09-25 (user approved, after a Claude–Codex consultation): L02d3 added, L02s made
+a unit, L02f split in three, and L02f and L02g report two separate decisions.
 
 ### L02a — Pin sources and write the blind requirement list
 
@@ -290,7 +298,7 @@ parallel with L02b–L02c.
 
 ### L02d — Build the QEMU harness and prove it on the reference driver
 
-- **Outcome:** O3 and the harness half of A3, A4, and A6, before any candidate exists.
+- **Outcome:** O3 and the harness half of A3, A4, and A6, before evaluating the candidate.
 - **Steps:** build a v6.12 x86-64 kernel on the test host with the reference `e1000` as a
   module; a busybox initramfs with the scenario scripts; a peer guest on a point-to-point
   socket network; per-run capture of register traces, packets, console, and verdicts. Run
@@ -301,8 +309,9 @@ parallel with L02b–L02c.
   run with identities.
 - **Review:** `review-swarm` on the harness code, plus a fresh reviewer on whether each
   scenario actually exercises what it claims (for example, that a ring-wrap run really wraps).
-- **Size:** one to two sessions; split point: boot-and-capture first, scenarios and mutations
-  second. Split 2026-09-24 at that point into two units:
+- **Size:** originally estimated at one to two sessions, split point boot-and-capture first,
+  scenarios and mutations second; split 2026-09-24 at that point into L02d1 and L02d2. L02d3
+  was added 2026-09-25, so L02d now comprises three separately checkpointed units:
 - **L02d1 — boot and capture.** Status: `complete` 2026-09-24
   ([evidence](evidence/L02d1.md), [notebook](notebook/L02d1.md)). One command on the test
   host boots the DUT (reference `e1000`) and a virtio-net peer, runs `smoke` (probe, MAC,
@@ -318,7 +327,39 @@ parallel with L02b–L02c.
   per-phase labels, manual-based trace rules, five planted defects (four detected; m1 an
   equivalent mutation). Review fixes applied and unit-tested but **not yet run on the host
   or reviewed**; the evidence file lists the four remaining steps. Open limitations there,
-  notably C9: most checks never shown able to fail.
+  notably C9: most checks never shown able to fail. Finishing the unit means those four steps
+  only; C9 is L02d3's.
+- **L02d3 — check qualification.** Status: `pending`; added 2026-09-25 (user approved,
+  reversing L02d2's decision not to take up C9). Needs L02d2 complete; must finish before any
+  candidate run. Design §7: before trusting a test, a planted defect must make it fail. For
+  L02 this plan adopts the rule the deferred plan states for physical checks: **qualify checks
+  before inspecting candidate execution results**, so that the candidate's results cannot shape
+  which defects are chosen.
+  - **Steps:** freeze the claim set first, the checks whose PASS L02f will cite as evidence
+    about the candidate. Plant defects for those claims, starting from the ones L02d2's open
+    limitations name (pad bit cleared with no software padding, TDLEN one short, LSC left out
+    of IMS, ITR never written, no post-reset delay) and adding any needed for the rest. A
+    defect must violate the claim it tests: "ITR never written" is legal under the manual
+    (ITR = 0 disables throttling) and "LSC left out of IMS" can be masked by polling, so each
+    names its exact claim or is dropped from the defect set with the reason kept, as m1 was.
+  - **Record:** a short table in the evidence file: claim → the defect that made its check
+    fail → run ID, or `unqualified`, `unobservable` or `insensitive` with the reason. Each row
+    makes recoverable that the stimulus occurred and the named assertion failed for that reason
+    (not total loss of connectivity), that the valid control passed on the same harness
+    revision, and the module and harness identities. Existing run identities carry most of
+    this; no new framework. A timing check that no defect can fail is a finding, not a failure
+    of the unit.
+  - **Accept:** the claim set frozen before any candidate run; every claim qualified or
+    labeled with its reason; unqualified checks may be reported in L02f but not cited as
+    qualified evidence, and unsupported mandatory design claims stay shortfalls. Qualification
+    is claim-specific: it shows sensitivity to that defect under the recorded conditions, not
+    completeness against every violation.
+  - **Review:** `review-swarm` on any harness change, plus a fresh reviewer (Codex through
+    `consult`, fresh session) reading the raw valid and defective runs, not only the table.
+  - **Proposed A6 amendment (needs design approval):** "Each validated non-equivalent planted
+    defect is detected by at least one scenario or trace check; equivalent mutations are
+    reported separately as valid controls." Until approved, report m1 against the literal A6
+    as a discrepancy; do not reinterpret it.
 
 ### L02e — Implement, build, and review the candidate
 
@@ -335,24 +376,54 @@ parallel with L02b–L02c.
   several spec gaps are open for L02f or the next spec revision; spec §5.4/§9.2 (PSCON bit 11)
   needs amending.
 
+### L02s — Spec revision 5
+
+- **Outcome:** a reviewed spec revision 5 that amends §5.4 G4 and §9.2 to set PSCON (PHY
+  register 16) bit 11, per the L02e spec error (manual §13.7.12, Table 13-31).
+- **Steps:** a source-backed correction in a new working copy; review of the affected claims
+  (`spec-verifier`); a new hash and its relation to revision 4 recorded. Spec only: the
+  candidate already sets the bit after its L02e repair. Revision 3's recall result stays as
+  measured on revision 3.
+- **Size:** small; may run alongside L02d3.
+
 ### L02f — Differential run, repair, and feedback
 
-- **Outcome:** O4, O5, A5, A7.
-- **Steps:** run the L02d suite against the candidate; compare traces with the reference by
-  required operation and order; classify each divergence with the manual as tie-breaker; repair
-  within the remaining repair cap; fold every `[emulated]` result and spec gap into a versioned
-  spec working copy.
-- **Accept:** every scenario result recorded; failures repaired or recorded as open findings;
-  evidence separates spec gaps, spec errors, implementation errors, and model limitations.
-- **Size:** one session; long runs split at stored-run boundaries.
+- **Outcome:** O4, O5, A5, A7. Split 2026-09-25 into three units, each one session.
+- **L02f1 — initial run and attribution.** Zero repair authority. Freeze and record the
+  candidate, harness, kernel, configuration and QEMU identities before execution, and keep the
+  first results before any repair. Run the L02d suite against the candidate; compare traces
+  with the reference by required operation and order; label each divergence with design §6's
+  labels (`bug`, `benign`, `suspect`, `ref-issue`), manual as tie-breaker, alongside its cause
+  (spec gap, spec error, implementation error, model limitation). Every scenario gets a
+  disposition, including not-run and error; an unexplained reference failure blocks judging
+  the affected candidate behavior (A4).
+- **L02f2 — bounded repair and retest.** Skipped if nothing needs repair. Gated on the user
+  choosing the repair budget and the implementer (L02e's cap is spent). Clean-side repair
+  briefs carry only permitted requirements and observations, never reference or QEMU source,
+  followed by review and a command-log audit. Rebuild and rerun the repaired candidate against
+  the qualified suite, keeping each repair attempt, its artifact identities and its results. A
+  harness change requalifies the checks it touches (L02d3).
+- **L02f3 — spec feedback and reverification.** Fold every `[emulated]` result and spec gap
+  into a versioned spec working copy built on L02s, and reverify the changed claims.
+- **Accept, reported as two decisions:** *evaluation complete* (every scenario result recorded,
+  failures repaired or recorded as open findings, evidence separating spec gaps, spec errors,
+  implementation errors and model limitations); and *candidate qualified for the declared
+  scope* (the required checks pass, each is qualified in L02d3, no blocking finding is
+  unresolved, and no unresolved mandatory claim remains; any such claim withholds
+  qualification and is listed as a shortfall). The first can be met while the second is not.
 
 ### L02g — Final check against the design
 
 - **Outcome:** confirm A1–A7 together, including interactions between units.
 - **Steps:** re-run the full suite against the final candidate and the reference from a clean
-  checkout; check each acceptance criterion against its evidence; decide whether the
-  `[emulated]` class goes into `SPEC-FORMAT.md` and the evidence model, based on how it was used.
-- **Accept:** each criterion has evidence or an explicitly recorded shortfall.
+  checkout; audit final artifact identities, qualification coverage, the revised spec's review,
+  and the repair audit; check each acceptance criterion against its evidence; decide whether
+  the `[emulated]` class goes into `SPEC-FORMAT.md` and the evidence model, based on how it was
+  used (a separate unit if that change affects the format's consumers or checks). New
+  engineering work found here goes to a named unit.
+- **Accept:** the same two decisions as L02f, over A1–A7: evaluation complete (each criterion
+  has evidence or an explicitly recorded shortfall), and candidate qualified for the declared
+  scope, which any unresolved mandatory claim withholds.
 
 ## What is deferred from the immediate path
 
@@ -770,19 +841,12 @@ Proposed evidence `evidence/P01.md`; status pending.
 
 ## Checks to use during execution
 
-From the repository root, run registration/privacy checks and `git diff --check` for documentation.
-For code changes, run the affected suites and the configured `.github/workflows/checks.yml` steps
-before pushing. Known commands include:
+From the repository root, run the checks [AGENTS.md](AGENTS.md#checks) lists (the same steps
+as `.github/workflows/checks.yml`, including the e1000 harness tests and the portability
+scanner) before every checkpoint commit, plus `git diff --check` for documentation. The ENC28J60
+ledger check is not in CI; run it when the ledger or its lock is touched:
 
 ```sh
-python3 utilities/check-skill-registration.py
-python3 utilities/check-no-private-paths.py
-python3 -m unittest discover -s skills/os-investigator/tests
-python3 -m unittest discover -s skills/cleanroom-implementer/tests
-python3 -m unittest discover -s skills/board-expert/tests
-python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
-uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
-uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 uv run --with pyyaml python3 evals/enc28j60/ledger_check.py evals/enc28j60/ledger.yaml --lock evals/enc28j60/ledger.lock
 ```
 
@@ -832,25 +896,25 @@ pretending the pilot plan completes an unspecified platform-wide system.
 
 ## Next session
 
-**The work is moving to its own repository (user, 2026-09-24): read
-[TRANSITION.md](TRANSITION.md) first.** L02a, L02b, L02c, L02e and L02d1 are complete
-([L02a](evidence/L02a.md), [L02b](evidence/L02b.md), [L02c](evidence/L02c.md),
-[L02e](evidence/L02e.md), [L02d1](evidence/L02d1.md)); L02d2 is in progress. Do not start two
-units in one session. Read [notebook/index.md](notebook/index.md) first.
+The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
+the move. L02a, L02b, L02c, L02e and L02d1 are complete ([L02a](evidence/L02a.md),
+[L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
+[L02d1](evidence/L02d1.md)); L02d2 is in progress. Do not start two units in one session. Read
+[notebook/index.md](notebook/index.md) first.
 
-- **L02d2 (resume first; L02f needs it):** finish the four steps in the
+- **L02d2 (resume first):** finish the four steps in the
   [evidence file's Status](evidence/L02d2.md#status): host runs of the fixed harness
-  (reference twice, five defects), confirm the new checks, a fresh review of the fixes, then
-  the checkpoint. Private run `e1000-l02d2-20260924-01`.
-- **L02f (after L02d2):** the differential run of `e1000_l02` (run `e1000-l02e-20260924-01`,
-  `candidate/`, SHA-256 `673e4787…402be74c`) against the reference. The candidate must be
-  rebuilt against the harness kernel's tree (the L02e build tree is the same one). The repair
-  cap for L02e is spent; L02f has its own repair budget.
-- **Spec revision 5 (whenever convenient, before L02f's feedback):** amend §5.4 G4 and §9.2 to
-  set PSCON bit 11, per the L02e spec-error gap.
+  (reference twice, five defects), confirm the new checks, a fresh review of the fixes (Codex
+  through `consult` in a fresh session, given the fixes, the original findings and the
+  post-fix runs), then the checkpoint. Private run `e1000-l02d2-20260924-01`. Its early-stop
+  checkpoint is commit `d9ddf68` on `main`; the unit continues on a new topic branch from
+  `origin/main`.
+- **L02d3 (after L02d2, before any candidate run):** check qualification, as described in L02d.
+- **L02s (any time after L02e; may run alongside L02d3):** spec revision 5, PSCON bit 11.
+- **L02f1 → L02f2 → L02f3 (after L02d3):** the differential run of `e1000_l02` (run
+  `e1000-l02e-20260924-01`, `candidate/`, SHA-256 `673e4787…402be74c`) against the reference.
+  The candidate must be rebuilt against the harness kernel's tree (the L02e build tree is the
+  same one). L02f2 needs the user's repair budget and implementer choice.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).
-- Branches: L02d2 is on `driver-porting/l02d2`, cut from `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1),
-  committed locally and not pushed; its early-stop checkpoint commit is the one that adds
-  this line.

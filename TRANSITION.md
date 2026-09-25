@@ -93,7 +93,8 @@ before L02f's feedback. The plan's "Next session" section says the same.
 
 - `driver-porting/l02d2` — L02d2's early-stop checkpoint and this document, on top of
   `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1).
-  Pushed to public-skills 2026-09-25 and carried into this repository's history.
+  Carried into this repository's history as `d9ddf68`; the public-skills branch was deleted
+  on 2026-09-25 after the move, so that is now the only copy.
 - `driver-porting/pixel10-spec`, `-v2`, `-v3` — kept on purpose (user decision 2026-09-24);
   do not prune them in a branch cleanup.
 - No open pull requests for this work at the time of writing.

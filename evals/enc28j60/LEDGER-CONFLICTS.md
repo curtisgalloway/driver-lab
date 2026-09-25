@@ -892,7 +892,7 @@ with the reclass). The leak scan over `ledger.yaml`, `SCORING-POLICY.md`, `LEDGE
 
 ## Pre-freeze repairs 2026-09-20
 
-An outside reviewer read the ledger at commit `01ca0ae` read-only, reproduced the clean mechanical
+An outside reviewer read the ledger at commit [`01ca0ae`](https://github.com/curtisgalloway/public-skills/commit/01ca0ae) read-only, reproduced the clean mechanical
 gate and the 161-row denominator, and **refused the freeze on semantic grounds**: the atomic-row
 contract, the overlap contract, and several claims stronger than their evidence. This pass clears
 those blockers. Every change below names the row or file it touches and the finding it answers.
@@ -1126,7 +1126,7 @@ it carries is the adjudicator's to sign.
 
 ## Pre-freeze repairs, second pass 2026-09-20
 
-The same outside reviewer read the ledger again at commit `f70e1ac`, read-only, reproduced the
+The same outside reviewer read the ledger again at commit [`f70e1ac`](https://github.com/curtisgalloway/public-skills/commit/f70e1ac), read-only, reproduced the
 clean mechanical gate and the 163-row denominator, and **again refused the freeze**: the atomic
 inventory had counterexamples under its own written test, PHY-033 duplicated PHY-020, INIT-014 had
 acquired a factual regression during the first pass's narrowing, TX-016's formulation contradicted
@@ -1273,7 +1273,7 @@ freeze is the adjudicator's step, and the two held-back weights are still open.
 
 ## Pre-freeze repairs, third pass 2026-09-20
 
-The same outside reviewer read the ledger again at commit `4516643`, read-only, reproduced the
+The same outside reviewer read the ledger again at commit [`4516643`](https://github.com/curtisgalloway/public-skills/commit/4516643), read-only, reproduced the
 clean mechanical gate and the arithmetic (203 active rows, 141 composites, 62 atomic, 689 declared
 facts, 162 recall-eligible rows), accepted the row repairs and the explicit operating profile, and
 **again refused the freeze** — this time entirely about the new scoring scheme. The finding that

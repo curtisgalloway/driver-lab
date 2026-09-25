@@ -16,7 +16,7 @@ See the [glossary](../../../GLOSSARY.md) and
 
 ## Scope
 
-Started from clean `main` at `d392553`, after verifying PR 71 merged and its CI passed.
+Started from clean `main` at [`d392553`](https://github.com/curtisgalloway/public-skills/commit/d392553), after verifying PR 71 merged and its CI passed.
 Work branch: `driver-porting/m02a-export`. This session-sized unit implements source-export
 machinery and transfer checks. It does not complete M02a: fixture configuration, semantic
 audit, API packaging, minimal scaffolding and offline placeholder compilation remain pending.
@@ -97,7 +97,7 @@ harness-isolation test. Models, caps and experimental reviewers remain unselecte
 
 ## Independent implementation review
 
-Review scope: the five working-tree files against `d392553`, including new files. The four
+Review scope: the five working-tree files against [`d392553`](https://github.com/curtisgalloway/public-skills/commit/d392553), including new files. The four
 reviewers ran in two waves because only three worker slots were available; each received only
 its own mandate. All four completed, the mechanical quote check passed all three submitted
 findings, and a separate referee merged the duplicate enumeration finding. Locations in the

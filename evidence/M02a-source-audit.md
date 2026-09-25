@@ -18,7 +18,7 @@ See the [glossary](../../../GLOSSARY.md), [export evidence](M02a-export.md), and
 
 **Reviewed audit finding checkpoint; full M02a remains incomplete.** This is evaluator-only evidence, not an implementer
 input or approval of the exported tree. Started from clean `driver-porting/m02a-export` at
-`e74a4c0`. A fresh fetch left `origin/main` at `d392553`; the branch had no open PR.
+[`e74a4c0`](https://github.com/curtisgalloway/public-skills/commit/e74a4c0). A fresh fetch left `origin/main` at [`d392553`](https://github.com/curtisgalloway/public-skills/commit/d392553); the branch had no open PR.
 The source archive and exporter remain unchanged. No candidate, build, hardware test, or
 experimental review was launched. The frozen preparation contract and documentary ledger remain
 unchanged.

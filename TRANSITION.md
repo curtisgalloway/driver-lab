@@ -86,7 +86,7 @@ before L02f's feedback. The plan's "Next session" section says the same.
 ## Branches and uncommitted state
 
 - `driver-porting/l02d2` — local only, not pushed: L02d2's early-stop checkpoint and this
-  document, on top of `origin/main` at `d63e3f1`. Push it or carry it into the new
+  document, on top of `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1). Push it or carry it into the new
   repository's history; either way, its commits are the only copy of this session's work.
 - `driver-porting/pixel10-spec`, `-v2`, `-v3` — kept on purpose (user decision 2026-09-24);
   do not prune them in a branch cleanup.

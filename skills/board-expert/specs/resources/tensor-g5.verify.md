@@ -57,7 +57,7 @@ bytes. See the [glossary](../../../../../../GLOSSARY.md).
 
 This record reconciles 4 scoped claims with the earlier record. Its summary mixes
 fresh results and historical carry-forward; it must not be presented as a fresh full audit.
-The baseline record and specification are preserved in Git at `e6499c3dff8de50e94f7325f77b1c0299ce16a4f` under the same
+The baseline record and specification are preserved in Git at [`e6499c3dff8de50e94f7325f77b1c0299ce16a4f`](https://github.com/curtisgalloway/public-skills/commit/e6499c3dff8de50e94f7325f77b1c0299ce16a4f) under the same
 paths, with their hashes above. Their detailed rationales and source-access results remain
 historical evidence. The new source list describes the scoped readings only.
 

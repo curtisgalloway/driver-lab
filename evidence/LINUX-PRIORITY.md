@@ -18,7 +18,7 @@ See the [glossary](../../../GLOSSARY.md) and [revised plan](../IMPLEMENTATION-PL
 On 2026-09-20 the user requested an independent assessment of whether directly writing and
 verifying the Linux driver would serve the goal as well as the extensive verification
 preparation. After receiving the assessment, the user directed a revision of the larger plan
-to prioritize the Linux driver mechanism. Starting revision: `2e6fc69`, after the source-audit
+to prioritize the Linux driver mechanism. Starting revision: [`2e6fc69`](https://github.com/curtisgalloway/public-skills/commit/2e6fc69), after the source-audit
 checkpoint; no production code changes are part of this revision.
 
 The assessment distinguished practical confidence from causal comparison. Independent driver

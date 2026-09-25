@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Review of VALIDATION-PROPOSAL.md
 
 Status: review for discussion, 2026-09-19. Reviewer: Claude Fable 5.1 in Claude Code, working
-from the repository at `315b12b` plus the untracked proposal. Every claim about existing behavior
+from the repository at [`315b12b`](https://github.com/curtisgalloway/public-skills/commit/315b12b) plus the untracked proposal. Every claim about existing behavior
 below was checked against the file it names; nothing was taken from the proposal's own description
 of the machinery.
 
@@ -56,7 +56,7 @@ delivery to ENC28J60 stages B, A, C, D in that order, and hold the rest until th
 | 3. No bounded automatic resolution workflow | Confirmed for accuracy repair (*revised*) | `cleanroom-spec/SKILL.md` line 178 bounds repair at two FAILs per section, but that verifier checks the clean-room wall, not accuracy (`spec-verifier` lines 207 to 213 say so). Accuracy repair is unbounded for every kind: `spec-verifier` line 137, "after a fix, run again; the loop ends at zero FAIL." Agreed wording for the proposal: "Clean-room boundary repair already stops after two failures on the same section. Accuracy verification lacks a consistent bounded repair workflow across spec kinds; structured expert feedback is also absent." |
 | 4. No contract linking requirements to tests and evidence | Confirmed | Nothing in the repository links a test to a requirement ID. `LEDGER-FORMAT.md` § "What this format cannot do" already concedes this. |
 | 5. Overlay precedence cannot settle facts or publication | Confirmed | `VENDOR-GUIDE.md` line 21: "Later layers win on conflicting scalars." Line 55: two overlays in one layer produce a warning and an undefined order. Nothing distinguishes a configuration override from a factual contradiction. |
-| 6. Verification records are overwritten; no longitudinal record | Partly overstated (*revised*) | `spec-verifier` step 7 says "replacing any earlier record," and `git log` shows seven verification rounds for `pixel10` and `tensor-g5` between `3a1a2ad` and `8313d9c`. But seven rounds is not seven archived attempts: `tensor-g5.verify.md` line 6 says the current record consolidates rounds 5 to 7, and `spec-verifier` line 241 makes committing conditional on the project. Agreed wording: "Git preserves committed verification snapshots. Validation must additionally identify and retain every attempt, its input revisions, scope, verdicts, and evidence references. A later attempt must not replace an earlier attempt's evidence." Git is an acceptable backend when the workflow keeps every attempt. |
+| 6. Verification records are overwritten; no longitudinal record | Partly overstated (*revised*) | `spec-verifier` step 7 says "replacing any earlier record," and `git log` shows seven verification rounds for `pixel10` and `tensor-g5` between [`3a1a2ad`](https://github.com/curtisgalloway/public-skills/commit/3a1a2ad) and [`8313d9c`](https://github.com/curtisgalloway/public-skills/commit/8313d9c). But seven rounds is not seven archived attempts: `tensor-g5.verify.md` line 6 says the current record consolidates rounds 5 to 7, and `spec-verifier` line 241 makes committing conditional on the project. Agreed wording: "Git preserves committed verification snapshots. Validation must additionally identify and retain every attempt, its input revisions, scope, verdicts, and evidence references. A later attempt must not replace an earlier attempt's evidence." Git is an acceptable backend when the workflow keeps every attempt. |
 
 Net: gaps 2, 3, 4, 5 and 6 justify new rules and checks, though small ones. Gap 1 is already
 documented and the proposal acknowledges it (its lines 43 to 46).
@@ -85,7 +85,7 @@ These close real gaps and none of them needs a claim ID, a manifest, or a new sk
 2. **The repair bound for every kind.** Copy `cleanroom-spec`'s two-FAILs rule into `spec-verifier`
    step 8, so the unbounded "run again until zero" loop ends the same way for board and anchored
    specs. The commit history is the argument: the fifth and sixth passes on `tensor-g5` found
-   failures inside the previous pass's fixes (`7e7d9c2`, `a27ec94`).
+   failures inside the previous pass's fixes ([`7e7d9c2`](https://github.com/curtisgalloway/public-skills/commit/7e7d9c2), [`a27ec94`](https://github.com/curtisgalloway/public-skills/commit/a27ec94)).
 3. **A run block in the record frontmatter.** Replace the free-text `verifier:` line with a mapping:
    model identifier as exposed, harness, skill file hashes, budget, timestamps, and any seed. Git
    keeps the history; the block makes each historical record comparable. This is the proposal's

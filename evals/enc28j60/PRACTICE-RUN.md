@@ -12,7 +12,7 @@ No implementation or hardware result is claimed.
 
 The user chose a fresh Claude practice context. Claude Code 2.1.278 exposed model
 `claude-opus-5[1m]`; its relationship to the ledger authors is unknown. Generation used skill
-revision `42dab3ef6ef58340506bd71b6a0902954778947f`. The 120,897-byte candidate has SHA-256
+revision [`42dab3ef6ef58340506bd71b6a0902954778947f`](https://github.com/curtisgalloway/public-skills/commit/42dab3ef6ef58340506bd71b6a0902954778947f). The 120,897-byte candidate has SHA-256
 `516b7854e97fca4577d67922d2a49d174a80ebae9df9956d3a0738788f76bd06` and was not repaired during
 review. The frozen ledger, facts, policy and corpus manifest were not changed.
 

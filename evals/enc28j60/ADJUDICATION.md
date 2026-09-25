@@ -267,8 +267,8 @@ to G)".
    atomic row" (y/n). Proposed: y. If n, INIT-002 and RX-010 return to group C.
 6. Still open from the log, for the record: the drafts' verbatim driver quotations (section 7;
    the drafts stay unpublished in the session scratchpad and are not in this repository). The
-   corpus.yaml section 6 corrections landed in commit `dfecb61`, and the checker gaps the review
-   listed landed in `a8c7b9b` and `c16d628`; neither needs a decision here.
+   corpus.yaml section 6 corrections landed in commit [`dfecb61`](https://github.com/curtisgalloway/public-skills/commit/dfecb61), and the checker gaps the review
+   listed landed in [`a8c7b9b`](https://github.com/curtisgalloway/public-skills/commit/a8c7b9b) and [`c16d628`](https://github.com/curtisgalloway/public-skills/commit/c16d628); neither needs a decision here.
 
 ## F. Residual overlap
 

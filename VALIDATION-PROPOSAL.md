@@ -104,7 +104,7 @@ Gaps and the resolved checker finding:
    every attempt, its input revisions, scope, verdicts, and evidence references. A later attempt
    must not replace an earlier attempt's evidence.
 7. The checker returned on a stale hash before checking the FAIL count, hiding failures behind a
-   stale-record warning. This bug was fixed in this branch in commit `4e4069a`; it is not open work.
+   stale-record warning. This bug was fixed in this branch in commit [`4e4069a`](https://github.com/curtisgalloway/public-skills/commit/4e4069a); it is not open work.
 
 ## 3. Architecture and ownership
 

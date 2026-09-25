@@ -115,7 +115,7 @@ using it diagnostically cannot change its frozen acceptance result.
 | Source sanitization | Export/transfer verified; five related-controller exclusions reviewed but not implemented; full audit and isolation incomplete. Deferred for L01. |
 | Preparation gates and reconstruction design | Existing protocols retained for a later spec-only experiment; [R1a trial draft](evals/enc28j60/RECONSTRUCTION-TRIAL.md) remains unchanged |
 | Paired generation, reconstruction, physical execution | Not run; no qualified runner or fixture established by these documents |
-| Checks at `de2bb68` | All `.github/workflows/checks.yml` unit suites: 228 tests, one skipped, no failures; board checker: nine existing verification warnings. PR 68 CI also passed. These were observed before planning, not rerun by Claude and not evidence of driver behavior. |
+| Checks at [`de2bb68`](https://github.com/curtisgalloway/public-skills/commit/de2bb68) | All `.github/workflows/checks.yml` unit suites: 228 tests, one skipped, no failures; board checker: nine existing verification warnings. PR 68 CI also passed. These were observed before planning, not rerun by Claude and not evidence of driver behavior. |
 
 Keep the corpus, ledger, scoring policy, fact lists, format, and lock unchanged. Additional
 execution requirements live outside that lock. A correction to the answer key requires a new
@@ -851,6 +851,6 @@ units in one session. Read [notebook/index.md](notebook/index.md) first.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).
-- Branches: L02d2 is on `driver-porting/l02d2`, cut from `origin/main` at `d63e3f1`,
+- Branches: L02d2 is on `driver-porting/l02d2`, cut from `origin/main` at [`d63e3f1`](https://github.com/curtisgalloway/public-skills/commit/d63e3f1),
   committed locally and not pushed; its early-stop checkpoint commit is the one that adds
   this line.

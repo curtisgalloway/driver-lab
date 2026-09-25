@@ -21,7 +21,7 @@ Do not supply it, its pin inventory, or its evidence record to an implementer.
 - Experiment: `enc28j60-reconstruction-trial-01`; preparation revision `M01-v1`.
 - Kind: historical-spec procedure trial. No generation, paired arm, repair, or fresh documentary
   review is included. Trial artifacts can never become either later paired arm.
-- Starting repository revision: `3d7eb2913551e0d462f0e22f4541c970b25af679`, clean topic branch.
+- Starting repository revision: [`3d7eb2913551e0d462f0e22f4541c970b25af679`](https://github.com/curtisgalloway/public-skills/commit/3d7eb2913551e0d462f0e22f4541c970b25af679), clean topic branch.
 - Predecessor: [R1a draft 1](../RECONSTRUCTION-TRIAL.md), preserved byte-for-byte; its check
   definitions, feature scope, exclusions, and attribution rules are incorporated below.
 - Candidate: historical run `enc28j60-practice-20260920-01`,

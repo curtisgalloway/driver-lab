@@ -16,7 +16,7 @@ implementation milestone or experiment has run.
 
 ## Scope and starting state
 
-Planning started at `7068a53` with a clean working tree. The changes are the plan, its plugin
+Planning started at [`7068a53`](https://github.com/curtisgalloway/public-skills/commit/0555d11) (now `0555d11`: a later public-skills history rewrite dropped commit signatures, not files) with a clean working tree. The changes are the plan, its plugin
 README link, shared glossary additions, and this record. The existing explanation commits are
 ancestors of this branch; they are not changes authored by this planning task.
 
@@ -84,7 +84,7 @@ Documentation-only changes; no implementation code or frozen input was edited.
 - PR 68 scope verified through GitHub: merged, head `docs/reconstruction-trial-preparation`,
   exactly the trial README, run guide, and trial preparation record.
 
-Historical checks at `de2bb68`, supplied to Claude as operator evidence: all 228 configured unit
+Historical checks at [`de2bb68`](https://github.com/curtisgalloway/public-skills/commit/de2bb68), supplied to Claude as operator evidence: all 228 configured unit
 tests ran, one skipped, no failures; registration/privacy/author-manifest/ledger checks passed;
 the board check had nine existing missing-verification warnings. GitHub CI run `35542319847`
 passed. These were not rerun for the planning-only edit and were not executed by Claude.

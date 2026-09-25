@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T15:56-07:00
+Updated: 2026-09-25T16:45-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,12 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02f2 — bounded repair and retest](L02f2.md)
+Entries: 2026-09-25T16:45-07:00 through 2026-09-25T16:45-07:00
+Outcome: in progress; blocked on a Codex outage before round 1.
+- The implementer runs under bubblewrap with a fresh Codex home; strace audits every read.
+- The sandbox is codified in `cleanroom-implementer` (`cleanroom_sandbox.sh`, `sandbox_audit.py`).
 
 ### [L02f1 — differential run and attribution](L02f1.md)
 Entries: 2026-09-25T15:06-07:00 through 2026-09-25T15:56-07:00

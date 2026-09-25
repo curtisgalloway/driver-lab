@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Curtis Galloway
+# SPDX-License-Identifier: Apache-2.0
+#
+# config.toml for a fresh Codex home used by a clean-room implementer run under
+# cleanroom_sandbox.sh (SKILL.md, "Tier 1 on Linux"). Copy it to <home>/config.toml
+# beside a copy of the operator's auth.json, and set the model the user chose.
+# Checked against codex-cli 0.157.0 with `codex exec --strict-config`; `codex features
+# list` names the current feature flags.
+#
+# Web search is off because the network cannot be: the agent must reach its model API.
+# The feature flags remove every tool that could fetch or delegate (apps, plugins, a
+# browser, computer use, subagents) and the agent's cross-session memory.
+
+model = "SET-ME"
+web_search = "disabled"
+approval_policy = "never"
+
+[features]
+apps = false
+browser_use = false
+browser_use_external = false
+computer_use = false
+in_app_browser = false
+plugins = false
+remote_plugin = false
+multi_agent = false
+image_generation = false
+memories = false
+hooks = false
+skill_search = false
+tool_suggest = false
+workspace_dependencies = false

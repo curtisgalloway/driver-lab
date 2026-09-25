@@ -76,6 +76,43 @@ iptables-allowlist approach works); every cited datasheet pre-fetched by the orc
 `docs/references/` so the implementer never needs the network. Scope the workspace so
 GPL-adjacent `third_party/` vendored code isn't in view either. A sandbox cannot be argued with.
 
+**Tier 1 on Linux: `scripts/cleanroom_sandbox.sh`.** Use it whenever the implementer runs on a
+host that also holds encumbered source (a test host with the reference driver, planted-defect
+copies, an emulator's source). It runs any agent CLI under bubblewrap, so the agent sees only
+the workspace (`/work`), its own state directory (`/agent-home`), its executables
+(`/opt/agent`), and read-only `/usr` and `/etc` with `/usr/src` and `/usr/lib/modules` hidden;
+`/home`, `/tmp` and the rest are empty, and the environment is cleared. strace logs every file,
+process and network syscall of the whole process tree.
+
+```
+cleanroom_sandbox.sh --workspace <ws> --home <fresh-agent-home> --tool-dir <agent-bin-dir> \
+    --log <run>/audit/<attempt>.strace --env CODEX_HOME=/agent-home -- \
+    codex exec --strict-config --skip-git-repo-check \
+      --dangerously-bypass-approvals-and-sandbox -m <model> --json - < brief.md > log.jsonl
+python3 sandbox_audit.py <run>/audit/<attempt>.strace --expect-read /work/<canary>
+```
+
+Four rules make it hold:
+
+1. **A fresh agent home, never the operator's.** The operator's `~/.codex` (or equivalent) holds
+   past sessions and memories, which may quote the very source being walled off. Copy only the
+   credential file into a new directory, and use `assets/codex-cleanroom-config.toml` for Codex:
+   web search, apps, plugins, browser, subagents and memory off.
+2. **The agent's own sandbox off, the outer one on.** Codex's sandbox cannot nest inside
+   bubblewrap and restricts writes, not reads; `--dangerously-bypass-approvals-and-sandbox` is
+   the documented flag for an externally sandboxed run.
+3. **Egress is audited, not blocked**, because the agent must reach its model API. The audit
+   lists every IP endpoint contacted; anything beyond the API and DNS is a finding to explain.
+4. **Prove the log covers the agent before trusting it.** Run a pilot that asks the agent to
+   read a canary file, and check `sandbox_audit.py --expect-read` finds it. The audit ignores
+   bubblewrap's setup processes (they touch host paths to build the sandbox), reports any
+   *successful* access outside the allowed roots as a finding (exit 1), and lists failed
+   attempts separately: a failed attempt means the wall held, and it is still worth reading.
+
+Credentials enter only the fresh home; never commit it or the logs from it. When an agent's
+CLI reports an auth failure, check the same command outside the sandbox before blaming the
+sandbox (observed 2026-09-25: a provider outage returned 401 for both).
+
 **Tier 2 — harness.** Ships in `assets/` and `scripts/`:
 
 1. Copy `scripts/cleanroom_hook.py` → `<workspace>/.agents/hooks/cleanroom_hook.py` and
@@ -210,6 +247,11 @@ spec is missing something. Sweep the gap file.
   names, not tool names, so a renamed or unfamiliar tool is still checked. Stdlib only.
 - `scripts/session_audit.py` — session and artifact auditor (imports the hook's policy/matcher so
   the two can never drift). Stdlib only.
+- `scripts/cleanroom_sandbox.sh` — Tier 1 on Linux: bubblewrap read isolation plus an strace
+  log of the whole process tree. Needs `bwrap` and `strace`.
+- `scripts/sandbox_audit.py` — audits that log: workspace reads and writes, programs run, network
+  endpoints, and any access outside the sandbox's allowed roots. Stdlib only.
+- `assets/codex-cleanroom-config.toml` — Codex config for the fresh agent home the sandbox uses.
 - `assets/cleanroom-policy.json` — shared policy: checkout roots, path/URL patterns, roles, log path.
 - `assets/antigravity-hooks.json` — `PreToolUse` hook wiring for `.agents/hooks.json`.
 - `assets/antigravity-permissions.json` — deny rules and permission mode: the capability-denial layer.

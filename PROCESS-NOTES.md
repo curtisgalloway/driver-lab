@@ -287,6 +287,12 @@ reason rests on a packet or register fact, look it up in the run before writing 
 Fix belongs in: project instructions (AGENTS.md, evidence-writing rule)
 Status: open
 
+### 2026-09-25T15:14-07:00 — instruction gap: resuming session had to search for the run store
+Status: fixed in AGENTS.md ("Run store location"): each user sets `run_store` in
+`~/.config/driver-lab/config.toml` (or `DRIVER_LAB_RUNS`), read by `utilities/run-store.py`;
+the path stays out of the repository, and an unconfigured store means asking the user, not
+searching. Recurred in L02f1, where the store was on another machine.
+
 ### 2026-09-25T15:48-07:00 — instruction gap: run store missing from the test host (recurrence)
 Chapter: [L02f1](notebook/L02f1.md)
 What happened: attributing the first candidate failure needed spec revision 4 and the manual,
@@ -310,3 +316,8 @@ Prevention: pin `IdentitiesOnly` with the one public key per target (`-i <key>.p
 `homelab-ssh` skill describes; the skill's notes assume the workstation's ssh config.
 Fix belongs in: the `homelab-ssh` skill (note that other hosts lack the workstation's pinning)
 Status: open
+
+### 2026-09-25T16:07-07:00 — instruction gap: run store missing from the test host (recurrence)
+Status: fixed in AGENTS.md ("Run store location") by the `docs/run-store-config` branch; the
+other half of its prevention (inputs copied to the test host when a unit is planned) is in the
+plan's L02f2 entry.

@@ -887,8 +887,16 @@ the move. L02a, L02b, L02c, L02e, L02d1–L02d3 and L02f1 are complete ([L02a](e
 [notebook/index.md](notebook/index.md) first.
 
 - **L02s (any time; before L02f3):** spec revision 5, PSCON bit 11.
-- **L02f2 (next; needs the user's repair budget and implementer choice):** repair the
-  candidate's E1 policy. The brief may carry only the observation "on the emulated device
+- **L02f2 (next):** repair the candidate's E1 policy. **Decided 2026-09-25 (user):**
+  implementer Codex (codex-cli 0.157.0) with model GPT-6 Astra, pinned explicitly at launch
+  (the local Codex config sets no model; confirm the exact model ID Codex accepts and record
+  it); repair budget 3 rounds. Round 1 is E1 only, then an isolated rerun of all ten
+  scenarios; rounds 2 and 3 take failures found past probe; stop early after a round that
+  fixes nothing new; a failure traced to a spec error goes to L02f3, not a repair. Split
+  after round 1 if the unit outgrows a session. Isolation: Codex works in a fresh workspace
+  holding only the spec, manual, candidate and kernel `include/` and `Documentation/`, with
+  no read access elsewhere (this host also holds the Linux e1000 source and planted-defect
+  copies); audit its command log, first checking that the log records every file read. The brief may carry only the observation "on the emulated device
   EECD reads 0x188 at rest and after EE_REQ is written 0: EE_GNT never reads 0" and the spec
   and manual; not reference or QEMU source. Then rerun every scenario isolated and compare
   past probe for the first time ([evidence/L02f1.md](evidence/L02f1.md), "For L02f2"). Claim

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T18:12-07:00
+Updated: 2026-09-25T18:19-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,15 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02f2b — harness fix H1 and Q15 requalification](L02f2b.md)
+Entries: 2026-09-25T18:05-07:00 through 2026-09-25T18:19-07:00
+Outcome: complete; a 3 s settling interval after carrier; Q15 requalified (reference and
+candidate 10/10, d15 4/4 FAIL).
+- Traffic already ran through shutdown; only the settling interval was missing.
+- The old harness still failed the candidate 4 of 8 at the same load (control).
+- The reference's leftover burst comes before its carrier-up RCTL write, at the end of the
+  hold from open.
 
 ### [L02s — spec revision 5](L02s.md)
 Entries: 2026-09-25T17:49-07:00 through 2026-09-25T18:12-07:00
@@ -97,7 +106,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   code review.
   [L02d3](L02d3.md) — qualified 22 of 26 claims with planted defects; the 1 µs reset rule
   stays unqualified. [L02f2](L02f2.md) — the reverse: a check that fails a correct driver at
-  random (H1, `down-during-traffic`).
+  random (H1, `down-during-traffic`); [L02f2b](L02f2b.md) fixed it and requalified Q15.
 - **Model departures from the manual:** [L02d2](L02d2.md) — no overrun drops, TX drains with
   the link down; [L02f1](L02f1.md) — EE_GNT always 1 and FWE = 00b in EECD;
   [L02f2](L02f2.md) — a one-second receive hold after every RCTL write.

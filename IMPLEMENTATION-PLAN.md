@@ -174,7 +174,7 @@ their cost. L01 outputs do not retroactively satisfy frozen trial or paired-run 
 ## L02 — An e1000 driver from a spec, tested differentially in QEMU
 
 **Status:** `in_progress`; L02a and L02b complete 2026-09-23, L02c, L02e and L02d1 2026-09-24,
-L02d2, L02d3, L02s, L02f1 and L02f2 2026-09-25; L02f2b next, then L02f3, which closes L02.
+L02d2, L02d3, L02s, L02f1, L02f2 and L02f2b 2026-09-25; L02f3 next, which closes L02.
 Design: [QEMU-DIFFERENTIAL.md](QEMU-DIFFERENTIAL.md), approved 2026-09-22 with decisions D1–D4
 resolved. Runs alongside L01, whose hardware unit waits on the fixture. Outcomes O1–O5 and
 acceptance criteria A1–A7 are the design's.
@@ -376,8 +376,17 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
   `review-swarm` (13 findings, fixed or recorded) and a fresh artifact reviewer (14, all
   fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
   `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
-- **L02f2b — harness fix H1 and Q15 requalification.** Added 2026-09-25 (user decision); a
-  small unit that runs before L02f3. Revised the same day (see
+- **L02f2b — harness fix H1 and Q15 requalification.** Status: `complete` 2026-09-25
+  ([evidence](evidence/L02f2b.md), [notebook](notebook/L02f2b.md)). A fixed 3 s settling
+  interval after carrier, confirmed from traces, and a trace-checked precondition that the
+  recovery pings start after the receive hold. In isolated runs eight at a time the
+  reference and the candidate passed `down-during-traffic` 10 of 10 each and d15 failed it
+  4 of 4 for the intended reason; the old harness failed the candidate 4 of 8 at that load.
+  Q15 requalified, still "not traffic-specific"; the candidate's Q15 result is PASS. One
+  independent reviewer read the diff and the run artifacts. Open limitations: the interval
+  rests on one QEMU version and host; the other nine scenarios run on the new harness only in
+  L02f3's acceptance stage.
+  Added 2026-09-25 (user decision); a small unit that runs before L02f3. Revised the same day (see
   [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)); the
   earlier fix, stopping both floods before the interface goes down, is withdrawn.
   - **Fix:** keep traffic running through shutdown; the harness already stops both floods
@@ -449,8 +458,6 @@ unfinished, not waived or complete.
 **Active blockers:**
 
 - **L01 second unit:** waits on fixture wiring ([evidence/L01.md](evidence/L01.md)).
-- **L02 Q15:** no usable result until L02f2b fixes H1 and requalifies it; until then neither
-  L02f decision can be met.
 
 ## Decisions and bounded investigations
 
@@ -494,28 +501,21 @@ Backlog items owned by deferred milestones (M02/M05, M11) are in the
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1, L02f2 and L02s are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1, L02f2, L02f2b and L02s are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
 [L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md),
-[L02f2](evidence/L02f2.md), [L02s](evidence/L02s.md)). Do not start two units in one session;
+[L02f2](evidence/L02f2.md), [L02f2b](evidence/L02f2b.md), [L02s](evidence/L02s.md)). Do not start two units in one session;
 in orchestrated mode each unit is one fresh subagent and one PR. Read
 [notebook/index.md](notebook/index.md) first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **L02f2b (next):** harness fix H1 and Q15 requalification (user decision, 2026-09-25;
-  fix revised the same day). `down-during-traffic` pings inside the model's receive hold
-  after a flood that leaves frames behind, so a driver that reports carrier promptly fails it
-  at random ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Keep traffic running through
-  shutdown; add a documented, bounded settling interval after carrier returns and before the
-  recovery pings, longer than the 1 s receive hold plus a margin and confirmed from traces;
-  no ping retry. Requalify Q15 as the L02f2b entry lists (repetition count declared before
-  looking, d15 still failing for the intended reason) and rerun `down-during-traffic` on the
-  candidate and the reference. One independent reviewer reads the diff and the run
-  artifacts. Until then Q15 has no usable result and neither L02f decision is met.
+- **L02f2b (done):** H1 fixed with a 3 s settling interval after carrier; Q15 requalified
+  (reference and candidate 10/10 in isolated runs, d15 4/4 FAIL); the candidate's Q15 result
+  is PASS ([evidence/L02f2b.md](evidence/L02f2b.md)). Q15 no longer blocks the L02f decisions.
 - **Sandbox decisions (settled by the user, 2026-09-25):** audit-only egress is accepted for L02
   (D7) and readable `/usr` and `/etc`, with kernel source and module trees hidden, are ratified
   (D8); the copied Codex credential in the L02f2 run has been deleted (that run's ledger).
-- **L02f3 (after L02f2b), the last L02 unit:** spec feedback on top of revision 5
+- **L02f3 (next), the last L02 unit:** spec feedback on top of revision 5
   (`c587f41d…d01b`): V1's E1 gap (the round-1 implementer filed it too: how long to wait for
   EE_GNT, and what to do when it stays set), the FWE observation, whether the spec should say
   anything about flow control (V10), and L02s's carried notes: §4.7 maps TNCRS to a
@@ -524,7 +524,8 @@ in orchestrated mode each unit is one fresh subagent and one PR. Read
   gigabit-half-duplex contradictions in G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the
   L02c leak-scan whitelist and provenance map onto the test host first; L02s had to scan without
   them. Then the acceptance stage (formerly L02g): one final isolated reference/candidate run
-  set on the final harness, one A1–A7 acceptance table (including how the revised spec meets or
+  set on the final harness (harness `57ef191b…` from L02f2b, unless L02f3 changes it; all ten
+  scenarios, since L02f2b reran only `down-during-traffic`), one A1–A7 acceptance table (including how the revised spec meets or
   falls short of A1's two-reading requirement), and an independent review; report *evaluation
   complete* and *candidate qualified* separately and close with explicit shortfalls (Q18,
   Q24–Q26 unqualified) rather than extending the campaign.

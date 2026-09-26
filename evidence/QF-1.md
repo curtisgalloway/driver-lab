@@ -80,3 +80,20 @@ changed.
 
 The declaration is in the run's ledger and here; this section is committed before the
 first run.
+
+**Round `q2` (declared 00:34, after `q1`'s results, before any `q2` run).** d21 was not
+specific: QEMU's model does not pad short frames, so the peer's 42-byte ARP frames reach
+the driver at 42 bytes and one byte short kills ARP and every ping (results below). Two
+replacement defects, `frame-sizes` ×3 each, modules `de9ecabf…` (d21b) and `5ff074ae…`
+(d21c), `jobs-q2.txt` `0b0d2abf…`, `run1.sh` `c1569765…`:
+
+- d21b (the small-frame path drops frames longer than the 46 bytes, header plus 32, it
+  was written for): expected the 42-byte ping PASS, the four 60/61-byte ping checks FAIL
+  in 3 of 3, 1513/1514 PASS, the sent-sizes check FAIL on the missing 60/61-byte replies
+  only, everything else PASS.
+- d21c (the small-frame copy's second part starts one byte too far, so frames longer than
+  46 bytes arrive with their tail shifted): expected "peer pings DUT with 60/61-byte
+  frames" FAIL in 3 of 3 (the DUT's ICMP checksum rejects the request); "DUT pings peer
+  with 60/61-byte frames" PASS if `ping` accepts a reply with a bad ICMP checksum (a
+  finding about that half of the check: arrival, not integrity) and FAIL if it verifies;
+  42, 1513 and 1514 PASS; the sent-sizes check FAIL on the 60/61-byte replies.

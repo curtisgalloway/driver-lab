@@ -268,7 +268,8 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
   missing; the list and per-row table are published in [`evals/e1000/`](evals/e1000/).
 - **Accept:** no unresolved FAIL; every GAP and UNVERIFIABLE recorded; recall reported by row,
   with each missing critical row either added to a spec revision or recorded as a gap.
-- **Open limitations:** revision 4's changes had one independent reading, not two; recall was
+- **Open limitations:** revision 4's changes had one independent reading, not two (a second,
+  independent reading followed in [AF-1](evidence/AF-1.md)); recall was
   not re-measured on revision 4; four claims rest on unread PCI/IEEE standards; row INIT-005
   overstates the manual and stays in the frozen list.
 
@@ -450,9 +451,13 @@ the user's.
   ([evidence](evidence/SF-1.md), [notebook](notebook/SF-1.md)). The class is in
   `SPEC-FORMAT.md`, the design's evidence model and `spec_check.py` (a citation parenthetical
   present, the TODO, and the never-alone rule, with tests); the shipped board specs still pass.
-- **AF-1 — a second reading of revision 4's changes**, or a recall re-measurement on the
-  current revision. Status: `queued`, next.
-- **QF-1 — the four unqualified claims.** Status: `queued`, after AF-1.
+- **AF-1 — a second reading of revision 4's changes.** Status: `complete` 2026-09-25
+  ([evidence](evidence/AF-1.md), [notebook](notebook/AF-1.md)). The second-reading option
+  was taken (the recall re-measurement stays open); a fresh clean-room reading of every
+  changed claim agrees with L02c's on all but one, adjudicated as a form lapse (an
+  `[inference]` without a stated confidence) for the next spec revision; A1's one-reading
+  shortfall for revision 4 is closed, revisions 5 and 6's final text still read once.
+- **QF-1 — the four unqualified claims.** Status: `queued`, next.
 - **CF-1 — candidate on revision 6.** Status: `queued`, after QF-1.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
@@ -534,10 +539,10 @@ first. Review, checks and records follow the
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
   [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
   2026-09-25; the order is the orchestrator's):
-  SF-1 is complete; **next is AF-1** (a second reading of revision 4's changes, or a recall
-  re-measurement), then QF-1 (plant defects for Q24–Q26; a timing approach for Q18), then CF-1
-  (rebuild the candidate from revision 6 and rerun the acceptance set). HF-1 (the hardware
-  verifications emulation cannot do) is blocked on hardware.
+  SF-1 and AF-1 are complete; **next is QF-1** (plant defects for Q24–Q26; a timing approach
+  for Q18), then CF-1 (rebuild the candidate from revision 6 and rerun the acceptance set;
+  the next spec revision also takes AF-1's six items and SF-1's `[emulated]` pointer form).
+  HF-1 (the hardware verifications emulation cannot do) is blocked on hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

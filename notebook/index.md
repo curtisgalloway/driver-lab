@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T21:05-07:00
+Updated: 2026-09-25T22:48-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,17 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [AF-1 — a second reading of revision 4's changes](AF-1.md)
+Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:48-07:00
+Outcome: complete; two independent readings of revision 4's changes, one disagreement
+adjudicated as a form lapse; see the [evidence](../evidence/AF-1.md).
+- The second reading (different model, no PDF) agrees with the first on 49 of 51 keys and
+  independently confirms the citation fix L02c had checked by `diff` only.
+- The one disagreement is the spec's own rule, not the manual: an `[inference]` with no
+  confidence, a form the spec applies to 13 of its 50 inferences.
+- Both readers independently hung the same caveat on R7's verification test.
+- The record's leak scan flagged a kernel type quoted from a HALF 2 prototype.
 
 ### [SF-1 — `[emulated]` in the format](SF-1.md)
 Entries: 2026-09-25T20:33-07:00 through 2026-09-25T21:05-07:00
@@ -138,3 +149,6 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   the spec as `[emulated]` EM1–EM7, with the rule that an entry cites runs, not mechanism.
   [SF-1](SF-1.md) — the class and that rule adopted into the format, the evidence model and
   the checker.
+- **Spec errors found downstream** (continued): [AF-1](AF-1.md) — a second independent reading
+  of revision 4's changes found no accuracy error the first had missed; the one disagreement
+  was the spec's tag convention applied unevenly.

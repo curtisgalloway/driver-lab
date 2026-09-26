@@ -173,8 +173,11 @@ their cost. L01 outputs do not retroactively satisfy frozen trial or paired-run 
 
 ## L02 — An e1000 driver from a spec, tested differentially in QEMU
 
-**Status:** `in_progress`; L02a and L02b complete 2026-09-23, L02c, L02e and L02d1 2026-09-24,
-L02d2, L02d3, L02s, L02f1, L02f2 and L02f2b 2026-09-25; L02f3 next, which closes L02.
+**Status:** `complete` 2026-09-25 with L02f3's acceptance stage
+([evidence/L02f3.md](evidence/L02f3.md)): *evaluation complete* met; *candidate qualified for
+the declared scope* met for the 22 qualified claims, with Q18 and Q24–Q26 outside that scope
+as explicit shortfalls. L02a and L02b complete 2026-09-23, L02c, L02e and L02d1 2026-09-24,
+L02d2, L02d3, L02s, L02f1, L02f2, L02f2b and L02f3 2026-09-25.
 Design: [QEMU-DIFFERENTIAL.md](QEMU-DIFFERENTIAL.md), approved 2026-09-22 with decisions D1–D4
 resolved. Runs alongside L01, whose hardware unit waits on the fixture. Outcomes O1–O5 and
 acceptance criteria A1–A7 are the design's.
@@ -397,7 +400,12 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
   - The sandbox questions L02f2 left open are settled as D7 and D8 (see "Decisions and bounded
     investigations"), and the copied Codex credential in the L02f2 run has been deleted
     (recorded in that run's ledger).
-- **L02f3 — spec feedback, reverification and L02 acceptance.** Follows L02f2b; the last L02
+- **L02f3 — spec feedback, reverification and L02 acceptance.** Status: `complete`
+  2026-09-25 ([evidence](evidence/L02f3.md), [notebook](notebook/L02f3.md)): spec revision 6
+  (`f78ea07a…45b2`, four sequential verifier readings ending at 0 FAIL); the final isolated
+  run set on the final harness, reference and candidate 20 of 20 each; the A1–A7 table; both
+  decisions met, with Q18 and Q24–Q26 outside the qualified scope as shortfalls; `[emulated]`
+  recommended for the format as follow-on SF-1. Follows L02f2b; the last L02
   unit. Revised 2026-09-25 to take in L02g as its acceptance stage. It changes no candidate
   code; any candidate change is a named follow-on with its own review (the L01 review trio).
   - **Spec feedback:** fold every `[emulated]` result and spec gap into a versioned spec
@@ -462,6 +470,7 @@ The plan's D1–D6 belong to the deferred experimental plan and moved with it
 | --- | --- | --- |
 | D7 | L02f2b (resolved) | Clean-room sandbox network egress. **User decision, 2026-09-25:** audit-only is accepted for L02 (strace records egress; nothing blocks it), a ratified departure from M02a's enforced network denial. An allowlisting proxy only if a later unit needs one. |
 | D8 | L02f2b (resolved) | Clean-room sandbox read scope. **User decision, 2026-09-25:** readable `/usr` and `/etc` are ratified, with the kernel source and module trees (`/usr/src`, `/usr/lib/modules`) hidden, as `cleanroom_sandbox.sh` does. |
+| D9 | recorded at L02f3 | Implementer routing in orchestrated mode. **User decision, 2026-09-25:** routing follows the user's quota strategy: Claude (Fable) subagents by default; Codex as overflow only for units outside the clean-room separation, since Codex is this project's audited clean-room implementer (L02f2). |
 
 Investigations end with evidence-backed choices or explicit blockers, not open-ended exploration.
 Do not invent commands, tool APIs, pin names, or equipment capabilities. A necessary material
@@ -495,34 +504,22 @@ Backlog items owned by deferred milestones (M02/M05, M11) are in the
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1, L02f2, L02f2b and L02s are complete ([L02a](evidence/L02a.md),
+the move. **L02 is complete** (2026-09-25): every unit has its evidence file ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
-[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md),
-[L02f2](evidence/L02f2.md), [L02f2b](evidence/L02f2b.md), [L02s](evidence/L02s.md)). Do not start two units in one session;
-in orchestrated mode each unit is one fresh subagent and one PR. Read
-[notebook/index.md](notebook/index.md) first. Review, checks and records follow the
+[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02s](evidence/L02s.md),
+[L02f1](evidence/L02f1.md), [L02f2](evidence/L02f2.md), [L02f2b](evidence/L02f2b.md),
+[L02f3](evidence/L02f3.md)), and L02f3's acceptance table reports the two decisions with their
+shortfalls. Do not start two units in one session; in orchestrated mode each unit is one fresh
+subagent and one PR (implementer routing: D9). Read [notebook/index.md](notebook/index.md)
+first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **L02f2b (done):** H1 fixed and Q15 requalified ([evidence/L02f2b.md](evidence/L02f2b.md));
-  Q15 no longer blocks the L02f decisions.
-- **Sandbox decisions (settled by the user, 2026-09-25):** audit-only egress is accepted for L02
-  (D7) and readable `/usr` and `/etc`, with kernel source and module trees hidden, are ratified
-  (D8); the copied Codex credential in the L02f2 run has been deleted (that run's ledger).
-- **L02f3 (next), the last L02 unit:** spec feedback on top of revision 5
-  (`c587f41d…d01b`): V1's E1 gap (the round-1 implementer filed it too: how long to wait for
-  EE_GNT, and what to do when it stays set), the FWE observation, whether the spec should say
-  anything about flow control (V10), and L02s's carried notes: §4.7 maps TNCRS to a
-  carrier-error count without its full-duplex limit (L02e finding L3), the header's change list,
-  the `[source-observed]` PHY bullet's reported rationale, and listing the TNCRS and
-  gigabit-half-duplex contradictions in G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the
-  L02c leak-scan whitelist and provenance map onto the test host first; L02s had to scan without
-  them. Then the acceptance stage (formerly L02g): one final isolated reference/candidate run
-  set on the final harness (L02f2b's, `705694b9…`, unless L02f3 changes it; all ten
-  scenarios, since L02f2b reran only `down-during-traffic`; commit or hash the run
-  declaration before launching), one A1–A7 acceptance table (including how the revised spec meets or
-  falls short of A1's two-reading requirement), and an independent review; report *evaluation
-  complete* and *candidate qualified* separately and close with explicit shortfalls (Q18,
-  Q24–Q26 unqualified) rather than extending the campaign.
+- **No L02 unit is queued.** New work found in L02f3 is named as follow-ons in its evidence,
+  none of them started: SF-1 (`[emulated]` into `SPEC-FORMAT.md`, the evidence model and
+  `spec_check.py`), CF-1 (rebuild the candidate from revision 6 and rerun the acceptance set),
+  QF-1 (plant defects for Q24–Q26; a timing approach for Q18), HF-1 (the hardware
+  verifications emulation cannot do), AF-1 (a second reading of revision 4's changes, or a
+  recall re-measurement). Each needs the user's go-ahead and its own unit.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

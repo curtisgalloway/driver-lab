@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T18:35-07:00
+Updated: 2026-09-25T19:20-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,17 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02f3 — spec feedback, reverification and L02 acceptance](L02f3.md)
+Entries: 2026-09-25T18:35-07:00 through 2026-09-25T19:20-07:00
+Outcome: complete; L02 closes with both decisions met and explicit shortfalls; see the
+[evidence](../evidence/L02f3.md).
+- The 40 acceptance runs finished in 81 s, before the spec edits were done.
+- An `[emulated]` entry states what the runs recorded, never the model's mechanism.
+- With the whitelist on the test host, the scans are clean; L02s's set comparison had no
+  baseline.
+- The fix pass made three defects of its own (a rename that hit the milestone keys, a
+  double replacement, a change list not rewritten from the diff); four verifier rounds.
 
 ### [L02f2b — harness fix H1 and Q15 requalification](L02f2b.md)
 Entries: 2026-09-25T18:05-07:00 through 2026-09-25T18:35-07:00
@@ -112,4 +123,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
   error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.
   [L02s](L02s.md) — corrected in revision 5; its own first draft had an ordering error that
-  the verifier caught.
+  the verifier caught. [L02f3](L02f3.md) — revision 6 folds in every gap L02 filed; the
+  verifiers' findings were mostly the operator's own fix-pass errors.
+- **Model departures from the manual** (continued): [L02f3](L02f3.md) — all seven recorded in
+  the spec as `[emulated]` EM1–EM7, with the rule that an entry cites runs, not mechanism.

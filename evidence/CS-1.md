@@ -28,14 +28,19 @@ limitation this unit answers) and the [notebook chapter](../notebook/CS-1.md).
 
 ## Status
 
-**In progress, 2026-09-26.** Round `c1` (52 isolated runs) was **not as declared**: the
-stimulus check failed in all 16 `frame-sizes` runs because the DUT sent its stream in
-310-byte frames, not 214, for a reason in the harness's premise, not in either driver
-(finding F1: the kernel never advertises an MSS under 256 by default), and d26 caught
-only 1 of 3 as a consequence (F2). The reference and the candidate delivered both
-streams intact in every run, and d25 failed exactly its stream check 3 of 3. The fix is
-one more peer-side setting; round `c2` reruns `frame-sizes` on it (declared below). The
-results, the qualification and the review follow.
+**Results in, review pending, 2026-09-26.** `frame-sizes` now carries 1 MiB over HTTP
+each way in frames of at most 214 bytes and compares the delivered bytes by MD5, so a
+corruption that keeps the checksum is seen in either direction; a new claim, Q28, is
+qualified by two planted defects that swap two 16-bit words, on receive (d25) and on
+transmit (d26), 3 of 3 each, failing exactly the stream check for their direction while
+the reference and the candidate pass `frame-sizes` 5 of 5 each and the nine other
+scenarios 18 of 18 each. No guest-image change; every existing check name unchanged.
+Round `c1` (52 runs) was **not as declared** for a reason in the harness's premise, not
+in either driver: the kernel never advertises an MSS under 256 by default, so the DUT's
+stream went in 310-byte frames and the stimulus check withheld every `frame-sizes` PASS
+(F1), and d26 caught 1 of 3 as a consequence (F2). The fix is one more peer-side setting;
+round `c2` (16 runs) on it is as declared. Private run `cs1-20260926-01`: 68 isolated
+runs in two declared rounds, none repeated or discarded.
 
 ## The gap (FC-1, open limitation)
 
@@ -241,24 +246,62 @@ check, doing its job, withheld the scenario's PASS.
 | d25 small-frame receive words swapped | `c1-d25-frame-sizes-1..3` | "1 MiB over HTTP in small frames peer to DUT arrives intact" only | **the declared check, 3 of 3**: `sent` and `got` different MD5s in every run, `wget` completing (the transfer did not stall); the DUT-to-peer stream, every ping and ICMP content check, the checksum-error count, bring-up, runts, rmmod, the kernel log and the trace rules PASS. Plus the stimulus check, failed for F1's reason in every `frame-sizes` run of the round, on the DUT-to-peer half only; the peer-to-DUT half, the defect's side, read as declared (7,087 frames of 111 to 214 bytes) |
 | d26 small-frame transmit words swapped | `c1-d26-frame-sizes-1..3` | "1 MiB over HTTP in small frames DUT to peer arrives intact" only | **1 of 3, a consequence of F1 (F2)**: run 1 failed the DUT-to-peer stream check (`sent` ≠ `got`), runs 2 and 3 passed it. The DUT's stream went in 310-byte frames (skbs over 256 bytes, or GSO skbs with `gso_size` 244), outside both of the defect's conditions; the only frames inside them were partial segments of 210 bytes, 16 in run 1 and none in runs 2 and 3 (`analysis/c1-mss.txt`), so the swap changed the delivered bytes in run 1 only. The stimulus check failed for F1's reason in all three; everything else PASS |
 
-## Round `c2`
+**Round `c2`** (16 isolated `frame-sizes` runs on `a1735b9f…`, launched 10:29:41, done
+10:30:15 Pacific; 34 s), KVM, every identity as frozen with the `c2` harness hash. The
+launch was the user's: the agent harness's safety check refused the implementer's launch
+command, and the user ran the declared command instead (recorded in the ledger). 576
+checks, 6 failed: exactly the six declared. The peer's SYN advertised an MSS of 160 in
+all 16 runs, and the DUT's stream went in 214-byte frames (7,084 to 7,086 full segments
+per run plus one to three partial ones of 90 to 210 bytes); the stimulus check passed in
+every run: "peer to DUT: 7,087 to 7,089 data frames of 110 to 214 bytes carrying
+1,048,769 bytes; DUT to peer: 7,087 to 7,090 data frames of 90 to 214 bytes carrying
+1,048,769 bytes" (one run, `c2-d25-frame-sizes-1`, read 7,113 frames and 1,052,617 bytes
+on the peer-to-DUT side: 26 segments retransmitted, an observation).
 
-Pending.
+- **Reference 5 of 5 and candidate 5 of 5, every check** (36 each), both stream MD5s
+  equal in all ten runs, every ping and ICMP content check passing, the checksum-error
+  count 0 before and after. The candidate's stream leaves in a different mix of partial
+  segments (16 of 186 bytes against the reference's one of 210), an observation about
+  segmentation, the bytes intact.
+
+| Defect | Runs | Declared failing checks | Result |
+| --- | --- | --- | --- |
+| d25 small-frame receive words swapped | `c2-d25-frame-sizes-1..3` | "1 MiB over HTTP in small frames peer to DUT arrives intact" only | **as declared, 3 of 3**: `sent` and `got` different MD5s, `wget` completing (no stall: the swap kept TCP's checksum and nothing was dropped); the DUT-to-peer stream, the stimulus check (the peer's 7,087 frames of 111 to 214 bytes, the DUT's 7,087), every ping and ICMP content check, the checksum-error count, bring-up, runts, rmmod, the kernel log and the trace rules PASS. The header contingency did not arise |
+| d26 small-frame transmit words swapped | `c2-d26-frame-sizes-1..3` | "1 MiB over HTTP in small frames DUT to peer arrives intact" only | **as declared, 3 of 3**: `sent` and `got` different, `wget` completing; the peer-to-DUT stream, the stimulus check and everything else PASS. F2 resolved: with an MSS of 148 every skb of the stream is inside the defect's conditions |
 
 ## Qualification
 
-Pending.
+For each row the reference passed `frame-sizes` on the same harness five times
+(`c2-ref-frame-sizes-1..5`), and the failing check is the claim's own and the only
+failure in the run.
+
+| Claim | Result | Defect → runs | What failed, and why it is the claim's failure |
+| --- | --- | --- | --- |
+| Q28 receive content | **qualified** | d25 → `c2-d25-frame-sizes-1..3` | The peer-to-DUT stream check failed on the MD5 of the bytes the DUT's stack delivered, after 7,087 frames of at most 214 bytes had passed every checksum and `wget` had received the whole body: the corruption FC-1 could not see (a checksum-preserving change in what the DUT receives), caught by the only witness there is for it. Nothing else failed, so the transmit path, the ICMP paths and the stimulus were intact |
+| Q28 transmit content | **qualified** | d26 → `c2-d26-frame-sizes-1..3` | The DUT-to-peer stream check failed on the peer's MD5 after the peer's stack had accepted every segment (the checksum was computed after the swap or preserved by it); nothing else failed, so the receive path and the stimulus were intact. Whether the reference segmented the stream itself or handed TSO skbs to the model is not observed; the defect is written for both shapes |
+
+**Candidate results.** On the `c2` harness the candidate passes `frame-sizes` 5 of 5
+with both stream checks and the stimulus check, so Q28 is qualified evidence about the
+candidate within the scope above: its small-frame receive and transmit paths deliver a
+1 MiB stream in 214-byte frames with its content intact, MD5-exact, which the ICMP checks
+of FC-1 could not show for a checksum-preserving corruption. The nine other scenarios'
+results for the candidate are `c1`'s, 18 of 18 on `da4c9407…`.
+
+**Coverage after this unit.** 27 of 28 claims qualified (L02d3: 22, with Q15 in L02f2b;
+QF-1: Q24, Q25, Q26; FC-1: Q27; here: Q28), each with its stated scope; Q18 unqualified,
+`unobservable` ([QF-1](QF-1.md)).
 
 ## Acceptance (against the brief)
 
 | Criterion | Result |
 | --- | --- |
-| A stimulus whose received payload the DUT verifies end to end, so a checksum-preserving corruption is detected | The check is implemented and tested offline; the runs are pending |
-| Smallest addition that works, justified | No guest-image change: busybox's `httpd`, `wget`, `md5sum`, `dd` and `ip link set … mtu`, one scenario step and one capture check (above) |
-| Check names stable; new checks and a claim, with the convention said | Every existing name unchanged (`ring-wrap`'s strings held by a test); Q28 a new claim, with the reasons above |
-| Harness tests for the changed surface | 12 new tests, 70 pass |
-| Planted defects for receive and transmit, built; counts and expected outcomes declared before any run | d25 and d26 built (0 warnings); the declaration above, committed |
-| Reference and candidate on the declared repetitions; whatever else the change touches rerun | Pending (the acceptance set ×2 each and `frame-sizes` ×5 each are declared) |
+| A stimulus whose received payload the DUT verifies end to end, so a checksum-preserving corruption is detected | Met: d25 (a word swap in the copybreak copy, invisible to every checksum) fails the peer-to-DUT stream check 3 of 3 and nothing else; d26 the same on transmit |
+| Smallest addition that works, justified | No guest-image change: busybox's `httpd`, `wget`, `md5sum`, `dd`, `ip link set … mtu` and one sysctl write on the peer, one scenario step and one capture check (above) |
+| Check names stable; new checks and a claim, with the convention said | Every existing name unchanged (`ring-wrap`'s strings held by a test; `c1`'s 828 checks in the nine other scenarios, 0 failed); Q28 a new claim, with the reasons above. The two MTU checks were renamed between `c1` and `c2` to say what they now do (F1) |
+| Harness tests for the changed surface | 12 new tests, 70 pass (2 changed for `c2`'s strings) |
+| Planted defects for receive and transmit, built; counts and expected outcomes declared before any run | d25 and d26 built (0 warnings); `c1` declared at `067d33f` before its launch, `c2` at `ad48dfa` (rebased: `24e7c35`) before its launch; `c1` not as declared and kept (F1, F2), `c2` as declared |
+| Reference and candidate on the declared repetitions; whatever else the change touches rerun | The acceptance set ×2 each on the `c1` harness (36 runs, 828 checks, 0 failed, the nine other scenarios) and `frame-sizes` ×5 each on the `c2` harness, every check; the `c2` diff confined to the streams' two peer commands and their check names |
+| Every failure kept and attributed; no run repeated | 68 runs in two declared rounds, all kept; `c1`'s 16 stimulus failures and d26's 1 of 3 attributed to F1 |
 
 ## Findings
 
@@ -273,12 +316,14 @@ Pending (one independent reviewer reading the diff and the run artifacts, after 
 
 ## Measures
 
-- Operator time so far: about 09:10 to the first checkpoint on 2026-09-26 (Pacific), one
-  session; see the notebook. Model cost not measured.
-- Host time so far: the two defect builds, about 20 s each; the offline premise checks
-  about 1 minute.
+- Operator time: about 09:10 to 10:34 on 2026-09-26 (Pacific) before the review, one
+  session interrupted twice for the KVM slot; see the notebook. Model cost not measured.
+- Host time: round `c1` (52 runs, 8 at a time) 1 minute 45 seconds; round `c2` (16 runs)
+  34 seconds; the two defect builds about 20 s each; the offline premise checks about a
+  minute.
+- Human effort: one launch (round `c2`, after the safety check refused the implementer's).
 
-## Open limitations (so far)
+## Open limitations
 
 - One corruption shape per direction (two adjacent words swapped at one offset); a
   compensating two-byte change or a swap elsewhere in the frame is not planted.
@@ -290,7 +335,16 @@ Pending (one independent reviewer reading the diff and the run artifacts, after 
   corruption of a TCP header field (a port, a sequence number) is seen as a lost or
   stalled transfer, not attributed.
 - The transmit half rests on the wire frames and the peer's MD5; whether the reference's
-  driver or the model segmented the DUT's stream is not observed.
+  driver or the model segmented the DUT's stream is not observed, and under d26 a GSO skb
+  has only its first segment's words swapped, so how many of the 7,087 frames the defect
+  changed is not known (at least one per run, enough for the MD5).
+- The stimulus is two settings on the peer's kernel (its MTU and its advertised-MSS
+  floor); `c1` showed the check fails safe when a setting does not do what was assumed,
+  and the stimulus check is what makes that visible. The candidate's stream leaves in a
+  different mix of partial segments from the reference's, not examined further.
+- The reference and the candidate were run once on the `c1` harness for the nine other
+  scenarios and on the `c2` harness for `frame-sizes` only, on the diff argument stated
+  in the `c2` declaration.
 - `ring-wrap`'s Q09 stays qualified only as a stalled transfer; the same defect shape at
   frames over 1,000 bytes would qualify it for content too, a possible follow-on.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.

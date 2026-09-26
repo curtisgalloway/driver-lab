@@ -61,3 +61,13 @@ same command as the MTU, restore both. Round c2 declared: `frame-sizes` ×5 each
 ×3 each defect on the new harness; the other nine scenarios' c1 results stand, since the
 diff touches only the two peer commands and their check names, a decision taken after
 seeing the results and said so in the evidence.
+
+## 2026-09-26T10:33-07:00 — round c2 as declared; both defects caught 3 of 3; d25 shows the FC-1 gap closed
+The user launched c2 (my launch command was refused by the agent harness's safety check),
+10:29:41 to 10:30:15. The peer now advertises MSS 160 and the DUT's stream goes in 214-byte
+frames; the stimulus check passes in all 16 runs. Reference and candidate 5 of 5 with both
+MD5s equal; d25 and d26 each fail exactly their own stream check 3 of 3, wget completing
+every time: the swapped words passed every checksum and reached the application, which is
+the corruption no check could see before. One retransmission burst (26 segments) in one
+d25 run and the candidate's different partial-segment pattern are observations. Rebased
+onto SR-8's merge, keeping both units' plan and index text.

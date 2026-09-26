@@ -114,6 +114,11 @@ REGS = {
 }
 REG = {name: off for off, name in REGS.items()}
 CTRL_RST = 1 << 26  # SDM 13.4.1
+# The trace stamps each access to the microsecond, so two stamps 1 us apart can be any
+# interval under 2 us; a difference of 2 us or more is the smallest that shows an
+# interval of at least 1 us. QEMU stamps a write before the model executes it and a
+# read after, so the difference bounds the guest's interval from above (QF-1).
+RESET_GAP_STAMPS_US = 2
 EN = 1 << 1  # RCTL.EN (SDM 13.4.22) and TCTL.EN (SDM 13.4.33)
 ICR_LSC = 1 << 2  # SDM Table 13-63
 
@@ -508,9 +513,11 @@ def trace_rules(accesses: list[Access]) -> tuple[list[Check], dict]:
             if nxt and a.t is not None and nxt.t is not None:
                 # The trace has microsecond resolution; rounding undoes the float
                 # error of subtracting two epoch times (about 0.24 us at this size).
+                # A difference of 1 us does not show an interval of 1 us: see
+                # RESET_GAP_STAMPS_US.
                 gap = round((nxt.t - a.t) * 1e6)
                 gaps.append(gap)
-                if gap < 1:
+                if gap < RESET_GAP_STAMPS_US:
                     bad["gap"].append(f"{gap} us before {nxt.name} at {nxt.t}")
             # A global reset returns the receive and transmit registers to power-on
             # values (SDM 14.7): lengths 0, EN clear.
@@ -555,8 +562,9 @@ def trace_rules(accesses: list[Access]) -> tuple[list[Check], dict]:
             detail(
                 "gap",
                 f"{len(gaps)} resets ({resets['mmio']} through the memory BAR,"
-                f" {resets['io']} through the I/O window, where port-I/O spacing alone"
-                f" exceeds 1 us), smallest gap {min(gaps, default=0)} us",
+                f" {resets['io']} through the I/O window), smallest gap"
+                f" {min(gaps, default=0)} us (stamps at least"
+                f" {RESET_GAP_STAMPS_US} us apart show an interval of 1 us)",
             ),
         ),
         (

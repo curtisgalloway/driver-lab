@@ -102,14 +102,27 @@ Four rules make it hold:
    bubblewrap and restricts writes, not reads; `--dangerously-bypass-approvals-and-sandbox` is
    the documented flag for an externally sandboxed run.
 3. **Egress is audited, not blocked**, because the agent must reach its model API. The audit
-   lists every IP endpoint contacted; anything beyond the API and DNS is a finding to explain.
+   lists every IP address passed to `connect`, `sendto` or `sendmsg`, and every UNIX socket
+   connected to; anything beyond the API and DNS is a finding to explain. Two limits: the
+   addresses are bare IPs, so a fetch from another site behind the API's CDN looks like API
+   traffic, and the verdict does not judge endpoints, so a person must read the list. Where
+   that is not enough, block egress instead (a network namespace with an allowlisting
+   proxy); this recipe does not.
 4. **Prove the log covers the agent before trusting it.** Run a pilot that asks the agent to
-   read a canary file, and check `sandbox_audit.py --expect-read` finds it. The audit ignores
+   read a canary file, and check `sandbox_audit.py --expect-read` finds it (a successful
+   open, not just a stat). The audit ignores
    bubblewrap's setup processes (they touch host paths to build the sandbox), reports any
    *successful* access outside the allowed roots as a finding (exit 1), and lists failed
    attempts separately: a failed attempt means the wall held, and it is still worth reading.
 
-Credentials enter only the fresh home; never commit it or the logs from it. When an agent's
+Credentials enter only the fresh home; never commit it or the logs from it, and delete the
+credential copy when the unit's last round is done. Pass secrets through the home, never
+`--env`, whose values appear on the command line and in the log. If the credential is an
+OAuth login whose refresh token rotates on use, a run in the copy can leave the operator's
+original stale; expect to log in again afterwards. `/usr` and `/etc` stay readable (minus
+`/usr/src` and `/usr/lib/modules`) so the agent's tools run; the audit lists those reads
+under `other_reads` so they can be checked. The script refuses to overwrite an existing log,
+and runs the agent in a new terminal session. When an agent's
 CLI reports an auth failure, check the same command outside the sandbox before blaming the
 sandbox (observed 2026-09-25: a provider outage returned 401 for both).
 

@@ -53,10 +53,7 @@ LOG = """\
 
 
 def audit_of(text, **kw):
-    a = sandbox_audit.Audit(**kw)
-    for line in text.splitlines(True):
-        a.feed(line)
-    return a
+    return sandbox_audit.audit_lines(text.splitlines(True), **kw)
 
 
 class ReportTest(unittest.TestCase):
@@ -93,6 +90,43 @@ class ReportTest(unittest.TestCase):
     def test_fd_relative_to_a_pipe_is_not_a_path(self):
         self.assertNotIn("pipe", str(self.rep))
         self.assertEqual(self.rep["unresolved_relative_paths"], [])
+
+    def test_relative_exec_with_unknown_cwd_does_not_crash(self):
+        log = LOG + '104 execve("./configure", ["./configure"], 0x1 /* 3 vars */) = 0\n'
+        rep = audit_of(log).report()
+        self.assertIn("./configure", rep["unresolved_relative_paths"])
+        self.assertNotIn(None, rep["execs"])
+
+    def test_setup_child_logged_before_clone_result_is_ignored(self):
+        log = (
+            '100 execve("/usr/bin/bwrap", ["bwrap"], 0x7 /* 4 vars */) = 0\n'
+            '100 clone(child_stack=NULL, flags=CLONE_NEWPID|SIGCHLD <unfinished ...>\n'
+            '101 openat(AT_FDCWD</srv/host>, "/srv/host/secret", O_RDONLY) = 3\n'
+            '100 <... clone resumed>) = 101\n'
+            '102 openat(AT_FDCWD</work>, "a.txt", O_RDONLY) = 3</work/a.txt>\n'
+        )
+        rep = audit_of(log).report()
+        self.assertEqual(rep["outside_allowed_roots_succeeded"], [])
+        self.assertEqual(rep["workspace_reads"], ["/work/a.txt"])
+
+    def test_send_destinations_and_unix_sockets_are_endpoints(self):
+        log = LOG + (
+            '102 sendto(9<socket:[3]>, "x", 1, 0, {sa_family=AF_INET, sin_port=htons(53), '
+            'sin_addr=inet_addr("198.51.100.7")}, 16) = 1\n'
+            '102 connect(10<socket:[4]>, {sa_family=AF_UNIX, sun_path=@"/tmp/.X11-unix/X0"}, 20)'
+            ' = 0\n'
+        )
+        eps = audit_of(log).report()["endpoints"]
+        self.assertIn("198.51.100.7 port 53", eps)
+        self.assertIn("unix @/tmp/.X11-unix/X0", eps)
+
+    def test_reads_outside_the_workspace_are_listed(self):
+        self.assertIn("/agent-home/auth.json", self.rep["other_reads"])
+
+    def test_a_stat_of_the_canary_is_not_an_open(self):
+        log = LOG + '102 newfstatat(AT_FDCWD</work>, "canary", {st_mode=S_IFREG}, 0) = 0\n'
+        rep = audit_of(log).report(["/work/canary"])
+        self.assertEqual(rep["expected_reads_missing"], ["/work/canary"])
 
     def test_expected_read_found(self):
         self.assertEqual(self.rep["expected_reads_missing"], [])
@@ -133,6 +167,22 @@ class CliTest(unittest.TestCase):
     def test_log_with_no_sandboxed_process_exits_1(self):
         self.assertEqual(self.run_cli(LOG.splitlines(True)[0]).returncode, 1)
 
+    def test_sandbox_refuses_trailing_option_and_existing_log(self):
+        script = str(SCRIPTS / "cleanroom_sandbox.sh")
+        r = subprocess.run([script, "--log"], capture_output=True, text=True,
+                           check=False, timeout=10)
+        self.assertEqual(r.returncode, 2)
+        with tempfile.TemporaryDirectory() as d:
+            log = os.path.join(d, "old.strace")
+            with open(log, "w", encoding="utf-8") as f:
+                f.write("kept\n")
+            r = subprocess.run(
+                [script, "--workspace", d, "--home", d, "--tool-dir", d, "--log", log,
+                 "--", "true"], capture_output=True, text=True, check=False, timeout=10)
+            self.assertEqual(r.returncode, 2)
+            with open(log, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "kept\n")
+
     def test_unreadable_log_exits_2(self):
         r = subprocess.run(
             [sys.executable, str(SCRIPTS / "sandbox_audit.py"), "/nonexistent/log"],
@@ -144,7 +194,7 @@ class CliTest(unittest.TestCase):
 @unittest.skipUnless(shutil.which("bwrap") and shutil.which("strace"),
                      "needs bubblewrap and strace")
 class RealSandboxTest(unittest.TestCase):
-    def test_host_home_invisible_and_reads_logged(self):
+    def test_host_files_invisible_and_reads_logged(self):
         with tempfile.TemporaryDirectory() as d:
             ws, home, tools = (os.path.join(d, n) for n in ("ws", "home", "tools"))
             for p in (ws, home, tools):
@@ -158,12 +208,13 @@ class RealSandboxTest(unittest.TestCase):
             r = subprocess.run(
                 [str(SCRIPTS / "cleanroom_sandbox.sh"), "--workspace", ws, "--home", home,
                  "--tool-dir", tools, "--log", log, "--",
-                 "sh", "-c", f"cat canary.txt; cat {secret}; exit 0"],
+                 "sh", "-c", f"cat canary.txt; cat {secret}; ls -A /home; exit 0"],
                 capture_output=True, text=True, check=False,
             )
             if r.returncode == 2 or "Operation not permitted" in r.stderr:
                 self.skipTest(f"sandbox unavailable here: {r.stderr.strip()[:200]}")
-            # The host file outside the workspace does not exist in the sandbox.
+            # A host file outside the workspace does not exist in the sandbox, and the
+            # host's /home is an empty directory there.
             self.assertEqual(r.stdout, "canary\n")
             with open(log, encoding="utf-8") as f:
                 rep = audit_of(f.read()).report(["/work/canary.txt"])

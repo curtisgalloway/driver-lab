@@ -8,8 +8,9 @@
 # list` names the current feature flags.
 #
 # Web search is off because the network cannot be: the agent must reach its model API.
-# The feature flags remove every tool that could fetch or delegate (apps, plugins, a
-# browser, computer use, subagents) and the agent's cross-session memory.
+# The feature flags remove Codex's built-in tools that could fetch or delegate (apps,
+# plugins, a browser, computer use, subagents) and its cross-session memory. The agent's
+# shell still reaches the network, so shell egress is audited, not prevented.
 
 model = "SET-ME"
 web_search = "disabled"

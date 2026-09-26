@@ -127,6 +127,21 @@ named check fails for the stated reason:
 | d5 ETXND short | every transmitted frame one byte short | C4a; C3 (truncated replies) |
 | d6 RXERIF not cleared | the overflow flag is never acknowledged | C7 (counters keep moving in the idle window) |
 
+### Round r2, declared after round p1 (2026-09-26 15:07 PDT)
+
+Round p1 ran the four primary runs and defect d1 (results below). Its C7 settle rule
+(`rx_over_errors` must not move at all in the 3 s idle window) failed the candidate's second
+run for a reason that is not the driver's: the LAN's own multicast arrives at wire speed and
+overflowed the 6 KiB ring twice in that window while 55 multicast frames came in, with the
+pings 10 of 10 and the transfer intact. The reference's overflow counter (`rx_dropped`) was
+never judged, so the rule was also asymmetric. **r2 rule, both drivers, C7 only:** in the idle
+window, `rx_errors` beyond `rx_over_errors` is 0 and `rx_over_errors` is at most 5. Defect d6
+is the control for it: a never-acknowledged RXERIF books one overflow per service pass, tens
+per 3 s. Every other rule is unchanged; p1's verdicts stand as recorded. r2 adds one run per
+driver under the new rule (harness `19840f97…`), the five remaining defects (d2–d6, one run
+each), and a diagnostic run of the reference with its own debug messages on (C6, C7, C8
+only; not a primary run; it exists to attribute the reference's C6 and C7 failures).
+
 ## Results
 
-*(filled in after the primary runs)*
+*(filled in after the runs)*

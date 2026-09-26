@@ -46,6 +46,8 @@ LOG = """\
 102 <... openat resumed>) = 6</agent-home/auth.json>
 102 connect(7<socket:[1]>, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("192.0.2.10")}, 16) = -1 EINPROGRESS (Operation now in progress)
 102 connect(8<socket:[2]>, {sa_family=AF_INET6, sin6_port=htons(443), sin6_flowinfo=htonl(0), inet_pton(AF_INET6, "2001:db8::1", &sin6_addr), sin6_scope_id=0}, 28) = 0
+102 statx(1<pipe:[586594]>, "", AT_STATX_SYNC_AS_STAT|AT_EMPTY_PATH, STATX_ALL, {stx_mode=S_IFIFO|0600, ...}) = 0
+102 newfstatat(3</work/spec/spec.md>, "", {st_mode=S_IFREG|0644, ...}, AT_EMPTY_PATH) = 0
 102 +++ exited with 0 +++
 """
 
@@ -87,6 +89,10 @@ class ReportTest(unittest.TestCase):
             ["/srv/other", "/usr/src/linux/e1000.c"],
         )
         self.assertEqual(self.rep["outside_allowed_roots_succeeded"], [])
+
+    def test_fd_relative_to_a_pipe_is_not_a_path(self):
+        self.assertNotIn("pipe", str(self.rep))
+        self.assertEqual(self.rep["unresolved_relative_paths"], [])
 
     def test_expected_read_found(self):
         self.assertEqual(self.rep["expected_reads_missing"], [])

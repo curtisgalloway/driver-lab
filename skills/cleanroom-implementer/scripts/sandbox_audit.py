@@ -173,8 +173,14 @@ class Audit:
             self._access(path, kind, ok)
 
     def _resolve(self, pid, dirbase, path):
+        if path == "" and not dirbase:
+            return None
         if path.startswith("/"):
             return posixpath.normpath(path)
+        if dirbase and not dirbase.startswith("/"):
+            # Relative to a pipe, socket or anonymous fd (fstat with AT_EMPTY_PATH):
+            # not a file-system path.
+            return None
         base = dirbase if dirbase else self.cwd.get(pid)
         if not base:
             self.unresolved[path] += 1

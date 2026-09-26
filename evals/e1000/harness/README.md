@@ -101,7 +101,7 @@ buffers and fail a scenario for an earlier one's fault; this check names that ca
 | Name | Checks |
 | --- | --- |
 | `smoke` | Module loads and binds; the interface's MAC matches the one QEMU was given; carrier within 15 s; three pings each way with no loss; `rmmod` succeeds |
-| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes |
+| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; the 60- and 61-byte pings carry a pattern payload, and the DUT kernel's ICMP checksum-error count must not rise while the pings run; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes, the DUT's 60/61-byte requests carry the pattern intact and its replies repeat the peer's requests byte for byte, and the DUT's capture shows the peer's requests and replies arrived with the expected payload (the stimulus) |
 | `ring-wrap` | 1,500 back-to-back pings each way with no loss, 4 MiB over HTTP each way with matching MD5; afterwards, the trace shows both tails wrapping at least 3 times |
 | `rx-overrun` | With the DUT's interrupts masked by the harness (`devmem` writes IMC, then restores IMS), the peer floods it; the receive head must reach the tail (the ring ran dry), and the trace must show the device accepting frames with no RDT write while masked; after the mask is restored, pings each way must succeed |
 | `link-flap` | The link drops through QEMU's monitor: carrier falls within 10 s and pings fail; it returns: carrier within 15 s and pings succeed. Observes whether ICR reads after the drop showed the link-change cause |
@@ -117,6 +117,23 @@ Two link scenarios clear both guests' ARP entries after the link returns, record
 first: pings sent during the outage leave the entry unresolved, and the next ping can be lost
 waiting for it, which is the stack's doing, not the driver's. Floods are `ping -i 0.001`;
 this busybox's `nc` has no UDP mode.
+
+**Small-frame content.** busybox ping's payload is a 4-byte timestamp followed by zeros, so
+a receive path that shifts or replaces a small frame's bytes past its headers changes nothing
+a ping can see (plan unit QF-1, finding F3). `frame-sizes` therefore sends its 60- and
+61-byte pings with a one-byte pattern (`ping -p`, one byte per size) and checks the content
+three ways (plan unit FC-1, [evidence](../../../evidence/FC-1.md)): from the peer's capture,
+the DUT's requests carry the pattern and the DUT's replies repeat the peer's requests byte
+for byte (what the driver transmitted, and what it delivered when the kernel echoed it);
+from the DUT's capture, the peer's frames arrived with the expected payload (the stimulus);
+and from `/proc/net/snmp` on the DUT, read before the pings and after each one, the kernel
+counted no ICMP checksum error (`InCsumErrors`). The count is the only witness for a reply
+the driver delivered corrupted: the kernel verifies every ICMP message's checksum after ping's
+raw socket has already received it, so ping counts such a reply as received. The pattern is
+one byte, so a shift that stays inside the pattern is still invisible; a shift into the byte
+beyond the frame, a flipped byte, a stale tail or a wrong length is not. A driver that
+wrongly marks a corrupted frame's checksum as verified would escape the count but not the
+echo comparison.
 
 QEMU's model holds all reception for one second after every RCTL write, and releases the
 frames that arrived meanwhile in one burst; the manual describes no such hold. Drivers rewrite

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T19:20-07:00
+Updated: 2026-09-25T19:30-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [L02f3 — spec feedback, reverification and L02 acceptance](L02f3.md)
-Entries: 2026-09-25T18:35-07:00 through 2026-09-25T19:20-07:00
+Entries: 2026-09-25T18:35-07:00 through 2026-09-25T19:30-07:00
 Outcome: complete; L02 closes with both decisions met and explicit shortfalls; see the
 [evidence](../evidence/L02f3.md).
 - The 40 acceptance runs finished in 81 s, before the spec edits were done.

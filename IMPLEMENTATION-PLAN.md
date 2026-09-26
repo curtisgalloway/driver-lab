@@ -439,6 +439,23 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
   [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)); no
   separate unit, PR or report.
 
+### Follow-ons named in L02f3
+
+Named in the [L02f3 evidence](evidence/L02f3.md#follow-ons-named-not-scope). On 2026-09-25
+the user asked for all of them to be run the same way as the milestones (one fresh
+implementer, one unit and one PR each); the order below was the orchestrator's choice, not
+the user's.
+
+- **SF-1 — `[emulated]` in the format.** Status: `complete` 2026-09-25
+  ([evidence](evidence/SF-1.md), [notebook](notebook/SF-1.md)). The class is in
+  `SPEC-FORMAT.md`, the design's evidence model and `spec_check.py` (a citation parenthetical
+  present, the TODO, and the never-alone rule, with tests); the shipped board specs still pass.
+- **AF-1 — a second reading of revision 4's changes**, or a recall re-measurement on the
+  current revision. Status: `queued`, next.
+- **QF-1 — the four unqualified claims.** Status: `queued`, after AF-1.
+- **CF-1 — candidate on revision 6.** Status: `queued`, after QF-1.
+- **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
+
 ## What is deferred from the immediate path
 
 | Work | Disposition |
@@ -514,12 +531,13 @@ subagent and one PR (implementer routing: D9). Read [notebook/index.md](notebook
 first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **No L02 unit is queued.** New work found in L02f3 is named as follow-ons in its evidence,
-  none of them started: SF-1 (`[emulated]` into `SPEC-FORMAT.md`, the evidence model and
-  `spec_check.py`), CF-1 (rebuild the candidate from revision 6 and rerun the acceptance set),
-  QF-1 (plant defects for Q24–Q26; a timing approach for Q18), HF-1 (the hardware
-  verifications emulation cannot do), AF-1 (a second reading of revision 4's changes, or a
-  recall re-measurement). Each needs the user's go-ahead and its own unit.
+- **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
+  [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
+  2026-09-25; the order is the orchestrator's):
+  SF-1 is complete; **next is AF-1** (a second reading of revision 4's changes, or a recall
+  re-measurement), then QF-1 (plant defects for Q24–Q26; a timing approach for Q18), then CF-1
+  (rebuild the candidate from revision 6 and rerun the acceptance set). HF-1 (the hardware
+  verifications emulation cannot do) is blocked on hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

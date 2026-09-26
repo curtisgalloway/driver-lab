@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T19:30-07:00
+Updated: 2026-09-25T21:05-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,15 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [SF-1 — `[emulated]` in the format](SF-1.md)
+Entries: 2026-09-25T20:33-07:00 through 2026-09-25T21:05-07:00
+Outcome: complete; the class is in the format, the evidence model and the checker; see the
+[evidence](../evidence/SF-1.md).
+- The checker already had the citation and TODO shapes; "never alone" is the one new rule,
+  a set test on the tail's tags.
+- The phrasing rule and the run-ID content are judgment, so they went to `spec-verifier`'s
+  text, where L02f3 actually enforced them.
 
 ### [L02f3 — spec feedback, reverification and L02 acceptance](L02f3.md)
 Entries: 2026-09-25T18:35-07:00 through 2026-09-25T19:30-07:00
@@ -127,3 +136,5 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   verifiers' findings were mostly the operator's own fix-pass errors.
 - **Model departures from the manual** (continued): [L02f3](L02f3.md) — all seven recorded in
   the spec as `[emulated]` EM1–EM7, with the rule that an entry cites runs, not mechanism.
+  [SF-1](SF-1.md) — the class and that rule adopted into the format, the evidence model and
+  the checker.

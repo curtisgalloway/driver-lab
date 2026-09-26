@@ -39,10 +39,11 @@ stated here; the skills point at this file instead of restating it.
   `--stubs-from` finds stubs by the sentence.
 - **Cache** — the out-of-tree directory `~/src/<cache>/` where the expert clones reference source. The
   cache is the encumbered side of the clean-room wall; the spec is the clean side.
-- **Provenance tag** — the class of authority behind a fact. `[databook]`, `[standard]`, `[DT]`, and
-  `[source-observed]` are `os-investigator`'s; specs add `[rtl]`, `[doc]`, `[hardware]`, and
-  `[press]`. What each class is trusted for, what that trust assumes, and how conflicts between
-  classes are recorded is in `DESIGN.md`, "Evidence model". The classes, with what falls in each:
+- **Provenance tag** — the class of authority behind a fact. `[databook]`, `[standard]`, `[DT]`,
+  `[source-observed]` and `[inference]` are `os-investigator`'s; specs add `[rtl]`, `[doc]`,
+  `[hardware]`, and `[press]`; testing against a device model adds `[emulated]`. What each class
+  is trusted for, what that trust assumes, and how conflicts between classes are recorded is in
+  `DESIGN.md`, "Evidence model". The classes, with what falls in each:
   - `[databook]` — the IP databook, TRM, or datasheet; cite the section.
   - `[standard]` — a public standard or architecture specification (ARM ARM, GICv3, PSCI, USB, IEEE
     802.3, the 16550 register model, the arm64 boot protocol in `booting.rst`); cite the clause.
@@ -77,6 +78,19 @@ stated here; the skills point at this file instead of restating it.
     hardware)`, which names the verification method. State the confidence in the bullet where it is
     not obvious. An inference is the one class whose support is an argument rather than a citation,
     so the argument has to be on the page.
+  - `[emulated]` — observed on a device model (QEMU or another emulator), not on silicon: a
+    register value read back, a gap in a trace, frames in a capture. Always followed by a
+    parenthetical naming the model, its version and the run IDs the observation comes from, the
+    way `[hardware]` names the board, so `[emulated]` (QEMU 10.2.1 `e1000`, runs
+    `e1000-l02f1-20260925-01` r001–r010) is complete; a spec that keeps its observations in a
+    numbered table carrying the version and run IDs may point at the entry instead, so
+    `[emulated]` (§12.5 EM2) is also complete. Phrased as what was observed from outside
+    the model, never as the model's mechanism: the model's source is encumbered like any other,
+    and the tag must not become a channel for it. A model result is never a hardware requirement
+    and never the sole authority for a fact: it stands beside another class (the databook the
+    model departs from or confirms), or it is one premise of an `[inference]`. Always with
+    `TODO (verify on hardware)`, because a model can accept programming the silicon would not.
+    Adopted 2026-09-25 from its use in L02 (SF-1; see `DESIGN.md`, "Evidence model").
 - **Series** — a patch series on a mailing list that adds or changes device trees or drivers before
   it is merged. A `resources.series` entry; a map (`[DT]`, `[source-observed]`), never an authority.
 - **Variant** — a model of a board that shares the SoC and most facts with a base model (a "Pro"
@@ -287,9 +301,15 @@ tag token inside it would be read as a tag.
   (`bcm2712.dtsi`), `[databook]` (DDI 0183). `TODO (verify on hardware)`: the IRQ number.
 ```
 
-- `[source-observed]`, `[press]`, and `[inference]` facts must carry `TODO (verify on hardware)`.
+- `[source-observed]`, `[press]`, `[inference]`, and `[emulated]` facts must carry
+  `TODO (verify on hardware)`.
 - `[inference]` is always followed by a parenthetical giving its premises and derivation, so a
   reader can check the reasoning without re-reading the source it was reasoned from.
+- `[emulated]` is always followed by a parenthetical naming the device model, its version and the
+  run IDs, or a numbered observation in the same spec that carries them, and is never the only
+  tag in a tag clause: another class stands beside it, or the
+  observation is a premise inside an `[inference]`'s parenthetical (which then carries the tag).
+  A bullet whose only authority is a model observation is a lead, not a fact.
 - `[doc]` is always followed by a parenthetical naming the page or document, so a store page, a
   platform guide, and a cover letter cannot be confused.
 - `[DT]` is always followed by a parenthetical naming the file the value came from (`bcm2712.dtsi`,
@@ -444,7 +464,9 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
 
 - Only facts that are datasheet-, standard-, documentation-, or DT-cited, verifier-PASSed, or
   measured on hardware belong in a spec. `[source-observed]` and `[press]` are allowed only with
-  `TODO (verify on hardware)`.
+  `TODO (verify on hardware)`; so is `[emulated]`, and only beside another class or as an
+  `[inference]` premise, phrased as an observation from outside the model (the model's source is
+  encumbered, and its function and variable names stay on the other side of the wall).
 - **Device-tree content is hardware description, not source.** Node names, labels, `compatible`
   strings, property names, and values (addresses, interrupt tuples, clock names, pin groups) are
   hardware facts, tagged `[DT]`, and may be read from a device tree and written into a spec by the
@@ -480,9 +502,11 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
   or a `fetch_via` that is not a string; a `status` other than unmerged | merged | superseded, on an
   entry or on one of its `files`;
 - `access: internal`, or a `via:` naming a skill outside the public set, under a `public` root;
-- a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]` or
-  `[press]` without `TODO (verify on hardware)`, or a `[doc]` or `[DT]` without a parenthetical
-  naming its source (tag names in the prose are ignored);
+- a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
+  `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
+  `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
+  that it name the source; the checker tests only that it is there); or a tail clause whose only
+  tag is `[emulated]` (tag names in the prose are ignored);
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;
 - a stub whose `spec: <id>` does not resolve. `--stubs-from` finds every `*/SKILL.md` under a

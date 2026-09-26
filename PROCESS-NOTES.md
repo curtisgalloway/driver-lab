@@ -368,4 +368,6 @@ Cost: one rewrite pass; a verifier check against an observations extract.
 Prevention: an `[emulated]` fact states an observation from outside the model and cites the
 run, the way `[hardware]` cites the board; the mechanism stays in the evidence file.
 Fix belongs in: `SPEC-FORMAT.md` and the design's evidence model (follow-on SF-1)
-Status: open
+Status: fixed in SF-1 (2026-09-25): the class, its citation form and the phrasing rule are in
+`SPEC-FORMAT.md` and `DESIGN.md`, and `spec_check.py` enforces that a citation parenthetical
+is present, the TODO, and the never-alone rule ([evidence](evidence/SF-1.md))

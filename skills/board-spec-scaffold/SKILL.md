@@ -121,9 +121,10 @@ of the Boot chain bullet.
    a block's register model and sequences are IP facts, written once and referenced from every
    `instances:` row that places it. Tag every fact; mark anything unverified
    `TODO (verify on hardware)` rather than guessing. Put the tag clause at the end of every bullet
-   (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]` and `[source-observed]`
-   carry the TODO. Sibling models go in `variants:` or their own `variant_of` spec
-   (`QUESTIONS.md` item 6).
+   (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]`, `[source-observed]`,
+   `[inference]` and `[emulated]` carry the TODO, and an `[emulated]` observation names its
+   model version and runs and never stands alone. Sibling models go in `variants:` or their
+   own `variant_of` spec (`QUESTIONS.md` item 6).
 4. **Write the root marker, stub, overlay, and vendor skill** if wanted, from their templates.
    Placeholders only in the vendor templates: the real names belong in the vendor's private repo.
 5. **Register.** A spec needs no registration; a stub does. In this repo a stub goes under

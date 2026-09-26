@@ -150,7 +150,10 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   id; `[hardware]` names a board and a method; `[press]` and `[source-observed]` name a page or a
   tree and are compared against it like any other claim, TODO or not; `[inference]` names its
   premises and derivation in its parenthetical, and is verified on whether those premises hold and
-  whether the conclusion follows from them. `instances:` rows are claims
+  whether the conclusion follows from them; `[emulated]` names a device model, its version and
+  run IDs, and is compared against an extract of what those runs recorded (traces, captures,
+  logs, verdicts), prepared by the operator, never against the model's source, and fails when it claims more than the runs show or states
+  the model's mechanism rather than an observation. `instances:` rows are claims
   too: each `reg`, `irq`, and `clocks` value against the device tree it came from, keyed
   `instances/<name>`.
 - **Composition.** The verifier may read the specs a board composes through `parts`, so "see
@@ -221,7 +224,10 @@ The kind produced by `cleanroom-spec`. Two passes, and the first is not this ski
    source, and does the conclusion actually follow from them? A premise that does not hold is a
    `FAIL`; premises that hold under a conclusion they do not support is also a `FAIL`, with the
    gap in the reasoning named. The commonest form is a workaround a driver applies to a whole
-   family being written as a hardware requirement, when the erratum scopes it to one part.
+   family being written as a hardware requirement, when the erratum scopes it to one part. An
+   `[emulated]` fact is checked against an extract of what its cited runs recorded, never against
+   the model's source: it is a `FAIL` when it claims more than the runs show, names the model's
+   mechanism instead of an observation, or is the only authority behind a step.
 
 - **Claims** are keyed by section and ordinal (tables: `<Section>/<table>/<row name>`; sequences:
   `<Section>/<step number>`).

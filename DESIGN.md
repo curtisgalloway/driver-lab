@@ -183,8 +183,11 @@ The investigation tags distinguish `[databook]`, `[standard]`, `[DT]`, `[source-
 `[inference]`. Board specs add `[rtl]`, `[doc]`, `[hardware]`, and `[press]`. These mean,
 respectively, hardware documentation, a standard, device-tree values, observed software, a
 reasoned conclusion, the hardware design itself, project or vendor documentation, a measurement,
-and third-party reporting. The format specifies
-where tags go and what accompanying citations and cautions they require.
+and third-party reporting. Testing against a device model adds `[emulated]`: a result observed on
+an emulator rather than on silicon (proposed in the [QEMU differential
+design](QEMU-DIFFERENTIAL.md), adopted 2026-09-25 after L02 showed how it is used; follow-on
+SF-1). The format specifies where tags go and what accompanying citations and cautions they
+require.
 
 The important distinction is between seeing a driver do something and establishing that hardware
 requires it. Source-only ordering carries "order not known to be required"; source-only tuning
@@ -213,6 +216,7 @@ disagreement. This section states the assumptions so they can be checked and arg
 | `[doc]` | What a vendor or project says about its own work | The author knew and the text is current | Marketing pages, docs for a different part or revision |
 | `[press]`, forums, other low-confidence reports | A lead worth checking | None | Allowed only with `TODO (verify on hardware)`, as today |
 | `[inference]` | A conclusion from tagged premises | The derivation is sound | Carries its own confidence; never stronger than its weakest premise |
+| `[emulated]` | How a driver behaves against a named device model under stated scenarios, and where that model departs from the manual | The model implements the behavior under test as the manual describes | Models are lenient (accept programming the silicon would not), omit errata and timing, and may share a misreading with the reference driver. A pass is weaker than `[hardware]`; a failure the manual explains is strong evidence. Never a hardware requirement and never the sole authority for a fact: it stands beside another class or is a premise of an `[inference]`, cites the model version and the runs, and states what was observed from outside the model, not its mechanism |
 | Model recall | Nothing | n/a | Not evidence and never tagged; a fact with no source is a gap |
 
 Two rules follow from the table:
@@ -243,7 +247,8 @@ A spec is not finished when it is accepted. Implementation, debugging, and testi
 evidence, and that evidence belongs in the spec rather than in a test log nobody rereads:
 
 1. A test or debugging result becomes a `[hardware]` fact, citing the test, board, revision,
-   image, and conditions.
+   image, and conditions; a result from a device model becomes an `[emulated]` fact, citing the
+   model, its version and the runs, and it narrows or confirms a claim without closing it.
 2. It confirms, contradicts, or narrows an existing claim. A `[source-observed]` ordering marked
    "order not known to be required" can become required, or shown not to be. A source-only
    constant can be re-derived.

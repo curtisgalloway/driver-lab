@@ -237,6 +237,61 @@ class TagRules(unittest.TestCase):
             "\n".join(self.tags_of(body)),
         )
 
+    def test_emulated_needs_a_parenthetical(self):
+        emu = spec_check.UNNAMED_RES["emulated"]
+        self.assertIsNone(emu.search("`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02)"))
+        self.assertIsNone(emu.search("[emulated] (widget-model 1.0, run widget-q1-01)"))
+        self.assertIsNotNone(emu.search("`[emulated]`"))
+        self.assertIsNotNone(emu.search("`[emulated]`, `[databook]` (Widget TRM 4.2)"))
+
+    def test_emulated_beside_another_class_passes(self):
+        body = (
+            "## Gotchas\n\n"
+            "- **Grant bit.** Reads back set at power-on on the model. `[databook]` (Widget TRM 4.2), "
+            "`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02) "
+            "`TODO (verify on hardware)`: read it after power-on.\n"
+        )
+        self.assertEqual(self.tags_of(body), [])
+
+    def test_emulated_as_an_inference_premise_passes(self):
+        body = (
+            "## Gotchas\n\n"
+            "- **Reset gap.** Leave 10 microseconds. `[inference]` (premises: the databook asks for 1 "
+            "`[databook]` (Widget TRM 5.1); 4 to 8 observed `[emulated]` (widget-model 1.0, run "
+            "widget-q1-01); a posted write cannot be timed) `TODO (verify on hardware)`: measure it.\n"
+        )
+        self.assertEqual(self.tags_of(body), [])
+
+    def test_emulated_alone_is_an_error(self):
+        body = (
+            "## Gotchas\n\n"
+            "- Reception pauses for a second after a control write. `[emulated]` (widget-model 1.0, "
+            "run widget-q1-01) `TODO (verify on hardware)`: time it on a board.\n"
+        )
+        msgs = self.tags_of(body)
+        self.assertEqual(len(msgs), 1, msgs)
+        self.assertIn("[emulated] is never the sole authority for a fact", msgs[0])
+
+    def test_emulated_without_todo_is_an_error(self):
+        body = (
+            "## Gotchas\n\n"
+            "- The transmit ring drains with the link down. `[databook]` (Widget TRM 3), "
+            "`[emulated]` (widget-model 1.0, run widget-q1-01)\n"
+        )
+        self.assertEqual(self.tags_of(body), ["[emulated] fact without 'TODO (verify on hardware)'"])
+
+    def test_emulated_without_a_parenthetical_is_an_error(self):
+        body = (
+            "## Gotchas\n\n"
+            "- Reads back set. `[databook]` (Widget TRM 4.2), `[emulated]` "
+            "`TODO (verify on hardware)`: read it on a board.\n"
+        )
+        self.assertEqual(
+            self.tags_of(body),
+            ["[emulated] must be followed by a parenthetical naming the device model, its version "
+             "and the run IDs"],
+        )
+
     def tags_of(self, body):
         spec = spec_check.Spec(pathlib.Path("x.spec.md"), pathlib.Path("."), "public", {}, body)
         findings = []
@@ -321,6 +376,9 @@ class BadRoot(unittest.TestCase):
                     "[press] fact without",
                     "[doc] must be followed by a parenthetical",
                     "[DT] must be followed by a parenthetical",
+                    "[emulated] fact without",
+                    "[emulated] must be followed by a parenthetical",
+                    "[emulated] is never the sole authority for a fact",
                     "irq.kind extended requires irq.parent",
                     "irq.parent is only valid for kind extended",
                     "irq.intid is not valid for kind extended",

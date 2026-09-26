@@ -35,3 +35,6 @@ resources:
 ## Gotchas
 
 - Fine. `[DT]`
+- **Receive hold.** Reception pauses for a second after a control write. `[emulated]` (widget-model 1.0, run widget-q1-01) `TODO (verify on hardware)`: time it on a board.
+- **Ring drain.** The transmit ring drains with the link down. `[databook]` (Widget TRM 3), `[emulated]` (widget-model 1.0, run widget-q1-01)
+- **Grant bit.** Reads back set. `[databook]` (Widget TRM 4.2), `[emulated]` `TODO (verify on hardware)`: read it on a board.

@@ -59,8 +59,9 @@ used these tools cannot follow the plan without them.
   writes a verdict per claim into a record outside the spec. Not the thing being evaluated; a tool
   used by the evaluation.
 - **Provenance tag** — the marker on each fact saying where it came from: `[databook]`,
-  `[standard]`, `[DT]`, `[source-observed]`, and `[inference]` for a fact concluded rather than
-  read. Defined in `skills/board-expert/SPEC-FORMAT.md` and used by both spec kinds.
+  `[standard]`, `[DT]`, `[source-observed]`, `[inference]` for a fact concluded rather than
+  read, and `[emulated]` for a result observed on a device model. Defined in
+  `skills/board-expert/SPEC-FORMAT.md` and used by both spec kinds.
 - **Adjudication** — a human decision resolving a conflict two readers could not settle between
   themselves. An adjudication item is not a pass and not a failure; it is a question waiting for a
   person.

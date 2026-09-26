@@ -38,14 +38,19 @@ What fails (exit 1):
     ignored by every rule below.  A bullet whose text, after an optional
     bold lead-in, starts with ``TODO (verify on hardware)`` is a gap and
     needs no tag
-  * a tail clause with ``[source-observed]``, ``[press]`` or ``[inference]``
-    but no ``TODO (verify on hardware)``; a ``[doc]``, ``[DT]`` or
-    ``[inference]`` in the tail not followed by a parenthetical naming its
-    source (for ``[DT]``: the file, and its origin when it is a decompiled
-    blob rather than a source ``.dts``; the origin may be the ``name`` of a
-    ``resources.repos`` entry -- for ``[inference]``: its premises and the
-    derivation, since an inference is supported by an argument rather than
-    by a citation)
+  * a tail clause with ``[source-observed]``, ``[press]``, ``[inference]``
+    or ``[emulated]`` but no ``TODO (verify on hardware)``; a ``[doc]``,
+    ``[DT]``, ``[rtl]``, ``[inference]`` or ``[emulated]`` in the tail not
+    followed by a parenthetical naming its source (for ``[DT]``: the file,
+    and its origin when it is a decompiled blob rather than a source
+    ``.dts``; the origin may be the ``name`` of a ``resources.repos`` entry
+    -- for ``[inference]``: its premises and the derivation, since an
+    inference is supported by an argument rather than by a citation -- for
+    ``[emulated]``: the device model, its version and the run IDs, the way
+    ``[hardware]`` names the board); a tail clause whose only tag is
+    ``[emulated]``, since a model observation is never the sole authority
+    for a fact: another class stands beside it, or the observation is a
+    premise of an ``[inference]``
   * an unsubstituted template placeholder (``<...>`` starting with a letter,
     outside backtick code spans, not a URL or a message id) in a spec's
     frontmatter or body, or in a stub
@@ -116,7 +121,7 @@ FACT_SECTIONS = {
     "Programming model",
     "Known variants and quirks",
 }
-TAG_NAMES = "databook|standard|rtl|DT|source-observed|doc|hardware|press|inference"
+TAG_NAMES = "databook|standard|rtl|DT|source-observed|doc|hardware|press|inference|emulated"
 TAG_CLASSES = tuple(TAG_NAMES.split("|"))
 TAG_RE = re.compile(rf"\[({TAG_NAMES})\]")
 TODO_RE = re.compile(r"TODO \(verify on hardware\)")
@@ -129,7 +134,9 @@ TAIL_RE = re.compile(
 )
 GAP_RE = re.compile(r"^- (?:\*\*[^*]+\*\*\s*)?`?TODO \(verify on hardware\)")
 # Tags that must be followed by a parenthetical naming their source.
-NAMED_TAGS = ("doc", "DT", "inference", "rtl")
+NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated")
+# Tags whose fact must carry the closing TODO (verify on hardware) sentence.
+TODO_TAGS = ("source-observed", "press", "inference", "emulated")
 UNNAMED_RES = {
     tag: re.compile(rf"\[{tag}\](?:`|(?!`))(?!\s*\()") for tag in NAMED_TAGS
 }
@@ -783,7 +790,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
         tail = tail_match.group(0)
         tags = TAG_RE.findall(tail)
         has_todo = bool(TODO_RE.search(tail))
-        for needs_todo in ("source-observed", "press", "inference"):
+        for needs_todo in TODO_TAGS:
             if needs_todo in tags and not has_todo:
                 findings.append(
                     Finding("error", where, f"[{needs_todo}] fact without 'TODO (verify on hardware)'")
@@ -795,10 +802,22 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     "DT": "the file (and its origin, for a blob)",
                     "inference": "its premises and derivation",
                     "rtl": "the design, its revision, and the module",
+                    "emulated": "the device model, its version and the run IDs",
                 }[tag]
                 findings.append(
                     Finding("error", where, f"[{tag}] must be followed by a parenthetical naming {what}")
                 )
+        # A model observation is never the sole authority for a fact: it stands beside
+        # another class, or it is a premise of an [inference] (which then carries the tag).
+        if tags and set(tags) == {"emulated"}:
+            findings.append(
+                Finding(
+                    "error",
+                    where,
+                    "[emulated] is never the sole authority for a fact: cite another class beside "
+                    "it, or make the observation a premise of an [inference]",
+                )
+            )
 
 
 RECORD_KEYS = ("spec", "spec_file", "spec_sha256", "verified", "verifier", "sources", "summary")

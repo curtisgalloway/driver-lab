@@ -23,7 +23,8 @@ A6 was amended 2026-09-25 (user approved; see below and the plan's L02d3).
   to the device and the device reports completed packets (DMA).
 - **Differential test** — run the reference driver and the candidate under identical
   scenarios and compare outcomes and register traces.
-- **`[emulated]`** — proposed evidence class for a result observed on a QEMU device model.
+- **`[emulated]`** — the evidence class for a result observed on a QEMU device model; proposed
+  here, adopted into the format and the evidence model on 2026-09-25 (SF-1).
 - **KVM / TCG** — hardware-assisted virtualization / QEMU's slower software emulation.
 
 See the [glossary](GLOSSARY.md), the [evidence model](DESIGN.md#evidence-model-what-we-trust-and-why),
@@ -157,13 +158,18 @@ length off by one descriptor.
 Every `[emulated]` result and every spec gap goes into a versioned working copy of the spec,
 following the update loop in the evidence model. The accepted spec is never edited in place.
 
-## Evidence class: `[emulated]` (proposed)
+## Evidence class: `[emulated]`
 
 | Trusted for | Assumes | Failure modes |
 | --- | --- | --- |
 | How a driver behaves against the device model under stated scenarios | The model implements the behavior under test as the manual describes | Models are often lenient (accept wrong programming), omit errata and timing, and may copy the same misreading as the Linux driver. A pass is weaker than `[hardware]`; a failure that the manual explains is strong evidence. |
 
-Adding the class to the format is part of L02, once the first results show how it is used.
+Proposed here; adopted on 2026-09-25 (follow-on SF-1, [evidence](evidence/SF-1.md)) after L02
+showed how it is used. The class now lives in the [evidence model](DESIGN.md#evidence-model-what-we-trust-and-why)
+and in `skills/board-expert/SPEC-FORMAT.md`, with the usage rules L02f3 learned: the tag cites the
+model version and the run IDs the way `[hardware]` cites the board; an entry states what was
+observed from outside the model, never its mechanism; and a model result is never the sole
+authority for a fact.
 
 ## Isolation
 

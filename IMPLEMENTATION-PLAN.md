@@ -377,15 +377,9 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
   fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
   `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
 - **L02f2b — harness fix H1 and Q15 requalification.** Status: `complete` 2026-09-25
-  ([evidence](evidence/L02f2b.md), [notebook](notebook/L02f2b.md)). A fixed 3 s settling
-  interval after carrier, confirmed from traces, and a trace-checked precondition that the
-  recovery pings start after the receive hold. In isolated runs eight at a time the
-  reference and the candidate passed `down-during-traffic` 10 of 10 each and d15 failed it
-  4 of 4 for the intended reason; the old harness failed the candidate 4 of 8 at that load.
-  Q15 requalified, still "not traffic-specific"; the candidate's Q15 result is PASS. One
-  independent reviewer read the diff and the run artifacts. Open limitations: the interval
-  rests on one QEMU version and host; the other nine scenarios run on the new harness only in
-  L02f3's acceptance stage.
+  ([evidence](evidence/L02f2b.md), [notebook](notebook/L02f2b.md)): H1 fixed with a bounded
+  settling interval after carrier; Q15 requalified, scope unchanged; the candidate's Q15
+  result is PASS.
   Added 2026-09-25 (user decision); a small unit that runs before L02f3. Revised the same day (see
   [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)); the
   earlier fix, stopping both floods before the interface goes down, is withdrawn.
@@ -509,9 +503,8 @@ in orchestrated mode each unit is one fresh subagent and one PR. Read
 [notebook/index.md](notebook/index.md) first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **L02f2b (done):** H1 fixed with a 3 s settling interval after carrier; Q15 requalified
-  (reference and candidate 10/10 in isolated runs, d15 4/4 FAIL); the candidate's Q15 result
-  is PASS ([evidence/L02f2b.md](evidence/L02f2b.md)). Q15 no longer blocks the L02f decisions.
+- **L02f2b (done):** H1 fixed and Q15 requalified ([evidence/L02f2b.md](evidence/L02f2b.md));
+  Q15 no longer blocks the L02f decisions.
 - **Sandbox decisions (settled by the user, 2026-09-25):** audit-only egress is accepted for L02
   (D7) and readable `/usr` and `/etc`, with kernel source and module trees hidden, are ratified
   (D8); the copied Codex credential in the L02f2 run has been deleted (that run's ledger).
@@ -524,8 +517,9 @@ in orchestrated mode each unit is one fresh subagent and one PR. Read
   gigabit-half-duplex contradictions in G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the
   L02c leak-scan whitelist and provenance map onto the test host first; L02s had to scan without
   them. Then the acceptance stage (formerly L02g): one final isolated reference/candidate run
-  set on the final harness (harness `57ef191b…` from L02f2b, unless L02f3 changes it; all ten
-  scenarios, since L02f2b reran only `down-during-traffic`), one A1–A7 acceptance table (including how the revised spec meets or
+  set on the final harness (L02f2b's, `705694b9…`, unless L02f3 changes it; all ten
+  scenarios, since L02f2b reran only `down-during-traffic`; commit or hash the run
+  declaration before launching), one A1–A7 acceptance table (including how the revised spec meets or
   falls short of A1's two-reading requirement), and an independent review; report *evaluation
   complete* and *candidate qualified* separately and close with explicit shortfalls (Q18,
   Q24–Q26 unqualified) rather than extending the campaign.

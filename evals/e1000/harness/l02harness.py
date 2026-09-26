@@ -1454,11 +1454,14 @@ RX_HOLD = 1.0
 # down-during-traffic. Both drivers rewrite RCTL at carrier-up, which starts a hold; frames
 # the peer's flood sent after the DUT went down are released in a burst when it ends. A
 # ping sent inside the hold can lose its reply behind that burst (L02f2, V6 and H1). In
-# the 18 L02f2 traces the last carrier-up RCTL write came 0.50 s (candidate) to 1.00 s
-# (reference) before the harness read carrier 1, so the hold ended at most 0.05 s after
-# that read. 3 s covers that with a margin of about 2 s, enough for a carrier-up RCTL write
-# up to ~1.9 s after the read. Fixed and bounded; the pings are never retried. The deferred
-# check settled_before() confirms from each run's trace that the hold was over.
+# every trace of L02f2 and L02f2b the carrier-up RCTL write came before the harness read
+# carrier 1, so the hold ended at most 1 s after that read: about 0.5 s after it for the
+# candidate, up to about 1.0 s for the reference (whose watchdog can report carrier just
+# before a read). 3 s leaves at least 2 s between the end of the hold and the pings
+# (observed: 2.005 s at the least), and would still cover a carrier-up RCTL write up to
+# ~1.9 s after the read. Fixed and bounded; the pings are never retried. The deferred check
+# settled_before() confirms from each run's trace that the last RCTL write before the
+# DUT's pings came at least RX_HOLD earlier; it does not see RCTL writes once they start.
 RECOVERY_SETTLE = 3.0
 
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T18:19-07:00
+Updated: 2026-09-25T18:35-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,13 +15,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [L02f2b — harness fix H1 and Q15 requalification](L02f2b.md)
-Entries: 2026-09-25T18:05-07:00 through 2026-09-25T18:19-07:00
-Outcome: complete; a 3 s settling interval after carrier; Q15 requalified (reference and
-candidate 10/10, d15 4/4 FAIL).
+Entries: 2026-09-25T18:05-07:00 through 2026-09-25T18:35-07:00
+Outcome: complete; see the [evidence](../evidence/L02f2b.md).
 - Traffic already ran through shutdown; only the settling interval was missing.
-- The old harness still failed the candidate 4 of 8 at the same load (control).
-- The reference's leftover burst comes before its carrier-up RCTL write, at the end of the
-  hold from open.
+- The old harness still failed the candidate at the same load (control).
+- The reference's leftover burst comes before its carrier-up RCTL write.
+- Correction (review R1): the first stated reason for 3 s was wrong for the candidate.
 
 ### [L02s — spec revision 5](L02s.md)
 Entries: 2026-09-25T17:49-07:00 through 2026-09-25T18:12-07:00

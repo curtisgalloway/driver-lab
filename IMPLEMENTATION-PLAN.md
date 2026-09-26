@@ -461,8 +461,14 @@ the user's.
   reset rule restated as what the trace can observe; two items for CF-1's spec revision (the
   model delivers runts; the reference's probe error path warns) and one possible new check
   (small-frame content).
-- **CF-1 — candidate on revision 6.** Status: `queued`, next; its workspace and brief are
-  prepared, and its Codex launch waits for the user.
+- **CF-1 — candidate on revision 6.** Status: `complete` 2026-09-26
+  ([evidence](evidence/CF-1.md), [notebook](notebook/CF-1.md)). One audited clean-room round
+  (Codex, launched by the user) changed the two behaviors revision 6 requires of this driver
+  (FWE = 01b on the EECD write; TNCRS reported in full duplex only), the rest already met;
+  reference and updated candidate 20 of 20 each on the QF-1 harness, declared before the run;
+  the L01 review trio (reference review, requirements review, `review-swarm`) found no bug.
+  For the next spec revision: the TNCRS attribution rule across a duplex change; for the next
+  implementer round: the file header's revision number.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -543,12 +549,15 @@ first. Review, checks and records follow the
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
   [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
   2026-09-25; the order is the orchestrator's):
-  SF-1, AF-1 and QF-1 are complete; **next is CF-1** (rebuild the candidate from revision 6
-  and rerun the acceptance set on the QF-1 harness `7024864e…`; the next spec revision also
-  takes AF-1's six items, SF-1's `[emulated]` pointer form, and QF-1's F2, the model
-  delivering runts at their wire length). CF-1's workspace and brief are prepared; its
-  Codex launch waits for the user. HF-1 (the hardware verifications emulation cannot do,
-  now including Q18's 1 µs rule, `unobservable` in emulation) is blocked on hardware.
+  SF-1, AF-1, QF-1 and CF-1 are complete: the candidate (`a8afc8c4…`, module `ce7e3e2c…`)
+  implements revision 6 and passes the acceptance set on the QF-1 harness `7024864e…`. The
+  next spec revision takes AF-1's six items, SF-1's `[emulated]` pointer form, QF-1's F2 (the
+  model delivering runts at their wire length) and CF-1's TNCRS attribution rule across a
+  duplex change; the next candidate round takes that rule and the file header's revision
+  number. A possible new check remains QF-1's F3 (small-frame content). HF-1 (the hardware
+  verifications emulation cannot do, now including Q18's 1 µs rule, `unobservable` in
+  emulation, and CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises) is
+  blocked on hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

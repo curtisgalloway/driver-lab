@@ -441,8 +441,10 @@ store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PL
 
 ### Follow-ons named in L02f3
 
-Named in the [L02f3 evidence](evidence/L02f3.md#follow-ons-named-not-scope); the user
-authorized running all of them on 2026-09-25, one unit and one PR each, in the order below.
+Named in the [L02f3 evidence](evidence/L02f3.md#follow-ons-named-not-scope). On 2026-09-25
+the user asked for all of them to be run the same way as the milestones (one fresh
+implementer, one unit and one PR each); the order below was the orchestrator's choice, not
+the user's.
 
 - **SF-1 — `[emulated]` in the format.** Status: `complete` 2026-09-25
   ([evidence](evidence/SF-1.md), [notebook](notebook/SF-1.md)). The class is in
@@ -530,7 +532,8 @@ first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
-  [follow-on list](#follow-ons-named-in-l02f3) (user go-ahead for all of them, 2026-09-25):
+  [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
+  2026-09-25; the order is the orchestrator's):
   SF-1 is complete; **next is AF-1** (a second reading of revision 4's changes, or a recall
   re-measurement), then QF-1 (plant defects for Q24–Q26; a timing approach for Q18), then CF-1
   (rebuild the candidate from revision 6 and rerun the acceptance set). HF-1 (the hardware

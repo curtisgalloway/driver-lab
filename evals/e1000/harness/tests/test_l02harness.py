@@ -907,6 +907,39 @@ class FrameSizesTest(unittest.TestCase):
         )
         self.assertEqual(log[-1], ("dut", "ip link set eth0 down && rmmod e1000"))
 
+    def test_a_failed_read_fails_the_check_and_a_rise_across_it_is_kept(self):
+        # Review R2: a read that fails mid-run must not let a rise through; the next
+        # comparison is against the last successful read.
+        class Flaky(self.FakeGuest):
+
+            def run(self, cmd, timeout=30):
+                if cmd.startswith("grep '^Icmp:'") and self.errors and self.errors[0] is None:
+                    self.errors.pop(0)
+                    self.log.append((self.name, cmd))
+                    return 1, ""
+                return super().run(cmd, timeout)
+
+        log = []
+        dut = Flaky("dut", log, [0, None, 2, 2, 2, 2, 2, 2, 2, 2])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, self.FakeGuest("peer", log, []), None, "e1000", Path(d), step=1)
+            h.scenario_frame_sizes(c)
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(
+            counter[0][1:],
+            (
+                False,
+                "InCsumErrors could not be read at every point;"
+                " +2 during 'DUT pings peer with 60-byte frames'",
+            ),
+        )
+        dut = Flaky("dut", log, [None, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, self.FakeGuest("peer", log, []), None, "e1000", Path(d), step=1)
+            h.scenario_frame_sizes(c)
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(counter[0][1:], (False, "InCsumErrors could not be read at every point"))
+
     def test_a_rising_count_fails_and_names_the_pings(self):
         # 10 reads: before the pings, then after each of the 9.
         _, c = self.scenario([0, 0, 2, 4, 4, 4, 4, 4, 4, 4])

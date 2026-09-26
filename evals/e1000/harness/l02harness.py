@@ -1395,24 +1395,27 @@ def scenario_frame_sizes(c: Ctx) -> None:
     ]
     start = errors = icmp_csum_errors(c.dut)
     rose: list[str] = []
+    unread = start is None
     for guest, dst, name, payload, frame in pings:
         ping(c, guest, dst, name, 2, payload, PING_PATTERN.get(frame) if payload else None)
         now = icmp_csum_errors(c.dut)
-        if errors is not None and now is not None and now > errors:
+        if now is None:
+            # A failed read fails the check: a rise across the gap would be lost, and
+            # the next comparison is against the last successful read.
+            unread = True
+            continue
+        if errors is not None and now > errors:
             rose.append(f"+{now - errors} during {name!r}")
         errors = now
+    detail = "; ".join(rose)
+    if unread:
+        detail = "InCsumErrors could not be read at every point" + (f"; {detail}" if detail else "")
+    elif not rose:
+        detail = f"InCsumErrors {start} before the pings, {errors} after"
     c.check(
         "the DUT's kernel counted no ICMP checksum errors while the pings ran",
-        errors is not None and not rose,
-        (
-            "; ".join(rose)
-            if rose
-            else (
-                "InCsumErrors could not be read"
-                if errors is None
-                else f"InCsumErrors {start} before the pings, {errors} after"
-            )
-        ),
+        not unread and not rose,
+        detail,
     )
     c.defer(
         "the DUT's 60- and 61-byte echo requests reached the peer with the pattern"

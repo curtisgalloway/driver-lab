@@ -143,9 +143,23 @@ The declaration is in the run's ledger and here; this section was committed
 the launcher started (08:41:35) and the first scenario (08:41:38). (The section as committed
 said "08:42"; the time above is the commit's, finding F1.)
 
+**Round `f2` (declared after the review, 09:03 Pacific, before any `f2` run; committed
+before launch).** Review finding R2: the checksum-error check compared each counter read
+with the previous one and let a failed read reset the comparison, so a rise across the gap
+would have been lost. Fixed (a failed read fails the check; comparisons are against the
+last successful read; one test), final harness `l02harness.py` `884e771c…`; the diff from
+`9c33f54d…` is that check's bookkeeping and its detail text, nothing that touches the
+captures, the pings or any other check, and the shared decoder is unchanged (identical on
+all 588 stored captures). No read failed in any `f1` run (all 160 succeeded), so `f1`'s
+verdicts stand as computed; `f2` shows the final harness on the affected scenario: reference
+×2, candidate ×2, d21c ×2 and d24 ×2 of `frame-sizes`, eight isolated runs, with the same
+expected outcome per check as `f1`'s declaration, except that under d24 "peer pings DUT
+with 60/61-byte frames" is expected to PASS (F2).
+
 ## Results
 
-All 52 runs (08:41:38 to 08:43:23 Pacific, 1 minute 49 seconds for the round), KVM, every
+All 52 runs of `f1` (launched 08:41:35, first scenario 08:41:38, last scenario end
+08:43:23, launcher done 08:43:24 Pacific), KVM, every
 run's `identities.json` recording the frozen hashes (checked by `summary.py` in the run
 store). "Run" names the run directory in `fc1-20260926-01`.
 

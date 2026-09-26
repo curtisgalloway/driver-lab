@@ -27,7 +27,11 @@ one breaks it.
 
 ## Checks
 
-CI (`.github/workflows/checks.yml`) runs these; run them before every checkpoint commit:
+CI (`.github/workflows/checks.yml`) runs the full list below on every pull request. Before a
+checkpoint commit, run locally the tests for the surface you changed plus the privacy check
+(`check-no-private-paths.py`); run the full list locally at the final checkpoint of a
+campaign (for L02, L02f3's acceptance stage). (Revised 2026-09-25, user approved.) The full
+list:
 
 ```bash
 python3 utilities/check-no-private-paths.py
@@ -48,10 +52,19 @@ The last one needs a public-skills checkout; CI pins the scanner to one of its c
 
 - **One unit per session**: implement, verify, review, then a checkpoint commit named
   `driver-porting: <unit> — <title>`; stop for inspection. Review happens **before** the
-  checkpoint and must leave an artifact (a run directory or reviewer report).
-- **Reviews**: `review-swarm` for code, plus a fresh reviewer that reads **run artifacts** for
-  harness work (L02d2's code review missed three claims that could not fail; the artifact
-  reviewer found them). `spec-verifier` for specs.
+  checkpoint and must leave an artifact (a run directory or reviewer report). In orchestrated
+  mode, one fresh subagent runs each unit and the orchestrator lands it as one pull request.
+- **Reviews** (default from 2026-09-25, user approved): for harness work, one independent
+  reviewer that reads the diff and the **run artifacts** (L02d2's code review missed three
+  claims that could not fail; the artifact reviewer found them). For spec work,
+  `spec-verifier` on the changed claims and their dependencies. `review-swarm` only when
+  shared execution machinery, access controls or several scenarios change, or whenever the
+  reviewer asks for broader review.
+- **Records, one job each**: the private run ledger holds identities, commands, artifacts,
+  attempts and reviewer references; the public evidence file holds conclusions, the acceptance
+  table, limitations, and consequential findings with their resolutions; the notebook holds
+  short chronological discoveries and dead ends; the plan and the notebook index hold status
+  and links. Do not repeat findings tables or conclusions across them.
 - **Implementers** are fresh subagents whose model the user selects.
 - **Isolation**: the operator reads the reference driver and QEMU; implementers never do. The
   blind requirement list stays private until its recall is measured. An implementer launched as

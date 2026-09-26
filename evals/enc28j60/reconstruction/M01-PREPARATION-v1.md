@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Qualification** — demonstrating a check works using reference cases and deliberate defects.
 
 See the [glossary](../../../GLOSSARY.md). This evaluator-only record implements
-[M01](../../../IMPLEMENTATION-PLAN.md#m01--make-trial-preparation-executable).
+[M01](../../../DEFERRED-PLAN.md#m01--make-trial-preparation-executable).
 Do not supply it, its pin inventory, or its evidence record to an implementer.
 
 ## Identity and custody

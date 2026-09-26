@@ -76,3 +76,14 @@ passing. d21c (tail shifted by one byte from byte 46) passes everything: the pay
 4-byte timestamp at frame bytes 42–45 and zeros after, so shifting zeros is a no-op, and the
 peer's capture shows every reply echoing its request byte for byte. An equivalent mutation
 under this stimulus, and a gap in the suite: nothing checks the content of a small frame.
+
+## 2026-09-26T00:52-07:00 — correction (review R1): I misread the histogram I had just printed
+The review recomputed the write-then-read stamp differences over the 40 L02f3 traces: the
+mode is 6 µs, and 0 or 1 µs is 1.1 % of pairs. I had written "1 µs apart most often" from a
+per-run listing whose first entries were the small differences, and declared d22's likely
+outcome on it. The resolution argument never needed that premise (write-to-write pairs at
+0 µs in every run carry it), and the conclusion stands, but the declared expectation was
+built on a number I had not checked. Also corrected from the review: the candidate's
+acceptance-set resets are 180, not 80; the driver core logs `-ENODEV` at debug level, so
+d18's declared "probe … failed" line could never have appeared; and the 00:24 entry above
+credits L02d3's reviewer with the padding premise when that reviewer recorded the opposite.

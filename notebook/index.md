@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T00:40-07:00
+Updated: 2026-09-26T00:52-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [QF-1 — the four unqualified claims](QF-1.md)
-Entries: 2026-09-26T00:10-07:00 through 2026-09-26T00:35-07:00
+Entries: 2026-09-26T00:10-07:00 through 2026-09-26T00:52-07:00
 Outcome: complete; Q24, Q25 and Q26 qualified, Q18 stays unqualified (`unobservable`); see
 the [evidence](../evidence/QF-1.md).
 - The trace resolves sub-microsecond intervals as equal stamps; the 1 µs rule was lenient,
@@ -24,6 +24,7 @@ the [evidence](../evidence/QF-1.md).
 - The model does not pad short frames: a small-frame defect that trims also kills ARP.
 - The kernel-log check caught a warning in the reference's own probe error path.
 - Ping payloads are zeros past a 4-byte timestamp, so small-frame corruption is invisible.
+- Correction (review R1): write-then-read stamps are typically 6 µs apart, not 1.
 
 ### [AF-1 — a second reading of revision 4's changes](AF-1.md)
 Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:56-07:00

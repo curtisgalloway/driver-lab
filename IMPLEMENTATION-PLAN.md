@@ -482,6 +482,13 @@ the user's.
   `frame-sizes` 5 of 5 each, declared before the run; every existing check name unchanged.
   The review's one code finding (a failed counter read could hide a rise) fixed and the
   scenario rerun on the final harness `884e771c…`, 8 of 8.
+- **SR-8 — spec revision 8.** Status: `complete` 2026-09-26
+  ([evidence](evidence/SR-8.md), [notebook](notebook/SR-8.md)). Approved by the user
+  2026-09-26, who chose CF-1's reviewer-A rule ("drain at link change"). Revision 8 on
+  revision 7: the TNCRS attribution rule in §4.7 and a new §5.9 step (a driver-requirement
+  change, stated in the header; the current candidate does not yet follow it) and SR-7's
+  three wording items. The next candidate round would implement the rule; **awaiting the
+  user** (it is the user's Codex launch).
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -572,12 +579,15 @@ first. Review, checks and records follow the
   SF-1's `[emulated]` pointer form and QF-1's F2 as EM8 and changes no driver
   requirement, so CF-1's result stands on it. FC-1 (QF-1's F3, small-frame content) is
   complete: the harness is `884e771c…`, claim Q27 is qualified, and the candidate passes it
-  5 of 5 (and 2 of 2 on the final harness). The next spec revision takes CF-1's TNCRS
-  attribution rule across a duplex change (a requirement change, so not in SR-7) and SR-7's
-  three wording items; the next candidate round takes that rule, the file header's revision
-  number, and revision 7 as its spec. HF-1 (the hardware verifications emulation cannot do,
-  now including Q18's 1 µs rule, `unobservable` in emulation, and CF-1's FWE and half-duplex
-  TNCRS behaviors, which no scenario exercises) is blocked on hardware.
+  5 of 5 (and 2 of 2 on the final harness). SR-8 is complete: spec revision 8 states
+  CF-1's TNCRS attribution rule (the user's choice, "drain at link change"; a requirement
+  change) and SR-7's three wording items. **Awaiting the user:** the next candidate round,
+  which would implement that rule, take the file header's revision number, and use revision
+  8 as its spec; it is the user's Codex launch and is not approved. HF-1 (the hardware
+  verifications emulation cannot do, now including Q18's 1 µs rule, `unobservable` in
+  emulation, CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises, and
+  revision 8's attribution rule, which needs a link that changes duplex) is blocked on
+  hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

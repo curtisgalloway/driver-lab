@@ -58,7 +58,9 @@ After the scenarios, two pseudo-scenarios check the stored files:
 
 - `trace` (when a suite scenario ran) checks the whole register trace against rules the
   manual states: at least 1 µs between a global reset (`CTRL.RST`) and the next register
-  access; ring lengths nonzero multiples of 128 bytes; ring bases 16-byte aligned; tail
+  access, judged as trace stamps at least 2 µs apart, since the stamps are whole
+  microseconds and a difference of 1 µs can be any interval under 2 µs (plan unit QF-1,
+  [evidence](../../../evidence/QF-1.md)); ring lengths nonzero multiples of 128 bytes; ring bases 16-byte aligned; tail
   writes inside the ring; head writes only while that direction is disabled; ITR's reserved
   bits clear. A reset returns lengths and enables to their power-on values. Its
   observations record which window carried each reset, the gaps, any ring base above

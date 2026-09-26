@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T22:56-07:00
+Updated: 2026-09-26T00:52-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,18 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [QF-1 — the four unqualified claims](QF-1.md)
+Entries: 2026-09-26T00:10-07:00 through 2026-09-26T00:52-07:00
+Outcome: complete; Q24, Q25 and Q26 qualified, Q18 stays unqualified (`unobservable`); see
+the [evidence](../evidence/QF-1.md).
+- The trace resolves sub-microsecond intervals as equal stamps; the 1 µs rule was lenient,
+  not blind, and now needs stamps 2 µs apart.
+- Even with no wait at all, a reset write is never followed within 4 µs here; why is unknown.
+- The model does not pad short frames: a small-frame defect that trims also kills ARP.
+- The kernel-log check caught a warning in the reference's own probe error path.
+- Ping payloads are zeros past a 4-byte timestamp, so small-frame corruption is invisible.
+- Correction (review R1): write-then-read stamps are typically 6 µs apart, not 1.
 
 ### [AF-1 — a second reading of revision 4's changes](AF-1.md)
 Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:56-07:00
@@ -149,3 +161,8 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **Spec errors found downstream** (continued): [AF-1](AF-1.md) — a second independent reading
   of revision 4's changes found no accuracy error the first had missed; the one disagreement
   was the spec's tag convention applied unevenly.
+- **A check that cannot fail** (continued): [QF-1](QF-1.md) — Q24–Q26 shown able to fail by
+  planted defects; the reset rule restated as what the trace can observe and still not shown
+  able to fail on this host and model; a small-frame content corruption that no check sees.
+- **Model departures from the manual** (continued): [QF-1](QF-1.md) — the model delivers
+  runts at their wire length (42-byte ARP reaches the driver), for the next `[emulated]` table.

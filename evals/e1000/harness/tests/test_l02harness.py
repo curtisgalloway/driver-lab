@@ -389,10 +389,36 @@ class TraceRulesTest(unittest.TestCase):
         # write each start a new ring.
         self.assertEqual(h.tail_wraps(acc, h.REG["RDT"]), 1)
 
-    def test_one_microsecond_at_epoch_scale_is_not_short(self):
+    def test_reset_gap_needs_two_stamps_to_show_one_microsecond(self):
+        # Stamps are whole microseconds: a difference of 1 us can be any interval
+        # under 2 us, so it fails; 2 us is the smallest difference that passes.
         t = 1790294563.166173
-        trace = [mmio(t, "w", "CTRL", h.CTRL_RST), mmio(t + 1e-6, "r", "STATUS", 0)]
-        self.assertEqual(self.failed(trace), [])
+        rule = (
+            "each CTRL.RST write is followed by at least 1 us before the next register"
+            " access"
+        )
+        for us, want in ((0, [rule]), (1, [rule]), (2, []), (3, [])):
+            with self.subTest(us=us):
+                trace = [
+                    mmio(t, "w", "CTRL", h.CTRL_RST),
+                    mmio(t + us * 1e-6, "r", "STATUS", 0),
+                ]
+                self.assertEqual(self.failed(trace), want)
+        checks, obs = h.trace_rules(
+            [mmio(t, "w", "CTRL", h.CTRL_RST), mmio(t + 1e-6, "r", "STATUS", 0)]
+        )
+        self.assertEqual(obs["reset_gaps_us"], [1])
+        self.assertIn("1 us before STATUS", checks[0][2])
+
+    def test_reset_gap_through_the_io_window_is_judged_the_same_way(self):
+        t = 1790294563.166173
+        trace = [
+            h.Access(t, "io", "w", h.REG["CTRL"], h.CTRL_RST),
+            mmio(t + 1e-6, "r", "MANC", 0),
+        ]
+        self.assertEqual(len(self.failed(trace)), 1)
+        _, obs = h.trace_rules(trace)
+        self.assertEqual(obs["resets_by_window"], {"mmio": 0, "io": 1})
 
 
 class DeferredTest(unittest.TestCase):

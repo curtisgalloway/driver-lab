@@ -28,10 +28,14 @@ limitation this unit answers) and the [notebook chapter](../notebook/CS-1.md).
 
 ## Status
 
-**In progress, 2026-09-26.** The harness change, its tests, the two planted defects and
-the run declaration below are done and committed; no run of this unit has been made,
-because the test host's KVM slot is held by another session. The runs, the results, the
-qualification and the review follow when the slot is free.
+**In progress, 2026-09-26.** Round `c1` (52 isolated runs) was **not as declared**: the
+stimulus check failed in all 16 `frame-sizes` runs because the DUT sent its stream in
+310-byte frames, not 214, for a reason in the harness's premise, not in either driver
+(finding F1: the kernel never advertises an MSS under 256 by default), and d26 caught
+only 1 of 3 as a consequence (F2). The reference and the candidate delivered both
+streams intact in every run, and d25 failed exactly its stream check 3 of 3. The fix is
+one more peer-side setting; round `c2` reruns `frame-sizes` on it (declared below). The
+results, the qualification and the review follow.
 
 ## The gap (FC-1, open limitation)
 
@@ -120,7 +124,7 @@ Private run `cs1-20260926-01`. The candidate does not change in this unit.
 
 | Artifact | Identity |
 | --- | --- |
-| Harness | `l02harness.py` `da4c9407…` (this unit's change; round `c1`), `guest-init.sh` `eccecebe…` (unchanged); the previous harness was `884e771c…` (FC-1 final) |
+| Harness | `l02harness.py` `da4c9407…` (this unit's change; round `c1`), `guest-init.sh` `eccecebe…` (unchanged); the previous harness was `884e771c…` (FC-1 final). Round `c2` (below): `a1735b9f…` |
 | Reference module | `e1000.ko` `43242751…` |
 | Candidate module | `e1000_l02.ko` `ce7e3e2c…` (CF-1 round 1) |
 | Kernel, QEMU, busybox | `0d96151b…`; 10.2.1+ds-1ubuntu3.2, `0cd4112a…`, KVM, DUT memory 3 GiB; `df12634c…` (busybox 1.37.0) |
@@ -173,12 +177,73 @@ Private run `cs1-20260926-01`. The candidate does not change in this unit.
   A reference or candidate failure blocks the corresponding conclusion. Every run's
   `identities.json` must record the hashes above.
 
-The declaration is in the run's ledger and here, committed before any run; the launch
-time and the first scenario's start are recorded when the runs are made.
+The declaration is in the run's ledger and here, committed
+([`067d33f`](https://github.com/curtisgalloway/driver-lab/commit/067d33f), authored
+09:29:35 Pacific) before the launch (10:10:28).
+
+**Round `c2` (declared 10:18 Pacific, after `c1`'s results, before any `c2` run;
+committed before launch).** Finding F1's fix: the peer's advertised-MSS floor
+(`/proc/sys/net/ipv4/route/min_adv_mss`) is lowered to 160 in the same command as the
+MTU and restored to 256 with it, so the peer advertises 160 and the DUT's segments carry
+148 bytes in 214-byte frames. Harness `l02harness.py` `a1735b9f…`; the diff from
+`da4c9407…` is the two peer commands, the two checks' names ("peer's MTU set to 200 and
+its minimum advertised MSS to 160 for the small-frame streams", "peer's MTU restored to
+1500 and its minimum advertised MSS to 256 after the small-frame streams"; `c1`'s names
+lacked the MSS clause), one docstring and the constants; nothing that touches the
+captures, the pings, the stream checks, the stimulus check or any other scenario. Two
+tests changed for the new strings; 70 pass. `jobs-c2.txt` (16 lines): `frame-sizes`
+reference ×5, candidate ×5, d25 ×3, d26 ×3, isolated, eight in parallel.
+
+- Reference and candidate, 5 of 5 each: every check PASS, the stimulus check now
+  reporting about 7,100 data frames of at most 214 bytes **each way** carrying at least
+  1,048,576 bytes; both MD5s equal.
+- d25 ×3: as `c1`'s declaration (exactly one failed check, the peer-to-DUT stream), now
+  with the stimulus check passing.
+- d26 ×3: as `c1`'s declaration, expected in 3 of 3 (exactly one failed check, the
+  DUT-to-peer stream): with an MSS of 148, every skb of the DUT's stream is either 214
+  bytes or a GSO skb with `gso_size` 148, both inside the defect's conditions.
+- The other nine scenarios are **not rerun** in `c2`; their `c1` results on `da4c9407…`
+  stand as the acceptance set, on the diff argument above (as FC-1's round `f2`). This
+  is a decision taken after seeing `c1`'s results, stated here as such; `frame-sizes`
+  itself is rerun in full for both drivers.
+- Every failure kept; no run repeated to replace a result; identities checked per run.
 
 ## Results
 
-Pending: no run yet (the KVM slot).
+**Round `c1`** (52 runs, launched 10:10:28, launcher done 10:12:13 Pacific; 1 min 45 s),
+KVM, every run's `identities.json` matching the frozen hashes; "run" names the run
+directory in `cs1-20260926-01`. 36 PASS, 16 FAIL, 0 ERROR.
+
+**The nine other scenarios.** Reference 18 of 18 PASS and candidate 18 of 18 PASS
+(`smoke`, `ring-wrap`, `rx-overrun`, `link-flap`, `link-loss-tx`, `stop-start`,
+`down-during-traffic`, `reload`, `itr`, ×2 each), every check, the trace and capture
+pseudo-scenarios included: the acceptance set minus `frame-sizes`.
+
+**`frame-sizes`, not as declared (F1).** All 16 runs (reference ×5, candidate ×5, d25
+×3, d26 ×3) FAIL the stimulus check "the small-frame streams' data frames were at most
+214 bytes and carried 1 MiB each way", and only its DUT-to-peer half: "peer to DUT:
+7,087 to 7,089 data frames of 98 to 214 bytes carrying 1,048,769 bytes" (as declared:
+the 1 MiB plus 193 bytes of HTTP headers) but "DUT to peer: 4,299 to 4,305 data frames
+of 110 to **310** bytes carrying 1,048,769 bytes, 4,289 to 4,298 over 214". The peer's
+SYN to the DUT's port 8081 carried an MSS option of **256** in all 16 runs (the DUT's
+carried 1460), so the DUT's segments held 244 bytes: the kernel's `ipv4_default_advmss`
+takes the larger of the route MTU less 40 and `ip_rt_min_advmss`, whose default
+`DEFAULT_MIN_ADVMSS` is 256 (v6.12 `net/ipv4/route.c`). The premise that the peer's MTU
+bounds the DUT's frames held only down to that floor. Every other check passed in the
+reference's and the candidate's ten runs (35 of 36 each), both stream MD5s equal in
+every one: **both drivers delivered 1 MiB intact in each direction**, peer to DUT in
+214-byte frames and DUT to peer in 310-byte frames. That is an observation, not Q28
+evidence: the claim's transmit half names frames of at most 214 bytes, and the stimulus
+check, doing its job, withheld the scenario's PASS.
+
+| Defect | Runs | Declared failing checks | Result |
+| --- | --- | --- | --- |
+| d25 small-frame receive words swapped | `c1-d25-frame-sizes-1..3` | "1 MiB over HTTP in small frames peer to DUT arrives intact" only | **the declared check, 3 of 3**: `sent` and `got` different MD5s in every run, `wget` completing (the transfer did not stall); the DUT-to-peer stream, every ping and ICMP content check, the checksum-error count, bring-up, runts, rmmod, the kernel log and the trace rules PASS. Plus the stimulus check, failed for F1's reason in every `frame-sizes` run of the round, on the DUT-to-peer half only; the peer-to-DUT half, the defect's side, read as declared (7,087 frames of 111 to 214 bytes) |
+| d26 small-frame transmit words swapped | `c1-d26-frame-sizes-1..3` | "1 MiB over HTTP in small frames DUT to peer arrives intact" only | **1 of 3, a consequence of F1 (F2)**: run 1 failed the DUT-to-peer stream check (`sent` ≠ `got`), runs 2 and 3 passed it. The DUT's stream went in 310-byte frames (skbs over 256 bytes, or GSO skbs with `gso_size` 244), outside both of the defect's conditions; the only frames inside them were partial segments of 210 bytes, 16 in run 1 and none in runs 2 and 3 (`analysis/c1-mss.txt`), so the swap changed the delivered bytes in run 1 only. The stimulus check failed for F1's reason in all three; everything else PASS |
+
+## Round `c2`
+
+Pending.
 
 ## Qualification
 
@@ -197,7 +262,10 @@ Pending.
 
 ## Findings
 
-None yet.
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| F1 | medium | **The premise missed the kernel's advertised-MSS floor.** Lowering the peer's MTU to 200 bounded its own sends but the peer advertised an MSS of 256, not 160: `ipv4_default_advmss` never goes under `route.min_adv_mss` (default 256). The DUT sent its stream in 310-byte frames, the stimulus check failed in all 16 `frame-sizes` runs of `c1` (on the DUT-to-peer half only), and no `frame-sizes` run of `c1` is Q28 evidence. A check-design error in this unit, not a driver finding: both drivers delivered both streams intact | The peer's floor is lowered to 160 with the MTU and restored with it (harness `a1735b9f…`, round `c2`); the check names say so. `c1` is kept as recorded |
+| F2 | low | **d26 caught in 1 of 3**, because F1 kept the DUT's stream outside the defect's conditions (skbs of 204 to 256 bytes, or GSO with `gso_size` at most 200): the only frames inside were 210-byte partial segments, present in run 1 only | No change to d26: with an MSS of 148 every skb of the stream is inside its conditions. Expected 3 of 3 in `c2` |
 
 ## Review
 

@@ -914,8 +914,14 @@ class FrameSizesTest(unittest.TestCase):
         # unload; both streams run in between, on their own port, the DUT untouched.
         log, c = self.scenario([])
         last_ping = max(i for i, (_, cmd) in enumerate(log) if cmd.startswith("ping"))
-        down = log.index(("peer", "ip link set eth0 mtu 200"))
-        up = log.index(("peer", "ip link set eth0 mtu 1500"))
+        # The advertised-MSS floor goes down with the MTU (c1's finding F1: the kernel
+        # advertises at least 256 by default) and back up with it, on the peer only.
+        down = log.index(
+            ("peer", "echo 160 > /proc/sys/net/ipv4/route/min_adv_mss && ip link set eth0 mtu 200")
+        )
+        up = log.index(
+            ("peer", "ip link set eth0 mtu 1500 && echo 256 > /proc/sys/net/ipv4/route/min_adv_mss")
+        )
         self.assertLess(last_ping, down)
         self.assertLess(up, log.index(("dut", "ip link set eth0 down && rmmod e1000")))
         between = log[down + 1 : up]
@@ -932,17 +938,19 @@ class FrameSizesTest(unittest.TestCase):
         )
         self.assertTrue(all(":8081/" in cmd for _, cmd in between if cmd.startswith("wget")))
         self.assertTrue(all("-p 8081 " in cmd for _, cmd in between if cmd.startswith("mkdir")))
-        self.assertFalse(any("mtu" in cmd for who, cmd in log if who == "dut"))
+        self.assertFalse(any("mtu" in cmd or "mss" in cmd for who, cmd in log if who == "dut"))
         names = [n for n, *_ in c.checks]
+        first = "peer's MTU set to 200 and its minimum advertised MSS to 160 for the small-frame streams"
         self.assertEqual(
-            names[names.index("peer's MTU set to 200 for the small-frame streams") :],
+            names[names.index(first) :],
             [
-                "peer's MTU set to 200 for the small-frame streams",
+                first,
                 "HTTP server with a 1 MiB file (peer to DUT)",
                 "1 MiB over HTTP in small frames peer to DUT arrives intact",
                 "HTTP server with a 1 MiB file (DUT to peer)",
                 "1 MiB over HTTP in small frames DUT to peer arrives intact",
-                "peer's MTU restored to 1500 after the small-frame streams",
+                "peer's MTU restored to 1500 and its minimum advertised MSS to 256 after the"
+                " small-frame streams",
                 "rmmod",
             ],
         )
@@ -963,9 +971,13 @@ class FrameSizesTest(unittest.TestCase):
             c = h.Ctx(dut, peer, None, "e1000", Path(d), step=1)
             with self.assertRaises(h.GuestError):
                 h.scenario_frame_sizes(c)
-        self.assertEqual(log[-1], ("peer", "ip link set eth0 mtu 1500"))
+        self.assertEqual(
+            log[-1],
+            ("peer", "ip link set eth0 mtu 1500 && echo 256 > /proc/sys/net/ipv4/route/min_adv_mss"),
+        )
         self.assertIn(
-            "peer's MTU restored to 1500 after the small-frame streams",
+            "peer's MTU restored to 1500 and its minimum advertised MSS to 256 after the"
+            " small-frame streams",
             [n for n, *_ in c.checks],
         )
         self.assertNotIn("small-frame streams' data frames", " ".join(n for _, n, *_ in c.deferred))

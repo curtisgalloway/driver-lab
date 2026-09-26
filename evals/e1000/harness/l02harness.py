@@ -1546,6 +1546,12 @@ def http_blob(
 SMALL_STREAM_MTU = 200
 SMALL_STREAM_KIB = 1024
 SMALL_STREAM_PORT = 8081
+# The MSS a Linux peer advertises is its MTU less 40, but never under this route sysctl,
+# whose default is 256: with it left alone the peer advertised 256 for an MTU of 200 and
+# the DUT sent 310-byte frames (CS-1 round c1, finding F1). It is lowered to MTU - 40 on
+# the peer with the MTU and restored with it; the DUT is still untouched.
+MIN_ADV_MSS = "/proc/sys/net/ipv4/route/min_adv_mss"
+MIN_ADV_MSS_DEFAULT = 256
 
 
 def small_stream_frames(p: Post, _: int) -> tuple[bool, str]:
@@ -1591,11 +1597,17 @@ def small_streams(c: Ctx) -> None:
     corruption reaches the application, and wget's MD5 of what the stack delivered is
     what catches it, in either direction. The peer's MTU is lowered for the streams and
     restored afterwards; that bounds the DUT's transmits too, through the MSS the peer
-    advertises, and touches nothing on the DUT.
+    advertises (with the advertised-MSS floor lowered alongside: MIN_ADV_MSS), and
+    touches nothing on the DUT.
     """
-    mtu = SMALL_STREAM_MTU
-    rc, out = c.peer.run(f"ip link set eth0 mtu {mtu}")
-    if not c.check(f"peer's MTU set to {mtu} for the small-frame streams", rc == 0, out):
+    mtu, mss = SMALL_STREAM_MTU, SMALL_STREAM_MTU - 40
+    rc, out = c.peer.run(f"echo {mss} > {MIN_ADV_MSS} && ip link set eth0 mtu {mtu}")
+    if not c.check(
+        f"peer's MTU set to {mtu} and its minimum advertised MSS to {mss} for the"
+        " small-frame streams",
+        rc == 0,
+        out,
+    ):
         return
     try:
         for server, client, ip, label in (
@@ -1607,8 +1619,15 @@ def small_streams(c: Ctx) -> None:
             )
     finally:
         if not c.peer.dead:
-            rc, out = c.peer.run("ip link set eth0 mtu 1500")
-            c.check("peer's MTU restored to 1500 after the small-frame streams", rc == 0, out)
+            rc, out = c.peer.run(
+                f"ip link set eth0 mtu 1500 && echo {MIN_ADV_MSS_DEFAULT} > {MIN_ADV_MSS}"
+            )
+            c.check(
+                f"peer's MTU restored to 1500 and its minimum advertised MSS to"
+                f" {MIN_ADV_MSS_DEFAULT} after the small-frame streams",
+                rc == 0,
+                out,
+            )
     c.defer(
         f"the small-frame streams' data frames were at most {mtu + 14} bytes and carried"
         f" {SMALL_STREAM_KIB // 1024} MiB each way",

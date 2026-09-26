@@ -43,3 +43,21 @@ in the copybreak copy) and d26 (transmit, after the padding) built with no warni
 a test, so the acceptance set is rerun for both drivers as FC-1 did. Round `c1` declared:
 52 isolated runs, each defect expected to fail exactly its own stream check, 3 of 3.
 Stopped before any run: ready for the KVM slot.
+
+## 2026-09-26T10:12-07:00 — round c1 in 1 min 45 s; not as declared: the DUT sent 310-byte frames
+52 runs, 36 PASS, 16 FAIL. Every `frame-sizes` run failed the stimulus check, and only
+its DUT-to-peer half: the peer's frames were 214 bytes as designed, the DUT's 310. Nothing
+was analyzed until the KVM window closed.
+
+## 2026-09-26T10:17-07:00 — the kernel floors the advertised MSS at 256
+The peer's SYN carried MSS 256 in all 16 runs: `ipv4_default_advmss` takes the larger of
+the MTU less 40 and `route.min_adv_mss`, whose default is 256, so the peer's MTU bounded
+the DUT's segments only down to that floor. A premise error in the check's design, not a
+driver finding: both drivers delivered both 1 MiB streams intact in every run, and the
+stimulus check did exactly what it is for. d26's 1 of 3 is the same error seen from the
+defect: 310-byte skbs and `gso_size` 244 fall outside its conditions, and only run 1 had
+partial 210-byte segments inside them. Fix on the peer only: lower the floor to 160 in the
+same command as the MTU, restore both. Round c2 declared: `frame-sizes` ×5 each driver and
+×3 each defect on the new harness; the other nine scenarios' c1 results stand, since the
+diff touches only the two peer commands and their check names, a decision taken after
+seeing the results and said so in the evidence.

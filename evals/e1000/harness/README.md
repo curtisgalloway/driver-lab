@@ -101,7 +101,7 @@ buffers and fail a scenario for an earlier one's fault; this check names that ca
 | Name | Checks |
 | --- | --- |
 | `smoke` | Module loads and binds; the interface's MAC matches the one QEMU was given; carrier within 15 s; three pings each way with no loss; `rmmod` succeeds |
-| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; the 60- and 61-byte pings carry a pattern payload, and the DUT kernel's ICMP checksum-error count must not rise while the pings run; then, with the peer's MTU lowered to 200, 1 MiB over HTTP each way in frames of at most 214 bytes with matching MD5 (the small-frame streams), and the peer's MTU restored; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes, the DUT's 60/61-byte requests carry the pattern intact and its replies repeat the peer's requests byte for byte, the DUT's capture shows the peer's requests and replies arrived with the expected payload (the stimulus), and the streams' data frames were at most 214 bytes and carried 1 MiB each way (the stimulus) |
+| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; the 60- and 61-byte pings carry a pattern payload, and the DUT kernel's ICMP checksum-error count must not rise while the pings run; then, with the peer's MTU lowered to 200 (and its advertised-MSS floor to 160), 1 MiB over HTTP each way in frames of at most 214 bytes with matching MD5 (the small-frame streams), and the peer's MTU and floor restored; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes, the DUT's 60/61-byte requests carry the pattern intact and its replies repeat the peer's requests byte for byte, the DUT's capture shows the peer's requests and replies arrived with the expected payload (the stimulus), and the streams' data frames were at most 214 bytes and carried 1 MiB each way (the stimulus) |
 | `ring-wrap` | 1,500 back-to-back pings each way with no loss, 4 MiB over HTTP each way with matching MD5; afterwards, the trace shows both tails wrapping at least 3 times |
 | `rx-overrun` | With the DUT's interrupts masked by the harness (`devmem` writes IMC, then restores IMS), the peer floods it; the receive head must reach the tail (the ring ran dry), and the trace must show the device accepting frames with no RDT write while masked; after the mask is restored, pings each way must succeed |
 | `link-flap` | The link drops through QEMU's monitor: carrier falls within 10 s and pings fail; it returns: carrier within 15 s and pings succeed. Observes whether ICR reads after the drop showed the link-change cause |
@@ -145,7 +145,9 @@ ones'-complement sum, so such a corruption reaches the application, and `wget`'s
 bytes the stack delivered is compared with the sender's, in either direction. The peer's
 MTU bounds both directions (its own sends by the MTU, the DUT's by the MSS the peer
 advertises from it) and leaves the DUT's configuration alone, so no MTU change reaches the
-driver under test. The frames are at most 214 bytes, inside the reference's 256-byte
+driver under test. The kernel never advertises an MSS under its `route.min_adv_mss` sysctl
+(256 by default, so the DUT sent 310-byte frames in CS-1's first round); the peer's floor
+is lowered to 160 with the MTU and restored with it. The frames are at most 214 bytes, inside the reference's 256-byte
 copybreak receive path; a deferred check reads both captures to confirm the streams ran
 in such frames and carried the whole 1 MiB each way (the stimulus, which a stalled stream
 fails too). The DUT may transmit its stream as TSO skbs the model segments; the check is

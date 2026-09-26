@@ -381,12 +381,19 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   secondary spec gap (E1 gives no bound or fallback when the grant stays set); five probe
   divergences, all `benign`. Reviewed by a fresh subagent reading the raw runs, in two turns
   (13 then 6 findings, all fixed). Open limitations: nothing after probe has run; neither L02f decision is met.
-- **L02f2 — bounded repair and retest.** Skipped if nothing needs repair. Gated on the user
-  choosing the repair budget and the implementer (L02e's cap is spent). Clean-side repair
-  briefs carry only permitted requirements and observations, never reference or QEMU source,
-  followed by review and a command-log audit. Rebuild and rerun the repaired candidate against
-  the qualified suite, keeping each repair attempt, its artifact identities and its results. A
-  harness change requalifies the checks it touches (L02d3).
+- **L02f2 — bounded repair and retest.** Status: `complete` 2026-09-25, after one of three
+  rounds ([evidence](evidence/L02f2.md), [notebook](notebook/L02f2.md)). Codex (`gpt-6-astra`)
+  repaired E1 inside a bubblewrap sandbox with an strace audit (canary pilot and round 1
+  PASS). The candidate binds and, in isolated runs, passes 9 of 10 scenarios; the reference
+  passes 10 of 10. `down-during-traffic` fails one check at random (3 of 6 runs): the reply
+  reaches the guest's ICMP layer (six of six measured runs) and ping misses it, because
+  QEMU's one-second receive hold after an RCTL write ends, with the candidate's faster
+  carrier detection, just as the ping starts, releasing about 30 frames left over from the
+  flood ahead of it (V6, `benign`, model limitation plus harness weakness H1). No candidate defect past
+  probe, so no round 2. First past-probe comparison: V7–V16, all `benign`. Reviewed by
+  `review-swarm` (13 findings, fixed or recorded) and a fresh artifact reviewer (14, all
+  fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
+  `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
 - **L02f3 — spec feedback and reverification.** Fold every `[emulated]` result and spec gap
   into a versioned spec working copy built on L02s, and reverify the changed claims.
 - **Accept, reported as two decisions:** *evaluation complete* (every scenario result recorded,
@@ -881,29 +888,26 @@ pretending the pilot plan completes an unspecified platform-wide system.
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e, L02d1–L02d3 and L02f1 are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1 and L02f2 are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
-[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md)). Do not start two units in one session. Read
+[L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md),
+[L02f2](evidence/L02f2.md)). Do not start two units in one session. Read
 [notebook/index.md](notebook/index.md) first.
 
 - **L02s (any time; before L02f3):** spec revision 5, PSCON bit 11.
-- **L02f2 (next):** repair the candidate's E1 policy. **Decided 2026-09-25 (user):**
-  implementer Codex (codex-cli 0.157.0) with model GPT-6 Astra, pinned explicitly at launch
-  (the local Codex config sets no model; confirm the exact model ID Codex accepts and record
-  it); repair budget 3 rounds. Round 1 is E1 only, then an isolated rerun of all ten
-  scenarios; rounds 2 and 3 take failures found past probe; stop early after a round that
-  fixes nothing new; a failure traced to a spec error goes to L02f3, not a repair. Split
-  after round 1 if the unit outgrows a session. Isolation: Codex works in a fresh workspace
-  holding only the spec, manual, candidate and kernel `include/` and `Documentation/`, with
-  no read access elsewhere (this host also holds the Linux e1000 source and planted-defect
-  copies); audit its command log, first checking that the log records every file read. The brief may carry only the observation "on the emulated device
-  EECD reads 0x188 at rest and after EE_REQ is written 0: EE_GNT never reads 0" and the spec
-  and manual; not reference or QEMU source. Then rerun every scenario isolated and compare
-  past probe for the first time ([evidence/L02f1.md](evidence/L02f1.md), "For L02f2"). Claim
-  IDs and scopes are in [evidence/L02d3.md](evidence/L02d3.md). The run store is each user's
-  own setting (AGENTS.md, "Run store location"); the inputs a unit needs must be reachable
-  from the test host before it starts.
-- **L02f3:** spec feedback, including V1's spec gap and the FWE observation, on top of L02s.
+- **H1 (decision for the user):** `down-during-traffic` pings inside the model's receive hold
+  after a flood that leaves frames behind, so a driver that reports carrier promptly fails it
+  at random ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Fix the harness (stop both
+  floods before the interface goes down; wait out the hold before pinging), requalify Q15
+  (L02d3's method), and rerun the candidate's `down-during-traffic`, as its own small unit or
+  at the start of L02f3. Until then Q15 has no usable result and neither L02f decision is met.
+- **Sandbox decisions (user):** whether the codified clean-room recipe should block egress
+  rather than audit it (M02a had required enforced network denial), whether readable `/usr`
+  and `/etc` are acceptable against "no read access elsewhere", and deleting this run's
+  credential copy (evidence/L02f2.md, Open items).
+- **L02f3:** spec feedback on top of L02s: V1's E1 gap (the round-1 implementer filed it too:
+  how long to wait for EE_GNT, and what to do when it stays set), the FWE observation, and
+  whether the spec should say anything about flow control (V10).
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

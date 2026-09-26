@@ -54,7 +54,13 @@ The last one needs a public-skills checkout; CI pins the scanner to one of its c
   reviewer found them). `spec-verifier` for specs.
 - **Implementers** are fresh subagents whose model the user selects.
 - **Isolation**: the operator reads the reference driver and QEMU; implementers never do. The
-  blind requirement list stays private until its recall is measured.
+  blind requirement list stays private until its recall is measured. An implementer launched as
+  a separate CLI (Codex) on the test host, which also holds the reference source, runs under
+  `skills/cleanroom-implementer/scripts/cleanroom_sandbox.sh` with a fresh agent home, and its
+  strace log is checked with `sandbox_audit.py`, after a canary pilot, before its output is used
+  (cleanroom-implementer, "Tier 1 on Linux"). Copying the operator's agent credential into that
+  home and bypassing the agent's own sandbox inside bubblewrap are expected; the user approved
+  both on 2026-09-25.
 - **Privacy**: this repository is public. Files name the test host and other machines by role
   only: no addresses, host names, user names or home paths. Source under other licenses stays in
   the private run store, which files cite by run ID only. The rule covers this project's own

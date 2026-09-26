@@ -903,9 +903,84 @@ class FrameSizesTest(unittest.TestCase):
                 " device with the expected payload",
                 "the DUT sent echo requests and replies of 60, 61, 1513 and 1514 bytes",
                 "no frame the DUT sent was shorter than 60 bytes",
+                "the small-frame streams' data frames were at most 214 bytes and carried"
+                " 1 MiB each way",
             ],
         )
         self.assertEqual(log[-1], ("dut", "ip link set eth0 down && rmmod e1000"))
+
+    def test_small_streams_run_after_the_pings_inside_the_peer_mtu_change(self):
+        # CS-1: the peer's MTU is lowered after the last ping and restored before the
+        # unload; both streams run in between, on their own port, the DUT untouched.
+        log, c = self.scenario([])
+        last_ping = max(i for i, (_, cmd) in enumerate(log) if cmd.startswith("ping"))
+        # The advertised-MSS floor goes down with the MTU (c1's finding F1: the kernel
+        # advertises at least 256 by default) and back up with it, on the peer only.
+        down = log.index(
+            ("peer", "echo 160 > /proc/sys/net/ipv4/route/min_adv_mss && ip link set eth0 mtu 200")
+        )
+        up = log.index(
+            ("peer", "ip link set eth0 mtu 1500 && echo 256 > /proc/sys/net/ipv4/route/min_adv_mss")
+        )
+        self.assertLess(last_ping, down)
+        self.assertLess(up, log.index(("dut", "ip link set eth0 down && rmmod e1000")))
+        between = log[down + 1 : up]
+        self.assertEqual(
+            [(who, cmd.split(" ", 1)[0]) for who, cmd in between],
+            [
+                ("peer", "mkdir"),
+                ("dut", "wget"),
+                ("peer", "killall"),
+                ("dut", "mkdir"),
+                ("peer", "wget"),
+                ("dut", "killall"),
+            ],
+        )
+        self.assertTrue(all(":8081/" in cmd for _, cmd in between if cmd.startswith("wget")))
+        self.assertTrue(all("-p 8081 " in cmd for _, cmd in between if cmd.startswith("mkdir")))
+        self.assertFalse(any("mtu" in cmd or "mss" in cmd for who, cmd in log if who == "dut"))
+        names = [n for n, *_ in c.checks]
+        first = "peer's MTU set to 200 and its minimum advertised MSS to 160 for the small-frame streams"
+        self.assertEqual(
+            names[names.index(first) :],
+            [
+                first,
+                "HTTP server with a 1 MiB file (peer to DUT)",
+                "1 MiB over HTTP in small frames peer to DUT arrives intact",
+                "HTTP server with a 1 MiB file (DUT to peer)",
+                "1 MiB over HTTP in small frames DUT to peer arrives intact",
+                "peer's MTU restored to 1500 and its minimum advertised MSS to 256 after the"
+                " small-frame streams",
+                "rmmod",
+            ],
+        )
+        self.assertTrue(all(ok for _, ok, _ in c.checks), c.checks)
+
+    def test_the_peer_mtu_is_restored_when_the_dut_dies_during_a_stream(self):
+        class Dying(self.FakeGuest):
+
+            def run(self, cmd, timeout=30):
+                if cmd.startswith("wget"):
+                    self.dead = "dut: no answer before the timeout"
+                    raise h.GuestError(self.dead)
+                return super().run(cmd, timeout)
+
+        log = []
+        dut, peer = Dying("dut", log, []), self.FakeGuest("peer", log, [])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, peer, None, "e1000", Path(d), step=1)
+            with self.assertRaises(h.GuestError):
+                h.scenario_frame_sizes(c)
+        self.assertEqual(
+            log[-1],
+            ("peer", "ip link set eth0 mtu 1500 && echo 256 > /proc/sys/net/ipv4/route/min_adv_mss"),
+        )
+        self.assertIn(
+            "peer's MTU restored to 1500 and its minimum advertised MSS to 256 after the"
+            " small-frame streams",
+            [n for n, *_ in c.checks],
+        )
+        self.assertNotIn("small-frame streams' data frames", " ".join(n for _, n, *_ in c.deferred))
 
     def test_a_failed_read_fails_the_check_and_a_rise_across_it_is_kept(self):
         # Review R2: a read that fails mid-run must not let a rise through; the next
@@ -953,6 +1028,205 @@ class FrameSizesTest(unittest.TestCase):
             ),
         )
 
+def inet_checksum(data: bytes) -> int:
+    """The ones'-complement sum IP, ICMP, TCP and UDP use; 0 over a valid message."""
+    if len(data) % 2:
+        data += b"\0"
+    s = sum(struct.unpack(f"!{len(data) // 2}H", data))
+    while s >> 16:
+        s = (s & 0xFFFF) + (s >> 16)
+    return (~s) & 0xFFFF
+
+
+def tcp_frame(
+    src: str, dst: str, sport: int, dport: int, payload: bytes, pad_to: int = 0
+) -> bytes:
+    """An IPv4 TCP frame with a timestamp option and valid IP and TCP checksums."""
+    eth = b"\x52\x54\x00\x12\x34\x57" + b"\x52\x54\x00\x12\x34\x56" + b"\x08\x00"
+    saddr = bytes(int(x) for x in src.split("."))
+    daddr = bytes(int(x) for x in dst.split("."))
+    opts = b"\x01\x01\x08\x0a" + b"\0" * 8
+    tcp = struct.pack("!HHIIBBHHH", sport, dport, 1, 1, (5 + 3) << 4, 0x18, 0xFFFF, 0, 0)
+    tcp += opts + payload
+    pseudo = saddr + daddr + struct.pack("!BBH", 0, 6, len(tcp))
+    tcp = tcp[:16] + struct.pack("!H", inet_checksum(pseudo + tcp)) + tcp[18:]
+    total = 20 + len(tcp)
+    ip = bytes([0x45, 0]) + struct.pack("!H", total) + bytes([0, 0, 0x40, 0, 64, 6, 0, 0])
+    ip += saddr + daddr
+    ip = ip[:10] + struct.pack("!H", inet_checksum(ip)) + ip[12:]
+    frame = eth + ip + tcp
+    return frame + b"\0" * max(0, pad_to - len(frame))
+
+
+def tcp_valid(frame: bytes) -> bool:
+    """True when the frame's TCP checksum verifies."""
+    ihl = (frame[14] & 0x0F) * 4
+    total = struct.unpack("!H", frame[16:18])[0]
+    tcp = frame[14 + ihl : 14 + total]
+    pseudo = frame[26:34] + struct.pack("!BBH", 0, 6, len(tcp))
+    return inet_checksum(pseudo + tcp) == 0
+
+
+class TcpSegmentsTest(unittest.TestCase):
+
+    def test_fields_and_the_payload_bound(self):
+        frames = [
+            tcp_frame(PEER, DUT, 8081, 40000, b"x" * 148),
+            tcp_frame(DUT, PEER, 40000, 8081, b"", pad_to=66),
+            tcp_frame(DUT, PEER, 40000, 8081, b"GET", pad_to=80),
+            echo_frame(DUT, PEER, 8),
+            tcp_frame(PEER, DUT, 8081, 40000, b"y" * 8)[:60],
+        ]
+        got = h.tcp_segments([h.Frame(0.0, f) for f in frames])
+        self.assertEqual(
+            [(s.src, s.dst, s.sport, s.dport, s.length, s.payload) for s in got],
+            [
+                (PEER, DUT, 8081, 40000, 214, 148),
+                (DUT, PEER, 40000, 8081, 66, 0),
+                (DUT, PEER, 40000, 8081, 80, 3),
+                (PEER, DUT, 8081, 40000, 60, 0),
+            ],
+        )
+
+
+class ChecksumPremiseTest(unittest.TestCase):
+    """Why the streams are checked by MD5: a swap of two aligned 16-bit words keeps
+    every ones'-complement checksum, TCP's and ICMP's alike, so the stack delivers the
+    corrupted bytes; a flipped byte does not survive either checksum."""
+
+    def swapped(self, frame: bytes, at: int) -> bytes:
+        f = bytearray(frame)
+        f[at : at + 2], f[at + 2 : at + 4] = f[at + 2 : at + 4], f[at : at + 2]
+        return bytes(f)
+
+    def test_tcp(self):
+        frame = tcp_frame(PEER, DUT, 8081, 40000, bytes(range(148)))
+        self.assertEqual(len(frame), 214)
+        self.assertTrue(tcp_valid(frame))
+        swapped = self.swapped(frame, 200)
+        self.assertNotEqual(swapped, frame)
+        self.assertTrue(tcp_valid(swapped))
+        flipped = bytearray(frame)
+        flipped[200] ^= 0x01
+        self.assertFalse(tcp_valid(bytes(flipped)))
+
+    def test_icmp(self):
+        frame = bytearray(echo(PEER, DUT, 0, b"\x01\x02\x03\x04" + bytes(range(10, 40))))
+        frame[36:38] = struct.pack("!H", inet_checksum(bytes(frame[34:])))
+        self.assertEqual(inet_checksum(bytes(frame[34:])), 0)
+        swapped = self.swapped(bytes(frame), 50)
+        self.assertNotEqual(swapped, bytes(frame))
+        self.assertEqual(inet_checksum(swapped[34:]), 0)
+        frame[50] ^= 0x01
+        self.assertNotEqual(inet_checksum(bytes(frame[34:])), 0)
+
+
+class SmallStreamFramesTest(unittest.TestCase):
+    """The streams' stimulus check, from synthetic captures, with the stream size
+    patched down to a few frames."""
+
+    def captures(self, d: str, peer_frames, dut_frames):
+        Path(d, "dut.pcap").write_bytes(pcap(peer_frames))
+        Path(d, "peer.pcap").write_bytes(pcap(dut_frames))
+        return h.Post([], {1: h.Window(0.0, 1.0, "01 frame-sizes")}, Path(d))
+
+    def stream(self, src, dst, n, payload=148, plus=()):
+        data = [tcp_frame(src, dst, 8081, 40000, bytes([i % 251] * payload)) for i in range(n)]
+        acks = [tcp_frame(dst, src, 40000, 8081, b"", pad_to=66)] * 3
+        req = [tcp_frame(dst, src, 40000, 8081, b"GET /blob HTTP/1.1\r\n" * 12)]
+        return data + acks + req + list(plus)
+
+    def run_check(self, peer_frames, dut_frames):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(h, "SMALL_STREAM_KIB", 1):
+            return h.small_stream_frames(self.captures(d, peer_frames, dut_frames), 1)
+
+    def test_a_full_exchange_in_small_frames_passes(self):
+        ok, detail = self.run_check(self.stream(PEER, DUT, 7), self.stream(DUT, PEER, 8))
+        self.assertTrue(ok, detail)
+        self.assertEqual(
+            detail,
+            "peer to DUT: 7 data frames of 214 to 214 bytes carrying 1036 bytes;"
+            " DUT to peer: 8 data frames of 214 to 214 bytes carrying 1184 bytes",
+        )
+
+    def test_a_frame_over_the_bound_fails(self):
+        big = tcp_frame(PEER, DUT, 8081, 40000, b"z" * 149)
+        ok, detail = self.run_check(self.stream(PEER, DUT, 7, plus=[big]), self.stream(DUT, PEER, 8))
+        self.assertFalse(ok)
+        self.assertIn("peer to DUT: 8 data frames of 214 to 215 bytes carrying 1185 bytes, 1 over 214", detail)
+
+    def test_a_short_stream_fails(self):
+        ok, detail = self.run_check(self.stream(PEER, DUT, 7), self.stream(DUT, PEER, 6))
+        self.assertFalse(ok)
+        self.assertIn("DUT to peer: 6 data frames of 214 to 214 bytes carrying 888 bytes, under 1024", detail)
+
+    def test_no_stream_fails_and_the_client_side_does_not_count(self):
+        ok, detail = self.run_check(self.stream(PEER, DUT, 0), self.stream(DUT, PEER, 7))
+        self.assertFalse(ok)
+        self.assertEqual(detail.split(";")[0], "peer to DUT: no data frames")
+
+    def test_the_bound_is_the_mtu_plus_the_ethernet_header(self):
+        self.assertEqual(h.SMALL_STREAM_MTU + 14, 214)
+        self.assertLessEqual(h.SMALL_STREAM_MTU + 14 + 4, 256)
+        self.assertNotEqual(h.SMALL_STREAM_PORT, 8080)
+
+
+class HttpBlobTest(unittest.TestCase):
+    """ring-wrap's transfer commands and check names are unchanged by the parameters
+    the small-frame streams added (CS-1)."""
+
+    class G:
+
+        def __init__(self, name, log):
+            self.name, self.log, self.dead = name, log, False
+
+        def run(self, cmd, timeout=30):
+            self.log.append((self.name, cmd))
+            return 0, "d41d8cd98f00b204e9800998ecf8427e"
+
+    def blob(self, *args, **kw):
+        log = []
+        peer, dut = self.G("peer", log), self.G("dut", log)
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, peer, None, "e1000", Path(d), step=1)
+            h.http_blob(c, peer, dut, h.PEER_IP, *args, **kw)
+        return log, c.checks
+
+    def test_ring_wrap_strings(self):
+        log, checks = self.blob("peer to DUT")
+        self.assertEqual(
+            log,
+            [
+                (
+                    "peer",
+                    "mkdir -p /tmp/www && dd if=/dev/urandom of=/tmp/www/blob bs=1k"
+                    " count=4096 2>/dev/null && md5sum /tmp/www/blob | cut -d' ' -f1"
+                    " && httpd -p 8080 -h /tmp/www",
+                ),
+                ("dut", "wget -q -T 20 -O - http://192.0.2.2:8080/blob | md5sum | cut -d' ' -f1"),
+                ("peer", "killall -q httpd; rm -rf /tmp/www; true"),
+            ],
+        )
+        self.assertEqual(
+            [(n, ok) for n, ok, _ in checks],
+            [
+                ("HTTP server with a 4 MiB file (peer to DUT)", True),
+                ("4 MiB over HTTP peer to DUT arrives intact", True),
+            ],
+        )
+
+    def test_small_stream_strings(self):
+        log, checks = self.blob("peer to DUT", 1024, 8081, " in small frames")
+        self.assertIn("bs=1k count=1024 ", log[0][1])
+        self.assertTrue(log[0][1].endswith("httpd -p 8081 -h /tmp/www"))
+        self.assertEqual(log[1][1], "wget -q -T 20 -O - http://192.0.2.2:8081/blob | md5sum | cut -d' ' -f1")
+        self.assertEqual(
+            [n for n, *_ in checks],
+            [
+                "HTTP server with a 1 MiB file (peer to DUT)",
+                "1 MiB over HTTP in small frames peer to DUT arrives intact",
+            ],
+        )
 
 class SuiteArgsTest(unittest.TestCase):
 

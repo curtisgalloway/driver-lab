@@ -489,6 +489,20 @@ the user's.
   change, stated in the header; the current candidate does not yet follow it) and SR-7's
   three wording items. The next candidate round would implement the rule; **awaiting the
   user** (it is the user's Codex launch).
+- **CS-1 — checksum-preserving corruption of received small frames.** Status:
+  `complete` 2026-09-26 ([evidence](evidence/CS-1.md), [notebook](notebook/CS-1.md)).
+  From FC-1's open limitation (a checksum-preserving corruption of a reply the DUT
+  receives was detected by no check), approved by the user 2026-09-26. `frame-sizes` now
+  carries 1 MiB over HTTP each way in frames of at most 214 bytes (the peer's MTU and
+  advertised-MSS floor lowered for the streams, which bounds both directions and touches
+  nothing on the DUT) with the delivered bytes checked by MD5; a new claim Q28 qualified
+  by two planted defects that swap two 16-bit words, on receive (d25) and on transmit
+  (d26), 3 of 3 each, failing exactly their stream check; reference and candidate 20 of
+  20 on the acceptance set and `frame-sizes` 5 of 5 each on the final harness
+  `a1735b9f…`; the guest image unchanged; every existing check name unchanged. Round `c1`
+  was not as declared and is kept: the kernel's advertised-MSS floor of 256 kept the
+  DUT's frames at 310 bytes (a check-design error, F1, fixed for round `c2`). 27 of 28
+  claims qualified; the review's seven findings applied or recorded.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -588,6 +602,9 @@ first. Review, checks and records follow the
   emulation, CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises, and
   revision 8's attribution rule, which needs a link that changes duplex) is blocked on
   hardware.
+  CS-1 (FC-1's open limitation, the checksum-preserving case) is complete: the harness is
+  `a1735b9f…`, claim Q28 is qualified, and the candidate passes it 5 of 5; 27 of 28 claims
+  are qualified, Q18 `unobservable`.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

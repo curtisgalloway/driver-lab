@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T10:17-07:00
+Updated: 2026-09-26T12:44-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -14,6 +14,22 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [CS-1 — checksum-preserving corruption of received small frames](CS-1.md)
+Entries: 2026-09-26T09:10-07:00 through 2026-09-26T12:44-07:00
+Outcome: complete; `frame-sizes` carries 1 MiB each way in 214-byte frames checked by
+MD5, Q28 qualified by two word-swap defects, reference and candidate 5 of 5; round c1 not
+as declared (a check-design error, both drivers intact) and kept; see the
+[evidence](../evidence/CS-1.md).
+- TCP's checksum is the same sum as ICMP's, so a word swap reaches the application;
+  `wget`'s MD5 over busybox's own tools is the witness, with no guest-image change.
+- Lowering the peer's MTU bounds both directions' frames (its sends by the MTU, the
+  DUT's by the advertised MSS) and touches nothing on the DUT.
+- On the stored captures a word swap keeps every TCP checksum and changes nothing inside
+  a one-byte ping pattern.
+- Dead end: an MTU of 200 does not make a Linux peer advertise an MSS of 160; the
+  `route.min_adv_mss` floor is 256, so the DUT sent 310-byte frames until it was lowered.
+- Correction (review R1–R4): the evidence carried c1's check names and pre-rebase hashes
+  and one wrong segment count; the plan and index lagged the checkpoint.
 ### [SR-8 — spec revision 8](SR-8.md)
 Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:17-07:00
 Outcome: complete; revision 8 states the TNCRS attribution rule (a requirement change the

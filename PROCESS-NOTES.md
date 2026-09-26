@@ -371,3 +371,17 @@ Fix belongs in: `SPEC-FORMAT.md` and the design's evidence model (follow-on SF-1
 Status: fixed in SF-1 (2026-09-25): the class, its citation form and the phrasing rule are in
 `SPEC-FORMAT.md` and `DESIGN.md`, and `spec_check.py` enforces that a citation parenthetical
 is present, the TODO, and the never-alone rule ([evidence](evidence/SF-1.md))
+
+### 2026-09-26T10:34-07:00 — record times written from expectation, three times in one unit
+Chapter: [CS-1](notebook/CS-1.md)
+What happened: the implementer wrote "10:35"/"10:40" into the notebook, the index and the
+evidence while the clock read 10:17, then "10:45" while it read 10:33, and had earlier put a
+notebook entry 25 s after its own commit. Each was caught by a `date` run or a commit
+timestamp and corrected before the commit, but only because a check happened to follow. FC-1's
+review R3 and SR-8's F7 were the same fault.
+Cost: three correction passes and an amended commit; a reviewer finding if one had slipped.
+Prevention: run `date` in the same command that writes a timestamped record (or read it back
+from the file just written); never type a clock time from the sense of how long a step took.
+Fix belongs in: the lab-notebook skill (an instruction that the entry time is read from the
+clock in the writing command) and the project's AGENTS.md records rule.
+Status: open

@@ -101,7 +101,7 @@ buffers and fail a scenario for an earlier one's fault; this check names that ca
 | Name | Checks |
 | --- | --- |
 | `smoke` | Module loads and binds; the interface's MAC matches the one QEMU was given; carrier within 15 s; three pings each way with no loss; `rmmod` succeeds |
-| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; the 60- and 61-byte pings carry a pattern payload, and the DUT kernel's ICMP checksum-error count must not rise while the pings run; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes, the DUT's 60/61-byte requests carry the pattern intact and its replies repeat the peer's requests byte for byte, and the DUT's capture shows the peer's requests and replies arrived with the expected payload (the stimulus) |
+| `frame-sizes` | Pings each way at 60, 61, 1513 and 1514-byte frames, and a 42-byte one the DUT must pad; the 60- and 61-byte pings carry a pattern payload, and the DUT kernel's ICMP checksum-error count must not rise while the pings run; then, with the peer's MTU lowered to 200 (and its advertised-MSS floor to 160), 1 MiB over HTTP each way in frames of at most 214 bytes with matching MD5 (the small-frame streams), and the peer's MTU and floor restored; afterwards, the peer's capture holds the DUT's requests and replies at each size and no DUT frame shorter than 60 bytes, the DUT's 60/61-byte requests carry the pattern intact and its replies repeat the peer's requests byte for byte, the DUT's capture shows the peer's requests and replies arrived with the expected payload (the stimulus), and the streams' data frames were at most 214 bytes and carried 1 MiB each way (the stimulus) |
 | `ring-wrap` | 1,500 back-to-back pings each way with no loss, 4 MiB over HTTP each way with matching MD5; afterwards, the trace shows both tails wrapping at least 3 times |
 | `rx-overrun` | With the DUT's interrupts masked by the harness (`devmem` writes IMC, then restores IMS), the peer floods it; the receive head must reach the tail (the ring ran dry), and the trace must show the device accepting frames with no RDT write while masked; after the mask is restored, pings each way must succeed |
 | `link-flap` | The link drops through QEMU's monitor: carrier falls within 10 s and pings fail; it returns: carrier within 15 s and pings succeed. Observes whether ICR reads after the drop showed the link-change cause |
@@ -134,6 +134,27 @@ one byte, so a shift that stays inside the pattern is still invisible; a shift i
 beyond the frame, a flipped byte, a stale tail or a wrong length is not. A driver that
 wrongly marks a corrupted frame's checksum as verified would escape the count but not the
 echo comparison.
+
+**Small-frame streams.** Those checks see a corruption through the ICMP checksum or the
+echo. A corruption that keeps the checksum (two 16-bit words swapped, a compensating
+two-byte change) in a reply the DUT receives is seen by neither: the kernel accepts the
+reply, and ping reads it from a raw socket and compares nothing past the id. So after the
+pings `frame-sizes` lowers the peer's MTU to 200 and sends 1 MiB over HTTP each way on port
+8081 (plan unit CS-1, [evidence](../../../evidence/CS-1.md)): TCP's checksum is the same
+ones'-complement sum, so such a corruption reaches the application, and `wget`'s MD5 of the
+bytes the stack delivered is compared with the sender's, in either direction. The peer's
+MTU bounds both directions (its own sends by the MTU, the DUT's by the MSS the peer
+advertises from it) and leaves the DUT's configuration alone, so no MTU change reaches the
+driver under test. The kernel never advertises an MSS under its `route.min_adv_mss` sysctl
+(256 by default, so the DUT sent 310-byte frames in CS-1's first round); the peer's floor
+is lowered to 160 with the MTU and restored with it. Should `ip link` fail in either
+chain, the floor would stay at 160 for the rest of a full-suite run (CS-1 review R7; not
+seen in any run, and isolated runs are unaffected). The frames are at most 214 bytes, inside the reference's 256-byte
+copybreak receive path; a deferred check reads both captures to confirm the streams ran
+in such frames and carried the whole 1 MiB each way (the stimulus, which a stalled stream
+fails too). The DUT may transmit its stream as TSO skbs the model segments; the check is
+of the bytes on the wire and at the peer either way. `ring-wrap`'s 4 MiB transfer on
+port 8080 is unchanged.
 
 QEMU's model holds all reception for one second after every RCTL write, and releases the
 frames that arrived meanwhile in one burst; the manual describes no such hold. Drivers rewrite

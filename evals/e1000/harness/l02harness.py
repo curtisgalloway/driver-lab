@@ -265,6 +265,52 @@ def icmp_echoes(frames: list[Frame]) -> list[tuple[str, str, int, int]]:
     return [(e.src, e.dst, e.type, e.length) for e in icmp_echo_frames(frames)]
 
 
+@dataclasses.dataclass
+class Segment:
+    """One IPv4 TCP segment from a capture.
+
+    length is the frame's length; payload is the number of data bytes the segment
+    carries, bounded by the IP total length, so a padded frame carries none of its
+    padding here.
+    """
+
+    src: str
+    dst: str
+    sport: int
+    dport: int
+    length: int
+    payload: int
+
+
+def tcp_segments(frames: list[Frame]) -> list[Segment]:
+    """Decodes each IPv4 TCP frame, in capture order."""
+    found = []
+    for f in frames:
+        d = f.data
+        if len(d) < 14 + 20 + 20 or d[12:14] != b"\x08\x00" or d[23] != 6:
+            continue
+        # The DUT's frames come from the driver under test, so a header may lie.
+        ihl = (d[14] & 0x0F) * 4
+        tcp = 14 + ihl
+        if ihl < 20 or len(d) < tcp + 20:
+            continue
+        doff = (d[tcp + 12] >> 4) * 4
+        total = struct.unpack("!H", d[16:18])[0]
+        end = min(len(d), 14 + total)
+        sport, dport = struct.unpack("!HH", d[tcp : tcp + 4])
+        found.append(
+            Segment(
+                ".".join(str(b) for b in d[26:30]),
+                ".".join(str(b) for b in d[30:34]),
+                sport,
+                dport,
+                len(d),
+                max(0, end - tcp - doff),
+            )
+        )
+    return found
+
+
 def empty_trace_counts() -> dict[str, int]:
     return {
         "mmio_read": 0,
@@ -1382,7 +1428,10 @@ def scenario_frame_sizes(c: Ctx) -> None:
     The 60- and 61-byte pings carry a pattern payload (PING_PATTERN). Their content is
     checked from the captures afterwards, both directions, and during the pings from
     the DUT kernel's ICMP checksum-error count, which is the only witness for a reply
-    the driver delivered corrupted to ping's raw socket.
+    the driver delivered corrupted to ping's raw socket. After the pings, the
+    small-frame streams (small_streams) carry 1 MiB each way in frames of at most 214
+    bytes with the delivered bytes checked by MD5: the witness for a corruption that
+    keeps the checksum.
     """
     if not bring_up(c):
         return
@@ -1436,6 +1485,7 @@ def scenario_frame_sizes(c: Ctx) -> None:
         dut_sent_sizes,
     )
     c.defer("no frame the DUT sent was shorter than 60 bytes", dut_runts)
+    small_streams(c)
     tear_down(c)
 
 
@@ -1447,26 +1497,142 @@ def wraps_at_least(reg: str, n: int) -> Deferred:
     return check
 
 
-def http_blob(c: Ctx, server: Guest, client: Guest, ip: str, label: str) -> None:
-    """Serves 4 MiB of random data from server and checks client receives it intact."""
+def http_blob(
+    c: Ctx,
+    server: Guest,
+    client: Guest,
+    ip: str,
+    label: str,
+    size_kib: int = 4096,
+    port: int = 8080,
+    via: str = "",
+) -> None:
+    """Serves size_kib KiB of random data from server over HTTP and checks that client
+    receives it intact: the MD5 of the bytes the client's stack delivered against the
+    server's MD5 of the file. via names the frames in the check ("in small frames").
+
+    The defaults are ring-wrap's 4 MiB on port 8080; its commands and check names are
+    unchanged by the parameters (CS-1).
+    """
+    what = f"{size_kib // 1024} MiB"
     rc, out = server.run(
-        "mkdir -p /tmp/www && dd if=/dev/urandom of=/tmp/www/blob bs=1k count=4096"
+        f"mkdir -p /tmp/www && dd if=/dev/urandom of=/tmp/www/blob bs=1k count={size_kib}"
         " 2>/dev/null && md5sum /tmp/www/blob | cut -d' ' -f1"
-        " && httpd -p 8080 -h /tmp/www"
+        f" && httpd -p {port} -h /tmp/www"
     )
     sent = out.strip().splitlines()[0] if rc == 0 and out.strip() else ""
-    if not c.check(f"HTTP server with a 4 MiB file ({label})", sent, out):
+    if not c.check(f"HTTP server with a {what} file ({label})", sent, out):
         return
     rc, got = client.run(
-        f"wget -q -T 20 -O - http://{ip}:8080/blob | md5sum | cut -d' ' -f1",
+        f"wget -q -T 20 -O - http://{ip}:{port}/blob | md5sum | cut -d' ' -f1",
         timeout=120,
     )
     c.check(
-        f"4 MiB over HTTP {label} arrives intact",
+        f"{what} over HTTP{via} {label} arrives intact",
         got.strip() == sent,
         f"sent {sent}, got {got}",
     )
     server.run("killall -q httpd; rm -rf /tmp/www; true")
+
+
+# The small-frame streams of frame-sizes (CS-1): SMALL_STREAM_KIB KiB over HTTP each way
+# while the peer's MTU is SMALL_STREAM_MTU, on a port of their own so the capture check
+# can tell them from ring-wrap's transfer. The peer's MTU bounds the frames in both
+# directions: its own sends by the MTU, the DUT's by the MSS the peer advertises from
+# it, so nothing changes on the DUT (no MTU change reaches the driver under test, whose
+# ndo_change_mtu the two drivers may implement differently). Frames are at most
+# MTU + 14 bytes on the wire, inside the reference's 256-byte copybreak receive path
+# (the descriptor length counts the 4-byte FCS the model reports: 218 of the 256).
+SMALL_STREAM_MTU = 200
+SMALL_STREAM_KIB = 1024
+SMALL_STREAM_PORT = 8081
+# The MSS a Linux peer advertises is its MTU less 40, but never under this route sysctl,
+# whose default is 256: with it left alone the peer advertised 256 for an MTU of 200 and
+# the DUT sent 310-byte frames (CS-1 round c1, finding F1). It is lowered to MTU - 40 on
+# the peer with the MTU and restored with it; the DUT is still untouched.
+MIN_ADV_MSS = "/proc/sys/net/ipv4/route/min_adv_mss"
+MIN_ADV_MSS_DEFAULT = 256
+
+
+def small_stream_frames(p: Post, _: int) -> tuple[bool, str]:
+    """The stimulus of the small-frame streams, from the captures: every data frame of a
+    stream (from TCP port SMALL_STREAM_PORT, payload present) was at most MTU + 14
+    bytes, and the payload carried each way adds up to at least the stream's size. The
+    peer's frames are read from the DUT's capture (what entered its device), the DUT's
+    from the peer's. A precondition, not a claim: a stalled stream fails it too."""
+    bound, want = SMALL_STREAM_MTU + 14, SMALL_STREAM_KIB * 1024
+    parts, ok = [], True
+    for side, src, way in (("dut", PEER_IP, "peer to DUT"), ("peer", DUT_IP, "DUT to peer")):
+        data = [
+            s
+            for s in tcp_segments(p.frames(side))
+            if s.src == src and s.sport == SMALL_STREAM_PORT and s.payload
+        ]
+        if not data:
+            ok = False
+            parts.append(f"{way}: no data frames")
+            continue
+        lengths = [s.length for s in data]
+        carried = sum(s.payload for s in data)
+        big = sum(1 for n in lengths if n > bound)
+        ok &= not big and carried >= want
+        parts.append(
+            f"{way}: {len(data)} data frames of {min(lengths)} to {max(lengths)} bytes"
+            f" carrying {carried} bytes"
+            + (f", {big} over {bound}" if big else "")
+            + (f", under {want}" if carried < want else "")
+        )
+    return ok, "; ".join(parts)
+
+
+def small_streams(c: Ctx) -> None:
+    """SMALL_STREAM_KIB KiB over HTTP each way in frames of at most SMALL_STREAM_MTU + 14
+    bytes, the delivered bytes checked by MD5 (CS-1).
+
+    The ICMP content checks see a corruption through the ICMP checksum or the echo. A
+    corruption that keeps the checksum (two 16-bit words swapped, a compensating
+    two-byte change) in a reply the DUT receives is seen by neither: the kernel accepts
+    the reply, ping reads it from a raw socket and compares nothing past the id (FC-1,
+    open limitation). TCP's checksum is the same 16-bit ones'-complement sum, so such a
+    corruption reaches the application, and wget's MD5 of what the stack delivered is
+    what catches it, in either direction. The peer's MTU is lowered for the streams and
+    restored afterwards; that bounds the DUT's transmits too, through the MSS the peer
+    advertises (with the advertised-MSS floor lowered alongside: MIN_ADV_MSS), and
+    touches nothing on the DUT.
+    """
+    mtu, mss = SMALL_STREAM_MTU, SMALL_STREAM_MTU - 40
+    rc, out = c.peer.run(f"echo {mss} > {MIN_ADV_MSS} && ip link set eth0 mtu {mtu}")
+    if not c.check(
+        f"peer's MTU set to {mtu} and its minimum advertised MSS to {mss} for the"
+        " small-frame streams",
+        rc == 0,
+        out,
+    ):
+        return
+    try:
+        for server, client, ip, label in (
+            (c.peer, c.dut, PEER_IP, "peer to DUT"),
+            (c.dut, c.peer, DUT_IP, "DUT to peer"),
+        ):
+            http_blob(
+                c, server, client, ip, label, SMALL_STREAM_KIB, SMALL_STREAM_PORT, " in small frames"
+            )
+    finally:
+        if not c.peer.dead:
+            rc, out = c.peer.run(
+                f"ip link set eth0 mtu 1500 && echo {MIN_ADV_MSS_DEFAULT} > {MIN_ADV_MSS}"
+            )
+            c.check(
+                f"peer's MTU restored to 1500 and its minimum advertised MSS to"
+                f" {MIN_ADV_MSS_DEFAULT} after the small-frame streams",
+                rc == 0,
+                out,
+            )
+    c.defer(
+        f"the small-frame streams' data frames were at most {mtu + 14} bytes and carried"
+        f" {SMALL_STREAM_KIB // 1024} MiB each way",
+        small_stream_frames,
+    )
 
 
 def scenario_ring_wrap(c: Ctx) -> None:

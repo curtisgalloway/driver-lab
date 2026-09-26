@@ -36,3 +36,27 @@ is the one L6 asks for. Permitted; the cost is one TNCRS and one STATUS read per
 Expected in the traces against CF-1: more TNCRS reads (one per link check), one more STATUS
 read per clearing sweep, and TNCRS before STATUS in each poll instead of after. Nothing the
 model can show about the crediting itself: its link never changes duplex.
+
+## 2026-09-26T12:40-07:00 — 40 of 40 on the FC-1 harness, 79 seconds
+Declared at 12:37 (commit `a283279`), launched 12:38:07, last done 12:39:26: reference 20 of 20,
+candidate 20 of 20, 944 checks (CF-1's 928 plus FC-1's sixteen), 0 failed, every identity as
+frozen. The driver's kernel-log lines are identical to CF-1's; the EECD probe line still reads
+`0x198`. Nothing the rule changed is visible in a verdict, as expected.
+
+## 2026-09-26T12:43-07:00 — attributing the traces: classify each TNCRS read by the register before it
+Every TNCRS read in a CF-2 trace has a predecessor that names it: DC means the clearing sweep,
+COLC the periodic poll, anything else a link check. With that, the three predicted differences
+fall out exactly in 19 of 20 runs: the TNCRS surplus is the link-check count (watchdog ticks,
+plus one for the forced LSC at open, plus the scenario's link changes), the STATUS surplus is
+the sweep count, and TNCRS precedes STATUS in every sweep and poll. The twentieth run,
+`frame-sizes-1`, has one more watchdog tick than its CF-1 twin: FC-1's counter reads made the
+scenario 10.4 s instead of 10.3, right on the 2 s boundary, so the sixth poll lands by chance
+(CF-2's own second repetition has five). One link check per open has its STATUS read a few
+accesses late, with MTA writes between: the stack's `set_rx_mode` on another CPU, the same
+interleaving class CF-1 saw with ICR and RDT. The 52 IMS/IMC phase-level leftovers are mostly
+`frame-sizes` phases renamed by FC-1's `-p` flag; whole-run totals sit within the control pairs.
+
+What the model cannot show: the crediting. STATUS reads `0x80080781` at every link check
+(1000 Mb/s full duplex, link up) and TNCRS reads 0 at every reading, so every sample is full
+duplex and nothing is ever discarded. The traces place the readings; the reviews and HF-1's
+hardware check carry the rule.

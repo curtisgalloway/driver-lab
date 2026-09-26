@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T08:22-07:00
+Updated: 2026-09-26T09:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,14 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [SR-7 — spec revision 7](SR-7.md)
+Entries: 2026-09-26T07:37-07:00 through 2026-09-26T09:00-07:00
+Outcome: complete; see the [evidence](../evidence/SR-7.md).
+- A second reading of a sentence finds what a reading of the change in it does not.
+- Write an `[emulated]` entry from the extract's sentences, not from the finding.
+- Six verification rounds; four FAILs were sentences a fix pass had written.
+- Corrections: ledger times from memory (AF-1's F5 repeated); the key count (55, not 54).
 
 ### [CF-1 — the candidate on spec revision 6](CF-1.md)
 Entries: 2026-09-26T07:55-07:00 through 2026-09-26T08:20-07:00
@@ -178,6 +186,10 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   able to fail on this host and model; a small-frame content corruption that no check sees.
 - **Model departures from the manual** (continued): [QF-1](QF-1.md) — the model delivers
   runts at their wire length (42-byte ARP reaches the driver), for the next `[emulated]` table.
+  [SR-7](SR-7.md) — recorded as EM8, from the captures alone.
+- **Spec errors found downstream** (continued): [SR-7](SR-7.md) — a second reading of
+  revisions 5 and 6 found three form and citation defects beside the changes, none an
+  accuracy error; revision 7 applies them and AF-1's items.
 - **Spec errors found downstream** (continued): [CF-1](CF-1.md) — updating the candidate to
   revision 6 surfaced one gap the revision does not close (TNCRS attribution across a duplex
   change), filed by the implementer and found again by two reviewers.

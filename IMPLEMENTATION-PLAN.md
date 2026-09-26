@@ -469,6 +469,15 @@ the user's.
   the L01 review trio (reference review, requirements review, `review-swarm`) found no bug.
   For the next spec revision: the TNCRS attribution rule across a duplex change; for the next
   implementer round: the file header's revision number.
+- **SR-7 — spec revision 7.** Status: `complete` 2026-09-26
+  ([evidence](evidence/SR-7.md), [notebook](notebook/SR-7.md)). A second independent reading
+  of revisions 5 and 6's changes, then revision 7 on revision 6; approved by the user
+  2026-09-26. Three items for the next revision are in the evidence.
+- **QF-2 — small-frame content check.** Status: `queued`, next; approved by the user
+  2026-09-26 from QF-1's F3. Add a check that small-frame payloads arrive intact (a pattern
+  payload or a short HTTP transfer), qualify it with a planted defect that corrupts a small
+  frame's content (QF-1's d21c is the control that no current check sees), and rerun the
+  affected scenarios for both drivers.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -530,6 +539,10 @@ Backlog items owned by deferred milestones (M02/M05, M11) are in the
   status descriptions; DRIVER-QUALITY.md describes the controlled evaluation now deferred.
   Current pilot artifacts and this priority revision govern; refresh those descriptions when publishing
   the next status update, without changing their design decisions or calling new work complete.
+- **Possible upstream report (user decides later; not filed):** the reference driver's probe
+  error path warns, [evidence/QF-1.md](evidence/QF-1.md) F1. Recorded on 2026-09-26 at the
+  user's request as a pointer for a later decision on reporting it to the Linux maintainers;
+  nothing has been filed. Owner: the user; no milestone.
 - Record further discoveries with impact and owner milestone. A completion blocker stays in its
   milestone; this backlog cannot be used to waive a failed acceptance criterion.
 
@@ -549,15 +562,17 @@ first. Review, checks and records follow the
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
   [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
   2026-09-25; the order is the orchestrator's):
-  SF-1, AF-1, QF-1 and CF-1 are complete: the candidate (`a8afc8c4…`, module `ce7e3e2c…`)
-  implements revision 6 and passes the acceptance set on the QF-1 harness `7024864e…`. The
-  next spec revision takes AF-1's six items, SF-1's `[emulated]` pointer form, QF-1's F2 (the
-  model delivering runts at their wire length) and CF-1's TNCRS attribution rule across a
-  duplex change; the next candidate round takes that rule and the file header's revision
-  number. A possible new check remains QF-1's F3 (small-frame content). HF-1 (the hardware
-  verifications emulation cannot do, now including Q18's 1 µs rule, `unobservable` in
-  emulation, and CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises) is
-  blocked on hardware.
+  SF-1, AF-1, QF-1, CF-1 and SR-7 are complete: the candidate (`a8afc8c4…`, module
+  `ce7e3e2c…`) implements revision 6 and passes the acceptance set on the QF-1 harness
+  `7024864e…`; spec revision 7 (SR-7, run in parallel with CF-1) takes AF-1's six items,
+  SF-1's `[emulated]` pointer form and QF-1's F2 as EM8 and changes no driver
+  requirement, so CF-1's result stands on it. **Next is QF-2** (the small-frame content
+  check). The next spec revision takes CF-1's TNCRS attribution rule across a duplex
+  change (a requirement change, so not in SR-7) and SR-7's three wording items; the next
+  candidate round takes that rule, the file header's revision number, and revision 7 as
+  its spec. HF-1 (the hardware verifications emulation cannot do, now including Q18's
+  1 µs rule, `unobservable` in emulation, and CF-1's FWE and half-duplex TNCRS behaviors,
+  which no scenario exercises) is blocked on hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

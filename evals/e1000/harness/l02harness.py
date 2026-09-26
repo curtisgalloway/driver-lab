@@ -1444,8 +1444,76 @@ def scenario_stop_start(c: Ctx) -> None:
     tear_down(c)
 
 
+# QEMU's e1000 model holds all reception for one second after every RCTL write
+# (hw/net/e1000.c, flush_queue_timer; the manual describes no such behavior). Frames that
+# arrive meanwhile wait outside the model (in the socket backend) and are delivered in one
+# burst when the hold ends.
+RX_HOLD = 1.0
+
+# Seconds the harness waits after it reads carrier 1, before the recovery pings of
+# down-during-traffic. Both drivers rewrite RCTL at carrier-up, which starts a hold; frames
+# the peer's flood sent after the DUT went down are released in a burst when it ends. A
+# ping sent inside the hold can lose its reply behind that burst (L02f2, V6 and H1). In
+# every trace of L02f2 and L02f2b the carrier-up RCTL write came before the harness read
+# carrier 1, so the hold ended at most 1 s after that read: about 0.5 s after it for the
+# candidate, up to about 1.0 s for the reference (whose watchdog can report carrier just
+# before a read). 3 s leaves at least 2 s between the end of the hold and the pings
+# (observed: 2.005 s at the least), and would still cover a carrier-up RCTL write up to
+# ~1.9 s after the read. Fixed and bounded; the pings are never retried. The deferred check
+# settled_before() confirms from each run's trace that the last RCTL write before the
+# DUT's pings came at least RX_HOLD earlier; it does not see RCTL writes once they start.
+RECOVERY_SETTLE = 3.0
+
+
+def settled_before(t_ping: float, t_end: float) -> Deferred:
+    """The pings starting at host time t_ping began after the model's receive hold ended.
+
+    Passes when the last RCTL write before t_ping came at least RX_HOLD earlier. The
+    detail records the burst: unicast frames the model accepted between that write and
+    t_ping (frames left over from the flood), and those accepted while the pings ran,
+    up to t_end.
+    """
+
+    def check(p: Post, _: int) -> tuple[bool, str]:
+        rctl = [
+            a.t
+            for a in p.accesses
+            if a.t is not None
+            and a.is_register
+            and a.rw == "w"
+            and a.reg == REG["RCTL"]
+            and a.t <= t_ping
+        ]
+        if not rctl:
+            return False, "no RCTL write before the pings"
+        last = max(rctl)
+        burst = [
+            a.t
+            for a in p.accesses
+            if a.kind == "event"
+            and a.name == "e1000x_rx_flt_ucast_match"
+            and a.t is not None
+            and last <= a.t < t_ping
+        ]
+        during = unicast_frames(p.accesses, t_ping, t_end)
+        where = f", the last {t_ping - max(burst):.3f} s before them" if burst else ""
+        return t_ping - last >= RX_HOLD, (
+            f"last RCTL write {t_ping - last:.3f} s before the pings (hold {RX_HOLD} s);"
+            f" {len(burst)} unicast frames accepted after it and before the pings{where};"
+            f" {during} while the DUT's pings ran"
+        )
+
+    return check
+
+
 def scenario_down_during_traffic(c: Ctx) -> None:
-    """The interface goes down while traffic flows both ways, then comes back."""
+    """The interface goes down while traffic flows both ways, then comes back.
+
+    Both floods run until the interface is down and are stopped only then, so the peer
+    keeps sending into the outage. After carrier returns, the harness waits
+    RECOVERY_SETTLE seconds for the model's receive hold and the burst of leftover
+    frames to pass, then pings once each way; see RECOVERY_SETTLE.
+    """
     if not bring_up(c) or not both_ways(c, "before the traffic"):
         return
     if not start_flood(c, c.peer, DUT_IP, "peer") or not start_flood(
@@ -1464,7 +1532,14 @@ def scenario_down_during_traffic(c: Ctx) -> None:
     rc, out = c.dut.run("ip link set eth0 up")
     c.check("interface comes back up", rc == 0, out)
     carrier(c, "1", 15, "carrier within 15 s")
-    both_ways(c, "afterwards")
+    c.hold(RECOVERY_SETTLE)
+    t_ping = time.time()
+    ping(c, c.dut, PEER_IP, "DUT pings peer afterwards")
+    c.defer(
+        "the pings afterwards began after the receive hold and the leftover burst",
+        settled_before(t_ping, time.time()),
+    )
+    ping(c, c.peer, DUT_IP, "peer pings DUT afterwards")
     tear_down(c)
 
 

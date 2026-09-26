@@ -105,7 +105,7 @@ buffers and fail a scenario for an earlier one's fault; this check names that ca
 | `link-flap` | The link drops through QEMU's monitor: carrier falls within 10 s and pings fail; it returns: carrier within 15 s and pings succeed. Observes whether ICR reads after the drop showed the link-change cause |
 | `link-loss-tx` | The link drops for 8 s while the DUT floods the peer (the trace must show it transmitting in the second before); carrier must fall; afterwards pings succeed. Observes TDH and TDT during the outage. QEMU's model keeps completing transmit descriptors with the link down, so transmits queued through an outage (L02e item L4) cannot be reproduced here |
 | `stop-start` | 20 interface down/up cycles back to back, then carrier and pings |
-| `down-during-traffic` | Floods both ways (the trace must show both tails moving in the second before), interface down, up, then carrier and pings |
+| `down-during-traffic` | Floods both ways (the trace must show both tails moving in the second before), interface down, and only then the floods stopped; interface up, carrier, a fixed 3 s settling interval, then one set of pings each way (no retry). The trace must show the last RCTL write at least 1 s before the DUT's pings, so QEMU's receive hold (below) had ended; the check's detail reports the frames accepted after that write (the leftover burst, for a driver whose carrier-up write releases it), but the burst itself is not checked |
 | `reload` | Three load, ping, unload cycles |
 | `itr` | ITR read through the memory BAR; afterwards, the read must equal the last value the trace shows written, or 0 after a reset. That checks the model and the decoder agree, not the driver; the values the driver wrote after its last reset are recorded for L02f |
 | `selftest-hang` | Harness self-test. PASS when a guest command that never returns gets the DUT reported dead after its timeout; later scenarios in the run then FAIL |
@@ -115,6 +115,12 @@ Two link scenarios clear both guests' ARP entries after the link returns, record
 first: pings sent during the outage leave the entry unresolved, and the next ping can be lost
 waiting for it, which is the stack's doing, not the driver's. Floods are `ping -i 0.001`;
 this busybox's `nc` has no UDP mode.
+
+QEMU's model holds all reception for one second after every RCTL write, and releases the
+frames that arrived meanwhile in one burst; the manual describes no such hold. Drivers rewrite
+RCTL when the stack joins multicast groups at carrier-up, so a ping sent right after carrier
+returns can fall inside it. `down-during-traffic` waits it out (plan unit L02f2b,
+[evidence](../../../evidence/L02f2b.md)).
 
 What QEMU's model does not show: when the receive ring is full it stops accepting frames
 rather than dropping and counting them, so there is no missed-packet count or overrun cause

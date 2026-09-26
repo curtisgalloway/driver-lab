@@ -28,7 +28,7 @@ limitation this unit answers) and the [notebook chapter](../notebook/CS-1.md).
 
 ## Status
 
-**Results in, review pending, 2026-09-26.** `frame-sizes` now carries 1 MiB over HTTP
+**Complete, 2026-09-26.** `frame-sizes` now carries 1 MiB over HTTP
 each way in frames of at most 214 bytes and compares the delivered bytes by MD5, so a
 corruption that keeps the checksum is seen in either direction; a new claim, Q28, is
 qualified by two planted defects that swap two 16-bit words, on receive (d25) and on
@@ -40,7 +40,8 @@ in either driver: the kernel never advertises an MSS under 256 by default, so th
 stream went in 310-byte frames and the stimulus check withheld every `frame-sizes` PASS
 (F1), and d26 caught 1 of 3 as a consequence (F2). The fix is one more peer-side setting;
 round `c2` (16 runs) on it is as declared. Private run `cs1-20260926-01`: 68 isolated
-runs in two declared rounds, none repeated or discarded.
+runs in two declared rounds, none repeated or discarded; one independent review of the
+diff and the run artifacts (below), seven findings, none changing a result.
 
 ## The gap (FC-1, open limitation)
 
@@ -57,18 +58,20 @@ checksum-breaking defect that stalled the transfer (L02d3).
 
 ## The check
 
-After its pings, `frame-sizes` lowers the peer's MTU to 200, serves 1 MiB of random
+After its pings, `frame-sizes` lowers the peer's MTU to 200 and, since round `c2`, the
+peer's advertised-MSS floor (`route.min_adv_mss`) to 160 (F1), serves 1 MiB of random
 bytes over HTTP from the peer to the DUT and then from the DUT to the peer (port 8081,
 so a capture check can tell the streams from `ring-wrap`'s transfer on 8080), compares
 `wget`'s MD5 of the bytes the receiving stack delivered with the sender's MD5 of the
-file, and restores the peer's MTU. Every existing check name is unchanged; the pings
-and their content checks are unchanged.
+file, and restores both settings. Every existing check name is unchanged; the pings and
+their content checks are unchanged. The check names below are the final harness's
+(`a1735b9f…`); in round `c1` the two MTU checks lacked the MSS clause (review R1).
 
 | Check (`frame-sizes`) | Reads | Shows |
 | --- | --- | --- |
 | "1 MiB over HTTP in small frames peer to DUT arrives intact" | the MD5 the DUT's `wget` computed against the peer's | What the driver delivered to the DUT's stack is what the peer sent, byte for byte, over about 7,100 frames of at most 214 bytes: the claim's receive half. A corruption that keeps TCP's checksum reaches `wget` and changes the MD5; one that breaks it stalls the transfer (Q09's failure shape) |
 | "1 MiB over HTTP in small frames DUT to peer arrives intact" | the MD5 the peer's `wget` computed against the DUT's | What reached the peer is what the DUT's stack gave the driver: the claim's transmit half |
-| "peer's MTU set to 200 for the small-frame streams", "peer's MTU restored to 1500 after the small-frame streams", "HTTP server with a 1 MiB file (peer to DUT)", "… (DUT to peer)" | the peer's and the DUT's command results | Preconditions: the stimulus was set up and taken down |
+| "peer's MTU set to 200 and its minimum advertised MSS to 160 for the small-frame streams", "peer's MTU restored to 1500 and its minimum advertised MSS to 256 after the small-frame streams", "HTTP server with a 1 MiB file (peer to DUT)", "… (DUT to peer)" | the peer's and the DUT's command results | Preconditions: the stimulus was set up and taken down |
 | "the small-frame streams' data frames were at most 214 bytes and carried 1 MiB each way" | both captures: the peer's data frames from the DUT's capture (what entered its device), the DUT's from the peer's | The stimulus: each stream ran in small frames and carried the whole 1 MiB. A precondition, not a claim; a stalled stream fails it too |
 
 **Why the peer's MTU.** TCP's checksum is the same 16-bit ones'-complement sum as
@@ -183,8 +186,11 @@ Private run `cs1-20260926-01`. The candidate does not change in this unit.
   `identities.json` must record the hashes above.
 
 The declaration is in the run's ledger and here, committed
-([`067d33f`](https://github.com/curtisgalloway/driver-lab/commit/067d33f), authored
-09:29:35 Pacific) before the launch (10:10:28).
+([`bc86249`](https://github.com/curtisgalloway/driver-lab/commit/bc86249), authored
+09:29:35 Pacific) before the launch (10:10:28). (The branch was rebased onto SR-8's merge
+after the runs; the hashes cited are the rebased ones, whose content for these files is
+unchanged, and the author times are the ones cited; before the rebase this commit was
+`067d33f` and round `c2`'s `ad48dfa`.)
 
 **Round `c2` (declared 10:18 Pacific, after `c1`'s results, before any `c2` run;
 committed before launch).** Finding F1's fix: the peer's advertised-MSS floor
@@ -251,8 +257,9 @@ check, doing its job, withheld the scenario's PASS.
 launch was the user's: the agent harness's safety check refused the implementer's launch
 command, and the user ran the declared command instead (recorded in the ledger). 576
 checks, 6 failed: exactly the six declared. The peer's SYN advertised an MSS of 160 in
-all 16 runs, and the DUT's stream went in 214-byte frames (7,084 to 7,086 full segments
-per run plus one to three partial ones of 90 to 210 bytes); the stimulus check passed in
+all 16 runs, and the DUT's stream went in 214-byte frames (the reference and the defects
+7,085 full segments per run plus one partial of 90 to 210 bytes and the 111-byte header
+segment; the candidate 7,073 full plus 16 of 186 bytes and the header); the stimulus check passed in
 every run: "peer to DUT: 7,087 to 7,089 data frames of 110 to 214 bytes carrying
 1,048,769 bytes; DUT to peer: 7,087 to 7,090 data frames of 90 to 214 bytes carrying
 1,048,769 bytes" (one run, `c2-d25-frame-sizes-1`, read 7,113 frames and 1,052,617 bytes
@@ -299,7 +306,7 @@ QF-1: Q24, Q25, Q26; FC-1: Q27; here: Q28), each with its stated scope; Q18 unqu
 | Smallest addition that works, justified | No guest-image change: busybox's `httpd`, `wget`, `md5sum`, `dd`, `ip link set … mtu` and one sysctl write on the peer, one scenario step and one capture check (above) |
 | Check names stable; new checks and a claim, with the convention said | Every existing name unchanged (`ring-wrap`'s strings held by a test; `c1`'s 828 checks in the nine other scenarios, 0 failed); Q28 a new claim, with the reasons above. The two MTU checks were renamed between `c1` and `c2` to say what they now do (F1) |
 | Harness tests for the changed surface | 12 new tests, 70 pass (2 changed for `c2`'s strings) |
-| Planted defects for receive and transmit, built; counts and expected outcomes declared before any run | d25 and d26 built (0 warnings); `c1` declared at `067d33f` before its launch, `c2` at `ad48dfa` (rebased: `24e7c35`) before its launch; `c1` not as declared and kept (F1, F2), `c2` as declared |
+| Planted defects for receive and transmit, built; counts and expected outcomes declared before any run | d25 and d26 built (0 warnings); `c1` declared at `bc86249` (authored 09:29:35) before its launch at 10:10:28, `c2` at `24e7c35` (10:19:52) before its launch at 10:29:41; `c1` not as declared and kept (F1, F2), `c2` as declared |
 | Reference and candidate on the declared repetitions; whatever else the change touches rerun | The acceptance set ×2 each on the `c1` harness (36 runs, 828 checks, 0 failed, the nine other scenarios) and `frame-sizes` ×5 each on the `c2` harness, every check; the `c2` diff confined to the streams' two peer commands and their check names |
 | Every failure kept and attributed; no run repeated | 68 runs in two declared rounds, all kept; `c1`'s 16 stimulus failures and d26's 1 of 3 attributed to F1 |
 
@@ -312,12 +319,75 @@ QF-1: Q24, Q25, Q26; FC-1: Q27; here: Q28), each with its stated scope; Q18 unqu
 
 ## Review
 
-Pending (one independent reviewer reading the diff and the run artifacts, after the runs).
+One independent fresh-context reviewer (same model family) read the diff at `12b4d3e`
+(`ad247be..`, four commits), the run store (ledger, all 68 runs' verdicts, identities,
+command logs, captures, the defect diffs and build logs, the analysis scripts, both
+harness copies) and this file, with the brief to recompute what it could and to ask for
+`review-swarm` if it judged the change broader than one scenario's step. (A first
+reviewer launched at 10:34 was stopped with the session before writing a report; this
+one was launched from the same brief at 12:32.) Its report is in the run store under
+`review/`. It recomputed every verdict and failed-check list (68 runs), the check counts
+(828 and 0 for `c1`'s nine other scenarios; 576 and 20 for `c1`'s `frame-sizes`, 576 and
+6 for `c2`), every identity against the ledger's full table (68 of 68), the declaration
+commits' author times against the launches, and, from the captures itself: the peer's
+SYN MSS (256 in all 16 `c1` runs, 160 in all 16 `c2` runs), the DUT-to-peer frame
+histograms, the stimulus check reproduced byte for byte through the harness's own
+function in 32 of 32 runs, that no non-stream frame of 204 to 256 bytes exists in any
+run either way (so d25 and d26 could reach nothing else), and the defects' effect:
+applying d25's swap to the peer's captured frames and reassembling reproduces the DUT's
+`got` MD5 exactly in all six d25 runs, and under d26 the DUT's wire frames reassemble to
+the peer's `got` with every TCP checksum verifying (in `c1`'s runs 2 and 3, to `sent`:
+F2 confirmed). It confirmed the premise script, F1's mechanism in the kernel source, the
+copybreak length and TSO facts in the reference, the unchanged check names and
+`ring-wrap` strings against FC-1's logs, the 31-line `c1`-to-`c2` diff reachable only
+from `frame-sizes`, the post-hoc decision not to rerun the nine other scenarios, and the
+privacy rule. Findings:
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| R1 | low | The check table and prose used `c1`'s MTU check names and omitted the sysctl | Corrected to the final names, with the `c1` names noted |
+| R2 | low | Commit citations were pre-rebase hashes reachable from no branch | The rebased hashes cited, with the pre-rebase ones noted |
+| R3 | low | The `c2` results sentence about full segments per run did not fit the candidate's runs | Corrected: reference and defects 7,085, candidate 7,073 plus 16 of 186 bytes |
+| R4 | low | The plan's entry and the notebook index were stale at the checkpoint | Updated at this checkpoint |
+| R5 | info | `expect-hashes*.json` list only the candidate module, so `summary.py` compared neither the reference's nor the defects' hashes; the reviewer checked all 68 runs against the ledger's full table | Recorded; every identity matches. The same shape as FC-1's file |
+| R6 | info | The process-log entry was uncommitted at the checkpoint, its heading time after its write time | Committed here with the heading corrected |
+| R7 | info | If `ip link` failed in the setup chain, or the restore chain, the peer's advertised-MSS floor would stay at 160; no consequence in isolated runs, and both commands returned 0 in all 32 runs | Recorded, not fixed: a harness change now would need another run; noted in the README and the limitations |
+
+**Decisions taken in the user's place** (orchestration rule of 2026-09-26: no finding is
+left open for the user; each is applied, fixed differently, deferred to a named place, or
+rejected with a reason):
+
+- R1, R2, R3, R4, R6: **applied** as the table says (record corrections; nothing to weigh).
+- R5: **deferred** to the next unit that touches the run-store scripts: the
+  expected-hash file's shape is FC-1's, the reviewer verified all 68 identities against
+  the ledger's full table, and changing `summary.py` now would alter a recorded artifact
+  after the runs. Where: the ledger's R5 line and this row.
+- R7: **deferred**, not fixed: fixing it changes the harness after the runs and would
+  need another round on the final file; no run saw the case, isolated runs cannot, and
+  the README and the limitations say it. Where: the next `frame-sizes` change (make the
+  restore chain independent of `ip link`'s result).
+- Not rerunning the nine other scenarios in round `c2`: **decided** on the diff argument
+  (31 lines reachable only from `frame-sizes`) and FC-1's `f2` precedent, taken after
+  seeing `c1`'s results and labeled so in the `c2` declaration; the reviewer confirmed it
+  from the call graph.
+- Keeping d26 unchanged for `c2` (F2): **decided**; the reviewer confirmed the
+  mechanism from the captures.
+- Retaining `c1` in full as not-as-declared, and reporting both drivers' 310-byte-frame
+  transfers as observations rather than Q28 evidence: **decided**.
+
+None of these reverses a recorded project decision, needs an outward action or a new
+QEMU round. No finding changed a verdict, a check count, an identity or a qualification.
+The reviewer judged broader review unnecessary: one scenario's step, one shared function's
+parameters shown byte-identical, and a decoder used only by the new check; no shared
+machinery or access control touched, and the acceptance set ran with no failure
+elsewhere.
 
 ## Measures
 
-- Operator time: about 09:10 to 10:34 on 2026-09-26 (Pacific) before the review, one
-  session interrupted twice for the KVM slot; see the notebook. Model cost not measured.
+- Operator time: about 09:10 to 10:36 on 2026-09-26 (Pacific) before the review, then
+  12:32 to the final checkpoint after a pause for a quota reset; one session interrupted
+  twice for the KVM slot and once for the quota; see the notebook. Model cost not
+  measured; the review took about 10 minutes.
 - Host time: round `c1` (52 runs, 8 at a time) 1 minute 45 seconds; round `c2` (16 runs)
   34 seconds; the two defect builds about 20 s each; the offline premise checks about a
   minute.
@@ -345,6 +415,11 @@ Pending (one independent reviewer reading the diff and the run artifacts, after 
 - The reference and the candidate were run once on the `c1` harness for the nine other
   scenarios and on the `c2` harness for `frame-sizes` only, on the diff argument stated
   in the `c2` declaration.
+- A failure of `ip link` in the setup or restore chain would leave the peer's
+  advertised-MSS floor at 160 for the rest of a full-suite run (review R7); no run saw
+  it, and isolated runs are unaffected.
+- The reviewer and the implementer share a model family; no human read the runs in this
+  unit beyond launching round `c2`.
 - `ring-wrap`'s Q09 stays qualified only as a stalled transfer; the same defect shape at
   frames over 1,000 bytes would qualify it for content too, a possible follow-on.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.

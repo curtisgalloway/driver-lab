@@ -71,3 +71,14 @@ every time: the swapped words passed every checksum and reached the application,
 the corruption no check could see before. One retransmission burst (26 segments) in one
 d25 run and the candidate's different partial-segment pattern are observations. Rebased
 onto SR-8's merge, keeping both units' plan and index text.
+
+## 2026-09-26T12:44-07:00 — review: seven findings, all on the records; the unit closes
+A first reviewer was stopped with the session at the quota pause; a fresh one from the same
+brief recomputed every verdict, identity and capture fact, reproduced the DUT's corrupted
+MD5s from the captures under both defects, and found nothing that changed a result: four
+record corrections (stale check names and pre-rebase hashes in the evidence, one wrong
+segment count, the plan and index behind the checkpoint), three notes (the expected-hash
+file compares only the candidate module; the process-log entry uncommitted; a failed
+`ip link` would leave the peer's MSS floor lowered). Applied or recorded; no harness
+change after the runs, so no further round. Times in this unit were written from
+expectation three times before a `date` caught them; the process log has the lesson.

@@ -147,7 +147,9 @@ MTU bounds both directions (its own sends by the MTU, the DUT's by the MSS the p
 advertises from it) and leaves the DUT's configuration alone, so no MTU change reaches the
 driver under test. The kernel never advertises an MSS under its `route.min_adv_mss` sysctl
 (256 by default, so the DUT sent 310-byte frames in CS-1's first round); the peer's floor
-is lowered to 160 with the MTU and restored with it. The frames are at most 214 bytes, inside the reference's 256-byte
+is lowered to 160 with the MTU and restored with it. Should `ip link` fail in either
+chain, the floor would stay at 160 for the rest of a full-suite run (CS-1 review R7; not
+seen in any run, and isolated runs are unaffected). The frames are at most 214 bytes, inside the reference's 256-byte
 copybreak receive path; a deferred check reads both captures to confirm the streams ran
 in such frames and carried the whole 1 MiB each way (the stimulus, which a stalled stream
 fails too). The DUT may transmit its stream as TSO skbs the model segments; the check is

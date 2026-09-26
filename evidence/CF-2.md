@@ -73,6 +73,21 @@ to be identical to CF-1's. The rule itself cannot be observed on the model, whos
 is credited, so the traces can show where the readings happen, not whether the crediting is
 right. The declaration is in the run's ledger and here, committed before the first run.
 
+**Round `a2` (declared 13:04 Pacific by the orchestrator's decision, made in the user's place,
+to close the harness caveat below now; committed before any `a2` run).** CS-1's harness
+`a1735b9f…` (origin/main at `272d578`; `guest-init.sh` unchanged) landed while round `a1` ran,
+and CS-1's own acceptance runs used CF-1's module. So: all ten suite scenarios, isolated, the
+reference ×2 and the CF-2 candidate `df37c7ad…` ×2, 40 runs, eight in parallel, on
+`a1735b9f…` (`run2.sh` `6d65e4b9…`, the same job list, `expect-hashes-a2.json` `5c6df2b1…`).
+Criteria as for `a1`: reference 20 of 20; candidate 20 of 20 on every check, with
+`frame-sizes` now 30 checks in the scenario (CS-1's two stream checks and its renamed MTU and
+stimulus checks; 36 with the trace rules) and every other scenario's count as in `a1`. The
+candidate's `a2` traces are compared with its own `a1` traces: differences are expected only in
+`frame-sizes` (CS-1's 1 MiB streams each way in small frames: traffic-dependent counts and index
+values, and more polls where the scenario runs longer) and in the run-to-run variation `a1`'s
+repetition pairs show; anything else is attributed before the round closes. If Q28 passes for
+the candidate, 27 of 28 claims are qualified evidence about it.
+
 ## Round 1: the update and its checks
 
 One round, no repair needed. The implementer (Codex, `gpt-6-astra`, in `cleanroom_sandbox.sh`,

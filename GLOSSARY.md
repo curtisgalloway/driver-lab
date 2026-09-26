@@ -91,3 +91,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Canary | A file planted in the workspace and read in a pilot run, to prove the audit log records the agent's reads before the log is trusted. |
 | Repair round | In L02f2, one repair of the candidate by the implementer, then the command-log audit, a build, and an isolated rerun of every scenario. |
 | Receive hold | QEMU's e1000 model delivers no received frame for one second after any write to RCTL; not described in the manual (L02f2, V6). |
+| Half / full duplex | Whether a link carries traffic one direction at a time, sharing the wire and detecting collisions (half), or both directions at once (full). |
+| Carrier sense (CRS) | The PHY's signal to the MAC that the wire is busy. In half duplex the MAC defers to it; the e1000 manual expects the PHY to assert it during every transmission (SDM §13.7.12). |
+| PSCON | The 82540EM PHY's register 16, PHY Specific Control (SDM Table 13-31); its bit 11 decides whether the PHY asserts carrier sense on transmit. |
+| Spec gap / spec error | A question a spec leaves unanswered, filed by an implementer / a place where the spec is wrong. |
+| Spec revision | A numbered, hashed version of a spec; each is verified before use, and a change produces a new revision rather than an edit in place (L02s made revision 5). |
+| MAC / PHY | The two halves of an Ethernet controller: the MAC moves frames between memory and the link logic; the PHY drives the wire, negotiates speed and duplex, and reports link and carrier. On the 82540EM the PHY is internal and reached through the MDIC register. |

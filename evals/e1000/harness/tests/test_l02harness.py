@@ -495,6 +495,103 @@ class DeferredMoreTest(unittest.TestCase):
         self.assertIn("no harness ITR read", detail)
 
 
+class SettledBeforeTest(unittest.TestCase):
+    """The down-during-traffic recovery pings must start after the model's receive hold."""
+
+    def ev(self, t: float) -> "h.Access":
+        return h.Access(t, "event", "", None, None, "e1000x_rx_flt_ucast_match x")
+
+    def post(self, accesses):
+        return h.Post(accesses, {1: h.Window(0.0, 100.0, "01 x")}, Path("."))
+
+    def test_the_settle_interval_outlasts_the_hold(self):
+        self.assertGreater(h.RECOVERY_SETTLE, h.RX_HOLD + 1.0)
+
+    def test_passes_when_the_last_rctl_write_is_a_hold_earlier(self):
+        burst = [self.ev(11.52 + i / 1000) for i in range(30)]
+        acc = [mmio(10.0, "w", "RCTL", 0x8002), mmio(10.52, "w", "RCTL", 0x8002)]
+        acc += burst + [self.ev(14.1), self.ev(15.1), self.ev(16.1)]
+        ok, detail = h.settled_before(14.0, 17.0)(self.post(acc), 1)
+        self.assertTrue(ok, detail)
+        self.assertIn("last RCTL write 3.480 s before the pings", detail)
+        self.assertIn("30 unicast frames accepted after it and before the pings", detail)
+        self.assertIn("the last 2.451 s before them", detail)
+        self.assertIn("3 while the DUT's pings ran", detail)
+
+    def test_fails_inside_the_hold(self):
+        acc = [mmio(10.52, "w", "RCTL", 0x8002), self.ev(11.0)]
+        ok, detail = h.settled_before(11.03, 14.0)(self.post(acc), 1)
+        self.assertFalse(ok)
+        self.assertIn("0.510 s before the pings", detail)
+        self.assertIn("1 unicast frames", detail)
+
+    def test_ignores_rctl_reads_and_writes_after_the_pings_start(self):
+        acc = [
+            mmio(10.0, "w", "RCTL", 0x8002),
+            mmio(13.5, "r", "RCTL", 0x8002),
+            mmio(15.0, "w", "RCTL", 0),
+        ]
+        self.assertTrue(h.settled_before(14.0, 16.0)(self.post(acc), 1)[0])
+
+    def test_no_rctl_write_fails(self):
+        ok, detail = h.settled_before(14.0, 16.0)(self.post([self.ev(12.0)]), 1)
+        self.assertFalse(ok)
+        self.assertIn("no RCTL write", detail)
+
+
+class DownDuringTrafficTest(unittest.TestCase):
+    """The scenario's order: floods stopped after the interface goes down, carrier, the
+    settle interval, then one ping each way with no retry."""
+
+    class FakeGuest:
+
+        def __init__(self, name, log):
+            self.name, self.log, self.dead = name, log, False
+
+        def run(self, cmd, timeout=30):
+            self.log.append((self.name, cmd))
+            if cmd.startswith("cat /sys/class/net/eth0/address"):
+                return 0, h.DUT_MAC
+            if cmd.startswith("cat /sys/class/net/eth0/carrier"):
+                return 0, "1"
+            if cmd.startswith("ping -c"):
+                return 0, "3 packets transmitted, 3 packets received, 0% packet loss"
+            return 0, "1"
+
+    def test_order(self):
+        log = []
+        dut, peer = self.FakeGuest("dut", log), self.FakeGuest("peer", log)
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, peer, None, "e1000", Path(d), step=1)
+            with mock.patch.object(h.time, "sleep", lambda s: log.append(("sleep", s))):
+                h.scenario_down_during_traffic(c)
+        cmds = [
+            (who, cmd.split(" 192.0.2")[0] if isinstance(cmd, str) else cmd)
+            for who, cmd in log
+        ]
+        down = cmds.index(("dut", "ip link set eth0 down"))
+        up = cmds.index(("dut", "ip link set eth0 up"))
+        self.assertLess(down, cmds.index(("peer", "killall -q ping; true")), cmds)
+        self.assertLess(cmds.index(("peer", "killall -q ping; true")), up)
+        settle = cmds.index(("sleep", h.RECOVERY_SETTLE))
+        carrier_after = max(
+            i for i, (w, x) in enumerate(cmds[:settle]) if "carrier" in str(x)
+        )
+        self.assertLess(up, carrier_after)
+        after = cmds[settle + 1 :]
+        pings = [x for x in after if str(x[1]).startswith("ping -c")]
+        self.assertEqual(pings, [("dut", "ping -c 3 -W 2"), ("peer", "ping -c 3 -W 2")])
+        self.assertEqual(
+            [n for n, *_ in c.checks if n.endswith("afterwards")],
+            ["DUT pings peer afterwards", "peer pings DUT afterwards"],
+        )
+        self.assertIn(
+            "the pings afterwards began after the receive hold and the leftover burst",
+            [n for _, n, *_ in c.deferred],
+        )
+        self.assertIn(f"hold {h.RECOVERY_SETTLE} s", [a["action"] for a in c.actions])
+
+
 class SetLinkTest(unittest.TestCase):
 
     class DeadQmp:

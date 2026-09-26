@@ -385,3 +385,18 @@ from the file just written); never type a clock time from the sense of how long 
 Fix belongs in: the lab-notebook skill (an instruction that the entry time is read from the
 clock in the writing command) and the project's AGENTS.md records rule.
 Status: open
+
+### 2026-09-26T15:07-07:00 — a record time from expectation, again, and a runner that read "no answer" as "driver bound"
+Chapter: [L01-hw](notebook/L01-hw.md)
+What happened: the ledger's r2 declaration and a runner fix were stamped "15:10" while the
+`date` in the same command printed 15:07; caught by that output and corrected before the
+commit. Same fault as CS-1's. Separately, the run driver treated a failed `ssh` as "a driver
+is bound before the run" and rebooted the fixture, and its first launch ran one job of eleven
+because `ssh` without `-n` consumed the job list on stdin.
+Cost: one correction pass; one needless reboot; a relaunch.
+Prevention: take the stamp from the `date` output in the same command, never from the sense
+of elapsed time; in a job loop over `ssh`, use `ssh -n` and test reachability separately
+from the condition (an unreachable host is a stop, not a state).
+Fix belongs in: the lab-notebook skill (entry time read from the clock) and a note in the
+harness-authoring guidance for remote fixtures (`ssh -n` in loops; reachability first).
+Status: open

@@ -46,7 +46,7 @@ any run) and the pattern checks fail everywhere, since that stimulus carried no 
 ## 2026-09-26T08:41-07:00 — declaration committed, 52 runs launched
 Round f1: the acceptance set (ten scenarios, reference ×2 and candidate ×2) on the changed
 harness, `frame-sizes` ×3 more per driver, d21c ×3 and d24 ×3. Each check's expected verdict
-for both defects is in the evidence and the ledger, committed at `612ec59` (08:41:24)
+for both defects is in the evidence and the ledger, committed at `61e3fea` (08:41:24)
 before the first run. The one contingency named: d21c's shift pulls in the byte beyond the
 frame, which was 0 in QF-1's buffers; a frame whose beyond-byte equals its pattern byte
 would pass unchanged.

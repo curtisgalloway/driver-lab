@@ -143,9 +143,11 @@ Private run `fc1-20260926-01`. The candidate does not change in this unit.
   A reference or candidate failure blocks the corresponding conclusion.
 
 The declaration is in the run's ledger and here; this section was committed
-([`612ec59`](https://github.com/curtisgalloway/driver-lab/commit/612ec59), 08:41:24) before
-the launcher started (08:41:35) and the first scenario (08:41:38). (The section as committed
-said "08:42"; the time above is the commit's, finding F1.)
+([`61e3fea`](https://github.com/curtisgalloway/driver-lab/commit/61e3fea), authored 08:41:24)
+before the launcher started (08:41:35) and the first scenario (08:41:38). (The section as
+committed said "08:42"; the time above is the commit's, finding F1. The branch was rebased
+onto SR-7's merge after the runs, so the commits' author times are the ones cited and their
+hashes are the rebased ones.)
 
 **Round `f2` (declared after the review, 09:03 Pacific, before any `f2` run; committed
 before launch).** Review finding R2: the checksum-error check compared each counter read
@@ -216,7 +218,7 @@ QF-1: Q24, Q25, Q26; here: Q27), each with its stated scope; Q18 unqualified,
 | The harness checks the contents of small frames, not only their arrival, from the capture, both directions | Met: a pattern payload on the 60/61-byte pings; three capture checks (the DUT's requests against the pattern, the DUT's replies against the peer's requests, the peer's frames as the DUT's device received them) and the kernel's checksum-error count for the one path no capture can see |
 | Existing check names stable; a new check and a claim, with the convention said | Met: every existing name unchanged (1,118 checks in the reference and candidate runs, every scenario's count as before plus `frame-sizes`' four); Q27 a new claim, with the reasons above |
 | Harness tests for the changed surface | 14 new tests, 58 pass (one added for the review's R2) |
-| Counts declared before running; d21c fails the new check for the intended reason, 3 of 3 isolated | Met: declaration committed at `612ec59` 14 s before the first scenario; d21c 3 of 3 on the checksum-error check, +8 per run; d24 3 of 3 on the two capture comparisons |
+| Counts declared before running; d21c fails the new check for the intended reason, 3 of 3 isolated | Met: declaration committed at `61e3fea` 14 s before the first scenario; d21c 3 of 3 on the checksum-error check, +8 per run; d24 3 of 3 on the two capture comparisons |
 | Reference and candidate pass the declared repetitions of the affected scenario | `frame-sizes` 5 of 5 each on `9c33f54d…`, every check; 2 of 2 each on the final harness `884e771c…` |
 | Whatever else the change touches rerun; earlier qualifications carry | The acceptance set rerun on the changed harness, 20 of 20 each; the shared decoder byte-identical on all 484 stored captures; every other scenario's checks unchanged by name and count |
 | Every failure kept and attributed; no run repeated | 60 runs in two declared rounds, all kept; d24's one undeclared pass reported (F2) |
@@ -232,7 +234,7 @@ QF-1: Q24, Q25, Q26; here: Q27), each with its stated scope; Q18 unqualified,
 
 ## Review
 
-One independent fresh-context reviewer (same model family) read the diff at `6d92d77`
+One independent fresh-context reviewer (same model family) read the diff at `c0b24de`
 (`9f8e43e..`), the run store (ledger, the 52 `f1` runs' verdicts, identities, command logs,
 captures, the defect diffs and build logs, the analysis scripts) and this file, with the
 brief to recompute what it could and to ask for `review-swarm` if it judged the change

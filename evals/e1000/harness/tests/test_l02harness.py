@@ -666,6 +666,294 @@ class KernelLogTest(unittest.TestCase):
         self.assertEqual(len(h.kernel_log_problems(log)), 3)
 
 
+def echo(
+    src: str,
+    dst: str,
+    icmp_type: int,
+    payload: bytes,
+    ident: int = 7,
+    seq: int = 0,
+    pad_to: int = 0,
+) -> bytes:
+    """An IPv4 ICMP echo frame with a true IP total length, padded to pad_to bytes."""
+    eth = b"\x52\x54\x00\x12\x34\x57" + b"\x52\x54\x00\x12\x34\x56" + b"\x08\x00"
+    total = 20 + 8 + len(payload)
+    ip = bytes([0x45, 0]) + struct.pack("!H", total) + bytes([0, 0, 0, 0, 64, 1, 0, 0])
+    ip += bytes(int(x) for x in src.split(".")) + bytes(int(x) for x in dst.split("."))
+    icmp = bytes([icmp_type, 0, 0, 0]) + struct.pack("!HH", ident, seq) + payload
+    frame = eth + ip + icmp
+    return frame + b"\0" * max(0, pad_to - len(frame))
+
+
+def patterned(size: int, stamp: bytes = b"\x01\x02\x03\x04") -> bytes:
+    """A busybox-style payload for a size-byte frame: timestamp, then the pattern."""
+    return stamp + bytes([h.PING_PATTERN[size]]) * (size - 42 - 4)
+
+
+DUT, PEER = h.DUT_IP, h.PEER_IP
+
+
+class EchoFramesTest(unittest.TestCase):
+
+    def test_fields_and_padding(self):
+        frames = [
+            echo(PEER, DUT, 8, patterned(61), ident=9, seq=3),
+            echo(DUT, PEER, 8, b"", ident=2, seq=1, pad_to=60),
+        ]
+        a, b = h.icmp_echo_frames([h.Frame(0.0, f) for f in frames])
+        self.assertEqual((a.src, a.dst, a.type, a.length, a.ident, a.seq), (PEER, DUT, 8, 61, 9, 3))
+        self.assertEqual((a.payload, a.data_at, a.padded), (patterned(61), 42, False))
+        self.assertEqual((b.length, b.payload, b.padded), (60, b"", True))
+        self.assertEqual(h.icmp_echoes([h.Frame(0.0, f) for f in frames])[1], (DUT, PEER, 8, 60))
+
+
+class ContentChecksTest(unittest.TestCase):
+    """The frame-sizes content checks, from synthetic captures."""
+
+    def good(self) -> list[bytes]:
+        out = []
+        for size in (60, 61):
+            for seq in (0, 1):
+                req = patterned(size, bytes([seq, 0, 0, size]))
+                out.append(echo(DUT, PEER, 8, req, ident=100 + size, seq=seq))
+                out.append(echo(PEER, DUT, 0, req, ident=100 + size, seq=seq))
+                out.append(echo(PEER, DUT, 8, req, ident=200 + size, seq=seq))
+                out.append(echo(DUT, PEER, 0, req, ident=200 + size, seq=seq))
+        # The 42-byte ping: the DUT's request padded to 60, the peer's reply unpadded.
+        out.append(echo(DUT, PEER, 8, b"", ident=1, seq=0, pad_to=60))
+        out.append(echo(PEER, DUT, 0, b"", ident=1, seq=0))
+        return out
+
+    def post(self, d: str, frames: list[bytes]):
+        for side in ("peer", "dut"):
+            Path(d, f"{side}.pcap").write_bytes(pcap(frames))
+        return h.Post([], {1: h.Window(0.0, 1.0, "01 frame-sizes")}, Path(d))
+
+    def run_checks(self, frames):
+        with tempfile.TemporaryDirectory() as d:
+            p = self.post(d, frames)
+            return {
+                "sent": h.dut_sent_pattern(p, 1),
+                "echoed": h.dut_echoed_peer(p, 1),
+                "stimulus": h.peer_frames_as_sent(p, 1),
+            }
+
+    def test_a_faithful_exchange_passes_every_check(self):
+        got = self.run_checks(self.good())
+        for name, (ok, detail) in got.items():
+            with self.subTest(check=name):
+                self.assertTrue(ok, detail)
+        self.assertIn("4 requests from the DUT (2 of 60 bytes, 2 of 61 bytes)", got["sent"][1])
+        self.assertIn("8 frames from the peer", got["stimulus"][1])
+
+    def test_a_flipped_byte_in_a_dut_request_names_the_frame_byte(self):
+        frames = self.good()
+        f = bytearray(frames[0])  # the DUT's 60-byte request, seq 0
+        f[50] ^= 0x01
+        frames[0] = bytes(f)
+        ok, detail = self.run_checks(frames)["sent"]
+        self.assertFalse(ok)
+        self.assertEqual(detail, "60-byte request seq 0: differs at frame byte 50 (0xa4 for 0xa5)")
+
+    def test_a_shifted_tail_in_a_dut_reply_is_a_mismatch(self):
+        frames = self.good()
+        f = bytearray(frames[11])  # the DUT's reply to the peer's 61-byte request, seq 0
+        f[46:61] = f[47:61] + b"\0"
+        frames[11] = bytes(f)
+        ok, detail = self.run_checks(frames)["echoed"]
+        self.assertFalse(ok)
+        self.assertEqual(detail, "61-byte request seq 0: reply differs at frame byte 60 (0x00 for 0x5a)")
+
+    def test_a_missing_or_short_reply_is_reported(self):
+        frames = self.good()
+        frames[7] = echo(DUT, PEER, 0, patterned(60)[:-1], ident=260, seq=1)
+        del frames[3]  # the DUT's reply to the peer's 60-byte request, seq 0
+        ok, detail = self.run_checks(frames)["echoed"]
+        self.assertFalse(ok)
+        self.assertEqual(
+            detail, "60-byte request seq 0: no reply; 60-byte request seq 1: reply is 59 bytes"
+        )
+
+    def test_a_size_never_sent_fails(self):
+        frames = [f for f in self.good() if len(f) != 61]
+        for name, (ok, detail) in self.run_checks(frames).items():
+            with self.subTest(check=name):
+                self.assertFalse(ok)
+                self.assertIn("no 61-byte", detail)
+
+    def test_zero_payloads_fail_the_pattern_checks_but_echo_fine(self):
+        # The stimulus before this unit: the timestamp then zeros (QF-1 F3).
+        frames = []
+        for size in (60, 61):
+            req = b"\x01\x02\x03\x04" + b"\0" * (size - 46)
+            frames.append(echo(DUT, PEER, 8, req, ident=size, seq=0))
+            frames.append(echo(PEER, DUT, 0, req, ident=size, seq=0))
+            frames.append(echo(PEER, DUT, 8, req, ident=size + 1, seq=0))
+            frames.append(echo(DUT, PEER, 0, req, ident=size + 1, seq=0))
+        got = self.run_checks(frames)
+        self.assertTrue(got["echoed"][0])
+        self.assertFalse(got["sent"][0])
+        self.assertIn("frame bytes 46 (0x00 for 0xa5)", got["sent"][1])
+        self.assertFalse(got["stimulus"][0])
+
+    def test_the_padded_42_byte_ping_is_not_a_patterned_frame(self):
+        frames = [
+            echo(DUT, PEER, 8, b"", ident=1, seq=0, pad_to=60),
+            echo(PEER, DUT, 0, b"", ident=1, seq=0),
+        ]
+        seen, faults = h.pattern_faults(h.icmp_echo_frames([h.Frame(0.0, f) for f in frames]), DUT)
+        self.assertEqual((seen, faults), ({}, []))
+
+    def test_byte_faults_lists_at_most_four_offsets(self):
+        self.assertEqual(h.byte_faults(b"\xa5" * 6, b"\0" * 6, 46), (
+            "differs at frame bytes 46 (0x00 for 0xa5), 47 (0x00 for 0xa5),"
+            " 48 (0x00 for 0xa5), 49 (0x00 for 0xa5) and 2 more"
+        ))
+        self.assertEqual(h.byte_faults(b"ab", b"ab", 0), "")
+
+
+SNMP = (
+    "Icmp: InMsgs InErrors InCsumErrors InDestUnreachs OutMsgs\n"
+    "Icmp: 9 0 {n} 0 73\n"
+)
+
+
+class IcmpCounterTest(unittest.TestCase):
+
+    class G:
+
+        def __init__(self, rc, out):
+            self.rc, self.out = rc, out
+
+        def run(self, cmd, timeout=30):
+            assert cmd == "grep '^Icmp:' /proc/net/snmp", cmd
+            return self.rc, self.out
+
+    def test_reads_the_column_by_name(self):
+        self.assertEqual(h.icmp_csum_errors(self.G(0, SNMP.format(n=3))), 3)
+
+    def test_unreadable_is_none(self):
+        self.assertIsNone(h.icmp_csum_errors(self.G(1, "")))
+        self.assertIsNone(h.icmp_csum_errors(self.G(0, "Icmp: InMsgs\nIcmp: 1\n")))
+        self.assertIsNone(h.icmp_csum_errors(self.G(0, SNMP.format(n="x"))))
+
+
+class FrameSizesTest(unittest.TestCase):
+    """The scenario's pings carry the pattern at 60 and 61 bytes only, the checksum
+    count is read around every ping, and the content checks are registered."""
+
+    class FakeGuest:
+
+        def __init__(self, name, log, errors):
+            self.name, self.log, self.dead, self.errors = name, log, False, errors
+
+        def run(self, cmd, timeout=30):
+            self.log.append((self.name, cmd))
+            if cmd.startswith("cat /sys/class/net/eth0/address"):
+                return 0, h.DUT_MAC
+            if cmd.startswith("cat /sys/class/net/eth0/carrier"):
+                return 0, "1"
+            if cmd.startswith("ping -c"):
+                return 0, "2 packets transmitted, 2 packets received, 0% packet loss"
+            if cmd.startswith("grep '^Icmp:'"):
+                return 0, SNMP.format(n=self.errors.pop(0) if self.errors else 0)
+            return 0, "1"
+
+    def scenario(self, errors):
+        log = []
+        dut = self.FakeGuest("dut", log, errors)
+        peer = self.FakeGuest("peer", log, [])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, peer, None, "e1000", Path(d), step=1)
+            h.scenario_frame_sizes(c)
+        return log, c
+
+    def test_pings_and_counter_reads(self):
+        log, c = self.scenario([])
+        pings = [(who, cmd) for who, cmd in log if cmd.startswith("ping")]
+        self.assertEqual(
+            pings,
+            [
+                ("dut", "ping -c 2 -W 2 -s 0 192.0.2.2"),
+                ("dut", "ping -c 2 -W 2 -s 18 -p a5 192.0.2.2"),
+                ("dut", "ping -c 2 -W 2 -s 19 -p 5a 192.0.2.2"),
+                ("dut", "ping -c 2 -W 2 -s 1471 192.0.2.2"),
+                ("dut", "ping -c 2 -W 2 -s 1472 192.0.2.2"),
+                ("peer", "ping -c 2 -W 2 -s 18 -p a5 192.0.2.1"),
+                ("peer", "ping -c 2 -W 2 -s 19 -p 5a 192.0.2.1"),
+                ("peer", "ping -c 2 -W 2 -s 1471 192.0.2.1"),
+                ("peer", "ping -c 2 -W 2 -s 1472 192.0.2.1"),
+            ],
+        )
+        reads = [i for i, (who, cmd) in enumerate(log) if cmd.startswith("grep '^Icmp:'")]
+        self.assertEqual(len(reads), 10)
+        self.assertTrue(all(who == "dut" for who, cmd in log if cmd.startswith("grep")))
+        first_ping = next(i for i, (_, cmd) in enumerate(log) if cmd.startswith("ping"))
+        self.assertLess(reads[0], first_ping)
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(counter, [(counter[0][0], True, "InCsumErrors 0 before the pings, 0 after")])
+        self.assertEqual(
+            [n for _, n, *_ in c.deferred],
+            [
+                "no frames left over from an earlier scenario arrived during bring-up",
+                "the DUT's 60- and 61-byte echo requests reached the peer with the pattern"
+                " payload intact",
+                "the DUT echoed the peer's 60- and 61-byte echo requests byte for byte",
+                "the peer's 60- and 61-byte echo requests and replies reached the DUT's"
+                " device with the expected payload",
+                "the DUT sent echo requests and replies of 60, 61, 1513 and 1514 bytes",
+                "no frame the DUT sent was shorter than 60 bytes",
+            ],
+        )
+        self.assertEqual(log[-1], ("dut", "ip link set eth0 down && rmmod e1000"))
+
+    def test_a_failed_read_fails_the_check_and_a_rise_across_it_is_kept(self):
+        # Review R2: a read that fails mid-run must not let a rise through; the next
+        # comparison is against the last successful read.
+        class Flaky(self.FakeGuest):
+
+            def run(self, cmd, timeout=30):
+                if cmd.startswith("grep '^Icmp:'") and self.errors and self.errors[0] is None:
+                    self.errors.pop(0)
+                    self.log.append((self.name, cmd))
+                    return 1, ""
+                return super().run(cmd, timeout)
+
+        log = []
+        dut = Flaky("dut", log, [0, None, 2, 2, 2, 2, 2, 2, 2, 2])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, self.FakeGuest("peer", log, []), None, "e1000", Path(d), step=1)
+            h.scenario_frame_sizes(c)
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(
+            counter[0][1:],
+            (
+                False,
+                "InCsumErrors could not be read at every point;"
+                " +2 during 'DUT pings peer with 60-byte frames'",
+            ),
+        )
+        dut = Flaky("dut", log, [None, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        with tempfile.TemporaryDirectory() as d:
+            c = h.Ctx(dut, self.FakeGuest("peer", log, []), None, "e1000", Path(d), step=1)
+            h.scenario_frame_sizes(c)
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(counter[0][1:], (False, "InCsumErrors could not be read at every point"))
+
+    def test_a_rising_count_fails_and_names_the_pings(self):
+        # 10 reads: before the pings, then after each of the 9.
+        _, c = self.scenario([0, 0, 2, 4, 4, 4, 4, 4, 4, 4])
+        counter = [x for x in c.checks if x[0].startswith("the DUT's kernel counted")]
+        self.assertEqual(
+            counter[0][1:],
+            (
+                False,
+                "+2 during 'DUT pings peer with 60-byte frames';"
+                " +2 during 'DUT pings peer with 61-byte frames'",
+            ),
+        )
+
+
 class SuiteArgsTest(unittest.TestCase):
 
     def test_all_expands_to_the_suite_without_self_tests(self):

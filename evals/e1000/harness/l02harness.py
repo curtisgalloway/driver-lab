@@ -204,8 +204,28 @@ def read_pcap(path: Path) -> list[Frame]:
     return frames
 
 
-def icmp_echoes(frames: list[Frame]) -> list[tuple[str, str, int, int]]:
-    """Returns (src, dst, icmp type, frame length) for each IPv4 ICMP echo frame."""
+@dataclasses.dataclass
+class Echo:
+    """One IPv4 ICMP echo request (type 8) or reply (type 0) from a capture.
+
+    payload is the ICMP data, bounded by the IP total length, so a frame padded to the
+    Ethernet minimum carries none of its padding here; data_at is the frame offset of
+    the payload's first byte.
+    """
+
+    src: str
+    dst: str
+    type: int
+    length: int
+    ident: int
+    seq: int
+    payload: bytes
+    data_at: int
+    padded: bool
+
+
+def icmp_echo_frames(frames: list[Frame]) -> list[Echo]:
+    """Decodes each IPv4 ICMP echo frame, in capture order."""
     found = []
     for f in frames:
         d = f.data
@@ -215,12 +235,34 @@ def icmp_echoes(frames: list[Frame]) -> list[tuple[str, str, int, int]]:
         ihl = (d[14] & 0x0F) * 4
         if ihl < 20 or len(d) < 14 + ihl + 8:
             continue
-        icmp_type = d[14 + ihl]
-        if icmp_type in (0, 8):
-            src = ".".join(str(b) for b in d[26:30])
-            dst = ".".join(str(b) for b in d[30:34])
-            found.append((src, dst, icmp_type, len(d)))
+        icmp = 14 + ihl
+        icmp_type = d[icmp]
+        if icmp_type not in (0, 8):
+            continue
+        src = ".".join(str(b) for b in d[26:30])
+        dst = ".".join(str(b) for b in d[30:34])
+        total = struct.unpack("!H", d[16:18])[0]
+        end = max(icmp + 8, min(len(d), 14 + total))
+        ident, seq = struct.unpack("!HH", d[icmp + 4 : icmp + 8])
+        found.append(
+            Echo(
+                src,
+                dst,
+                icmp_type,
+                len(d),
+                ident,
+                seq,
+                d[icmp + 8 : end],
+                icmp + 8,
+                len(d) > 14 + total,
+            )
+        )
     return found
+
+
+def icmp_echoes(frames: list[Frame]) -> list[tuple[str, str, int, int]]:
+    """Returns (src, dst, icmp type, frame length) for each IPv4 ICMP echo frame."""
+    return [(e.src, e.dst, e.type, e.length) for e in icmp_echo_frames(frames)]
 
 
 def empty_trace_counts() -> dict[str, int]:
@@ -963,11 +1005,22 @@ def wait_for(guest: Guest, cmd: str, want: str, timeout: float) -> tuple[bool, s
 
 
 def ping(
-    c: Ctx, guest: Guest, dst: str, name: str, count: int = 3, size: int | None = None
+    c: Ctx,
+    guest: Guest,
+    dst: str,
+    name: str,
+    count: int = 3,
+    size: int | None = None,
+    pattern: int | None = None,
 ) -> bool:
-    """Pings dst from guest; the check passes on zero loss."""
+    """Pings dst from guest; the check passes on zero loss.
+
+    pattern fills the payload past busybox ping's 4-byte timestamp with one byte
+    (`-p`); without it the payload is zeros.
+    """
     s = "" if size is None else f" -s {size}"
-    rc, out = guest.run(f"ping -c {count} -W 2{s} {dst}", timeout=20 + 2 * count)
+    p = "" if pattern is None else f" -p {pattern:02x}"
+    rc, out = guest.run(f"ping -c {count} -W 2{s}{p} {dst}", timeout=20 + 2 * count)
     return c.check(name, rc == 0 and " 0% packet loss" in out, out)
 
 
@@ -1175,22 +1228,209 @@ def dut_runts(p: Post, _: int) -> tuple[bool, str]:
     return not short, f"{len(short)} short frames, lengths {sorted(set(short))}"
 
 
+# The payload byte (busybox ping -p) of the 60- and 61-byte pings, by frame length. The
+# payload's first PING_TIMESTAMP_LEN bytes are ping's timestamp; the pattern fills the
+# rest. Without a pattern the payload is zeros, and a small-frame receive path that
+# shifts or replaces the bytes past its headers changes nothing (QF-1, F3: a defect that
+# shifted every small frame's tail passed frame-sizes). One byte per size: a shift
+# inside the pattern is still invisible, a shift into the byte beyond the frame, a
+# flipped byte, a stale tail or a wrong length is not.
+PING_PATTERN = {60: 0xA5, 61: 0x5A}
+PING_TIMESTAMP_LEN = 4
+
+
+def byte_faults(want: bytes, got: bytes, base: int) -> str:
+    """Says where got differs from want, as frame byte offsets from base; "" if equal."""
+    if len(got) != len(want):
+        return f"{len(got)} payload bytes for {len(want)}"
+    offs = [i for i, (a, b) in enumerate(zip(want, got)) if a != b]
+    if not offs:
+        return ""
+    shown = ", ".join(f"{base + i} ({got[i]:#04x} for {want[i]:#04x})" for i in offs[:4])
+    more = f" and {len(offs) - 4} more" if len(offs) > 4 else ""
+    return f"differs at frame byte{'s' if len(offs) > 1 else ''} {shown}{more}"
+
+
+def pattern_faults(echoes: list[Echo], src: str) -> tuple[dict[int, int], list[str]]:
+    """Checks src's unpadded echo requests at the patterned sizes: the payload past the
+    timestamp must be the size's pattern byte throughout. Returns (requests per size,
+    faults)."""
+    seen: dict[int, int] = {}
+    faults: list[str] = []
+    for e in echoes:
+        if e.src != src or e.type != 8 or e.length not in PING_PATTERN or e.padded:
+            continue
+        seen[e.length] = seen.get(e.length, 0) + 1
+        n = len(e.payload) - PING_TIMESTAMP_LEN
+        if n < 1:
+            faults.append(f"{e.length}-byte request seq {e.seq}: {len(e.payload)}-byte payload")
+            continue
+        want = bytes([PING_PATTERN[e.length]]) * n
+        fault = byte_faults(
+            want, e.payload[PING_TIMESTAMP_LEN:], e.data_at + PING_TIMESTAMP_LEN
+        )
+        if fault:
+            faults.append(f"{e.length}-byte request seq {e.seq}: {fault}")
+    return seen, faults
+
+
+def echo_faults(
+    echoes: list[Echo], requester: str, replier: str
+) -> tuple[dict[int, int], list[str]]:
+    """For each of requester's unpadded echo requests at the patterned sizes, replier's
+    reply with the same id and sequence number must be the request's length and repeat
+    its payload. Returns (requests per size, faults)."""
+    replies: dict[tuple[int, int], list[Echo]] = {}
+    for e in echoes:
+        if e.src == replier and e.dst == requester and e.type == 0:
+            replies.setdefault((e.ident, e.seq), []).append(e)
+    seen: dict[int, int] = {}
+    faults: list[str] = []
+    for e in echoes:
+        if (
+            e.src != requester
+            or e.dst != replier
+            or e.type != 8
+            or e.length not in PING_PATTERN
+            or e.padded
+        ):
+            continue
+        seen[e.length] = seen.get(e.length, 0) + 1
+        what = f"{e.length}-byte request seq {e.seq}"
+        pool = replies.get((e.ident, e.seq))
+        if not pool:
+            faults.append(f"{what}: no reply")
+            continue
+        r = pool.pop(0)
+        if r.length != e.length:
+            faults.append(f"{what}: reply is {r.length} bytes")
+            continue
+        fault = byte_faults(e.payload, r.payload, r.data_at)
+        if fault:
+            faults.append(f"{what}: reply {fault}")
+    return seen, faults
+
+
+def content_verdict(
+    seen: dict[int, int], faults: list[str], what: str, ok_text: str
+) -> tuple[bool, str]:
+    """A content check's verdict: every patterned size seen and no fault. what names
+    the frames counted, in the plural ("requests from the DUT")."""
+    one = what.replace("s ", " ", 1)
+    missing = [f"no {s}-byte {one} in the capture" for s in PING_PATTERN if not seen.get(s)]
+    faults = missing + faults
+    if faults:
+        more = f" (and {len(faults) - 6} more)" if len(faults) > 6 else ""
+        return False, "; ".join(faults[:6]) + more
+    counts = ", ".join(f"{n} of {s} bytes" for s, n in sorted(seen.items()))
+    return True, f"{sum(seen.values())} {what} ({counts}) {ok_text}"
+
+
+def dut_sent_pattern(p: Post, _: int) -> tuple[bool, str]:
+    """The DUT's 60- and 61-byte echo requests, as the peer's capture holds them, carry
+    the pattern past the timestamp: what the driver transmitted is what the stack gave
+    it."""
+    seen, faults = pattern_faults(icmp_echo_frames(p.frames("peer")), DUT_IP)
+    return content_verdict(seen, faults, "requests from the DUT", "with the pattern intact")
+
+
+def dut_echoed_peer(p: Post, _: int) -> tuple[bool, str]:
+    """The DUT's reply to each of the peer's 60- and 61-byte echo requests, in the
+    peer's capture, repeats the request byte for byte: the driver delivered the
+    request intact (or its checksum failed and there is no reply) and transmitted the
+    reply intact."""
+    seen, faults = echo_faults(icmp_echo_frames(p.frames("peer")), PEER_IP, DUT_IP)
+    return content_verdict(seen, faults, "requests from the peer", "echoed byte for byte")
+
+
+def peer_frames_as_sent(p: Post, _: int) -> tuple[bool, str]:
+    """The stimulus for the DUT's receive path, from the DUT's own capture (the frames
+    that reached its device): the peer's 60- and 61-byte requests carry the pattern,
+    and the peer's replies repeat the DUT's requests byte for byte."""
+    echoes = icmp_echo_frames(p.frames("dut"))
+    seen, faults = pattern_faults(echoes, PEER_IP)
+    seen2, faults2 = echo_faults(echoes, DUT_IP, PEER_IP)
+    for s, n in seen2.items():
+        seen[s] = seen.get(s, 0) + n
+    return content_verdict(
+        seen, faults + faults2, "frames from the peer", "carried the expected payload"
+    )
+
+
+def icmp_csum_errors(guest: Guest) -> int | None:
+    """The guest kernel's count of ICMP messages dropped for a bad checksum
+    (InCsumErrors in /proc/net/snmp), or None when it cannot be read.
+
+    The kernel verifies every ICMP message's checksum, echo replies included, after
+    a raw socket (busybox ping's) has already received it: the count sees a corrupted
+    reply that ping counted as received.
+    """
+    rc, out = guest.run("grep '^Icmp:' /proc/net/snmp")
+    rows = [ln.split() for ln in out.splitlines() if ln.startswith("Icmp:")]
+    if rc != 0 or len(rows) != 2 or "InCsumErrors" not in rows[0]:
+        return None
+    try:
+        return int(rows[1][rows[0].index("InCsumErrors")])
+    except (IndexError, ValueError):
+        return None
+
+
 def scenario_frame_sizes(c: Ctx) -> None:
     """Transmit and receive at 60, 61, 1513 and 1514 bytes, and a 42-byte frame the
-    DUT must pad."""
+    DUT must pad.
+
+    The 60- and 61-byte pings carry a pattern payload (PING_PATTERN). Their content is
+    checked from the captures afterwards, both directions, and during the pings from
+    the DUT kernel's ICMP checksum-error count, which is the only witness for a reply
+    the driver delivered corrupted to ping's raw socket.
+    """
     if not bring_up(c):
         return
-    for payload, _ in FRAME_SIZES:
-        ping(
-            c,
-            c.dut,
-            PEER_IP,
-            f"DUT pings peer with {42 + payload}-byte frames",
-            2,
-            payload,
-        )
-    for payload, frame in FRAME_SIZES[1:]:
-        ping(c, c.peer, DUT_IP, f"peer pings DUT with {frame}-byte frames", 2, payload)
+    pings = [
+        (c.dut, PEER_IP, f"DUT pings peer with {42 + payload}-byte frames", payload, frame)
+        for payload, frame in FRAME_SIZES
+    ] + [
+        (c.peer, DUT_IP, f"peer pings DUT with {frame}-byte frames", payload, frame)
+        for payload, frame in FRAME_SIZES[1:]
+    ]
+    start = errors = icmp_csum_errors(c.dut)
+    rose: list[str] = []
+    unread = start is None
+    for guest, dst, name, payload, frame in pings:
+        ping(c, guest, dst, name, 2, payload, PING_PATTERN.get(frame) if payload else None)
+        now = icmp_csum_errors(c.dut)
+        if now is None:
+            # A failed read fails the check: a rise across the gap would be lost, and
+            # the next comparison is against the last successful read.
+            unread = True
+            continue
+        if errors is not None and now > errors:
+            rose.append(f"+{now - errors} during {name!r}")
+        errors = now
+    detail = "; ".join(rose)
+    if unread:
+        detail = "InCsumErrors could not be read at every point" + (f"; {detail}" if detail else "")
+    elif not rose:
+        detail = f"InCsumErrors {start} before the pings, {errors} after"
+    c.check(
+        "the DUT's kernel counted no ICMP checksum errors while the pings ran",
+        not unread and not rose,
+        detail,
+    )
+    c.defer(
+        "the DUT's 60- and 61-byte echo requests reached the peer with the pattern"
+        " payload intact",
+        dut_sent_pattern,
+    )
+    c.defer(
+        "the DUT echoed the peer's 60- and 61-byte echo requests byte for byte",
+        dut_echoed_peer,
+    )
+    c.defer(
+        "the peer's 60- and 61-byte echo requests and replies reached the DUT's device"
+        " with the expected payload",
+        peer_frames_as_sent,
+    )
     c.defer(
         "the DUT sent echo requests and replies of 60, 61, 1513 and 1514 bytes",
         dut_sent_sizes,

@@ -26,7 +26,18 @@ this unit answers) and the [notebook chapter](../notebook/FC-1.md).
 
 ## Status
 
-**In progress, 2026-09-26.** Declaration below; results follow.
+**Complete, 2026-09-26.** `frame-sizes` now checks what its 60- and 61-byte frames carry,
+not only that they arrive: the pings carry a pattern payload, and four new checks read the
+content from the captures and from the DUT kernel's checksum-error count. A new claim, Q27
+(small-frame content, both directions), is qualified by two planted defects in isolated
+runs, 3 of 3 each, for the intended reason: QF-1's d21c, invisible to the suite before this
+unit, now fails the checksum-error check on all four 60/61-byte pings, and a new transmit
+defect fails the two capture comparisons at the byte it corrupts. The reference and the
+candidate pass the whole acceptance set on the changed harness (20 of 20 each) and
+`frame-sizes` five times each, every check, declared before the first run; every existing
+check name is unchanged and the shared decoder is byte-identical on every stored capture.
+Private run `fc1-20260926-01`: 52 isolated runs, none repeated or discarded; one
+independent review of the diff and the run artifacts (below).
 
 ## The gap (QF-1, F3)
 
@@ -73,7 +84,7 @@ the candidate and d21c (F3 reproduced offline) and fails for d21 and d21b (no re
 two pattern checks fail on every stored capture, as they must for a stimulus that carried
 no pattern. 57 harness tests pass (44 before, 13 for the changed surface).
 
-## Frozen before execution (2026-09-26, 08:42 Pacific)
+## Frozen before execution (2026-09-26, 08:41 Pacific)
 
 Private run `fc1-20260926-01`. The candidate does not change in this unit.
 
@@ -127,4 +138,110 @@ Private run `fc1-20260926-01`. The candidate does not change in this unit.
 - Every failure is kept, attributed and reported; no run is repeated to replace a result.
   A reference or candidate failure blocks the corresponding conclusion.
 
-The declaration is in the run's ledger and here, committed before the first run.
+The declaration is in the run's ledger and here; this section was committed
+([`612ec59`](https://github.com/curtisgalloway/driver-lab/commit/612ec59), 08:41:24) before
+the launcher started (08:41:35) and the first scenario (08:41:38). (The section as committed
+said "08:42"; the time above is the commit's, finding F1.)
+
+## Results
+
+All 52 runs (08:41:38 to 08:43:23 Pacific, 1 minute 49 seconds for the round), KVM, every
+run's `identities.json` recording the frozen hashes (checked by `summary.py` in the run
+store). "Run" names the run directory in `fc1-20260926-01`.
+
+**Reference and candidate on the changed harness.** 20 of 20 PASS each across the ten
+scenarios ×2, and `frame-sizes` 5 of 5 PASS each: 46 runs, 1,118 checks, 0 failed, the
+trace and capture pseudo-scenarios and the kernel-log check included. In every `frame-sizes`
+run the checksum-error count read 0 before the pings and 0 after; the pattern check saw the
+DUT's four requests (two of 60 bytes, two of 61) with the pattern intact; the echo check saw
+the peer's four requests echoed byte for byte; the stimulus check saw the peer's eight
+frames (four requests, four replies) with the expected payload, which also confirms the
+`-p` layout the check assumes (timestamp, then the pattern). Every other scenario's check
+count is as in CF-1's run set; `frame-sizes` has 23 checks in the scenario (19 before, plus
+the four), 29 with the trace rules.
+
+| Defect | Runs | Declared failing checks | Result |
+| --- | --- | --- | --- |
+| d21c small-frame tail shifted by one byte (receive) | `f1-d21c-frame-sizes-1..3` | the checksum-error check (+2 on each 60/61-byte ping); the echo check ("no reply"); "peer pings DUT with 60/61-byte frames"; sent-sizes as a consequence | **as declared, 3 of 3**, five failed checks each: the checksum-error check with `+2 during 'DUT pings peer with 60-byte frames'; +2 during '… 61-byte frames'; +2 during 'peer pings DUT with 60-byte frames'; +2 during '… 61-byte frames'`; the echo check with "no reply" for the peer's four requests; the two "peer pings DUT" checks at 100 % loss; sent-sizes missing `(0, 60), (0, 61)`. "DUT pings peer with 60-byte frames" and "… 61" **PASS** in 3 of 3 (`2 packets received, 0% packet loss`) while the count rose by 2 during each: the corrupted replies were counted received by ping and counted bad by the kernel. The pattern check, the stimulus check, the 42-, 1513- and 1514-byte pings, bring-up, runts, rmmod, the kernel log and the trace rules passed. The contingency did not arise: all 24 frames the defect touched per run failed their checksum |
+| d24 small-frame transmit flips frame byte 50 | `f1-d24-frame-sizes-1..3` | the pattern check and the echo check ("differs at frame byte 50"); "DUT pings peer with 60/61-byte frames"; "peer pings DUT with 60/61-byte frames"; the stimulus check as a consequence | **as declared but for one check, 3 of 3**, five failed checks each: the pattern check with every DUT request `differs at frame byte 50 (0xa4 for 0xa5)` or `(0x5b for 0x5a)`; the echo check with every reply `differs at frame byte 50`; the two "DUT pings peer" checks at 100 % loss (the peer's kernel dropped the requests); the stimulus check with "no reply" for the DUT's four requests. **Not as declared:** "peer pings DUT with 60/61-byte frames" **passed** in 3 of 3: the DUT's corrupted replies reached the peer's ping on its raw socket before the peer's kernel verified them, exactly as on the DUT (F2). The checksum-error check passed (`0 before, 0 after`: nothing corrupted reached the DUT), sent-sizes passed (the frames exist at their sizes), and the 42-, 1513- and 1514-byte pings, bring-up, runts, rmmod, the kernel log and the trace rules passed |
+
+## Qualification
+
+For each row the reference passed `frame-sizes` on the same harness five times
+(`f1-ref-frame-sizes-1..5`), and the failing check is the claim's own; the notes say what
+else failed alongside it and why that is a consequence.
+
+| Claim | Result | Defect → runs | What failed, and why it is the claim's failure |
+| --- | --- | --- | --- |
+| Q27 receive content | **qualified**, as the kernel's checksum sees it | d21c → `f1-d21c-frame-sizes-1..3` | The checksum-error check failed with +2 during each of the four 60/61-byte pings: eight ICMP messages per run that the driver delivered with a bad checksum. On the DUT's own 60/61-byte pings this was the only failing check, ping having reported 0 % loss: the case no check could see before this unit. The peer's 60/61-byte requests got no reply (the echo check and the two arrival checks), the same corrupted delivery seen where the kernel dropped the request; the missing replies fail sent-sizes as a consequence. The transmit checks passed, so the transmit path was intact |
+| Q27 transmit content | **qualified** | d24 → `f1-d24-frame-sizes-1..3` | The pattern check failed on every DUT request and the echo check on every DUT reply, each at frame byte 50, the byte the defect flips; both name the byte and the values. The DUT's own 60/61-byte pings failed as the peer's kernel dropped the requests; the peer's pings passed for the same reason the DUT's did under d21c (F2); the checksum count stayed 0, so nothing corrupted reached the DUT; the stimulus check failed only because the peer never replied to a corrupted request (a consequence) |
+
+**Candidate results.** On the changed harness the candidate passes `frame-sizes` 5 of 5
+with every content check, so Q27 is qualified evidence about the candidate within the scope
+above: its small-frame receive and transmit paths deliver 60- and 61-byte frames with their
+content intact, as far as the ICMP checksum and a one-byte pattern can tell.
+
+**Coverage after this unit.** 26 of 27 claims qualified (L02d3: 22, with Q15 in L02f2b;
+QF-1: Q24, Q25, Q26; here: Q27), each with its stated scope; Q18 unqualified,
+`unobservable` ([QF-1](QF-1.md)).
+
+## Acceptance (against the brief)
+
+| Criterion | Result |
+| --- | --- |
+| The harness checks the contents of small frames, not only their arrival, from the capture, both directions | Met: a pattern payload on the 60/61-byte pings; three capture checks (the DUT's requests against the pattern, the DUT's replies against the peer's requests, the peer's frames as the DUT's device received them) and the kernel's checksum-error count for the one path no capture can see |
+| Existing check names stable; a new check and a claim, with the convention said | Met: every existing name unchanged (1,118 checks in the reference and candidate runs, every scenario's count as before plus `frame-sizes`' four); Q27 a new claim, with the reasons above |
+| Harness tests for the changed surface | 13 new tests, 57 pass |
+| Counts declared before running; d21c fails the new check for the intended reason, 3 of 3 isolated | Met: declaration committed at `612ec59` 14 s before the first scenario; d21c 3 of 3 on the checksum-error check, +8 per run; d24 3 of 3 on the two capture comparisons |
+| Reference and candidate pass the declared repetitions of the affected scenario | `frame-sizes` 5 of 5 each, every check |
+| Whatever else the change touches rerun; earlier qualifications carry | The acceptance set rerun on the changed harness, 20 of 20 each; the shared decoder byte-identical on all 484 stored captures; every other scenario's checks unchanged by name and count |
+| Every failure kept and attributed; no run repeated | 52 runs, all kept; d24's one undeclared pass reported (F2) |
+
+## Findings
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| F1 | info | The frozen section as committed said "08:42 Pacific"; the commit is 08:41:24 | Corrected to the commit's time, with the note in that section |
+| F2 | low | **The declaration applied two rules to one program.** It expected the DUT's ping to count a corrupted reply as received (raw socket before the kernel's checksum) and the peer's ping to lose one (kernel drop). Both guests run the same busybox ping on a raw socket, so under d24 the peer counted the DUT's corrupted replies as received, 3 of 3, and "peer pings DUT with 60/61-byte frames" passed where a failure was declared. The content checks caught the corruption either way | Recorded; the d24 row reports the pass. It is a second instance of arrival-not-integrity, on the peer's side: the four arrival checks at 60/61 bytes never see a corrupted reply, only a corrupted request. The peer's own checksum-error count is not read (limitation); the capture comparison sees the DUT's transmit corruption directly |
+| F3 | info | The arrival-not-integrity prediction QF-1 made about the DUT's own pings held: under d21c, ping reported 0 % loss on both sizes in 3 of 3 while the kernel counted every reply bad | Recorded; this is why the checksum-error check exists |
+
+## Review
+
+One independent fresh-context reviewer (same model family) read the diff (`9f8e43e..` this
+branch), the run store (ledger, the 52 runs' verdicts, identities, kernel logs, captures and
+traces, the defect diffs and build logs, the analysis scripts) and this file, with the brief
+to recompute what it could and to ask for `review-swarm` if it judged the change broader
+than one scenario. Its report is in the run store under `review/`.
+
+_(Findings and resolutions are recorded here after the review.)_
+
+## Measures
+
+- Operator time: about 08:22 to the final checkpoint on 2026-09-26 (Pacific), one session;
+  see the notebook. Model cost not measured.
+- Host time: round `f1` (52 runs, 8 at a time) 1 minute 49 seconds; the d24 build about
+  20 s.
+- Human review effort: none during the unit.
+
+## Open limitations
+
+- The pattern is one byte, so a shift that stays inside the pattern is invisible; d21c is
+  caught at its boundary byte (the byte beyond the frame), and both qualifying defects are
+  ones the ICMP checksum sees. A corruption that preserves the checksum is seen by the
+  capture comparisons only where the DUT echoes or sends the frame; a checksum-preserving
+  corruption of a reply the DUT receives is not detected by any check.
+- The checksum-error count relies on the kernel verifying the checksum in software, which
+  it does here because the model marks every received frame "ignore checksum" (IXSM) and
+  both drivers honor it. A driver that wrongly marked a corrupted ICMP frame's checksum as
+  verified would escape the count; the echo comparison would still see a corrupted request.
+- The peer's checksum-error count is not read; corruption of what the DUT transmits is seen
+  from the peer's capture and as a lost ping, not as a counted error at the peer (F2).
+- The 1513- and 1514-byte pings still carry zeros; large-frame content rests on Q09, which
+  sees receive corruption only as a stalled transfer (L02d3).
+- Qualification is defect-specific, as in L02d3: d21c and d24 each show one corruption
+  shape caught; a stale-buffer defect (delivering an earlier frame's bytes with a valid
+  checksum) was not planted.
+- One host, one QEMU version, KVM only, eight runs at a time; the acceptance-set rerun is two
+  repetitions per scenario, as L02f3's, with `frame-sizes` at five.
+- The reviewer and the implementer share a model family; no human read the runs in this unit.
+- Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.

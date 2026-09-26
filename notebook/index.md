@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T09:00-07:00
+Updated: 2026-09-26T09:04-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,19 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [FC-1 — a small-frame content check](FC-1.md)
+Entries: 2026-09-26T08:22-07:00 through 2026-09-26T09:04-07:00
+Outcome: complete; `frame-sizes` checks small-frame content, Q27 qualified by two defects,
+reference and candidate 20 of 20 on the changed harness; see the [evidence](../evidence/FC-1.md).
+- Of the four small-frame paths, captures see three; a reply the driver delivers corrupted is
+  seen only by the kernel's ICMP checksum-error count, because ping reads a raw socket.
+- d21c, invisible with zero payloads, fails the count on every 60/61-byte ping while ping
+  still reports no loss.
+- Dead end in the declaration: expecting the peer's ping to lose a corrupted reply when it is
+  the same raw-socket program as the DUT's.
+- Correction (review R2, R3): a failed counter read could have hidden a rise, fixed and
+  rerun; the chapter's 08:50 entry was committed at 08:47.
 
 ### [SR-7 — spec revision 7](SR-7.md)
 Entries: 2026-09-26T07:37-07:00 through 2026-09-26T09:00-07:00
@@ -193,3 +206,6 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **Spec errors found downstream** (continued): [CF-1](CF-1.md) — updating the candidate to
   revision 6 surfaced one gap the revision does not close (TNCRS attribution across a duplex
   change), filed by the implementer and found again by two reviewers.
+- **A check that cannot fail** (continued): [FC-1](FC-1.md) — small-frame content made
+  checkable with a pattern payload and the kernel's checksum-error count; the arrival checks
+  at 60/61 bytes are shown unable to see a corrupted reply on either side.

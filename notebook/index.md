@@ -18,6 +18,8 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 Entries: 2026-09-26T08:22-07:00 through 2026-09-26T09:04-07:00
 Outcome: complete; `frame-sizes` checks small-frame content, Q27 qualified by two defects,
 reference and candidate 20 of 20 on the changed harness; see the [evidence](../evidence/FC-1.md).
+- Correction (review R2, R3): a failed counter read could have hidden a rise, fixed and
+  rerun; the chapter's 08:50 entry was committed at 08:47.
 - Of the four small-frame paths, captures see three; a reply the driver delivers corrupted is
   seen only by the kernel's ICMP checksum-error count, because ping reads a raw socket.
 - d21c, invisible with zero payloads, fails the count on every 60/61-byte ping while ping

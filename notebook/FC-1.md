@@ -69,3 +69,13 @@ exactly as the DUT does under d21c. The content checks saw the corruption either
 is the point of having them; the lesson is that none of the four arrival checks at 60/61
 bytes can ever see a corrupted reply, on either side. The frozen section's "08:42" against a
 commit at 08:41:24 is a records nit, corrected.
+
+## 2026-09-26T09:04-07:00 — the review's one real finding, fixed and rerun; the record's clocks straightened
+The reviewer recomputed everything, parsed the captures itself and found one gap in the new
+check: a counter read that failed mid-run reset the comparison, so a rise across the gap
+would have been lost (never exercised: all 160 reads succeeded). A failed read now fails
+the check and comparisons are against the last successful read; `frame-sizes` rerun on the
+final harness for both drivers and both defects, 8 of 8 as declared. The other findings
+were the record's own clocks: the notebook's 08:50 entry and the index were committed at
+08:47:46, so this entry carries its real time; "24 frames per run" was 8; d24 also touches
+the DUT's IPv6 housekeeping frames, which nothing reads.

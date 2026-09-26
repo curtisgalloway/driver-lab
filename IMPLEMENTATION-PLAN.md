@@ -487,8 +487,8 @@ the user's.
   2026-09-26, who chose CF-1's reviewer-A rule ("drain at link change"). Revision 8 on
   revision 7: the TNCRS attribution rule in §4.7 and a new §5.9 step (a driver-requirement
   change, stated in the header; the current candidate does not yet follow it) and SR-7's
-  three wording items. The next candidate round would implement the rule; **awaiting the
-  user** (it is the user's Codex launch).
+  three wording items. The next candidate round, which implements the rule, is CF-2, approved
+  by the user 2026-09-26.
 - **CS-1 — checksum-preserving corruption of received small frames.** Status:
   `complete` 2026-09-26 ([evidence](evidence/CS-1.md), [notebook](notebook/CS-1.md)).
   From FC-1's open limitation (a checksum-preserving corruption of a reply the DUT
@@ -503,7 +503,25 @@ the user's.
   was not as declared and is kept: the kernel's advertised-MSS floor of 256 kept the
   DUT's frames at 310 bytes (a check-design error, F1, fixed for round `c2`). 27 of 28
   claims qualified; the review's seven findings applied or recorded.
-- **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
+- **CF-2 — candidate on revision 8.** Status: `complete` 2026-09-26
+  ([evidence](evidence/CF-2.md), [notebook](notebook/CF-2.md)). Approved by the user
+  2026-09-26 ("Run the next round when able"). One audited clean-room round (Codex, launched
+  by the user) implemented revision 8's TNCRS attribution rule (one sample under the
+  statistics lock, seeded at the clearing read; every reading credited by the previous sample;
+  the link check drains under the lock) and the header's revision number, the other 17 spec
+  hunks already met or not driver behavior; reference and updated candidate 20 of 20 each on
+  the FC-1 harness `884e771c…`, declared before the run, and 20 of 20 again on CS-1's harness
+  `a1735b9f…` (round `a2`, declared first; 27 of 28 claims qualified for the updated
+  candidate); every trace difference from CF-1's candidate attributed (the three the rule
+  predicts, plus cadence); the L01 review trio found no bug. The rule is unobservable on the model (its link never changes duplex); its hardware
+  check is on HF-1's list.
+- **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part. Its
+  list: Q18's 1 µs reset rule (`unobservable` in emulation, QF-1); CF-1's FWE write and
+  half-duplex TNCRS behaviors (no scenario exercises them); revision 8's TNCRS attribution rule
+  (§4.7's method: a 10/100 link whose partner switches duplex, SR-8 and CF-2; CF-2's reference
+  review adds two more: transmit at full duplex, drop the link, return at half duplex and
+  compare the carrier-error totals per interval; and read STATUS.FD right after G7 with no
+  link and record it, so the first interval's duplex is known).
 
 ## What is deferred from the immediate path
 
@@ -516,6 +534,7 @@ the user's.
 | Paired authoring/implementation and complete documentary scoring (M09–M13, P01) | Optional follow-on to answer comparative questions; no immediate gate. |
 | Test-authoring experiments and companion-skill ablation (M14–M15) | Exercise useful existing skills in L01; defer controlled comparisons. |
 | Automated maintenance/invalidation and full pilot qualification (M16–M17) | Preserve versioned evidence now; defer general machinery and broader claims. |
+| The candidate's two link-check callers (`link_work` and the watchdog) are not serialized against each other beyond the statistics lock; the carrier decision can interleave and leave the carrier stale for up to one 2 s tick after a link flap (CF-2, A-RR-7; pre-existing since L02e; no statistic affected) | Deferred to the next implementer round's brief, whenever one is launched: one serialization for the carrier decision, or one work item for both callers. Not a round on its own. |
 
 The detail behind these rows is in the [deferred plan](DEFERRED-PLAN.md): decisions D1–D6, the
 [M01–M17 and P01 dependency table](DEFERRED-PLAN.md#sequence-and-dependencies) and milestone
@@ -595,13 +614,15 @@ first. Review, checks and records follow the
   complete: the harness is `884e771c…`, claim Q27 is qualified, and the candidate passes it
   5 of 5 (and 2 of 2 on the final harness). SR-8 is complete: spec revision 8 states
   CF-1's TNCRS attribution rule (the user's choice, "drain at link change"; a requirement
-  change) and SR-7's three wording items. **Awaiting the user:** the next candidate round,
-  which would implement that rule, take the file header's revision number, and use revision
-  8 as its spec; it is the user's Codex launch and is not approved. HF-1 (the hardware
-  verifications emulation cannot do, now including Q18's 1 µs rule, `unobservable` in
-  emulation, CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises, and
-  revision 8's attribution rule, which needs a link that changes duplex) is blocked on
-  hardware.
+  change) and SR-7's three wording items. CF-2 is complete (approved by the user
+  2026-09-26): the candidate (`2ac15713…`, module `df37c7ad…`) implements revision 8's rule
+  and names revision 8 in its header, and passes the acceptance set on the FC-1 harness
+  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed, and again on
+  CS-1's harness `a1735b9f…`, which landed meanwhile (round `a2`, 20 of 20, Q28 included: 27
+  of 28 claims qualified for the updated candidate `df37c7ad…`). **No unit is queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
+  `unobservable` in emulation; CF-1's FWE and half-duplex TNCRS behaviors, which no scenario
+  exercises; revision 8's attribution rule, which needs a link that changes duplex) is
+  blocked on hardware.
   CS-1 (FC-1's open limitation, the checksum-preserving case) is complete: the harness is
   `a1735b9f…`, claim Q28 is qualified, and the candidate passes it 5 of 5; 27 of 28 claims
   are qualified, Q18 `unobservable`.

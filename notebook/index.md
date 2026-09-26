@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T12:44-07:00
+Updated: 2026-09-26T13:08-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,25 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [CF-2 — the candidate on spec revision 8](CF-2.md)
+Entries: 2026-09-26T12:32-07:00 through 2026-09-26T13:08-07:00
+Outcome: complete; the candidate implements revision 8's TNCRS attribution rule, 40 of 40 on
+the FC-1 harness and again on CS-1's, every trace difference from CF-1 attributed, no bug from
+the L01 review trio;
+see the [evidence](../evidence/CF-2.md).
+- Of 21 spec hunks only four change this driver, and all four are one rule seen from four
+  places.
+- The link check drains on every watchdog tick as well as on every LSC; the rule is per
+  reading, so an extra reading is permitted, not a deviation.
+- Classify each TNCRS read by the register read before it (DC, COLC, other) and the three
+  predicted trace differences fall out exactly.
+- The one unexplained tick was FC-1's longer `frame-sizes` landing on the 2 s boundary.
+- The model's link never changes duplex, so the crediting itself is for hardware.
+- Correction (artifact review R2, R3, R5): a link-down STATUS value glossed as link up; late
+  reads counted per run instead of per open; a script that looked two accesses ahead.
+- A poll with an interrupt-handler access between COLC and TNCRS looks like a link check by
+  its predecessor; the run totals settle it.
 
 ### [CS-1 — checksum-preserving corruption of received small frames](CS-1.md)
 Entries: 2026-09-26T09:10-07:00 through 2026-09-26T12:44-07:00
@@ -243,4 +262,5 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **Spec errors found downstream** (continued): [SR-8](SR-8.md) — the TNCRS attribution gap
   CF-1 filed is closed by a rule the spec chooses, tagged as an argument with the manual's
   premises; the first requirement change since revision 6, which the candidate does not yet
-  follow.
+  follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
+  but not test the crediting, which goes to HF-1.

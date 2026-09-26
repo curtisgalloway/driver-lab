@@ -386,11 +386,14 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   repaired E1 inside a bubblewrap sandbox with an strace audit (canary pilot and round 1
   PASS). The candidate binds and, in isolated runs, passes 9 of 10 scenarios; the reference
   passes 10 of 10. `down-during-traffic` fails one check at random (3 of 6 runs): the reply
-  reaches the guest's ICMP layer every time, and is lost above it inside QEMU's one-second
-  receive hold after an RCTL write, which only the candidate's faster carrier detection runs
-  into (V6, `benign`, model limitation plus harness weakness H1). No candidate defect past
-  probe, so no round 2. First past-probe comparison: V7–V16, all `benign`. Open: H1 (Q15
-  unresolved until fixed and requalified); spec gaps for L02f3.
+  reaches the guest's ICMP layer (six of six measured runs) and ping misses it, because
+  QEMU's one-second receive hold after an RCTL write ends, with the candidate's faster
+  carrier detection, just as the ping starts, releasing about 30 frames left over from the
+  flood ahead of it (V6, `benign`, model limitation plus harness weakness H1). No candidate defect past
+  probe, so no round 2. First past-probe comparison: V7–V16, all `benign`. Reviewed by
+  `review-swarm` (13 findings, fixed or recorded) and a fresh artifact reviewer (14, all
+  fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
+  `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
 - **L02f3 — spec feedback and reverification.** Fold every `[emulated]` result and spec gap
   into a versioned spec working copy built on L02s, and reverify the changed claims.
 - **Accept, reported as two decisions:** *evaluation complete* (every scenario result recorded,
@@ -898,6 +901,10 @@ the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1 and L02f2 are complete ([
   floods before the interface goes down; wait out the hold before pinging), requalify Q15
   (L02d3's method), and rerun the candidate's `down-during-traffic`, as its own small unit or
   at the start of L02f3. Until then Q15 has no usable result and neither L02f decision is met.
+- **Sandbox decisions (user):** whether the codified clean-room recipe should block egress
+  rather than audit it (M02a had required enforced network denial), whether readable `/usr`
+  and `/etc` are acceptable against "no read access elsewhere", and deleting this run's
+  credential copy (evidence/L02f2.md, Open items).
 - **L02f3:** spec feedback on top of L02s: V1's E1 gap (the round-1 implementer filed it too:
   how long to wait for EE_GNT, and what to do when it stays set), the FWE observation, and
   whether the spec should say anything about flow control (V10).

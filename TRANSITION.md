@@ -9,6 +9,10 @@ Written 2026-09-24, when the user decided to move this work out of `public-skill
 starting point for whoever sets up the new repository, person or agent: what moves, what it
 leans on that stays behind, where the work stands, and what to do first.
 
+*Snapshot of 2026-09-24.* Its status table and rules are superseded by the
+[implementation plan](IMPLEMENTATION-PLAN.md) and [AGENTS.md](AGENTS.md); in particular, L02g
+was folded into L02f3 and the review defaults changed on 2026-09-25.
+
 ## Terms
 
 - **Workstream** — everything under `plugins/driver-porting/`: the skills, the design and
@@ -83,7 +87,7 @@ Also in `public-skills` but not tracked: `HANDOFF-eval-proposal.md` at the repos
 | L02d1 — QEMU harness, boot and capture | Complete 2026-09-24 | [L02d1](evidence/L02d1.md) |
 | **L02d2 — scenarios and planted defects** | **In progress**, stopped early 2026-09-24: built, run, reviewed; review fixes applied and unit-tested but not yet run on the test host or reviewed | [L02d2](evidence/L02d2.md#status) |
 | L02f — differential run of the candidate | Pending; needs L02d2 | plan |
-| L02g — final check against the design | Pending | plan |
+| L02g — final check against the design | Pending (folded into L02f3 on 2026-09-25) | plan |
 
 **First work in the new repository:** finish L02d2's four remaining steps (its evidence
 file's Status section), then L02f. Spec revision 5 (set PSCON bit 11, per L02e) is due

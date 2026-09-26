@@ -216,9 +216,12 @@ off to these by name.
   protocol. Paired generation and reconstruction remain pending; its
   [reconstruction run guide](evals/enc28j60/RECONSTRUCTION-RUN.md) lists the preparation
   still needed.
-- [Remaining implementation plan](IMPLEMENTATION-PLAN.md): trial preparation, paired
-  evaluation, test quality, companion-skill validation, and final verification, as
-  session-sized milestones with explicit dependencies and review gates.
+- [Remaining implementation plan](IMPLEMENTATION-PLAN.md): the active work (the L01 Linux
+  driver pass and the L02 e1000 QEMU differential campaign) as session-sized units with
+  status, dependencies and review gates.
+- [Deferred plan](DEFERRED-PLAN.md): trial preparation, paired evaluation, test quality,
+  companion-skill validation, and final verification (milestones M01–M17 and P01), kept for
+  when that experimental work is resumed.
 
 Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 

@@ -97,3 +97,6 @@ evaluation; add other terms as the documents that use them are updated.
 | Spec gap / spec error | A question a spec leaves unanswered, filed by an implementer / a place where the spec is wrong. |
 | Spec revision | A numbered, hashed version of a spec; each is verified before use, and a change produces a new revision rather than an edit in place (L02s made revision 5). |
 | MAC / PHY | The two halves of an Ethernet controller: the MAC moves frames between memory and the link logic; the PHY drives the wire, negotiates speed and duplex, and reports link and carrier. On the 82540EM the PHY is internal and reached through the MDIC register. |
+| Run ledger | The private per-run record in the run store: identities, commands, artifacts, attempts and reviewer references. Public evidence files cite it by run ID; distinct from the requirement ledger and the provenance ledger. |
+| Settling interval | In the QEMU harness, a documented, bounded wait after carrier returns and before recovery pings, longer than the model's receive hold plus a margin and confirmed from traces (L02f2b). |
+| Acceptance stage | The closing part of L02f3 (formerly the separate unit L02g): a final isolated run set, the A1–A7 acceptance table, and an independent review. |

@@ -5,8 +5,12 @@ SPDX-License-Identifier: Apache-2.0
 
 # Driver specification and validation: remaining implementation plan
 
-Revision: 2026-09-25 (L02 remaining units revised after a Claude–Codex consultation; the user
-approved the changes). Earlier revision: 2026-09-20. No experiment launched by this plan.
+Revision: 2026-09-25, second amendment (L02g folded into L02f3, L02f2b's H1 fix, review and
+record defaults, deferred material moved to [DEFERRED-PLAN.md](DEFERRED-PLAN.md); see
+[Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units) under
+L02). Earlier revisions: 2026-09-25 (L02 remaining units revised after a Claude–Codex
+consultation; the user approved the changes) and 2026-09-20. No experiment launched by this
+plan.
 
 ## Terms
 
@@ -60,71 +64,6 @@ absence of prior knowledge, or a causal skill advantage.
 Full documentary acceptance and the wider experimental/workflow qualification decisions remain
 separate, deferred outcomes. The current spec's incomplete documentary review remains visible;
 using it diagnostically cannot change its frozen acceptance result.
-
-## Conventions and authorization
-
-The bullets below were written for L01 in the 2026-09-20 revision and are kept as written;
-branch, review and check rules for current work are in [AGENTS.md](AGENTS.md) and the L02
-conventions.
-
-- Name the working conversation after its active milestone: `L01 — Implement and verify the Linux driver`
-  for the immediate engineering pass. If the harness offers no
-  thread-renaming control, state the intended title without claiming it was changed.
-- Execution uses a topic branch and a PR; never push directly to main. This revision authorizes
-  planning and its Claude review, not a new paid implementation run, hardware operation or push.
-  Record the starting revision and pre-existing changes; review and fixes precede local commits.
-  Use `driver-porting: L01 —` for engineering checkpoints and `driver-porting: PLAN —` for this revision.
-- The current branch contains the completed M02a export and source-audit checkpoints. Preserve
-  them; do not rewrite their outcomes. Fetch and inspect the current target branch before any PR.
-- The previous procedure-trial-then-pair sequence is deferred. L01 comes first; models and a
-  bounded implementation/repair effort limit still need selection before launching that work.
-  A separate experimental budget, two attribution reviewers and an adjudicator are not L01 gates.
-- Complete one session-sized milestone or named unit, verify, review, checkpoint, and stop for
-  inspection. Aim to retain ample context for fixes and handoff; split before execution if the
-  scope cannot fit. Record unfinished work accurately if context is compacted.
-  Sizing refers to the operator's session; separately launched sessions have their own agreed
-  effort limits. Split long-running operations at preserved
-  launch/collection boundaries without calling an unfinished attempt complete.
-- Default implementation review: `review-swarm` for code, schemas, access controls, and execution
-  machinery. For a documentation-only milestone, use `consult` with Claude. These methods are
-  authorized by this plan when executing an authorized milestone. Experimental semantic reviewers
-  and failure-attribution reviewers are separately selected and budgeted; a code-review swarm is
-  not a substitute for their independence. If a method is unavailable, record the failure and
-  leave required review incomplete; do not silently replace independent review with self-review.
-  In L01, code review must also include a source/requirement-based driver review by someone other
-  than the implementer; the general code-review swarm alone does not establish hardware correctness.
-- Evidence location: proposed `evidence/<milestone-or-unit-id>.md`, with sanitized commands,
-  outcomes, review findings and resolutions, and references to retained private/raw artifacts.
-  Keep only status, evidence link, and limitations here after moving completed detail to evidence.
-  Record model cost, operator time, and human review effort separately: reviewer sessions, active
-  time when measurable, elapsed time and adjudications; unknown effort remains unknown. Distinguish
-  human reviewers from agent reviewers and avoid double-counting overlapping or resumed sessions.
-- Raw sessions, captures, equipment identifiers and private records live in a run-ID root outside
-  this public repository, following the practice-run convention. Public evidence files are
-  publishable artifacts, not a temporary raw-log store. The private-path checker catches home
-  paths only; also review hostnames/addresses, user/account identifiers, MACs, instrument serials,
-  secrets and transcript contents before staging. Record evidence availability and retention.
-- Every unit inherits tests for its changed surface, design conformance, regressions, privacy,
-  and a pre-commit review artifact. No milestone is complete on the strength of tests merely added.
-  A required unavailable check leaves it blocked; a budget exhaustion is retained, not erased.
-
-## Current state and inputs
-
-| Item | Observed state at the planning snapshot |
-| --- | --- |
-| Source investigation, spec authoring, board experts, implementation isolation helpers | Shipped skills and supporting tests; inspect their actual limits before reuse |
-| Corpus and ledger | Frozen; 213 rows, 203 active; policy `enc28j60-1.4` |
-| Documentary scoring | `prepare.py`, `score.py`, and `skills/board-expert/scripts/strict_accept.py` implemented; strict acceptance is documentary only |
-| Practice candidate | Frozen hash in [PRACTICE-RUN.md](evals/enc28j60/PRACTICE-RUN.md); review incomplete and acceptance blocked |
-| Reference build | Pinned Linux v6.12 reference kernel, module and Pi 4 DTB compiled after correcting case-colliding extraction; [evidence](evidence/M02a.md). No physical qualification implied. |
-| Source sanitization | Export/transfer verified; five related-controller exclusions reviewed but not implemented; full audit and isolation incomplete. Deferred for L01. |
-| Preparation gates and reconstruction design | Existing protocols retained for a later spec-only experiment; [R1a trial draft](evals/enc28j60/RECONSTRUCTION-TRIAL.md) remains unchanged |
-| Paired generation, reconstruction, physical execution | Not run; no qualified runner or fixture established by these documents |
-| Checks at [`de2bb68`](https://github.com/curtisgalloway/public-skills/commit/de2bb68) | All `.github/workflows/checks.yml` unit suites: 228 tests, one skipped, no failures; board checker: nine existing verification warnings. PR 68 CI also passed. These were observed before planning, not rerun by Claude and not evidence of driver behavior. |
-
-Keep the corpus, ledger, scoring policy, fact lists, format, and lock unchanged. Additional
-execution requirements live outside that lock. A correction to the answer key requires a new
-benchmark version and explicit rescoring policy, preserving all old attempts.
 
 ## L01 — Implement and verify the Linux driver
 
@@ -234,30 +173,63 @@ their cost. L01 outputs do not retroactively satisfy frozen trial or paired-run 
 
 ## L02 — An e1000 driver from a spec, tested differentially in QEMU
 
-**Status:** `in_progress`; L02a and L02b complete 2026-09-23, L02c, L02e and L02d1 2026-09-24. Design:
-[QEMU-DIFFERENTIAL.md](QEMU-DIFFERENTIAL.md), approved 2026-09-22 with decisions D1–D4
+**Status:** `in_progress`; L02a and L02b complete 2026-09-23, L02c, L02e and L02d1 2026-09-24,
+L02d2, L02d3, L02s, L02f1 and L02f2 2026-09-25; L02f2b next, then L02f3, which closes L02.
+Design: [QEMU-DIFFERENTIAL.md](QEMU-DIFFERENTIAL.md), approved 2026-09-22 with decisions D1–D4
 resolved. Runs alongside L01, whose hardware unit waits on the fixture. Outcomes O1–O5 and
 acceptance criteria A1–A7 are the design's.
 
 **Conventions for L02.** One topic branch and PR per unit, prefix `driver-porting: L02<x> —`.
-Raw runs, the candidate driver, traces, captures, and the manual stay in the private run store
-under run IDs `e1000-l02<x>-<date>-<n>`; public evidence goes to `evidence/L02<x>.md`, naming
-the test host by role only. Review: `spec-verifier` for the spec, `review-swarm` plus a fresh
-reviewer subagent for harness and driver code, the L01 review trio for the candidate. The
-operator context reads the reference driver and the QEMU model and so never writes candidate
-code; implementer turns go to a separately launched implementer whose model the user selects.
+Units may be run in orchestrated mode: one fresh subagent executes each unit and an
+orchestrator lands it as one PR. Raw runs, the candidate driver, traces, captures, and the
+manual stay in the private run store under run IDs `e1000-l02<x>-<date>-<n>`; public evidence
+goes to `evidence/L02<x>.md`, naming the test host by role only. Review and records follow the
+2026-09-25 defaults below. The operator context reads the reference driver and the QEMU model
+and so never writes candidate code; implementer turns go to a separately launched implementer
+whose model the user selects.
 Possible process improvements noticed while working go to [PROCESS-NOTES.md](PROCESS-NOTES.md)
 (user request, 2026-09-24), not into evidence files or this plan.
 From L02e on, each unit keeps a lab-notebook chapter at `notebook/<unit>.md`, indexed in
 [notebook/index.md](notebook/index.md) (`project-plan` with `lab-notebook`); `PROCESS-NOTES.md`
 serves as that skill's process log.
 
-Dependencies: L02a → L02b → L02c → L02e → L02f → L02g; L02d needs only L02a and may run in
+Dependencies: L02a → L02b → L02c → L02e → L02f; L02d needs only L02a and may run in
 parallel with L02b–L02c, and L02f also needs L02d (all of L02d1–L02d3). L02s (spec revision
 5) needs L02e and may run in parallel with L02d; L02f3's feedback builds on it. Within L02f:
-L02f1 → L02f2 → L02f2b → L02f3.
+L02f1 → L02f2 → L02f2b → L02f3. L02f3 ends with L02's acceptance stage (formerly L02g).
 Revised 2026-09-25 (user approved, after a Claude–Codex consultation): L02d3 added, L02s made
 a unit, L02f split in three, and L02f and L02g report two separate decisions.
+
+### Revision 2026-09-25 — lighter process for the remaining units
+
+A second Claude–Codex consultation on 2026-09-25 reviewed the plan's weight and reached
+consensus on five amendments; the user adopted them the same day. They replace the earlier
+review, check and record rules for L02f2b onward; completed units keep the reviews they had.
+
+1. **Units.** L02f2b stays a separate unit. L02g is folded into L02f3 as its acceptance
+   stage; there is no separate L02g PR or report (see L02f3 below).
+2. **L02f2b's H1 fix** keeps traffic running through shutdown and adds a bounded settling
+   interval after carrier returns; see the L02f2b entry below.
+3. **Review default.** Harness units: one independent reviewer reading the diff and the run
+   artifacts. Spec units: `spec-verifier` on the changed claims and their dependencies.
+   `review-swarm` only when shared execution machinery, access controls or several scenarios
+   change, and whenever the reviewer asks for broader review. **Checks:** the changed
+   surface's tests plus the privacy check locally; the full suite in CI and at the final
+   checkpoint.
+4. **Records, one job each.** The private run ledger holds identities, commands, artifacts,
+   attempts and reviewer references. The public evidence file holds conclusions, the
+   acceptance table, limitations, and consequential findings and their resolutions. The
+   notebook holds short chronological discoveries and dead ends. This plan and the notebook
+   index hold status and links. Do not repeat findings tables and conclusions across them.
+5. **Plan document.** The deferred material (M-series, P01, the deferred experimental plan,
+   conditional follow-ons and their backlog items) and the historical L01 conventions and
+   input snapshot moved verbatim to [DEFERRED-PLAN.md](DEFERRED-PLAN.md); this plan keeps a
+   short disposition table and the active blockers.
+
+Kept as-is: Q15 requalification with artifact review, source separation, artifact identities
+and preserved failed attempts, manual-backed expectations with model limitations stated
+explicitly, and versioned spec feedback. The consultation record stays in the private run
+store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PLAN-2026-09-25.md).
 
 ### L02a — Pin sources and write the blind requirement list
 
@@ -405,35 +377,56 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
   `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
 - **L02f2b — harness fix H1 and Q15 requalification.** Added 2026-09-25 (user decision); a
-  small unit that runs before L02f3. Fix the harness so `down-during-traffic` stops both floods
-  before the interface goes down and waits more than 1 s after carrier before pinging (past the
-  model's receive hold); requalify Q15 by L02d3's method; rerun `down-during-traffic` on the
-  candidate and the reference in isolated runs. Review as for harness work (`review-swarm` plus
-  a fresh reviewer reading the run artifacts). The sandbox questions L02f2 left open are
-  settled as D7 and D8 (see "Decisions and bounded investigations"), and the copied Codex
-  credential in the L02f2 run has been deleted (recorded in that run's ledger).
-- **L02f3 — spec feedback and reverification.** Follows L02f2b. Fold every `[emulated]`
-  result and spec gap into a versioned spec working copy built on L02s, and reverify the
-  changed claims.
+  small unit that runs before L02f3. Revised the same day (see
+  [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)); the
+  earlier fix, stopping both floods before the interface goes down, is withdrawn.
+  - **Fix:** keep traffic running through shutdown; the harness already stops both floods
+    after the DUT's interface goes down. Add a documented, bounded settling interval after
+    carrier returns and before the recovery pings, longer than the model's 1 s receive hold
+    plus a margin, with the length confirmed from traces. No ping retry.
+  - **Requalification shows:** traffic in both directions right before shutdown (the existing
+    stimulus check); floods stopped, and the measured pings sent after the hold and the
+    residual burst of leftover frames; reference and candidate both passing, in isolated
+    runs, a repetition count declared before looking, under comparable host load, with
+    failures retained; and planted defect d15 still failing the recovery check for the
+    intended reason. Q15 keeps its "qualified, not traffic-specific" limit.
+  - **Review:** one independent reviewer reading the diff and the run artifacts.
+  - The sandbox questions L02f2 left open are settled as D7 and D8 (see "Decisions and bounded
+    investigations"), and the copied Codex credential in the L02f2 run has been deleted
+    (recorded in that run's ledger).
+- **L02f3 — spec feedback, reverification and L02 acceptance.** Follows L02f2b; the last L02
+  unit. Revised 2026-09-25 to take in L02g as its acceptance stage. It changes no candidate
+  code; any candidate change is a named follow-on with its own review (the L01 review trio).
+  - **Spec feedback:** fold every `[emulated]` result and spec gap into a versioned spec
+    working copy built on L02s, and reverify the changed claims and their dependencies
+    (`spec-verifier`).
+  - **Acceptance stage (formerly L02g):** one final set of isolated reference and candidate
+    runs on the final harness, from a clean checkout; one A1–A7 acceptance table, checking
+    each criterion against its evidence and covering interactions between units, including
+    how the revised spec meets or falls short of A1's two-reading requirement; and an
+    independent review. The table also audits final artifact identities, qualification
+    coverage, the revised spec's review and the repair audit, and decides, based on how it
+    was used, whether the `[emulated]` class goes into `SPEC-FORMAT.md` and the evidence model
+    (a separate unit if that change affects the format's consumers or checks). No separate
+    L02g PR or report.
+  - **Closing:** close with explicit shortfalls, among them Q18 and Q24–Q26 unqualified,
+    rather than extending the campaign to earn a label. New engineering work found here is
+    recorded as a shortfall or a named follow-on, not added to L02.
 - **Accept, reported as two decisions:** *evaluation complete* (every scenario result recorded,
   failures repaired or recorded as open findings, evidence separating spec gaps, spec errors,
   implementation errors and model limitations); and *candidate qualified for the declared
   scope* (the required checks pass, each is qualified in L02d3, no blocking finding is
   unresolved, and no unresolved mandatory claim remains; any such claim withholds
   qualification and is listed as a shortfall). The first can be met while the second is not.
+  L02f3's acceptance stage reports both over A1–A7: evaluation complete (each criterion has
+  evidence or an explicitly recorded shortfall), and candidate qualified for the declared
+  scope, which any unresolved mandatory claim withholds.
 
 ### L02g — Final check against the design
 
-- **Outcome:** confirm A1–A7 together, including interactions between units.
-- **Steps:** re-run the full suite against the final candidate and the reference from a clean
-  checkout; audit final artifact identities, qualification coverage, the revised spec's review,
-  and the repair audit; check each acceptance criterion against its evidence; decide whether
-  the `[emulated]` class goes into `SPEC-FORMAT.md` and the evidence model, based on how it was
-  used (a separate unit if that change affects the format's consumers or checks). New
-  engineering work found here goes to a named unit.
-- **Accept:** the same two decisions as L02f, over A1–A7: evaluation complete (each criterion
-  has evidence or an explicitly recorded shortfall), and candidate qualified for the declared
-  scope, which any unresolved mandatory claim withholds.
+- **Status:** folded into L02f3 as its acceptance stage on 2026-09-25 (see
+  [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)); no
+  separate unit, PR or report.
 
 ## What is deferred from the immediate path
 
@@ -447,24 +440,25 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
 | Test-authoring experiments and companion-skill ablation (M14–M15) | Exercise useful existing skills in L01; defer controlled comparisons. |
 | Automated maintenance/invalidation and full pilot qualification (M16–M17) | Preserve versioned evidence now; defer general machinery and broader claims. |
 
-## Deferred experimental plan
+The detail behind these rows is in the [deferred plan](DEFERRED-PLAN.md): decisions D1–D6, the
+[M01–M17 and P01 dependency table](DEFERRED-PLAN.md#sequence-and-dependencies) and milestone
+text, design coverage, the conditional follow-ons, their backlog items, and the historical L01
+conventions and input snapshot, all moved there verbatim on 2026-09-25. Deferred means
+unfinished, not waived or complete.
 
-The remaining D1–D6 decisions, M01–M17/P01 dependency table, detailed milestone acceptance
-criteria and wider follow-ons below preserve the earlier **experimental** plan. They apply
-only if that work is explicitly resumed. None is an implicit prerequisite for L01. Deferred
-means unfinished, not waived or complete. In particular, L01 cannot be scored or published as
-an instance of the frozen spec-only trial. Completed evidence remains valid for its stated scope.
+**Active blockers:**
+
+- **L01 second unit:** waits on fixture wiring ([evidence/L01.md](evidence/L01.md)).
+- **L02 Q15:** no usable result until L02f2b fixes H1 and requalifies it; until then neither
+  L02f decision can be met.
 
 ## Decisions and bounded investigations
 
+The plan's D1–D6 belong to the deferred experimental plan and moved with it
+([deferred plan](DEFERRED-PLAN.md#decisions-and-bounded-investigations)). D7 and D8 govern L02.
+
 | ID | Resolve before | Question and required evidence |
 | --- | --- | --- |
-| D1 | M02/M06 | Target board, architecture, toolchain and boot path: demonstrate the pinned reference kernel builds and the selected SPI host is usable; record fixture availability without assuming ordered parts arrived |
-| D2 | Harness before M02; caps/roles before any paid run | Harness and version, models/settings, tools/access, per-stage resource caps, independent reviewers, adjudicator, and authorization; keep user choices pending until selected |
-| D3 | M03/M04 | Exact record/schema placement and status mapping: inspect existing score/replay interfaces; approve a compatible sidecar design with separate result dimensions, no changed frozen denominator |
-| D4 | M07/M08 | Which faults and traces can the fixture actually produce? Establish a finite capability inventory and report each unavailable check; do not infer recovery coverage from ordinary traffic |
-| D5 | M14/M15 | Generated-test and companion-skill experiment conditions: freeze tasks, allowed inputs, independent expected outcomes, defect sets, and acceptance thresholds before inspecting outputs |
-| D6 | M16 | Maintenance and feedback representation: select versioned records and conservative dependency invalidation without migrating legacy records into accepted status |
 | D7 | L02f2b (resolved) | Clean-room sandbox network egress. **User decision, 2026-09-25:** audit-only is accepted for L02 (strace records egress; nothing blocks it), a ratified departure from M02a's enforced network denial. An allowlisting proxy only if a later unit needs one. |
 | D8 | L02f2b (resolved) | Clean-room sandbox read scope. **User decision, 2026-09-25:** readable `/usr` and `/etc` are ratified, with the kernel source and module trees (`/usr/src`, `/usr/lib/modules`) hidden, as `cleanroom_sandbox.sh` does. |
 
@@ -472,433 +466,24 @@ Investigations end with evidence-backed choices or explicit blockers, not open-e
 Do not invent commands, tool APIs, pin names, or equipment capabilities. A necessary material
 design amendment returns to the design approval gate before dependent implementation.
 
-## Sequence and dependencies
-
-| ID | Outcome | Depends on | Status |
-| --- | --- | --- | --- |
-| M01 | Trial inputs located and design choices recorded | Existing trial draft; D1–D3 investigations | complete; launch blockers retained ([evidence](evidence/M01.md)) |
-| M02 | Sanitized implementation environment and tested isolation | M01, D1 | deferred, incomplete; M02a source-export unit ([evidence](evidence/M02a-export.md)); baseline [build evidence](evidence/M02a.md) |
-| M03 | Versioned execution contracts and result fixtures | M01, D3 | deferred |
-| M04 | One complete synthetic execution/replay path | M03 | deferred |
-| M05 | Frozen offline trial implementation | M02, M03, D2 authorization | deferred |
-| M06 | Qualified physical fixture and reference smoke path | D1, approved hardware envelope | deferred |
-| M07 | Independent offline and physical check qualification | M03/M04 for offline; M06/D4 additionally for physical | deferred |
-| M08 | Trial results and independent attribution | M05/M07-offline for partial result; M07-physical for full result; D2 | deferred |
-| M09 | Post-trial paired design freeze | M08-offline; retain all trial findings and physical deferrals | deferred |
-| M10 | Two frozen specifications | M09, D2 author authorization | deferred |
-| M11 | Both documentary reviews completed before either score | M10, D2 reviewer authorization | deferred |
-| M12 | Two frozen implementations, no evaluation feedback | M10, M02 as refrozen by M09, D2 implementer authorization | deferred |
-| M13 | Paired execution, attribution, and separate results | M08-physical, M11, M12, physical check qualification from M07/M09 | deferred |
-| M14 | Independent assessment of implementer-authored tests | M02/M04 environment; M05/M07-offline for diagnostic trial, or M13 for paired inputs; D5 and separate authorization | deferred, design-gated |
-| M15 | Companion-skill use and bounded repair demonstrated | M05/M07-offline for diagnostic use; M08 or M13 attribution for repair; D5 and separate authorization | deferred, design-gated |
-| M16 | Maintenance/feedback invalidation and replay | M03, M04, D6; reconstruction prioritized | deferred, design-gated |
-| M17 | Final pilot verification and qualification decision | M13–M16 and required physical evidence | deferred |
-| P01 | Fresh review of the same frozen practice spec | Own D2 budget/reviewers | deferred, independent work |
-
-M06 can proceed alongside M01–M05 when authorized. Hardware delays need not block offline
-qualification, a partial trial report, M09–M12, diagnostic M14/M15, P01, or bounded M16 design work.
-M09 can proceed only when the offline trial has established its declared procedure-readiness
-criteria; it cannot call the physical trial complete. Freeze physical check definitions, record
-qualification as pending, and qualify tests before inspecting candidate execution results.
-Later changes require a new version and a rerun policy for reference and both candidates.
-M11 and M12 may overlap only with enforced information
-separation. This sequencing does not require shared contexts or simultaneous agent sessions.
-
-## Design coverage
-
-R labels refer to [VALIDATION-PROPOSAL.md](VALIDATION-PROPOSAL.md#1-outcome-and-scope).
-Coverage below names the pilot subset and leaves broader obligations visible.
-
-| Requirement | Milestones and verification | Remaining scope outside pilot |
-| --- | --- | --- |
-| R1 identities/applicability/dispositions | M01, M03, M16; stable IDs, full scoped inventories, stale/unknown rejection | General board/SoC identity vocabulary |
-| R2 independent completeness | Existing frozen ledger; M11, P01; whole-prose audit and ledger coverage | New independently authored ledgers per device |
-| R3 source access and public/private separation | M02, M04, M17; deny-access and private-input negative fixtures | Authorized private runs and full vendor workflow |
-| R4 accuracy and clean-room gates | M02, M11, M15; independent review and unchanged acceptance policy | Generalized strict acceptance for legacy board specs |
-| R5 independently supported tests | M03, M07, M14; expected-outcome review, mutations, known-good controls | Additional devices and unobservable faults |
-| R6 physical identity/freshness | M04, M06–M08, M13; wrong-image, stale/truncated capture and cleanup failures | Each additional board and fixture |
-| R7 comparison and maintenance | M09–M13, M16; paired conditions, preserved attempts, dependency invalidation | Repeated-device campaigns and optimized replay |
-| R8 actionable optional feedback | M15, M16; bounded repair and recorded feedback disposition | Full feedback automation and private expert workflow |
-| R9 OS-neutral core | M03, M04, M17; target-specific adapter boundary and interface review | Separate Fuchsia follow-on |
-
-The reconstruction protocol additionally requires separate generation and implementation briefs,
-trial/pair separation, no feedback until both drivers freeze, two independent failure attributions,
-and source-isolation auditing. M01/M02/M09 establish these; M10–M13 verify them in use.
-
-## M01 — Make trial preparation executable
-
-**Coverage/dependencies:** R1/R2/R5; existing R1a draft, D1–D3. No paid implementation.
-**Steps:** Retrieve the historical spec without repairing it; verify its recorded size/hash.
-Inventory current scripts and artifact locations. Resolve target/build inputs and general OS
-documentation. Complete separate allowed-input and exclusion inventories, neutral brief, model
-and budget placeholders, source-access controls, scope, and check definitions in a versioned
-manifest outside the documentary lock. Record which choices remain launch blockers.
-**Accept:** Every preparation field has a value or a stage-specific blocker; candidate identity
-matches; no trial result can be labeled a paired arm; generation is explicitly not part of trial.
-The versioned manifest declares the offline procedure-readiness criteria for M09 before the
-trial launches; they must not be chosen after its result is visible.
-**Verify/review:** Check hashes, links and ledger references; review trial definitions against
-RECONSTRUCTION.md and source locators, including ambiguity and reference defects.
-**Sizing:** One input/decision record; if board investigation expands, checkpoint it as M01a and
-finish the manifest in M01b. [Preparation manifest](evals/enc28j60/reconstruction/M01-PREPARATION-v1.md)
-and [evidence](evidence/M01.md) now record verified custody, D1–D3 investigations and launch
-blockers; Claude review confirmed the final text after fixes. M01 is complete at this checkpoint.
-No build, isolation or physical result is implied.
-
-## M02 — Build and prove the isolated environment
-
-**Coverage/dependencies:** R3/R4; M01 and D1. Excludes any implementer run.
-**Steps:** Export a sanitized pinned OS tree and minimal shared integration scaffolding; remove
-device sources, bindings, metadata, archives, history and caches. Inventory every outside-spec
-fact. Pin tools, general API documentation and neutral instructions. Adapt and test the existing
-hook/policy/audit helpers; do not load the treatment-specific consumer prose into benchmark runs.
-**Accept:** A neutral placeholder builds offline; forbidden file/network/subprocess/symlink/cache
-access fails in the selected harness; output/access records are retained; scanner settings and
-overlap dispositions are frozen. Mechanical scans alone do not establish isolation.
-**Verify/review:** Positive compilation/read controls and negative access canaries; regression
-tests for changed helpers. Review environment mounts, provider transport and inherited context.
-**Sizing:** Separate M02a sanitized-build and M02b harness-isolation sessions, each with tests and
-review. [M02a evidence](evidence/M02a.md) records the incomplete entry/build checkpoint and
-netboot/wiring decisions; the [source-export unit](evidence/M02a-export.md) adds archive
-transformation and transfer verification. Sanitized build and full isolation remain open.
-M02b evidence is still proposed as `evidence/M02b.md`.
-
-## M03 — Freeze execution contracts without changing documentary scoring
-
-**Coverage/dependencies:** R1/R5/R6/R9; M01/D3. No hardware claims.
-**Steps:** Propose `evals/enc28j60/reconstruction/` for pilot contracts and fixtures; reuse existing
-IDs and archive conventions. Define manifest, test contract, result, artifact and attribution
-records; explicitly translate reconstruction statuses to the proposal's execution dispositions.
-Record independent authority for each expected outcome, tolerance and decision rule. Keep new
-execution requirements separate from the frozen ledger and OS-specific adapters out of the core.
-**Accept:** Valid records retain independent spec/implementation/hardware results; missing IDs,
-duplicate IDs, unresolved applicability, incompatible versions and dangling evidence are rejected
-or explicitly blocked. An execution pass cannot manufacture documentary acceptance.
-Review an explicit status mapping: retain the original protocol label alongside the canonical
-execution disposition; awaiting-fixture/blocked never becomes not-applicable. Keep unresolved
-attribution separate from execution verdicts. No lossy mapping may hide missing coverage.
-Keep `score.py`, `prepare.py`, `ledger_check.py`, and `strict_accept.py` unchanged for this
-sidecar addition. Any unavoidable later tool change requires explicit versioning and staleness
-analysis; demonstrate archived results replay with their own archived tool copies. The five
-locked artifacts remain unchanged; their corrections require a new benchmark revision.
-**Verify/review:** Schema and transition fixtures, including unknown/unavailable versus failure;
-review compatibility with `score.py`, `strict_accept.py`, and preserved historical attempts.
-**Sizing:** Contract and fixtures only, one session; resolve D3 before coding. Evidence proposed
-`evidence/M03.md`; status pending.
-
-## M04 — One synthetic attempt from preflight through replay
-
-**Coverage/dependencies:** R3/R6/R7/R9; M03. Excludes physical validation.
-**Steps:** Implement the smallest pilot runner/adapter path at M03's approved location. Record
-exclusive ownership, run identity, preflight, execution timeout, capture, cleanup and immutable
-attempt archive. Refuse output collisions and missing artifacts; replay deterministic decisions.
-**Accept:** A simulated successful observation passes; wrong image, stale log, truncated capture,
-missing tool, unavailable channel and untrusted target-only PASS cannot pass. Cleanup failure
-quarantines the fixture abstraction. A retry gets a new linked attempt.
-Inherit M03's tool-byte compatibility and archived-replay requirements; a new execution runner
-must not silently alter documentary decisions.
-**Verify/review:** Integration tests through the complete path, injected failures at each state,
-archive/replay test and a private-input publication rejection. Review evidence identity and error
-paths. CLI/API commands remain to be defined under D3, not asserted here.
-**Sizing:** One fake adapter and one contract only; split archive/replay if needed. Evidence
-proposed `evidence/M04.md`; status pending.
-
-## M05 — Run and freeze the offline procedure trial
-
-**Coverage/dependencies:** R4/R5; M02/M03 and explicit D2 launch authorization.
-**Steps:** Package the exact old spec and permitted inputs; start one fresh implementer with
-recorded settings. Allow identical declared offline checks only. Stop on completion, blocker or
-cap; freeze code, prompts, logs, assumption/gap records and actual resource use. Audit access and
-scan overlap before interpretation. No source or reviewer feedback goes to this implementer.
-**Accept:** A complete preserved attempt exists even if the code does not build; exposed or
-incomplete isolation is explicitly disqualifying for a spec-only interpretation. Compile success
-is reported independently from hardware behavior and spec quality.
-**Verify/review:** Reproduce build result in the sanitized environment and audit inputs, stopping
-condition and output identity. Do not repair the spec or candidate in this attempt.
-**Sizing:** One capped implementation attempt; evidence proposed `evidence/M05.md`; pending.
-
-## M06 — Qualify fixture and reference observation
-
-**Coverage/dependencies:** R6; D1, equipment, explicit hardware envelope/authorization.
-**Steps:** Record device revision evidence, wiring, SPI configuration, image/firmware/tool pins,
-traffic-peer role, capture settings and reset procedure privately as needed. Establish the
-reference build/load/bind and externally observed smoke test. Verify exclusive access, fresh
-capture window and booted-image identity using M04's adapter contract when available.
-**Accept:** Repeatable cold starts and externally observed reference traffic; a target printout
-alone cannot pass. Channel suitability is scoped to an observation, not universal hardware trust.
-**Verify/review:** Positive reference control; deliberately stale/wrong-identity records refused;
-cleanup and recovery exercised within the approved envelope. Record every attempt and failure.
-**Sizing:** One host/device/peer configuration; board bring-up may require an incomplete checkpoint.
-Evidence proposed `evidence/M06.md`; status pending until real equipment checks run.
-
-## M07 — Qualify each independent behavior check
-
-**Coverage/dependencies:** R5/R6; M03/M04 for offline qualification, M06/D4 for physical checks.
-No candidate execution inspection before the affected test is qualified.
-**Steps:** Implement the frozen T01–T07 design from the trial record, correcting the design only
-through versioned, reviewed changes. Inspect cited source evidence. Exercise each test against
-the reference and representative evaluator-owned mutations; report false alarms on known-good
-controls, invalid mutations and undetected faults. Capture actual boundary/fault conditions.
-**Accept:** Each test has an independently supported decision rule and measured detection result;
-unprovokable faults remain unavailable. Reference disagreements receive adjudication rather than
-an expectation edited to make the reference pass. Primary checks freeze before candidate results.
-**Verify/review:** Test-code unit/integration checks and physical evidence for physical claims;
-review discriminating power and observability, including frame lengths, wraps and recovery order.
-**Sizing:** M07-offline covers T01 build/registration checks, source-review criteria, and host or
-simulated mutation checks; split by check family and record actual units before starting if needed.
-It does not claim silicon behavior. M07-physical contains one check
-or tightly coupled pair per session, `M07-T01` through `M07-T07`, including T01 load/bind.
-Each unit has its own proposed evidence file. Offline completion can unblock a partial trial;
-M07 as a whole remains incomplete for missing required physical checks.
-
-## M08 — Evaluate the trial and attribute failures
-
-**Coverage/dependencies:** R4/R5/R6; M05/M07-offline and D2 for partial results;
-M07-physical additionally for physical results.
-**Steps:** Execute frozen candidate checks with controlled reset/order and preserve unsuccessful
-attempts. Give two fresh attribution reviewers requirement evidence, spec passages, candidate
-behavior and reference behavior, never each other's decisions. Adjudicate conflicts; report
-spec gaps, implementation mistakes, environment limits, reference discrepancies and justified
-verification requirements separately. Log procedure changes for M09; no silent repairs.
-**Accept:** Requirement-linked results and both independent judgments retained; disagreement is
-unresolved rather than a binary failure. Any repair is separately versioned and budgeted.
-**Verify/review:** Replay result decisions; check all T01–T07 dispositions and actual resource use.
-Review specifically whether facts deferred to hardware were recoverable from permitted evidence.
-**Sizing:** M08-offline comprises offline execution, two independent source/build/procedure
-readings and reconciliation in separate sessions. It records every physical check as awaiting
-fixture or qualification and states whether the implementation procedure is ready for M09.
-M08-physical later supplies execution, two attributions and reconciliation in separate sessions.
-Evidence proposed per unit; status pending. A partial report does not complete the physical trial.
-
-## M09 — Freeze the paired experiment after the trial
-
-**Coverage/dependencies:** R2/R3/R5/R7; M08-offline, with physical limitations explicit.
-**Steps:** Version trial-informed procedure changes. Freeze shared generation scope and general
-OS inputs separately from implementation wiring/binding facts. Write the baseline prompt before
-the treatment prompt. Pin skills, environments, checks, access rules, scanner rules, reviewer
-protocols, resource caps and attribution procedure before paired candidates are inspected.
-**Accept:** Trial artifacts cannot become an arm; both planned conditions differ only as ARMS.md
-permits; unknown settings and material mismatches have explicit unpaired dispositions. Resolve
-run-critical decisions while retaining unresolved execution limitations honestly.
-Record evaluator exposure to the practice candidate, its reviews and treatment instructions.
-Use a fresh baseline-prompt author context that has not read a skill-produced ENC28J60 spec or
-its review, and independently audit the prompt for treatment-specific structure. If this cannot
-be achieved, disclose the exposure and investigate the prompt; actual treatment leakage invalidates
-the intended baseline. Familiarity alone is a recorded limitation, not proof of leakage.
-Freeze the semantic-review batching plan before launching reviewers: expected scale, named units,
-disjointness rules and per-batch completeness audits; adapt counts to each frozen inventory.
-**Verify/review:** Run corpus, ledger-lock and author-manifest gates; compare input inventories;
-review information flow and precommitment. Requalify affected M07 tests before execution use.
-**Sizing:** One freeze record and prompt pair; evidence proposed `evidence/M09.md`; pending.
-
-## M10 — Generate and freeze the specification pair
-
-**Coverage/dependencies:** R2/R7; M09, D2 author authorization.
-**Steps:** Execute ARMS.md in separate contexts with identical recorded settings; send only the
-pins-only author manifest, never the interpretive corpus manifest or ledger. Preserve exact
-prompts, input/output hashes, source access records and cost. Assign opaque candidate IDs.
-**Accept:** Both specs frozen; failed/budget-exhausted attempts retained; any material condition
-difference makes the comparison unpaired. No retrospective prompt reconstruction.
-**Verify/review:** Source pin checks before runs, packet/access inspection, artifact identity and
-pairing review. Source-access controls are stage-specific: authors legitimately read sources.
-M10c carries the evaluator-exposure and baseline-prompt audit record from M09 into the report.
-**Sizing:** M10a and M10b are separate generation sessions followed by M10c pairing audit;
-proposed evidence per unit. Status pending.
-
-## M11 — Review both specs before scoring either
-
-**Coverage/dependencies:** R1/R2/R4; M10/D2. Preserve frozen scoring and citation rules.
-**Steps:** Audit each entire spec into a complete, nonoverlapping claim inventory. Prepare neutral
-packets with `prepare.py`; perform fresh accuracy readings and ledger-to-spec coverage under
-SCORING-RUN.md. Preserve full fact/unit prose and disagreements. Finish both reviews before
-running either score; archive and replay each attempt. Report the existing OS-integration citation
-and denominator limitation without inventing a new precision partition.
-**Accept:** Reviews account for every claim and ledger requirement; unavailable evidence remains
-pending; no inherited contaminated verdicts. Completed measurement can conclude acceptance is
-blocked. Incomplete semantic review leaves this milestone incomplete, regardless of arithmetic.
-**Verify/review:** Inventory/packet gates, independent access records, scorer tests and archived
-replay. Review quotes and source locators as well as schema validity.
-**Sizing:** Create named units per candidate for inventory, each accuracy reader, coverage, and
-reconciliation; split large inventories into stable disjoint batches before launch. Each batch
-has a completeness audit; reviewers never receive another reader's findings. Score-pair is the
-last unit. Evidence proposed per named unit; status pending.
-Use the historical practice workload as a sizing warning: 194 roster rows, 670 facts and 522
-active claim records were reviewed, and a mapping invocation exhausted its budget. These are
-historical counts, not new frozen denominators or prescribed batch sizes. Record actual batch
-counts and coverage before each reviewer launch; reconcile the full prose across batch boundaries.
-
-## M12 — Implement both frozen specs without evaluation feedback
-
-**Coverage/dependencies:** R3/R4/R7; M10, refrozen M02 environment, D2 authorization.
-**Steps:** Execute separate fresh implementations using opaque spec IDs and identical neutral
-brief, environment, model/settings, caps and permitted checks. Record gaps and assumptions; no
-citations fetched, source recovered, scores disclosed, or facts added through clarifications.
-Freeze both drivers and logs before evaluator comparison or any repair.
-**Accept:** Both attempts preserved and access audited; material differences make implementation
-unpaired independently of generation pairing. Style-based inference of arm identity is a limit.
-**Verify/review:** Repeat the declared build check, scan/audit access and compare input/settings
-manifests. Review artifact and feedback boundaries without sending findings to implementers.
-**Sizing:** M12a/b implementation sessions, M12c pairing/access audit; proposed per-unit evidence;
-pending. May overlap M11 only with enforced separation.
-
-## M13 — Produce the paired reconstruction result
-
-**Coverage/dependencies:** R4–R7; M08-physical/M11/M12 and independently qualified M07/M09 checks.
-**Steps:** Run identical reference/candidate scenarios with recorded reset, order and repetitions.
-Obtain two independent attributions without arm labels or each other's findings; adjudicate
-disagreements. Cross-tabulate documentary coverage and implementation outcomes. Report build,
-behavior, access, omissions, implementation errors, unresolved cases, cost and time separately.
-**Accept:** Reproducible per-check results with limitations; no blended quality score, no discarded
-failed attempt, no claim that one pair estimates variability or proves absence of prior knowledge.
-**Verify/review:** Replay, both reviews, evidence availability and per-requirement reconciliation;
-check capture freshness and hardware identity across candidates, not merely within one run.
-**Sizing:** Separate execution per implementation, two attribution sessions and one synthesis
-unit; proposed evidence per unit. Pending; physical gaps prevent full execution completion.
-
-## M14 — Measure whether agents can write meaningful tests
-
-**Coverage/dependencies:** R5; M02/M04 supply the build/execution environment.
-Use M05/M07-offline for a diagnostic trial using the old spec, or
-M13 for a study of paired inputs; D5 and separately approved design/budget in either case.
-**Steps:** Freeze a small test-authoring task, permitted inputs and an independently prepared
-defect/control set. Have a fresh implementer derive tests from the spec, then assess those tests
-against the hidden defects and valid alternative implementations. Keep evaluator tests and
-expected judgments out of the author packet. Start with one bounded normal/boundary/recovery slice.
-**Accept:** Report detected, undetected and invalid mutations, false alarms, requirement coverage,
-and resource use. A test that merely repeats a mistaken spec is not independent corroboration.
-Do not claim success from test compilation or the existing evaluator-authored test results.
-A trial-spec test-authoring result cannot become a paired arm or a skill-effect estimate.
-**Verify/review:** Validate defect/control correctness independently, then execute all generated
-tests against them; physical claims need qualified hardware. Review task leakage and overfitting.
-**Sizing:** M14a approved design, M14b authoring, M14c assessment; evidence proposed per unit.
-Status pending/design-gated; exact metrics and thresholds must precede candidate tests.
-
-## M15 — Validate companion-skill use and bounded repair
-
-**Coverage/dependencies:** R4/R5/R8; M05/M07-offline for diagnostic usability, or M13 for paired
-inputs; attributed M08 or M13 failures for repair; D5 and separate procedure/budget approval.
-**Steps:** Reuse `board-expert`, authoring/implementation skills and `spec-verifier`; avoid a new
-umbrella skill without demonstrated reuse. Freeze representative spec-navigation, tool-selection,
-implementation and diagnosis tasks. Test correct revision selection, permitted-source use,
-expected-versus-observed reasoning, and missing-tool/evidence handling. Demonstrate one separately
-versioned repair through the appropriate source-reader/implementer boundary and add a regression
-case for any skill correction. Stop after two failed accuracy checks on the same section, as the
-proposal specifies, with unresolved findings and cost preserved.
-**Accept:** Usability and failure-handling evidence for the declared tasks; successful source
-reading cannot contaminate a clean-side repair implementer. No change to primary benchmark
-specs, code or scores. A failed repair remains blocked and is not counted as qualification.
-Diagnostic usability on the old spec cannot establish a skill effect or become a paired arm.
-Skill changes from early diagnostics must precede M09's freeze; later changes require a new
-experimental version and cannot be spliced into the frozen pair.
-**Verify/review:** Independent task expectations, negative cases, before/after evidence and
-reverification of affected requirements. Review tool instructions against actual tool interfaces.
-**Sizing:** M15-diagnostic covers one approved usability task family per session. M15-repair
-separately exercises the bounded repair using attributed failures. Separate skill edit/review
-from fresh task evaluation. Evidence proposed per task; pending/design-gated. No new general
-interface assumed.
-
-## M16 — Preserve confidence when inputs change
-
-**Coverage/dependencies:** R1/R7/R8; M03/M04/D6. Lower priority than reconstruction; no hardware gate
-on purely documentary work. Excludes optimized replay and full vendor automation.
-**Steps:** Define compatible evidence sidecars and a small latest-status index. Preserve every
-attempt before replacing latest status. Conservatively invalidate dependents when sources,
-applicability, policy, spec, code, tests, expected outcomes or fixture change. Record expert
-feedback with target IDs, evidence, disclosure constraints and accepted/rejected/unresolved
-disposition; reproduce one supported correction and suspend affected acceptance.
-**Accept:** Changed or unavailable evidence cannot retain unqualified acceptance; incompatible
-policy versions cannot be compared; unrelated capabilities stay scoped; old results still replay.
-Legacy verification records remain legacy, never upgraded by format conversion alone.
-Apply M03's versioning/staleness rules to any change in archived documentary tools; demonstrate
-old attempts still replay using their archived versions, rather than attaching new hashes to old
-judgments.
-**Verify/review:** Synthetic dependency-change matrix, missing archives, rejected feedback,
-critical supported feedback, and replay of old attempts using archived tools. Review authorization
-of feedback and conservative invalidation before attempting optimization.
-**Sizing:** M16a record/invalidation design and tests, M16b feedback and replay; proposed evidence
-per unit; pending/design-gated. Optional verifier integration is a separately justified extension.
-
-## M17 — Final verification and handoff
-
-**Coverage/dependencies:** All pilot subsets of R1–R9; M13–M16 and required hardware evidence.
-**Steps:** From a fresh session/environment, follow the published instructions to locate inputs,
-replay documentary and execution decisions, exercise a selected qualified physical path, and
-demonstrate a dependency change withdrawing acceptance. Verify companion-skill tasks and a
-failure/repair history. Audit every requirement-to-evidence link and all outstanding limitations.
-**Accept:** Separate evaluation-complete and workflow-qualified decisions with reasons; no
-missing mandatory check hidden as a successful skip. Publish only sanitized evidence and identify
-the next authorized scope. Negative results may close the campaign but not a qualification gate.
-Report measured human-review effort per stage as a baseline for any future reduced-review claim;
-unknown effort is not zero. OS neutrality has interface-review evidence only in this pilot,
-not a demonstrated second-OS port.
-**Verify/review:** All configured CI checks, replay, fresh hardware observation, cross-milestone
-identity/isolation/version tests, and review-swarm against this plan's full coverage matrix.
-**Sizing:** M17a offline replay/audit, M17b physical closure, M17c final review/report, separately
-checkpointed. Proposed per-unit evidence; status pending.
-
-## P01 — Independent historical practice re-review
-
-Re-review the same frozen spec with fresh reviewers and neutral packets, preserving all old
-attempts. Follow M11's inventory, independent reading, coverage and replay gates in separate
-session-sized units. Pending D2 authorization; does not block the reconstruction trial or replace
-either paired arm. A later correction belongs to a new attempt/version, never the old record.
-Record reviewer identities, contexts and exposure. Use fresh contexts for M11 and disclose any
-reviewer-model/person reuse across P01 and M11 or between arms. Do not carry P01 judgments into
-either paired review. Match reviewer assignment across arms and freeze that assignment in M09;
-different model families per arm would introduce another experimental difference. Blinding
-limits remain explicit even with fresh contexts.
-Prefer a pool without prior candidate exposure when equally capable reviewers are available;
-choose the pool before matching its assignment across arms and disclose remaining limitations.
-Proposed evidence `evidence/P01.md`; status pending.
-
 ## Checks to use during execution
 
-From the repository root, run the checks [AGENTS.md](AGENTS.md#checks) lists (the same steps
-as `.github/workflows/checks.yml`, including the e1000 harness tests and the portability
-scanner) before every checkpoint commit, plus `git diff --check` for documentation. The ENC28J60
-ledger check is not in CI; run it when the ledger or its lock is touched:
+From the repository root, before each checkpoint commit, run the tests for the changed surface
+and the privacy check, plus `git diff --check` for documentation; the full suite that
+[AGENTS.md](AGENTS.md#checks) lists (the same steps as `.github/workflows/checks.yml`) runs in
+CI on every pull request and locally at the final checkpoint (revised 2026-09-25; see
+[Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units)). The
+ENC28J60 ledger check is not in CI; run it when the ledger or its lock is touched:
 
 ```sh
 uv run --with pyyaml python3 evals/enc28j60/ledger_check.py evals/enc28j60/ledger.yaml --lock evals/enc28j60/ledger.lock
 ```
 
-Before generation, from `evals/enc28j60/`, run
-`python3 corpus_check.py` with source access: require zero drifted pins. The other ARMS.md gates
-must pass too. Scoring commands and expected exit codes remain authoritative in
-[SCORING-RUN.md](evals/enc28j60/SCORING-RUN.md). A valid blocked result is not a tool failure or
-permission to claim acceptance. Build, runner and hardware commands are discovered and recorded
-in the relevant milestone (L01 for the active engineering pass); none exist by assertion in this plan.
-
-## Conditional follow-ons and unresolved wider scope
-
-| Work | Entry decision and acceptance experiment |
-| --- | --- |
-| Repeat pairs and test larger devices | Review pilot usefulness and cost; freeze sample plan before runs. Qualify a precisely scoped FEC target only after matching documents and execution setup are available. Measure variability before claims of stable advantage. |
-| Dedicated reusable validation/companion skill | A second device demonstrates reuse, as VALIDATION-PROPOSAL section 3 requires; extract shared procedures instead of copying the existing skills. |
-| Reduce routine human review | Use M17's effort baseline; approve a held-out comparison of reduced-review decisions against independently adjudicated good/bad cases. Measure false acceptance, false rejection, unresolved cases and effort before changing a review gate. No current acceptance rule is waived by this goal. |
-| Held-out transfer | Freeze skill tuning before independent held-out tasks; separately approve device, sources, model/execution reference and budget. Historical OpenTitan proposal is a candidate, not an executable task in this plan. |
-| Fuchsia UART | Name board, image, peripheral, fixture and external observation method; design in the companion Fuchsia package and verify against its pinned source. No generic plan invents its APIs. |
-| General strict board-spec acceptance | Approve stable claim IDs, critical-set mapping and migration design; test missing/stale/unresolved critical claims. Existing `--require-verified` is not this feature. |
-| Integrate optional verifier coverage pass | Decide value after paired review experience; preserve two-direction measurement and frozen scoring contracts. Not blocked on hardware availability. |
-| Vendor overlays and private evidence | Approve the proposal's deferred stage E design, source authorization and publication policy; test conflicting facts and private/public separation before use. |
-| Campaign infrastructure and optimized replay | Approve deferred stage F after repeated runs demonstrate need; retain conservative invalidation and complete attempt history from the pilot. |
-
-These are required decisions before broadening the project's claims, not hidden implementation
-authorization. Derive session-sized milestones after the corresponding design gate, rather than
-pretending the pilot plan completes an unspecified platform-wide system.
-
 ## Discovered work and backlog
 
-- **M02/M05 input-transfer identity:** M02a found that a Mac extraction merged 13 pairs of
-  case-distinct Linux paths even though all M01 spot checks passed. The original archive and
-  corrected ext4 extraction matched the pinned Git tree. Require complete tree/manifest
-  equality after every sanitized export or packet transfer; retain archives when staging on
-  case-insensitive filesystems. This is a build/input gate, not a change to the frozen ledger.
-- **M11 prerequisite — scoring-contract heading:** `SCORING-RUN.md` still titles its review
-  contract `enc28j60-review-2`, while `score.py` declares `enc28j60-review-3` and the same document
-  describes version 3 later. Correct the heading in a reviewed documentation change before
-  freezing reviewer instructions; use the actual script/schema and version-3 contract meanwhile.
-  No change to the locked policy is implied.
+Backlog items owned by deferred milestones (M02/M05, M11) are in the
+[deferred plan](DEFERRED-PLAN.md#discovered-work-and-backlog).
+
 - **Historical status text:** DESIGN.md and VALIDATION-PROPOSAL.md contain older ledger/scorer
   status descriptions; DRIVER-QUALITY.md describes the controlled evaluation now deferred.
   Current pilot artifacts and this priority revision govern; refresh those descriptions when publishing
@@ -912,27 +497,37 @@ The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION
 the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1, L02f2 and L02s are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
 [L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md),
-[L02f2](evidence/L02f2.md), [L02s](evidence/L02s.md)). Do not start two units in one session. Read
-[notebook/index.md](notebook/index.md) first.
+[L02f2](evidence/L02f2.md), [L02s](evidence/L02s.md)). Do not start two units in one session;
+in orchestrated mode each unit is one fresh subagent and one PR. Read
+[notebook/index.md](notebook/index.md) first. Review, checks and records follow the
+[2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **L02f2b (next):** harness fix H1 and Q15 requalification (user decision, 2026-09-25).
-  `down-during-traffic` pings inside the model's receive hold after a flood that leaves frames
-  behind, so a driver that reports carrier promptly fails it at random
-  ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Stop both floods before the interface
-  goes down, wait more than 1 s after carrier before pinging, requalify Q15 (L02d3's method),
-  and rerun `down-during-traffic` on the candidate and the reference. Until then Q15 has no
-  usable result and neither L02f decision is met.
+- **L02f2b (next):** harness fix H1 and Q15 requalification (user decision, 2026-09-25;
+  fix revised the same day). `down-during-traffic` pings inside the model's receive hold
+  after a flood that leaves frames behind, so a driver that reports carrier promptly fails it
+  at random ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Keep traffic running through
+  shutdown; add a documented, bounded settling interval after carrier returns and before the
+  recovery pings, longer than the 1 s receive hold plus a margin and confirmed from traces;
+  no ping retry. Requalify Q15 as the L02f2b entry lists (repetition count declared before
+  looking, d15 still failing for the intended reason) and rerun `down-during-traffic` on the
+  candidate and the reference. One independent reviewer reads the diff and the run
+  artifacts. Until then Q15 has no usable result and neither L02f decision is met.
 - **Sandbox decisions (settled by the user, 2026-09-25):** audit-only egress is accepted for L02
   (D7) and readable `/usr` and `/etc`, with kernel source and module trees hidden, are ratified
   (D8); the copied Codex credential in the L02f2 run has been deleted (that run's ledger).
-- **L02f3 (after L02f2b):** spec feedback on top of revision 5 (`c587f41d…d01b`): V1's E1 gap
-  (the round-1 implementer filed it too: how long to wait for EE_GNT, and what to do when it
-  stays set), the FWE observation, whether the spec should say anything about flow control
-  (V10), and L02s's carried notes: §4.7 maps TNCRS to a carrier-error count without its
-  full-duplex limit (L02e finding L3), the header's change list, the `[source-observed]` PHY
-  bullet's reported rationale, and listing the TNCRS and gigabit-half-duplex contradictions in
-  G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the L02c leak-scan whitelist and
-  provenance map onto the test host first; L02s had to scan without them.
+- **L02f3 (after L02f2b), the last L02 unit:** spec feedback on top of revision 5
+  (`c587f41d…d01b`): V1's E1 gap (the round-1 implementer filed it too: how long to wait for
+  EE_GNT, and what to do when it stays set), the FWE observation, whether the spec should say
+  anything about flow control (V10), and L02s's carried notes: §4.7 maps TNCRS to a
+  carrier-error count without its full-duplex limit (L02e finding L3), the header's change list,
+  the `[source-observed]` PHY bullet's reported rationale, and listing the TNCRS and
+  gigabit-half-duplex contradictions in G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the
+  L02c leak-scan whitelist and provenance map onto the test host first; L02s had to scan without
+  them. Then the acceptance stage (formerly L02g): one final isolated reference/candidate run
+  set on the final harness, one A1–A7 acceptance table (including how the revised spec meets or
+  falls short of A1's two-reading requirement), and an independent review; report *evaluation
+  complete* and *candidate qualified* separately and close with explicit shortfalls (Q18,
+  Q24–Q26 unqualified) rather than extending the campaign.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

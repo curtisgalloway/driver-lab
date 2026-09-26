@@ -517,7 +517,10 @@ the user's.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part. Its
   list: Q18's 1 µs reset rule (`unobservable` in emulation, QF-1); CF-1's FWE write and
   half-duplex TNCRS behaviors (no scenario exercises them); revision 8's TNCRS attribution rule
-  (§4.7's method: a 10/100 link whose partner switches duplex, SR-8 and CF-2).
+  (§4.7's method: a 10/100 link whose partner switches duplex, SR-8 and CF-2; CF-2's reference
+  review adds two more: transmit at full duplex, drop the link, return at half duplex and
+  compare the carrier-error totals per interval; and read STATUS.FD right after G7 with no
+  link and record it, so the first interval's duplex is known).
 
 ## What is deferred from the immediate path
 
@@ -530,6 +533,7 @@ the user's.
 | Paired authoring/implementation and complete documentary scoring (M09–M13, P01) | Optional follow-on to answer comparative questions; no immediate gate. |
 | Test-authoring experiments and companion-skill ablation (M14–M15) | Exercise useful existing skills in L01; defer controlled comparisons. |
 | Automated maintenance/invalidation and full pilot qualification (M16–M17) | Preserve versioned evidence now; defer general machinery and broader claims. |
+| The candidate's two link-check callers (`link_work` and the watchdog) are not serialized against each other beyond the statistics lock; the carrier decision can interleave and leave the carrier stale for up to one 2 s tick after a link flap (CF-2, A-RR-7; pre-existing since L02e; no statistic affected) | Deferred to the next implementer round's brief, whenever one is launched: one serialization for the carrier decision, or one work item for both callers. Not a round on its own. |
 
 The detail behind these rows is in the [deferred plan](DEFERRED-PLAN.md): decisions D1–D6, the
 [M01–M17 and P01 dependency table](DEFERRED-PLAN.md#sequence-and-dependencies) and milestone

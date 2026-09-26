@@ -60,3 +60,12 @@ What the model cannot show: the crediting. STATUS reads `0x80080781` at every li
 (1000 Mb/s full duplex, link up) and TNCRS reads 0 at every reading, so every sample is full
 duplex and nothing is ever discarded. The traces place the readings; the reviews and HF-1's
 hardware check carry the rule.
+
+## 2026-09-26T13:02-07:00 — correction (artifact review R2, R3, R5): the STATUS value, the late reads, the identity
+The 12:43 entry glossed `0x80080781` as "link up"; it is the link-down value (bit 1 clear), read
+at the forced LSC of each open and at every link-down check, while `0x80080783` is the link-up
+one; both have FD = 1, which is all the argument needed. The late STATUS read after an open's
+first link check happens once per affected open, 26 times in 12 runs, 3 to 16 accesses later;
+my script looked two accesses ahead and I read its "missing" entries by hand. And the link-check
+identity only adds up once a "poll" is seen to include stop's final reading, one per close.
+None touches a verdict or an attribution.

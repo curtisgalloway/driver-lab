@@ -172,17 +172,21 @@ builds.
 
 | Difference | Attribution |
 | --- | --- |
-| TNCRS is read more often: in every run each read is a sweep's, a poll's or a link check's, and the link checks number the watchdog ticks plus one (the forced LSC at open) plus the scenario's link changes (`smoke` 3 polls, 4 link checks; `link-flap` 6 and 9; `link-loss-tx` 10 and 13; `stop-start` 23 and 25). In 19 of 20 runs the sweep and poll counts equal the CF-1 twin's exactly, so the surplus is exactly the link checks | The rule's L6 (each link check drains); expected |
+| TNCRS is read more often: in every run each read is a sweep's, a poll's (the watchdog's, or `l02_stop`'s final reading, one per close) or a link check's, and the link checks number the polls less the closes (the watchdog ticks) plus the ICR reads with the LSC bit set (the forced LSC of each open plus the scenario's link changes): `smoke` 3 − 1 + 2 = 4; `link-flap` 6 − 1 + 4 = 9; `link-loss-tx` 10 − 1 + 4 = 13; `reload` 6 − 3 + 6 = 9; `stop-start` 23 − 21 + 23 = 25; `frame-sizes-1` 6 − 1 + 2 = 7. In 19 of 20 runs the sweep and poll counts equal the CF-1 twin's exactly, so the surplus is exactly the link checks | The rule's L6 (each link check drains); expected |
 | STATUS is read once more per clearing sweep in the same 19 runs (`smoke` 14 vs 13; `reload` 36 vs 33; `stop-start` 135 vs 114, 21 sweeps) | The §5.5 sample; expected |
-| Within every sweep and every poll, in all 20 runs, the TNCRS read is immediately followed by the STATUS read; so is every link check's but one per run in 12 runs: the first link check of an open (the forced LSC's link work) has its STATUS read 1 to 6 accesses later with MTA writes stamped between, the stack's own `set_rx_mode` (under `netif_addr_lock`) running on another CPU while the link work holds `stats_lock` | Expected order; the interleaving is candidate concurrency, the class CF-1 recorded for ICR and RDT; `benign`, the read is present |
+| Within every sweep and every poll, in all 20 runs, the TNCRS read is immediately followed by the STATUS read, except one poll in `link-loss-tx-1` with a TDT write from another CPU between them (11 µs); so is every link check's but 26 in 12 runs, one per affected open: the first link check of an open (the forced LSC's link work) has its STATUS read 3 to 16 accesses later with MTA writes, and once the RCTL write, stamped between, the stack's own `set_rx_mode` (under `netif_addr_lock`) running on another CPU while the link work holds `stats_lock` | Expected order; the interleaving is candidate concurrency, the class CF-1 recorded for ICR and RDT; `benign`, the read is present |
 | `frame-sizes-1` has one more watchdog tick than its CF-1 twin (6 polls and 7 link checks against 5 and 6; CF-2's own `frame-sizes-2` has 5 and 6), so every statistics register's run total is one read higher there | Poll cadence: the scenario now runs 10.40 to 10.43 s on the FC-1 harness (10.27 s in CF-1), on the 2 s tick boundary, so the sixth poll lands or not by run; `benign`, the harness revision, not the candidate |
-| Ring base addresses; ring index values and ICR, IMC, IMS, RDT, TDT counts; MTA and RCTL write counts; EECD read counts at probe; statistics reads landing in a different guest command; IMS and IMC writes recorded in a neighboring phase (52 phase-level entries, 36 of them `frame-sizes` phases whose names changed with FC-1's pattern pings, so the same writes sit under a different phase key; whole-run IMS/IMC totals lie in or beside the spread of CF-1's two repetitions, with the same two values `0xd5` and `0xffffffff` in every run of both builds) | Allocation, traffic and open/close cadence, phase boundaries and the harness revision's phase names: the variation the control pairs show between two CF-1 runs of one module; `benign`, not the candidate change |
+| Ring base addresses; ring index values and ICR, IMC, IMS, RDT, TDT counts; MTA and RCTL write counts; EECD read counts at probe; statistics reads landing in a different guest command; IMS and IMC writes recorded in a neighboring phase (52 phase-level entries, 32 of them `frame-sizes` phases whose names changed with FC-1's pattern pings, so the same writes sit under a different phase key; whole-run IMS/IMC totals lie in or beside the spread of CF-1's two repetitions, with the same two values `0xd5` and `0xffffffff` in every run of both builds) | Allocation, traffic and open/close cadence, phase boundaries and the harness revision's phase names: the variation the control pairs show between two CF-1 runs of one module; `benign`, not the candidate change |
 
 No written value differs other than the allocation- and traffic-dependent ones above; no
 register is written or read by only one build; the EECD write is `0x198` in every probe of
 both builds. What the traces cannot show is whether the crediting is right: the model's link
-is always 1000 Mb/s full duplex (STATUS `0x80080781` at every link check), so every sample is
-full duplex and every reading is credited, and TNCRS read 0 at every reading in every run. The
+is always 1000 Mb/s full duplex (STATUS.FD = 1 and SPEED = 1000 Mb/s at every link check:
+`0x80080783` with the link up, `0x80080781` with it down), so every sample is full duplex and
+every reading is credited, and TNCRS read 0 at every reading in every run. One thing they do
+show, an `[emulated]` observation for the next spec revision and not a requirement: on the
+model STATUS.FD reads 1 while LU = 0 (the 80 link checks taken before the link is up or after
+it went down), so the first interval's sample (A-RR-5) is full duplex here. The
 traces show that the readings happen where the spec puts them (the sweep with its sample, the
 poll, every link change) and that they are taken under the statistics lock's serialization
 (no statistics read is ever interleaved with another statistics read); the rule's crediting
@@ -200,7 +204,7 @@ reports in the run store under `review/`), as L01, L02e and CF-1 applied to the 
 | C: `review-swarm` | Seven arms and a referee on the round-1 diff, in a review checkout holding the candidate before and after, spec revision 8 with its diff from revision 6, and an instruction file naming the spec and the rule as the rule set | All 7 arms delivered with **0 findings each** (security, correctness, compat, docs, history, conventions, perf); checker 0 verified, 0 dropped; referee 0 examined, 0 kept |
 
 **Fallback recorded.** As in CF-1, the reference review is a scoped brief with manual citations
-rather than `reference-driver-review`'s anchored form: the change is 34 lines and the candidate
+rather than `reference-driver-review`'s anchored form: the change is 36 lines and the candidate
 lives outside any git repository the anchor checker could pin. The swarm's `history` and
 `conventions` arms had a two-commit checkout and one instruction file to read; both returned
 empty lists, which is the evidence that they looked.
@@ -209,16 +213,17 @@ empty lists, which is the evidence that they looked.
 
 Per the orchestrator's process update of 2026-09-26 (12:44), each finding carries a decision
 made by the unit implementer in the user's place, for the user to confirm or change; nothing
-here is left as an open question.
+here is left as an open question, except that A-RR-4's upstream report is reserved for the
+user as an outward action, by the process's own rule.
 
 | ID | Sev | Finding | Decision |
 | --- | --- | --- | --- |
 | A-RR-1 | info, `[benign]` | The watchdog takes two readings per tick (the poll's, then the link check's) where §4.7 names one. An extra reading splits an interval into two, each credited by the sample at its start: identical credit when the duplex is unchanged, a smaller misattributed span when a change fell in the latency window. The rule forbids skipping a reading, not adding one | **Permitted; defer the wording**: no driver change. §4.7 could say the counter is read "at least" at the poll and at every change; recorded for the next spec revision below |
-| A-RR-2 | low, `[benign]` | The reference takes no statistics reading while its link is down, so a lost link's counts land in the next link's first reading; the candidate reads at every link check and credits by the previous sample. The manual is silent (§13.7.12 ties incrementing to transmits being enabled, not to the link) | **Reject as a candidate change**: the spec's rule governs where the manual is silent, and the candidate follows it. The reviewer's hardware probe (transmit at full duplex, drop the link, return at half duplex, compare the totals per interval) is §4.7's own method, on HF-1's list |
+| A-RR-2 | low, `[benign]` | The reference takes no statistics reading while its link is down, so a lost link's counts land in the next link's first reading; the candidate reads at every link check and credits by the previous sample. The manual is silent (§13.7.12 ties incrementing to transmits being enabled, not to the link) | **Reject as a candidate change**: the spec's rule governs where the manual is silent, and the candidate follows it. The reviewer's hardware probe (transmit at full duplex, drop the link, return at half duplex, compare the totals per interval) is a variant of §4.7's own method, on HF-1's list in the plan |
 | A-RR-3, A-RR-4 | info, `[ref-issue]` | The reference reports TNCRS at every duplex, and leaves it out of `tx_errors` where the kernel's `if_link.h` says `tx_errors` includes `tx_carrier_errors`; the candidate follows §13.7.12 and the kernel's definition | **None** for the candidate (CF-1's A-F3 and A-F4 again). Whether to report A-RR-4 upstream is an outward action and stays with the user, as CF-1 recorded |
-| A-RR-5 | info, `[benign]` | The first sample is taken at the clearing read with the link normally down, and Table 13-5 gives FD an initial value of X with no rule for no link, so the first interval is credited by an unspecified duplex. Nothing can be counted in it: TCTL.EN is set after the clearing read, the carrier is off until the first link check, and the forced LSC at open ends it within one work-item latency | **Defer**: already SR-8's next-revision item 2 (a sentence in §5.5). The reviewer's hardware note (read STATUS.FD right after G7 with no link and record it) added to HF-1's list |
+| A-RR-5 | info, `[benign]` | The first sample is taken at the clearing read with the link normally down, and Table 13-5 gives FD an initial value of X with no rule for no link, so the first interval is credited by an unspecified duplex. Nothing can be counted in it: TCTL.EN is set after the clearing read, the carrier is off until the first link check, and the forced LSC at open ends it within one work-item latency | **Defer**: already SR-8's next-revision item 2 (a sentence in §5.5). The reviewer's hardware note (read STATUS.FD right after G7 with no link and record it) is on HF-1's list in the plan |
 | A-RR-6 | info, `[benign]` | Between stop's D2 and its final reading the link check takes no reading; D3 disables transmits before the final reading and the reset comes after it, so no count is lost or double-counted, and the misattribution is within the residual §4.7 accepts. Re-seeding at every open restarts the record where §5.5 says it starts | **None** |
-| A-RR-7 | low, `[benign]`, pre-existing | `l02_link_work` and `l02_watchdog` both call `l02_link_check()` and are not serialized against each other beyond the statistics lock. The drain and the sample are atomic under the lock, so no count is lost or credited to the wrong sample whichever order the readings take; only the carrier decision outside the lock can interleave, and two checks that see different LU values around a transition can leave the carrier opposite to the link, or log "link up" twice, until the next 2 s tick. Not introduced by this round; the reference handles link state from one work item. Reviewer B lists the same as a list gap | **Defer to the next implementer round's brief**: a driver change (one serialization for the carrier decision, or one work item for both callers) outside this round's scope; no statistic is affected and the carrier self-heals at the next tick. No round for it alone |
+| A-RR-7 | low, `[benign]`, pre-existing | `l02_link_work` and `l02_watchdog` both call `l02_link_check()` and are not serialized against each other beyond the statistics lock. The drain and the sample are atomic under the lock, so no count is lost or credited to the wrong sample whichever order the readings take; only the carrier decision outside the lock can interleave, and two checks that see different LU values around a transition can leave the carrier opposite to the link, or log "link up" twice, until the next 2 s tick. Not introduced by this round; the reference handles link state from one work item. Reviewer B lists the same as a list gap | **Defer to the next implementer round's brief**: a driver change (one serialization for the carrier decision, or one work item for both callers) outside this round's scope; no statistic is affected and the carrier self-heals at the next tick. No round for it alone; recorded in the plan's deferred-work table so the next brief inherits it |
 | B: PHY-004 | info | Not applicable: the driver reads link state from STATUS.LU, never PHY register 1's latched-low bit | **None**: unchanged since L02e; the row offers that alternative |
 | B: list gaps | info | The blind list has no row for TNCRS's full-duplex-only validity, for counting only with TCTL.EN, for what STATUS.FD reads with LU = 0, for the duplex changing only with a link change, for the read-in-one-place lock rule, or for the two link-check callers' serialization | **Recorded, not added**: the list is the recall baseline measured on revision 3 (L02c) and is not amended after the fact; the rule's requirements live in the spec, which the reviews judged the code against |
 
@@ -230,7 +235,8 @@ RX/TX are enabled; a 2 s accumulator under a spinlock with interrupts off; TNCRS
 handler or the NAPI poll).
 
 **For the next spec revision (none applied here):** §4.7's TNCRS row could say "at least" at
-the poll and at every change (A-RR-1), beside SR-8's four listed items.
+the poll and at every change (A-RR-1); an `[emulated]` entry that the model's STATUS.FD reads 1
+with LU = 0 (AR-10, below); beside SR-8's four listed items.
 
 ## The two decisions, restated for the updated candidate
 
@@ -279,3 +285,31 @@ rule and the reviews, not on a differential result.
 - Two repetitions per scenario, one host, one QEMU version, KVM only, eight runs at a time,
   as CF-1.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.
+
+### Review of this file
+
+One fresh, read-only artifact reviewer (same model family; report in the run store under
+`review/`) read this file, the ledger, the round-1 outputs, all 40 runs' verdicts, identities,
+kernel logs and traces, CF-1's 20 candidate traces, the three review reports and the scans, and
+recomputed every verdict, check count and identity hash, the declaration's timing, the reset
+gaps, the EECD writes, the three expected trace differences and their exceptions (with its own
+trace script, written before it read `aggregate-cf2.py`), the review counts, every decision
+against its report and the scope table's dispositions. Nothing recomputed disagreed with a
+verdict, an identity, an attribution or either decision; its ten findings are two records the
+decisions pointed at but the plan did not yet hold, and figure and wording corrections, all
+applied:
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| R1 | medium | Two decisions said items were "added to HF-1's list" (A-RR-5's note, A-RR-2's probe) but the plan's HF-1 entry did not hold them | Both added to HF-1's entry in the plan; the cells now point at it |
+| R2 | low | "STATUS `0x80080781` at every link check" is the link-down value (103 of 183 link checks read `0x80080783`); the notebook glossed it as "link up" | Restated as FD = 1 and SPEED = 1000 at every link check, both values given; the notebook corrected |
+| R3 | low | The late STATUS read after an open's first link check is 26 reads in 12 runs (one per affected open; 5 and 11 in the two `stop-start` runs), 3 to 16 accesses later, not "one per run" and "1 to 6"; `aggregate-cf2.py` looked only two accesses ahead | Corrected; the script now looks 40 accesses ahead, reads and writes, and its rerun gives the reviewer's figures |
+| R4 | low | One poll (`link-loss-tx-1`) has a TDT write between its TNCRS and STATUS reads, invisible to a reads-only check | Said; same benign class |
+| R5 | low | The link-check identity as printed did not add up: a "poll" includes stop's final reading (one per close) and the forced LSC is one per open | Restated as polls − closes + LSC-flagged ICR reads, with the figures per scenario |
+| R6 | low | 32 of the 52 phase-level IMS/IMC entries are `frame-sizes` phases, not 36 | Corrected here and in the ledger |
+| R7 | low | A-RR-7's deferral to "the next implementer round's brief" had no durable home; no unit is queued | A row in the plan's deferred-work table |
+| R8 | info | "34 lines" survived in the Fallback paragraph after the diff count was corrected to 36 | Corrected |
+| R9 | info | "nothing here is left as an open question" while A-RR-4's upstream report is reserved for the user | Said in the sentence |
+| R10 | info | The traces do show STATUS.FD = 1 while LU = 0 on the model (80 link checks), which answers A-RR-5 and B's list gap 3 for the model | Recorded as an `[emulated]` observation for the next spec revision |
+
+The reviewer confirmed both decisions as stated and judged broader review unnecessary.

@@ -126,3 +126,13 @@ that EM8 is a new observation written from captures, and every rewording of its 
 sentences traded one overclaim for another until the sentence said only what the extract
 says. Next time an `[emulated]` entry is drafted, write it from the extract's sentences, not
 from the finding that prompted it.
+
+## 2026-09-26T08:57-07:00 — corrections from the records review
+Three things above are wrong and stay as written because the chapter is append-only. The
+07:49 heading's "55 of 60 keys": the comparison's own rows say 54 same, 2 read once, 4
+disagreeing keys on 3 passages; I had counted the passage that is a key in both first
+records once. The 08:10 entry says round 3 launched; it launched at 08:11 by the ledger. And
+the same entry's "one is mine" undercounts: by the ledger, round 2's header FAIL and rounds
+3 to 5's EM8 FAILs were fix-pass sentences, while round 2's other two were in text round 1
+had passed. The 07:49 entry also repeats the adjudication argument the evidence carries (the
+one-job rule, F9); read the evidence for it.

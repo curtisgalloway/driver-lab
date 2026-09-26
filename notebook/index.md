@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T08:50-07:00
+Updated: 2026-09-26T08:57-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,13 +15,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SR-7 — spec revision 7](SR-7.md)
-Entries: 2026-09-26T07:37-07:00 through 2026-09-26T08:46-07:00
-Outcome: complete; revisions 5 and 6 have two independent readings, revision 7 landed
-with no driver requirement changed; see the [evidence](../evidence/SR-7.md).
-- The second reading's three disagreements were the neighbor of the change, not the change.
-- An `[emulated]` entry written from a finding overclaims; written from the extract it does not.
-- The new tag rule's first FAIL was a policy the rule itself made inconsistent.
-- Correction: the ledger's step times were from memory again (AF-1's F5 repeated).
+Entries: 2026-09-26T07:37-07:00 through 2026-09-26T08:57-07:00
+Outcome: complete; see the [evidence](../evidence/SR-7.md).
+- A second reading of a sentence finds what a reading of the change in it does not.
+- Write an `[emulated]` entry from the extract's sentences, not from the finding.
+- Six verification rounds; four FAILs were sentences a fix pass had written.
+- Corrections: ledger times from memory (AF-1's F5 repeated); the key count (55, not 54).
 
 ### [CF-1 — the candidate on spec revision 6](CF-1.md)
 Entries: 2026-09-26T07:55-07:00 through 2026-09-26T08:20-07:00

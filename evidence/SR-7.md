@@ -31,14 +31,16 @@ in L02f3) and the [notebook chapter](../notebook/SR-7.md).
 
 **Complete, 2026-09-26.** Revisions 5 and 6's changes now have two independent readings: the
 second read every changed claim (83 verdicts: 77 PASS, 3 FAIL, 3 UNVERIFIABLE) and agrees
-with the first readings on 55 of their 60 keys; the three disagreements are adjudicated
-below for the second reading, all on form, citation scope or definiteness, and applied in
+with the first readings on 54 of their 60 keys (2 were read once by the first readings
+only; 4 keys, on three passages, disagree); the three disagreements are adjudicated below
+for the second reading, all on form, citation scope or definiteness, and applied in
 revision 7. Revision 7 is revision 6 plus fifteen hunks: AF-1's six items, SF-1's pointer
 form, QF-1's F2 as §12.5 EM8, the three adjudicated corrections and the readers' wording
 notes; **no requirement on a driver changes**, which the revision-7 readers confirmed hunk by
 hunk. Six sequential fresh readings of revision 7's changes ended at 59 PASS, 0 FAIL, 1
-UNVERIFIABLE (the first five found 1, 3, 1, 1 and 1 FAIL, all fixed; every FAIL after the
-first was a sentence the previous fix pass had written). Revision 7 is 1,685 lines, SHA-256
+UNVERIFIABLE (the first five found 1, 3, 1, 1 and 1 FAIL, all fixed; round 2's header FAIL
+and rounds 3 to 5's EM8 FAILs were sentences a fix pass had written, and round 2's other
+two were in text an earlier round had passed). Revision 7 is 1,685 lines, SHA-256
 `ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14`, landed in private run
 `e1000-sr7-20260926-01` with its ledger PASS line. The user's two backlog requests are
 recorded in the plan.
@@ -51,8 +53,8 @@ recorded in the plan.
 | Second reading of revisions 5 and 6 | Brief written from the diffs before the operator opened either first record: 18 changed passages keyed by section and item. One fresh `spec-verifier` reader, clean-room (no driver or QEMU source; the operator read none either), given the extract as L02f3's readers had it. 83 verdicts in 7.7 minutes: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP; clean-room check of the changed hunks PASS |
 | Comparison | The operator matched the first readings' 60 keys (15 + 45) to the second's 83 lines by section and item (`review/comparison.md` in the run) and adjudicated each disagreement against the manual's text and the extract |
 | Revision 7 | Edited on a working copy of revision 6 from the manual text, the spec, the public evidence files and QF-1's run artifacts (captures classified by sender, ethertype and length; verdicts; the guests' device models from the run's argv files). No driver source, no QEMU source |
-| Reverification of revision 7 | Fresh `spec-verifier` readers on the r6→r7 changes and their dependencies (15 hunks), each given revision 6, the working copy, the diff, the manual text, the extract extended with M8, both scan reports and the two kernel directories; none given the second reading's record, the comparison or an earlier round's record. Round 1: 54 verdicts, 52 PASS, 1 FAIL, 1 UNVERIFIABLE; the FAIL and five notes applied. Round 2: 42 verdicts, 39 PASS, 3 FAIL (the header omitted the passage round 1's fix had changed; R7's caveat rested on a precondition the test lacked; a "last paragraph" that was not); all applied. Round 3: 53 verdicts, 50 PASS, 1 FAIL, 2 UNVERIFIABLE (EM8's second-defect sentence, scoped by the runs' results rather than by the defect's place in the driver; the format file added as an input for the header's citation-shape claim). Round 4: 55 verdicts, 53 PASS, 1 FAIL, 1 UNVERIFIABLE (EM8's first-defect sentence, the same overreach round 1's rewording had introduced in the other half of the sentence; scoped to short frames). Round 5: 60 verdicts, 59 PASS, 1 FAIL (the operator's gloss on the d21 captures, "ARP included, the peer's ARP went unanswered", which the extract does not record; replaced by the extract's facts). Round 6: 60 verdicts, **59 PASS, 0 FAIL, 1 UNVERIFIABLE** (G-16's "checked on the PDF", unchanged from revision 6; no PDF in this store); clean-room check of the changed hunks PASS in every round; the landed record carries the landed hash |
-| Leak scans | Revision 6, both drafts of revision 7 and the verification records, with the L02c whitelist against the 7 reference driver files at the pinned commit; every scan clean |
+| Reverification of revision 7 | Fresh `spec-verifier` readers on the r6→r7 changes and their dependencies (15 hunks), each given revision 6, the working copy, the diff, the manual text, the extract extended with M8, both scan reports and the two kernel directories; none given the second reading's record, the comparison or an earlier round's record. Round 1: 54 verdicts, 52 PASS, 1 FAIL, 1 UNVERIFIABLE; the FAIL and six notes applied. Round 2: 42 verdicts, 39 PASS, 3 FAIL (the header omitted the passage round 1's fix had changed; R7's caveat rested on a precondition the test lacked; a "last paragraph" that was not); all applied. Round 3: 53 verdicts, 50 PASS, 1 FAIL, 2 UNVERIFIABLE (EM8's second-defect sentence, scoped by the runs' results rather than by the defect's place in the driver; the format file added as an input for the header's citation-shape claim). Round 4: 55 verdicts, 53 PASS, 1 FAIL, 1 UNVERIFIABLE (EM8's first-defect sentence, the same overreach round 1's rewording had introduced in the other half of the sentence; scoped to short frames). Round 5: 60 verdicts, 59 PASS, 1 FAIL (the operator's gloss on the d21 captures, "ARP included, the peer's ARP went unanswered", which the extract does not record; replaced by the extract's facts). Round 6: 60 verdicts, **59 PASS, 0 FAIL, 1 UNVERIFIABLE** (G-16's "checked on the PDF", unchanged from revision 6; no PDF in this store); clean-room check of the changed hunks PASS in every round; the landed record carries the landed hash |
+| Leak scans | Revision 6, every draft of revision 7 (seven scans) and the verification records, with the L02c whitelist against the 7 reference driver files at the pinned commit; every scan clean |
 
 ## The readings of revisions 5 and 6 compared
 
@@ -62,7 +64,7 @@ recorded in the plan.
 | Text read | The landed revisions 5 and 6 (each first record is the final, clean round after fixes) | The landed revision 6, with revisions 4 and 5 and the three diffs |
 | Model, inputs | Opus 5.5 (L02s), Fable 5.1 (L02f3); manual text; L02f3's extract | Fable 5.1; the same manual text and extract |
 
-- **Agreements: 55 of the 60 first keys** carry the same verdict in the second reading,
+- **Agreements: 54 of the 60 first keys** carry the same verdict in the second reading,
   usually at finer grain (the second gives a quotation, a page number, each premise set, the
   confidence and the verification their own lines). Two of those carry an extra UNVERIFIABLE
   line beside the PASS: R6's "1 µs", which the second declares unsettleable without the PDF
@@ -71,16 +73,18 @@ recorded in the plan.
 - **Read by the first readings only: 2 keys**, both claims about that unit's leak-scan
   reports; the second reader was not given those reports (this unit rescanned revision 6:
   clean).
-- **Disagreements: 3**, on three passages (four first keys, since the PHY-extras bullet is a
-  key in both first records). All three adjudicated for the second reading, below; none
-  touches what a driver must do.
-- **Independently noted by both a first and the second reader:** §8.4.2's last paragraph
-  as a third manual statement against 1000 Mb/s half duplex (L02f3's round 4 and this
-  reading); revision 7 cites it.
+- **Disagreements: 4 keys, on three passages** (the PHY-extras bullet is a key in both first
+  records). 54 + 2 + 4 = 60. All three passages adjudicated for the second reading, below;
+  none touches what a driver must do.
+- **Noted by a first and by the second reader:** a third manual statement against 1000 Mb/s
+  half duplex in §8.4.2 (L02f3's round-4 record calls it the section's last sentence; the
+  second reader's reply, recorded in the ledger and not in its record, its last paragraph);
+  revision 7 cites it.
 - **Missed by both on the hunks:** nothing found beyond the three disagreements. Outside the
   hunks the second reader noted, and revision 7 applies as wording: §4.8's PSCON row gave
-  bit 11's reset value with no pointer at G4's "set to 1"; §12.3's HALF 1 bullet listed the
-  tag classes behind "every fact" without §8's `[kernel]`.
+  bit 11's reset value with no pointer at G4's "set to 1" (in its record, the cross-file
+  line); §12.3's HALF 1 bullet listed the tag classes behind "every fact" without §8's
+  `[kernel]` (in its reply, recorded in the ledger).
 
 ## Adjudication
 
@@ -104,9 +108,10 @@ recorded in the plan.
    claims more than the runs show). **FAIL on definiteness**; wording only. Applied with the
    second reader's text.
 
-Why both first readers passed passages 1 and 2: each was reading the change (bit 11), and
-the defect sits in the neighboring clause of the same sentence, which the change had
-altered by removing a parenthetical. A second independent reading of the sentence, rather
+Why the first readers passed passage 1 (both) and passage 2 (L02s, the only first reading
+of §9.2, which revision 6 did not change): each was reading the change (bit 11), and the
+defect sits in the neighboring clause of the same sentence, which the change had altered by
+removing a parenthetical. A second independent reading of the sentence, rather
 than of the change, is what found it.
 
 ## Revision 7
@@ -119,7 +124,7 @@ confirm that hunk by hunk (below). CF-1 can proceed on revision 6 or revision 7 
 
 | Passage | Change | Source |
 | --- | --- | --- |
-| Header | Revision 7, ten items, the no-requirement-change statement | — |
+| Header | Revision 7, eleven items, the no-requirement-change statement | — |
 | §1 tag table, `[inference]` row | Says when confidence and a verification method are required (an inference that carries an argument) and when a one-clause design choice may omit them (naming its premise; "order not known to be required" is its verification clause). The narrowing option of AF-1's item 2: the inferences that state no confidence on the tag's line (38 of revision 4's 50, by AF-1's count) conform where they are one-clause design choices, without editing each; the revision-7 reader sampled both kinds against the row | AF-1 item 2 |
 | §4.1 FWE row, §5.2 R6, §5.3 E1 | `[emulated]` §12.5 EMn → `[emulated]` (§12.5 EMn), the format's parenthetical form; no change of meaning | SF-1 Limitations |
 | §4.7 general rules, initialization bullet | Notes §14.3's "For the 82541xx and 82547GI/EI, clear all statistical counters" (printed p. 376), the one place the manual scopes counter-clearing to named parts, and that it does not settle the §13.7/§14.8 disagreement for this part | AF-1 item 4 |
@@ -130,10 +135,10 @@ confirm that hunk by hunk (below). CF-1 can proceed on revision 6 or revision 7 
 | §5.4 PHY-extras bullet | Register 20's place before G7: "order not known to be required, since §11.1.3 names no register-20 bit" | Adjudication 1 |
 | §9.2 PSCON row | Timing clause scoped to bits 6:5 and 11 with §11.1.3; bit 1 kept at reset | Adjudication 2 |
 | §10.3 probe step 3 | The `IORESOURCE_MEM_64` `[inference]` states its premise with citations, confidence high, and a verification on the test device (compare the resource flag against the config dword's type field) | AF-1 item 1 |
-| §12.1 G-12 | Also quotes §8.4.2 (p. 159): no half-duplex support "when operating at 1000 Mb/s in internal PHY mode"; both readers had called it the section's last paragraph, and the revision-7 reader found the section runs on to p. 160 | L02f3 round 4 and the second reading, independently; the revision-7 reader's round-2 FAIL on the citation |
+| §12.1 G-12 | Also quotes §8.4.2 (p. 159): no half-duplex support "when operating at 1000 Mb/s in internal PHY mode"; L02f3's record had called it the section's last sentence and the second reader's reply its last paragraph, and the revision-7 reader found the section runs on to p. 160 | L02f3 round 4 and the second reader's reply (ledger); the revision-7 reader's round-2 FAIL on the citation |
 | §12.1 G-16 | The rendering drops the micro sign in the cited places (pp. 228, 308, 318) and keeps it in §14.8 (p. 388) and §6.3's PCI clock notes (pp. 135, 137), so a bare "s" is suspect and a surviving "µs" is not; "drops" is what a reader sees, since those places hold a private-use code point (U+F06D) that displays as nothing, and the three pages are the set of places, not one per value | AF-1 item 6; the revision-7 reader's note, confirmed in the rendering's bytes |
-| §12.3 HALF 1 bullet | Names §8's `[kernel]` citations among the classes behind HALF 1's facts | Second reading's note |
-| §12.5 heading, intro, EM7, EM8 | Heading EM1–EM8; the intro names the planted-defect runs EM8 rests on; EM7 reworded (adjudication 3); **EM8**: frames shorter than 60 bytes reach the host at their wire length instead of being dropped as runts, stated from the captures and verdicts (the peer's 42-byte ARP and echo replies received by both drivers in every `frame-sizes` run; a planted one-byte-short defect failing every ping including ARP; a planted drop-over-46-bytes defect passing the 42-byte ping), beside §6.4's row 60 (whose words "runt" and "dropped" are the spec's; the manual's are undersize, RUC §13.7.34, and "short packets" stored only with RCTL.SBP = 1, §13.4.22); consequence: none required, since §6.4 takes the length from the descriptor, and a receive path assuming 60 bytes would misbehave here and not on hardware. The defects are described by what they did to short frames and by the pings that passed and failed, not by where they sit in the reference driver | QF-1 F2, phrased from what the runs recorded; the revision-7 readers' rounds 1, 3 and 4 on the two defect sentences |
+| §12.3 HALF 1 bullet | Names §8's `[kernel]` citations among the classes behind HALF 1's facts | The second reader's reply (ledger) |
+| §12.5 heading, intro, EM7, EM8 | Heading EM1–EM8; the intro names the planted-defect runs EM8 rests on; EM7 reworded (adjudication 3); **EM8**: frames shorter than 60 bytes reach the host at their wire length instead of being dropped as runts, stated from the captures and verdicts (the peer's 42-byte ARP and echo replies received by both unmodified drivers in every `frame-sizes` run; a planted defect delivering short received frames one byte short failing every ping; a planted defect keyed to a descriptor length over 46 bytes and reaching short frames only passing the 42-byte ping), beside §6.4's row 60 (whose words "runt" and "dropped" are the spec's; the manual's are undersize, RUC §13.7.34, and "short packets" stored only with RCTL.SBP = 1, §13.4.22); consequence: none required, since §6.4 takes the length from the descriptor, and a receive path assuming 60 bytes would misbehave here and not on hardware. The defects are described by what they did to short frames and by the pings that passed and failed, not by where they sit in the reference driver | QF-1 F2, phrased from what the runs recorded; the revision-7 readers' rounds 1, 3 and 4 on the two defect sentences |
 
 **What EM8 rests on.** QF-1's finding explains the runts by the model's source, which the
 spec must not carry. The captures alone say enough: the DUT is QEMU's `e1000`; the peer is a
@@ -141,10 +146,12 @@ guest on a virtio-net device, so nothing pads its frames; in every `frame-sizes`
 peer's ARP and its echo replies to the DUT's 42-byte pings are 42-byte frames at the DUT
 (the DUT's own frames all leave at 60 bytes or more); both drivers receive them (the
 42-byte ping passes in all eight control runs across QF-1 and L02f3); a copy of the
-reference driver delivering each small frame one byte short failed every ping, ARP included,
-in 3 of 3 runs (21 unanswered 42-byte ARP frames per capture), and a copy dropping only
-received frames with a descriptor length over 46 bytes passed the 42-byte ping in 3 of 3.
-The extract (M8 in the run) carries the counts.
+reference driver delivering short received frames one byte short failed every ping in 3 of
+3 runs (the DUT's pings never left it; the peer's six echo requests went unanswered, while
+its 21 42-byte ARP requests and replies appear in every capture), and a copy whose defect
+was keyed to a descriptor length over 46 bytes and reached short frames only passed the
+42-byte ping in 3 of 3, failed the 60- and 61-byte ones and passed the 1513- and 1514-byte
+ones. The extract (M8 in the run) carries the counts.
 
 **The checker.** `spec_check.py` reads board specs (`*.spec.md` with YAML frontmatter) and
 not this spec, so "passing its rule" was checked by hand: its `[emulated]`-unnamed regex,
@@ -171,9 +178,9 @@ changes what a driver must do, so nothing is listed for the user under the CF-1 
 
 | # | Passage | Item | Source |
 | --- | --- | --- | --- |
-| 1 | §12.1 G-16 | The private-use code point that stands for the micro sign also occurs at printed pp. 295 (ITR's 128 µs example, §4.3), 309 (RADV, §4.4), 319 (TIDV) and 321 (TADV, §4.5), values the spec uses; G-16 lists only the three pages AF-1 named, and "the set of places" could be read as exhaustive | Round-6 reader, outside scope |
-| 2 | §1 tag table, `[inference]` row | "Verification: none needed, because …" satisfies the row in R6 and now E5; the row could say so | Round-4 reader, outside scope |
-| 3 | §5.2 R7 precondition | A prior iteration of the test in the same power cycle would also make CTRL bit 20 read 0; the parenthetical gives only the signature reason (the stated handling, "inconclusive", is right either way) | Round-5 reader, outside scope |
+| 1 | §12.1 G-16 | The private-use code point that stands for the micro sign also occurs at printed pp. 295 (ITR's 128 µs example, §4.3), 309 (RADV, §4.4), 319 (TIDV) and 321 (TADV, §4.5), values the spec uses; G-16 lists only the three pages AF-1 named, and "the set of places" could be read as exhaustive | The round-6 reader's reply, outside scope (recorded in the ledger, not in its record) |
+| 2 | §1 tag table, `[inference]` row | "Verification: none needed, because …" satisfies the row in R6 and now E5; the row could say so | The round-4 reader's reply, outside scope (ledger) |
+| 3 | §5.2 R7 precondition | A prior iteration of the test in the same power cycle would also make CTRL bit 20 read 0; the parenthetical gives only the signature reason (the stated handling, "inconclusive", is right either way) | The round-5 reader's reply, outside scope (ledger) |
 
 ## Open items for the user
 
@@ -198,9 +205,37 @@ changes what a driver must do, so nothing is listed for the user under the CF-1 
 
 - Operator time: about 07:37 to the final checkpoint on 2026-09-26 (Pacific), one session.
   Model cost not measured.
-- Readers, harness-reported: the second reading of revisions 5 and 6, 7.7 minutes; the six
-  revision-7 rounds, 7.8, 9.4, 8.6, 7.1, 8.6 and about 7 minutes.
+- Readers, harness-reported (figures in the ledger): the second reading of revisions 5 and
+  6, 7.7 minutes; the six revision-7 rounds, 7.8, 9.4, 8.6, 7.1, 8.6 and 7.5 minutes.
 - Human review effort: none during the unit.
+
+## Review
+
+The unit's verification artifacts are the readings themselves (the second reading's record
+and the six revision-7 records in the run store). The public records were then read by one
+fresh, read-only reviewer (same model family as the implementer) against the ledger, the
+briefs, the comparison, the diffs, the extract, the scans, the verification records, the
+first readings' records and the QF-1 and L02f3 captures and verdicts; its report is in the
+run store under `review/`. It confirmed every hash, line count, hunk count, verdict total
+and scan result quoted here, the comparison's coverage of all 60 keys and its mapped
+verdicts, §11.1.3 as both records quote it, the adjudications as fair to both records, the
+revision-7 table's coverage of all 15 hunks and their sources, that no hunk changes a driver
+obligation (judged on each hunk's imperative content), that EM8 claims no more than the
+extract and the extract matches a recount of all 14 captures and the verdicts exactly, the
+A1 table against L02f3 and AF-1, and the absence of private infrastructure in the diff; it
+judged broader review unnecessary. Nine findings, two medium, all applied:
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| F1 | medium | "55 of 60 keys agree": the comparison's own rows give 54 same, 2 read once, 4 disagreeing keys on 3 passages; the totals had counted the passage that is a key in both first records once | 54 + 2 + 4 = 60 everywhere; the comparison's totals and the ledger corrected with a note; the notebook carries a correction entry |
+| F2 | medium | "Every FAIL after the first was a fix-pass sentence": round 2's G-12 and R7 FAILs were in text round 1 had passed | Restated: round 2's header FAIL and rounds 3 to 5's EM8 FAILs were fix-pass sentences; the other two were not |
+| F3 | low | Stale counts: "ten items" (eleven landed), "both drafts" (seven scans), "five notes" (six) | Corrected |
+| F4 | low | "What EM8 rests on" and the table row kept the glosses the round-5 reader removed from the spec ("ARP included"; "21 unanswered ARP frames", when 15 of the 21 are replies) | Both now use the landed EM8's facts |
+| F5 | low | Notes attributed to records that do not hold them (the §8.4.2 and §12.3 notes are in the second reader's reply, not its record; L02f3 said "last sentence"; the next-revision items cite readers whose ledger entries lacked them) | Attributed to the replies, recorded in the ledger; the round-4 to round-6 replies' notes added to the ledger |
+| F6 | low | "Both first readers passed passages 1 and 2": only L02s read §9.2 | Restated |
+| F7 | low | The rounds' harness-reported durations were not in the ledger | Harness figures (minutes, tokens, tool calls) added to the ledger; Measures quotes them |
+| F8 | low | The index's "Updated" time postdated its commit; the ledger's "grep … below" had nothing below; the notebook's "08:10" for round 3's launch against the ledger's 08:11 | Index time set at the final edit; the grep's results written into the ledger; the notebook's correction entry |
+| F9 | info | The plan's backlog entry restated QF-1's F1; the plan's SR-7 entry, the index bullets and one notebook entry repeated conclusions | Backlog entry cut to a pointer; plan entry and index bullets cut to status, links and one-line lessons; the notebook entry noted in its correction entry (append-only) |
 
 ## Limitations
 
@@ -215,6 +250,8 @@ changes what a driver must do, so nothing is listed for the user under the CF-1 
 - EM8's defect descriptions went through four rounds of wording: what the runs recorded is
   in the extract (M8) and the captures; the entry claims only that, and the private ledger
   holds the reason QF-1's first declaration was wrong, which the spec does not carry.
-- The four rounds of FAIL after the first were each a sentence the previous fix pass had
-  written, as L02f3 also found; a fix pass that adds words needs its own reading.
+- Four of the six FAILs after round 1 (round 2's header, rounds 3 to 5's EM8 sentences) were
+  sentences a fix pass had written, as L02f3 also found; a fix pass that adds words needs its
+  own reading. The other two (round 2's R7 caveat and G-12 citation) were in text an earlier
+  round had passed.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.

@@ -471,9 +471,8 @@ the user's.
   implementer round: the file header's revision number.
 - **SR-7 — spec revision 7.** Status: `complete` 2026-09-26
   ([evidence](evidence/SR-7.md), [notebook](notebook/SR-7.md)). A second independent reading
-  of revisions 5 and 6's changes (A1), then revision 7 on revision 6: AF-1's six items, SF-1's
-  `[emulated]` pointer form, QF-1's F2 as §12.5 EM8; no driver requirement changed. Approved
-  by the user 2026-09-26.
+  of revisions 5 and 6's changes, then revision 7 on revision 6; approved by the user
+  2026-09-26. Three items for the next revision are in the evidence.
 - **QF-2 — small-frame content check.** Status: `queued`, next; approved by the user
   2026-09-26 from QF-1's F3. Add a check that small-frame payloads arrive intact (a pattern
   payload or a short HTTP transfer), qualify it with a planted defect that corrupts a small
@@ -540,13 +539,10 @@ Backlog items owned by deferred milestones (M02/M05, M11) are in the
   status descriptions; DRIVER-QUALITY.md describes the controlled evaluation now deferred.
   Current pilot artifacts and this priority revision govern; refresh those descriptions when publishing
   the next status update, without changing their design decisions or calling new work complete.
-- **Possible upstream report (user decides later; not filed):** QF-1's F1 found that the
-  reference driver's probe error path in Linux v6.12 warns: when `e1000_probe` fails after
-  its hardware-structure initialization, its error labels fall through to unmapping a CE4100
-  MDIO base this part never mapped, and the kernel logs a `WARNING` at `iounmap` with a call
-  trace ([evidence/QF-1.md](evidence/QF-1.md), F1, runs `q1-d18-smoke-1..3`). Recorded on
-  2026-09-26 at the user's request as a pointer for a later decision on reporting it to the
-  Linux maintainers; nothing has been filed. Owner: the user; no milestone.
+- **Possible upstream report (user decides later; not filed):** the reference driver's probe
+  error path warns, [evidence/QF-1.md](evidence/QF-1.md) F1. Recorded on 2026-09-26 at the
+  user's request as a pointer for a later decision on reporting it to the Linux maintainers;
+  nothing has been filed. Owner: the user; no milestone.
 - Record further discoveries with impact and owner milestone. A completion blocker stays in its
   milestone; this backlog cannot be used to waive a failed acceptance criterion.
 

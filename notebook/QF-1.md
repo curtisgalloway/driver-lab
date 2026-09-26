@@ -49,3 +49,30 @@ committed at `9442e08` before the first run (00:27:30). The acceptance set (ten 
 reference ×2 and candidate ×2) reruns on the changed harness in the same round, since the
 trace pseudo-scenario runs in every scenario. Offline, the new rule over the 40 stored
 L02f3 traces reproduces every stored trace verdict and gap list (candidate minimum 4 µs).
+
+## 2026-09-26T00:30-07:00 — five of six defects fail as declared; the small-frame one kills ARP
+Round q1 in 122 s. d17, d18, d19 and d20 each fail exactly the declared check three times,
+and the acceptance set passes 40 of 40 on the changed harness. d21 fails every ping: the
+model does not pad short frames (I had it from memory that it did; the L02d3 reviewer's
+"ARP at 42 bytes" was the fact, and the DUT capture shows 21 of them), so the peer's 42-byte
+ARP replies come through the copybreak path at 42 bytes, one byte short is 41, and ARP drops
+them. A defect that must spare 42-byte frames has to key on length, not trim. d18 also
+tripped the kernel-log check: the reference's own probe error path unmaps the CE4100 MDIO
+base it never mapped and the kernel warns. The check caught a real error-path bug in the
+reference, which is what it is for.
+
+## 2026-09-26T00:33-07:00 — a reset write is never followed within 4 µs, and I do not know why
+d22 resets through the memory BAR and reads MANC at once; the stamps say 6 to 17 µs, every
+one of 24 resets. The candidate's 80 resets in the acceptance set: never under 4 µs. But
+EECD-then-STATUS pairs in the same traces are stamped 1 µs apart, and QEMU's `set_ctrl` only
+clears the bit. So the restated rule is right about the instrument and still cannot fail
+here; Q18 stays unqualified, now labeled `unobservable`, with the numbers and the gap in the
+explanation stated as such rather than guessed at.
+
+## 2026-09-26T00:35-07:00 — d21b qualifies Q25; d21c is invisible because ping payloads are zeros
+Round q2 in 24 s. d21b (drop small frames over 46 bytes) fails exactly the four 60/61-byte
+pings and the sent-sizes check on the two missing replies, 3 of 3, with 42, 1513 and 1514
+passing. d21c (tail shifted by one byte from byte 46) passes everything: the payload is a
+4-byte timestamp at frame bytes 42–45 and zeros after, so shifting zeros is a no-op, and the
+peer's capture shows every reply echoing its request byte for byte. An equivalent mutation
+under this stimulus, and a gap in the suite: nothing checks the content of a small frame.

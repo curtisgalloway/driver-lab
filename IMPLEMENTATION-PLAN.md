@@ -455,8 +455,14 @@ the user's.
   ([evidence](evidence/AF-1.md), [notebook](notebook/AF-1.md)); the second-reading option
   was taken, the recall re-measurement stays open. One item for the next spec revision; A1's
   remaining shortfalls are stated in the evidence.
-- **QF-1 — the four unqualified claims.** Status: `queued`, next.
-- **CF-1 — candidate on revision 6.** Status: `queued`, after QF-1.
+- **QF-1 — the four unqualified claims.** Status: `complete` 2026-09-26
+  ([evidence](evidence/QF-1.md), [notebook](notebook/QF-1.md)). Q24, Q25 and Q26 qualified by
+  planted defects; Q18 stays unqualified (`unobservable` on this host and model) with the
+  reset rule restated as what the trace can observe; two items for CF-1's spec revision (the
+  model delivers runts; the reference's probe error path warns) and one possible new check
+  (small-frame content).
+- **CF-1 — candidate on revision 6.** Status: `queued`, next; its workspace and brief are
+  prepared, and its Codex launch waits for the user.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -537,10 +543,12 @@ first. Review, checks and records follow the
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
   [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
   2026-09-25; the order is the orchestrator's):
-  SF-1 and AF-1 are complete; **next is QF-1** (plant defects for Q24–Q26; a timing approach
-  for Q18), then CF-1 (rebuild the candidate from revision 6 and rerun the acceptance set;
-  the next spec revision also takes AF-1's six items and SF-1's `[emulated]` pointer form).
-  HF-1 (the hardware verifications emulation cannot do) is blocked on hardware.
+  SF-1, AF-1 and QF-1 are complete; **next is CF-1** (rebuild the candidate from revision 6
+  and rerun the acceptance set on the QF-1 harness `7024864e…`; the next spec revision also
+  takes AF-1's six items, SF-1's `[emulated]` pointer form, and QF-1's F2, the model
+  delivering runts at their wire length). CF-1's workspace and brief are prepared; its
+  Codex launch waits for the user. HF-1 (the hardware verifications emulation cannot do,
+  now including Q18's 1 µs rule, `unobservable` in emulation) is blocked on hardware.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

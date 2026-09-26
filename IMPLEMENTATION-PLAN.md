@@ -446,8 +446,8 @@ authorized running all of them on 2026-09-25, one unit and one PR each, in the o
 
 - **SF-1 — `[emulated]` in the format.** Status: `complete` 2026-09-25
   ([evidence](evidence/SF-1.md), [notebook](notebook/SF-1.md)). The class is in
-  `SPEC-FORMAT.md`, the design's evidence model and `spec_check.py` (citation, TODO and
-  never-alone rules, with tests); the shipped board specs still pass.
+  `SPEC-FORMAT.md`, the design's evidence model and `spec_check.py` (a citation parenthetical
+  present, the TODO, and the never-alone rule, with tests); the shipped board specs still pass.
 - **AF-1 — a second reading of revision 4's changes**, or a recall re-measurement on the
   current revision. Status: `queued`, next.
 - **QF-1 — the four unqualified claims.** Status: `queued`, after AF-1.

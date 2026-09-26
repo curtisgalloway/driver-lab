@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T20:45-07:00
+Updated: 2026-09-25T21:05-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF-1 — `[emulated]` in the format](SF-1.md)
-Entries: 2026-09-25T20:33-07:00 through 2026-09-25T20:45-07:00
+Entries: 2026-09-25T20:33-07:00 through 2026-09-25T21:05-07:00
 Outcome: complete; the class is in the format, the evidence model and the checker; see the
 [evidence](../evidence/SF-1.md).
 - The checker already had the citation and TODO shapes; "never alone" is the one new rule,

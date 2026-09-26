@@ -22,7 +22,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Pin | An exact revision, edition, or file digest identifying an input. |
 | QEMU / device model | An open-source machine emulator / its software imitation of a hardware device, which a guest OS drives as if it were real. A device model is a separate implementation, not the silicon. |
 | Differential test | Running a reference driver and a candidate under identical scenarios and comparing their outcomes and register traces. |
-| Emulated evidence | A result observed on a QEMU device model (class `[emulated]`, adopted 2026-09-25); weaker than a hardware measurement because models are often lenient. It cites the model version and the runs, states what was observed from outside the model, and is never the sole authority for a fact. |
+| Emulated evidence | A result observed on a device model (QEMU or another emulator; class `[emulated]`, adopted 2026-09-25); weaker than a hardware measurement because models are often lenient. It cites the model version and the runs, states what was observed from outside the model, and is never the sole authority for a fact. |
 | RTL | Register-transfer level: the hardware design written in a language such as Verilog or VHDL. As evidence (`[rtl]`), the strongest authority for digital register behavior on the revision it names. |
 | Conflict entry | A recorded disagreement between evidence sources, kept beside the claim with both readings, the resolution, and the assumption that justified it. |
 | Hash / digest | A fingerprint of file contents; identifies bytes, not their correctness. |

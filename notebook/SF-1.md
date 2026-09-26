@@ -36,3 +36,14 @@ the same as for `[doc]`. Those two rules go to `spec-verifier`'s text, which is 
 L02f3 verifier actually enforced them (against an observations extract, never the model's
 source). The rule that the fact stays distinct from a hardware requirement is carried by the
 mandatory `TODO (verify on hardware)`.
+
+## 2026-09-25T21:05-07:00 — the review: the reference use did not match the rule I wrote
+The reviewer read revision 6 in the run store and found its inline citations are bare
+pointers (`[emulated]` §12.5 EM2), not parentheticals: the format as first written would
+have rejected the very use it was adopted from, and no test could show it because the
+board-spec checker never reads a clean-room spec. Fixed by letting the parenthetical name
+either the model, version and runs or a numbered observation that carries them; revision 6's
+bare form is a limitation for the next spec revision. The other findings were wording that
+overstated the checker (it tests that a parenthetical exists, not what it names) and a
+paragraph written before the review it described. The reviewer proved the three new tests
+fail on weakened copies of the checker, which the implementer had not done.

@@ -216,16 +216,21 @@ disagreement. This section states the assumptions so they can be checked and arg
 | `[doc]` | What a vendor or project says about its own work | The author knew and the text is current | Marketing pages, docs for a different part or revision |
 | `[press]`, forums, other low-confidence reports | A lead worth checking | None | Allowed only with `TODO (verify on hardware)`, as today |
 | `[inference]` | A conclusion from tagged premises | The derivation is sound | Carries its own confidence; never stronger than its weakest premise |
-| `[emulated]` | How a driver behaves against a named device model under stated scenarios, and where that model departs from the manual | The model implements the behavior under test as the manual describes | Models are lenient (accept programming the silicon would not), omit errata and timing, and may share a misreading with the reference driver. A pass is weaker than `[hardware]`; a failure the manual explains is strong evidence. Never a hardware requirement and never the sole authority for a fact: it stands beside another class or is a premise of an `[inference]`, cites the model version and the runs, and states what was observed from outside the model, not its mechanism |
+| `[emulated]` | How a driver behaves against a named device model under stated scenarios, and where that model departs from the manual | The model implements the behavior under test as the manual describes | Models are lenient (accept programming the silicon would not), omit errata and timing, and may share a misreading with the reference driver. A pass is weaker than `[hardware]`; a failure the manual explains is strong evidence. Never a hardware requirement and never the sole authority for a fact: it stands beside another class or is a premise of an `[inference]` |
 | Model recall | Nothing | n/a | Not evidence and never tagged; a fact with no source is a gap |
 
-Two rules follow from the table:
+Three rules follow from the table:
 
 - **Confidence is scoped.** `[rtl]` for revision A says nothing certain about revision B0, and a
   `[hardware]` result on one board is a result for that board. The citation must carry the scope:
   the revision, board, image, or conditions.
 - **Low-confidence evidence is allowed, labeled.** A forum post that names a register quirk is
   worth recording as a lead. The tag and its TODO keep it from reading as settled fact.
+- **A model observation is a citation, not a mechanism.** An `[emulated]` fact cites the model,
+  its version and the runs the way `[hardware]` cites the board, and states what was observed
+  from outside the model (a value read back, a gap in a trace, frames in a capture), never how
+  the model produces it: the model's source is encumbered like any other, and the tag must not
+  carry it across the clean-room wall.
 
 ### Conflicts are recorded, never overwritten
 

@@ -82,7 +82,9 @@ stated here; the skills point at this file instead of restating it.
     register value read back, a gap in a trace, frames in a capture. Always followed by a
     parenthetical naming the model, its version and the run IDs the observation comes from, the
     way `[hardware]` names the board, so `[emulated]` (QEMU 10.2.1 `e1000`, runs
-    `e1000-l02f1-20260925-01` r001–r010) is complete. Phrased as what was observed from outside
+    `e1000-l02f1-20260925-01` r001–r010) is complete; a spec that keeps its observations in a
+    numbered table carrying the version and run IDs may point at the entry instead, so
+    `[emulated]` (§12.5 EM2) is also complete. Phrased as what was observed from outside
     the model, never as the model's mechanism: the model's source is encumbered like any other,
     and the tag must not become a channel for it. A model result is never a hardware requirement
     and never the sole authority for a fact: it stands beside another class (the databook the
@@ -304,7 +306,8 @@ tag token inside it would be read as a tag.
 - `[inference]` is always followed by a parenthetical giving its premises and derivation, so a
   reader can check the reasoning without re-reading the source it was reasoned from.
 - `[emulated]` is always followed by a parenthetical naming the device model, its version and the
-  run IDs, and is never the only tag in a tag clause: another class stands beside it, or the
+  run IDs, or a numbered observation in the same spec that carries them, and is never the only
+  tag in a tag clause: another class stands beside it, or the
   observation is a premise inside an `[inference]`'s parenthetical (which then carries the tag).
   A bullet whose only authority is a model observation is a lead, not a fact.
 - `[doc]` is always followed by a parenthetical naming the page or document, so a store page, a
@@ -501,8 +504,9 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
 - `access: internal`, or a `via:` naming a skill outside the public set, under a `public` root;
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
   `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
-  `[rtl]`, `[inference]` or `[emulated]` without a parenthetical naming its source; or a tail
-  clause whose only tag is `[emulated]` (tag names in the prose are ignored);
+  `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
+  that it name the source; the checker tests only that it is there); or a tail clause whose only
+  tag is `[emulated]` (tag names in the prose are ignored);
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;
 - a stub whose `spec: <id>` does not resolve. `--stubs-from` finds every `*/SKILL.md` under a

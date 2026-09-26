@@ -151,8 +151,8 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   tree and are compared against it like any other claim, TODO or not; `[inference]` names its
   premises and derivation in its parenthetical, and is verified on whether those premises hold and
   whether the conclusion follows from them; `[emulated]` names a device model, its version and
-  run IDs, and is compared against what those runs recorded (traces, captures, logs, verdicts),
-  never against the model's source, and fails when it claims more than the runs show or states
+  run IDs, and is compared against an extract of what those runs recorded (traces, captures,
+  logs, verdicts), prepared by the operator, never against the model's source, and fails when it claims more than the runs show or states
   the model's mechanism rather than an observation. `instances:` rows are claims
   too: each `reg`, `irq`, and `clocks` value against the device tree it came from, keyed
   `instances/<name>`.

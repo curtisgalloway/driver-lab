@@ -57,3 +57,10 @@ rule, not to a repair round. The model's link is always full duplex, so no scena
 
 Dead end avoided: fixing the stale "revision 4" header comment myself. It is the implementer's
 file, and the source identity the acceptance set ran would change; it waits for the next round.
+
+## 2026-09-26T08:20-07:00 — correction (artifact review R1, R2): the gap and poll ranges were misread
+The candidate's smallest reset gap per run is 5 to 8 µs, not 5 to 17: I took 17 from the gap
+lists, where it appears, not from the per-run minima. The statistics-poll surplus ranges 2 to
+23 per run, not 3 to 23 (`ring-wrap` polls twice). Neither touches a verdict. The reviewer also
+re-derived the STATUS surplus a second way (TNCRS reads minus the clearing sweep's GORCL
+reads) and got the same numbers in all 20 runs.

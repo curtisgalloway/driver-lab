@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T08:20-07:00
+Updated: 2026-09-26T08:22-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [CF-1 — the candidate on spec revision 6](CF-1.md)
-Entries: 2026-09-26T07:55-07:00 through 2026-09-26T08:09-07:00
+Entries: 2026-09-26T07:55-07:00 through 2026-09-26T08:20-07:00
 Outcome: complete; the candidate implements revision 6 (two behaviors changed), 40 of 40 on the
 QF-1 harness, no bug from the L01 review trio; see the [evidence](../evidence/CF-1.md).
 - Of 16 spec hunks only two change this driver: FWE = 01b on its one EECD write, TNCRS in full
@@ -24,6 +24,7 @@ QF-1 harness, no bug from the L01 review trio; see the [evidence](../evidence/CF
   init-time clearing sweep reads TNCRS too.
 - Where the drivers differ on the changed code, the reference is the one off the manual.
 - The one weakness (which duplex a TNCRS reading belongs to after a link change) is a spec gap.
+- Correction (artifact review R1): per-run smallest reset gaps are 5 to 8 µs, not 5 to 17.
 
 ### [QF-1 — the four unqualified claims](QF-1.md)
 Entries: 2026-09-26T00:10-07:00 through 2026-09-26T00:52-07:00

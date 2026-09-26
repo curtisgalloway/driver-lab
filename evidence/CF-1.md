@@ -70,7 +70,7 @@ One round, no repair needed. The implementer (Codex, `gpt-6-astra`, in `cleanroo
 launched by the user after the agent's own launch was refused twice by its safety check) read
 the spec, the revision-4-to-6 diff, the manual, the candidate and one kernel header
 (`iopoll.h`), and nothing else: the canary pilot's audit found the expected read, and the
-round's audit lists those five workspace reads, no successful read outside the allowed roots
+round's audit counts six workspace reads (the workspace directory and the five files in `CONSULTED.md`, listed with `--json`), no successful read outside the allowed roots
 (12 failed probes, all the agent's own housekeeping paths), and endpoints of the model API's
 CDN and the local resolver only. Both audits were re-run in this unit with the repository's
 `sandbox_audit.py` (`a4876214…`, the same file as the run's copy) and gave byte-identical PASS
@@ -89,7 +89,7 @@ each a disposition, checked here against the code:
 | §5.4 G4, ordering note, PHY extras; §9.2 | already compliant: PSCON read-modify-write sets bits 6:5 and 11 and clears bit 1 before the ANA, GCON and PCTRL writes | Confirmed |
 | Header; §1 tag table; §4.1 EERD pointer; §12.1 G-12; §12.3; §12.5–12.6 | not driver behavior | The `[emulated]` entries were not used to change anything; GCON, TCTL.COLD, CT and TIPG unchanged |
 
-The diff is those two changes plus two defines (46 lines); nothing else in the file changed.
+The diff is those two changes plus two defines (four hunks, 44 lines, +10 net); nothing else in the file changed.
 One gap filed: how to attribute TNCRS counts that span a duplex change between two reads
 (§4.7 and the manual's §13.4.2 and §13.7.12 do not say); the implementer samples STATUS.FD
 immediately before the read. Recorded for the next spec revision, not repaired.
@@ -127,7 +127,7 @@ declaration commit ([`122b04a`](https://github.com/curtisgalloway/driver-lab/com
 928 checks, 0 failed; the kernel-log check passed in every run. Every candidate probe logs
 `EEPROM grant still set after release (EECD=0x00000198); trying EERD` (L02f3: `0x00000188`)
 and binds with the right MAC and a good checksum; the driver's other kernel-log lines are
-unchanged. The candidate's smallest reset gap per run was 5 to 17 µs (180 resets, memory BAR);
+unchanged. The candidate's smallest reset gap per run was 5 to 8 µs (180 resets through the memory BAR, all 5 to 27 µs);
 the reference's 5.84 to 6.06 ms (I/O window). No reference failure needs explaining (A4).
 
 **Claims.** Q01–Q17 and Q19–Q26 PASS for the updated candidate in both repetitions, on the
@@ -141,13 +141,13 @@ Each candidate run's decoded register trace was compared with L02f3's run of the
 scenario and repetition (the L02f2-round-1 module), register by register within each guest
 command: written values, write counts and read counts (`analysis/compare-cf1.py` and
 `aggregate.py` in the run store; the two L02f3 repetitions of each scenario served as the
-control for run-to-run variation).
+control for run-to-run variation; their comparison is on file as `analysis/control-pairs-l02f3.txt`). The comparison crosses a harness revision (L02f3's runs on `705694b9…`, these on `7024864e…`, QF-1's one-constant change to the reset rule); per run the set of registers touched is identical between the builds, so the guest command sequence the traces see did not change.
 
 | Difference | Attribution |
 | --- | --- |
 | The EECD write is `0x198` in every CF-1 probe (24, three per `reload` run), `0x188` in L02f3's | The FWE change (§4.1): bits 5:4 written 01b; expected |
-| STATUS is read more often: in every run by exactly the number of statistics polls (3 to 23 per run; the poll count is the TNCRS reads minus the init-time sweeps that clear the whole block without reading STATUS); TNCRS read counts identical in every pair | The TNCRS change (§4.7): one STATUS read before each poll's TNCRS read; expected. In 18 of 20 runs the STATUS read is immediately followed by the TNCRS read in every poll; in `itr-1` one poll has an ICR read and in `ring-wrap-1` one has an RDT write stamped between them, another CPU's interrupt handler or NAPI poll running during the statistics poll (whose lock is local); `benign`, candidate concurrency, not a missing read |
-| Ring base addresses; ring index values and ICR, IMC, IMS, RDT, TDT counts; MTA and RCTL write counts; EECD read counts at probe; IMC and IMS writes recorded one phase earlier or later around `set_link down` | Allocation, traffic and open/close cadence, and phase boundaries: the same variation the control pairs show between two L02f3 runs of one module; `benign`, not the candidate change |
+| STATUS is read more often: in every run by exactly the number of statistics polls (2 to 23 per run; the poll count is the TNCRS reads minus the init-time sweeps that clear the whole block without reading STATUS); TNCRS read counts identical in every pair | The TNCRS change (§4.7): one STATUS read before each poll's TNCRS read; expected. In 18 of 20 runs the STATUS read is immediately followed by the TNCRS read in every poll; in `itr-1` one poll has an ICR read and in `ring-wrap-1` one has an RDT write stamped between them, another CPU's interrupt handler or NAPI poll running during the statistics poll (whose lock is local); `benign`, candidate concurrency, not a missing read |
+| Ring base addresses; ring index values and ICR, IMC, IMS, RDT, TDT counts; MTA and RCTL write counts; EECD read counts at probe; statistics reads landing in a different guest command (poll cadence; every statistics register's run total is identical between the builds); IMC and IMS writes recorded one phase earlier or later around `set_link down` | Allocation, traffic and open/close cadence, and phase boundaries: the same variation the control pairs show between two L02f3 runs of one module; `benign`, not the candidate change |
 
 No written value differs other than EECD and the allocation- and traffic-dependent ones above;
 no register is written or read by only one build.
@@ -165,7 +165,7 @@ reports in the run store under `review/`), as L01 and L02e applied to the candid
 
 **Fallback recorded.** L01's reviewer A used `reference-driver-review`'s anchored form with
 its checkers; here, as in L02e, the reference review is a scoped brief (the changed behaviors
-and the compliance claims) with manual citations, because the change is 46 lines and the
+and the compliance claims) with manual citations, because the change is 44 lines and the
 candidate lives outside any git repository the anchor checker could pin. The swarm's `history`
 and `conventions` arms had a two-commit checkout and one instruction file to read; both
 returned empty lists, which is the evidence that they looked.
@@ -177,7 +177,7 @@ returned empty lists, which is the evidence that they looked.
 | A-F1 | low, `[ref-issue]` | The reference writes EECD's FWE field back as read on every EECD write, so a disallowed value read back (EM2: 00b) is written back; the candidate writes 01b | None: the candidate follows §4.1 (Table 13-6 allows 01b and 10b only); a reference observation, not a candidate defect |
 | A-F3 | low, `[ref-issue]` | The reference accumulates and reports TNCRS at every duplex; the candidate only in full duplex | None: §4.7 and §13.7.12 ("only valid … at full duplex"); the manual contradicts itself (G-12) |
 | A-F4 | low, `[ref-issue]` | The reference leaves TNCRS out of `tx_errors`, while the kernel's `include/uapi/linux/if_link.h` says `tx_errors` includes `tx_carrier_errors`; the candidate includes it | None for the candidate. A reference-driver observation, not reported upstream in this unit (open item for the user, as QF-1's F1) |
-| A-F5 / C-F1 | low (`[benign]` in A; correctness, low, in C) | Counts drained from TNCRS are attributed to the duplex read at drain time, so up to one watchdog period (2 s) of counts per duplex change goes to the wrong duplex; nothing drains the counter when the link changes. The implementer filed the same question as a spec gap | **Spec gap, recorded for the next spec revision**, not repaired: §4.7 and the manual's §13.4.2 and §13.7.12 give no attribution rule, so a fix is a design choice the spec has to make. Both reviewers propose the same rule (drain TNCRS at every link-status change under the statistics lock, crediting the duplex in force since the previous drain, and not gating on link-up). Bounded to one interval per link event, and unobservable on the model, whose link is always 1000 Mb/s full duplex |
+| A-F5 / C-F1 | low (`[benign]` in A; correctness, low, in C) | Counts drained from TNCRS are attributed to the duplex read at drain time, so up to one watchdog period (2 s) of counts per duplex change goes to the wrong duplex; nothing drains the counter when the link changes. The implementer filed the same question as a spec gap | **Spec gap, recorded for the next spec revision**, not repaired: §4.7 and the manual's §13.4.2 and §13.7.12 give no attribution rule, so a fix is a design choice the spec has to make. Reviewer A proposes a rule (drain TNCRS at every link-status change under the statistics lock, crediting the duplex in force since the previous drain, and not gating on link-up); the swarm proposes two variants (gate on the duplex saved at the previous drain, or drain at the link change and discard the first sample). The reviewers agree on the defect, not on one rule. Bounded to one interval per link event, and unobservable on the model, whose link is always 1000 Mb/s full duplex |
 | A-F7 | info, `[benign]` | E5's third choice (use a valid EEPROM address on a checksum failure) is not taken | None: optional in E5; the candidate's random-address choice is one of the permitted two |
 | A-F2, A-F6 | info, `[benign]` | The reference has no EERD path for this part (it bit-bangs; E1 has no reference analog) and never polls RST after its reset; the candidate follows E1 and R6 | None |
 | C-F4 | low, docs, outside the diff | The file header still says the driver was written from spec revision 4 | **Open**: a comment-only change to the implementer's file, to go in the next implementer round's brief rather than an operator edit; not made here because the source identity the acceptance set ran (`a8afc8c4…`) would change |
@@ -188,6 +188,33 @@ No finding changed a verdict, an identity or a qualification, and no reviewer as
 review. Reviewer A also recorded the agreements between the two drivers on the changed code
 (EE_GNT written back as read in the release write, the MAC byte order, the checksum, STATUS.FD
 as the duplex source, RUC + ROC, the PSCON bits and their order before AN, the reset sequence).
+
+### Review of this file
+
+One fresh, read-only artifact reviewer (same model family; report in the run store under
+`review/`) read this file, the ledger, the round-1 outputs, all 40 runs' verdicts, identities,
+kernel logs and traces, L02f3's 20 candidate traces, the three review reports and the scans,
+and recomputed every verdict, check count and identity hash, the declaration's timing, the
+reset gaps, the EECD writes, the STATUS surplus (by a different method: TNCRS reads minus the
+clearing sweep's GORCL reads), the review counts and the scope table's claims. Nothing
+recomputed disagreed with a verdict, an identity, a qualification or either decision; its nine
+findings are figure and wording corrections, all applied:
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| R1 | low | The candidate's smallest reset gap per run is 5 to 8 µs, not 5 to 17 (17 is never a run's smallest; all 180 gaps span 5 to 27 µs) | Corrected here, in the ledger and the notebook |
+| R2 | low | The statistics-poll range is 2 to 23 per run (`ring-wrap` has 2), not 3 to 23 | Corrected |
+| R3 | low | The update diff is 44 lines (four hunks, +10 net), not 46 | Corrected |
+| R4 | low | The audit counts six workspace reads (the directory plus the five files), which "five" could not be reconciled with | Said |
+| R5 | low | The two reviewers agree on the TNCRS defect, not on one rule: A's rule differs from the swarm's two variants | Restated; A's rule kept as the recommendation, attributed |
+| R6 | info | The comparison with L02f3 crosses a harness revision (`705694b9…` to `7024864e…`) without saying so; benign, since every register set and statistics total is identical per run | Said |
+| R7 | info | The control-pair comparison was not on file | Recorded in the run store |
+| R8 | info | The commit trailer names one model and the ledger another for this unit's implementer | Records nit; the trailer text is the orchestrator's instruction, noted in the ledger |
+| R9 | info | The benign-variation row omitted statistics reads moving between guest commands (poll cadence) | Added |
+
+The reviewer confirmed both decisions as stated and judged broader review unnecessary. It
+disclosed one deviation: it read the first 60 lines of reviewer A's brief, which its own brief
+did not name, and nothing in its report depends on it.
 
 ## The two decisions, restated for the updated candidate
 
@@ -213,7 +240,7 @@ not on a differential result.
 | Item | Recommendation |
 | --- | --- |
 | The copied Codex credential in the run's agent home | Delete it: no further round is needed (recorded in the ledger once done) |
-| TNCRS attribution across a duplex change (A-F5 / C-F1, the implementer's gap) | Add a rule to §4.7 in the next spec revision (SR-7's successor): drain TNCRS at every link-status change and credit the duplex in force since the previous drain; then implement it in the next candidate round |
+| TNCRS attribution across a duplex change (A-F5 / C-F1, the implementer's gap) | Add a rule to §4.7 in the next spec revision (SR-7's successor); reviewer A's is the recommendation (drain TNCRS at every link-status change and credit the duplex in force since the previous drain); then implement it in the next candidate round |
 | The file header's "revision 4" (C-F4) | Fold into the next implementer round's brief; no round for a comment |
 | The reference's `tx_errors` omitting TNCRS (A-F4) | A reference-driver observation, like QF-1's F1; report upstream or not, the user's call |
 

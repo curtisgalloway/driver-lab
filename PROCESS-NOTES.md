@@ -346,3 +346,26 @@ Prevention: for any PHY or register write, look for the manual's section on when
 effect before stating an order.
 Fix belongs in: `cleanroom-spec` authoring guidance (a check for "when does the write apply")
 Status: open
+
+### 2026-09-25T18:50-07:00 — a revision's change list named some of its own hunks
+Chapter: [L02f3](notebook/L02f3.md)
+What happened: revision 5's header said it changed G4 and §9.2; its diff had five hunks (the
+G4 ordering note and the PHY-extras bullet too). The second L02s verifier noticed; revision 6
+names every changed passage and records the omission.
+Cost: one carried note and a header correction a revision later.
+Prevention: write the change list from the diff's hunks, after editing, not from the plan
+before it.
+Fix belongs in: `cleanroom-spec` (revision step: "list the hunks")
+Status: open
+
+### 2026-09-25T18:50-07:00 — an `[emulated]` entry needs a phrasing rule
+Chapter: [L02f3](notebook/L02f3.md)
+What happened: the evidence files that establish the model departures name QEMU functions,
+because the operator side may read the model's source. Writing the spec's §12.5 from them
+risked carrying those names across the clean-room wall. The entries were rewritten as what
+the runs recorded (register values, trace gaps, captured frames) with their run IDs.
+Cost: one rewrite pass; a verifier check against an observations extract.
+Prevention: an `[emulated]` fact states an observation from outside the model and cites the
+run, the way `[hardware]` cites the board; the mechanism stays in the evidence file.
+Fix belongs in: `SPEC-FORMAT.md` and the design's evidence model (follow-on SF-1)
+Status: open

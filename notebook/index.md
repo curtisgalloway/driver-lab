@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T10:14-07:00
+Updated: 2026-09-26T10:17-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SR-8 — spec revision 8](SR-8.md)
-Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:10-07:00
+Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:17-07:00
 Outcome: complete; revision 8 states the TNCRS attribution rule (a requirement change the
 candidate does not yet follow) and SR-7's three wording items, two verifier rounds; see the
 [evidence](../evidence/SR-8.md).
@@ -26,6 +26,8 @@ candidate does not yet follow) and SR-7's three wording items, two verifier roun
 - The rule's starting point (§5.5) needed a step of its own; a reader's GAP found it.
 - First record-scan findings in this series: the reader's own kernel-API citations.
 - Interrupted by a spend limit after landing; resumed from disk.
+- Corrections (records review F5, F7, F9): two reader notes were in its record, not its
+  reply; the index time was set before the commit again; two entries restate the evidence.
 
 ### [FC-1 — a small-frame content check](FC-1.md)
 Entries: 2026-09-26T08:22-07:00 through 2026-09-26T09:04-07:00

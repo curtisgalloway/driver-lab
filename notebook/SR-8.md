@@ -75,3 +75,12 @@ The session stopped on an API spend-limit error at about 09:38, after revision 8
 and its PASS line was written, with the public records drafted and nothing committed. Resumed
 at 10:10 on usage credits from the ledger and the worktree, not from memory; the ledger carries
 the same note.
+
+## 2026-09-26T10:17-07:00 — corrections from the records review
+The records review (ten findings, all applied; the evidence's Review table has them) marks
+two things in this chapter that stay as written because it is append-only. The 09:17 entry
+restates the rule's premises, confidence and residual, and the 09:28 entry restates round 1's
+findings; both belong to the evidence (the one-job rule, F9), so read them there. And the
+09:37 entry's account of the reader's four notes attributes all four to its reply, where two
+(R7's third cause; the plain-directory tree) are in its record. The lesson SR-7 wrote for the
+index's "Updated" time was repeated here (F7): set it at the last edit, not at the first.

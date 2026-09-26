@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T09:04-07:00
+Updated: 2026-09-26T10:17-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,21 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [SR-8 — spec revision 8](SR-8.md)
+Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:17-07:00
+Outcome: complete; revision 8 states the TNCRS attribution rule (a requirement change the
+candidate does not yet follow) and SR-7's three wording items, two verifier rounds; see the
+[evidence](../evidence/SR-8.md).
+- The rule is an argument the manual supplies four premises for; the fifth (duplex changes
+  only with a link change) is the spec's own configuration, and the confidence says so.
+- Count the code point and map it to pages; do not search for a sign that is not there.
+- Round 1's page FAILs: the footer sits between a heading and its first sentence.
+- The rule's starting point (§5.5) needed a step of its own; a reader's GAP found it.
+- First record-scan findings in this series: the reader's own kernel-API citations.
+- Interrupted by a spend limit after landing; resumed from disk.
+- Corrections (records review F5, F7, F9): two reader notes were in its record, not its
+  reply; the index time was set before the commit again; two entries restate the evidence.
 
 ### [FC-1 — a small-frame content check](FC-1.md)
 Entries: 2026-09-26T08:22-07:00 through 2026-09-26T09:04-07:00
@@ -209,3 +224,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
 - **A check that cannot fail** (continued): [FC-1](FC-1.md) — small-frame content made
   checkable with a pattern payload and the kernel's checksum-error count; the arrival checks
   at 60/61 bytes are shown unable to see a corrupted reply on either side.
+- **Spec errors found downstream** (continued): [SR-8](SR-8.md) — the TNCRS attribution gap
+  CF-1 filed is closed by a rule the spec chooses, tagged as an argument with the manual's
+  premises; the first requirement change since revision 6, which the candidate does not yet
+  follow.

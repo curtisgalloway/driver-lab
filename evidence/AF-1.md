@@ -61,9 +61,10 @@ revision 3 only, still open) and would have left the one-reading shortfall stand
 | Text read | Revision 4 draft (`e3b80f84…`), before the follow-up | Landed revision 4 (`0490a888…`) |
 | Model, inputs | Claude Opus 5.5; manual PDF and text; kernel `include/`, `Documentation/` | Claude Fable 5.1; manual text only; the same kernel directories |
 
-- **Agreements: 49 of the first reading's 51 keys** carry the same verdict (PASS) in the
-  second, usually at finer grain (the second splits a passage's quotation, page number and
-  `[inference]` into separate lines). Both readings independently attached the same caveat
+- **Agreements: 48 of the first reading's 51 keys** carry the same verdict (PASS) in the
+  second, 47 on a line of their own and one (R7's "5 ms wait kept") inside the second's R7
+  verification-test line, usually at finer grain (the second splits a passage's quotation,
+  page number and `[inference]` into separate lines). Both readings independently attached the same caveat
   to R7's verification test: a CTRL bit reading 1 after the reset cannot separate an EEPROM
   re-read from the hardware restoring the value without one; both outcomes keep the 5 ms
   wait, so the test is safe as written.
@@ -75,11 +76,12 @@ revision 3 only, still open) and would have left the one-reading shortfall stand
   `IORESOURCE_MEM_64` from BAR0's type field. First: PASS ("the inference is labeled and the
   advice to read the config dword follows"). Second: FAIL, the inference states no confidence,
   which the spec's §1 requires. Adjudicated below.
-- **Keyed by one reading only** (no verdict conflict): the first keyed "R7: 5 ms wait kept"
-  and "EEPROM-default CTRL bits: coverage by G1 through §5.10", which the second folded into
-  neighboring lines; the second added Table 13-3's footnote 2 as its own line, and three
-  cross-checks (a keyword sweep of the whole file, the citations around each hunk, and §5.1's
-  unchanged statistics sentence).
+- **Read by one reading only** (no verdict conflict): the first reading's key "EEPROM-default
+  CTRL bits: coverage by G1 through §5.10" has no counterpart in the second, which never
+  mentions §5.10 or the every-open rule, so that claim has one reading. The second added
+  Table 13-3's footnote 2 as its own line, and three cross-checks (a keyword sweep of the whole
+  file, the citations around each hunk, and §5.1's unchanged statistics sentence). The 51-row
+  key-to-key table is in the run store (`review/comparison.md`); 48 + 1 + 1 + 1 = 51.
 - **Missed by both on the hunks:** nothing found. Outside the hunks, the second reading noted
   three things the first had not: §5.1's unchanged "statistics become valid within 1 µs
   (§14.8)" leans on the §14.8 claim that §4.7 and G-10 now decline to follow; §14.3's last
@@ -102,7 +104,8 @@ verification. Read against that sentence, the second reading is right and the cl
 spec says (`include/linux/pci.h:1241`, `include/uapi/linux/pci_regs.h:96, :105–108`,
 `include/linux/ioport.h:55`), so it is not an accuracy error. The first reading's PASS
 applied the weaker test "labeled and mitigated". The lapse is not particular to this
-passage: of revision 4's 50 `[inference]` uses, 13 state a confidence; the full form is used
+passage: of revision 4's 50 `[inference]` uses, 12 state a confidence on the tag's own line
+(a `grep` recorded in the ledger; 27 when the surrounding paragraph is counted); the full form is used
 for the argued inferences (R7, the EEPROM-default bits, X9, §7.4, §9.1) and omitted from the
 one-clause design choices, and both full readings of revision 3 passed those. Revisions 5 and
 6 did not change §10.3 or §1's sentence (the revision 4→6 diff touches neither), so the
@@ -113,7 +116,7 @@ item 2.
 
 | A1 clause | Revision 4's changes | Revisions 5 and 6's changes |
 | --- | --- | --- |
-| Two verification readings | **Met.** Two independent readings, different models and contexts, neither seeing the other; the first's one FAIL independently confirmed fixed | Not met as independent readings: sequential fresh readings until clean (L02s: two; L02f3: four), the final text read once after fixes |
+| Two verification readings | **Met**, with one exception. Two independent readings, different models and contexts, neither seeing the other; the first's one FAIL independently confirmed fixed; one first-reading claim (G1's coverage of the EEPROM-default bits through §5.10) has no second line | Not met as independent readings: sequential fresh readings until clean (L02s: two; L02f3: four), the final text read once after fixes |
 | No unresolved FAIL | One FAIL open, on form (the §10.3 confidence), carried to the next spec revision because this unit does not edit the spec; no accuracy FAIL | None open in the landed records |
 
 The recorded shortfall "revision 4's changes were read once" is closed. What remains under A1:
@@ -127,7 +130,7 @@ independent reading of their changes is the same procedure as this unit.
 | # | Passage (unchanged in revisions 5 and 6 unless said) | Item | Source |
 | --- | --- | --- | --- |
 | 1 | §10.3 probe step 3, `IORESOURCE_MEM_64` `[inference]` | State a confidence (high) and a verification (on the test device, compare the resource flag against the config-dword read) | Second reading's FAIL, adjudicated |
-| 2 | §1 tag table, `[inference]` row | 37 of revision 4's 50 inferences give no confidence; either add one to each inference that carries an argument, or narrow the sentence to say when the full form is required | Adjudication |
+| 2 | §1 tag table, `[inference]` row | Most of revision 4's 50 inferences give no confidence on the tag's line (12 do; 27 within the paragraph); either add one to each inference that carries an argument, or narrow the sentence to say when the full form is required | Adjudication |
 | 3 | §5.1, "Statistics become valid within 1 µs" | Reword so that §5.1 and §4.7/G-10 read as one position (§14.8 says accessible within 1 µs; the spec clears by reading rather than relying on it) | Second reading, outside scope |
 | 4 | §4.7 statistics rules | Mention §14.3's last bullet, which scopes counter-clearing to the 82541xx and 82547GI/EI, beside the §13.7/§14.8 disagreement (revision 6 changed §4.7's TNCRS, RLEC, RUC and ROC rows, not this bullet) | Second reading, outside scope |
 | 5 | §5.2 R7 verification test | Say that a reading of 1 cannot separate a re-read from a restore without one, and that either keeps the wait | Both readings' caveat |
@@ -147,12 +150,25 @@ Items 3–6 are wording; none changes a requirement. Revision 6's bare `[emulate
 
 ## Review
 
-The unit's review artifact is the second reading itself (the record in the run store). The
-records here were also read by one fresh, read-only reviewer (same model family as the
-implementer) against the two verification records, the diff and the ledger; its report is in
-the run store under `review/`, and its findings and resolutions follow.
+The unit's verification artifact is the second reading itself (the record in the run store).
+The public records were then read by one fresh, read-only reviewer (same model family as the
+implementer) against the two verification records, the diff, the scans and the ledger; its
+report is in the run store under `review/`. It confirmed every hash, line count, verdict
+total and scan result quoted here, the §1 sentence and both records' wording as attributed,
+the R7 caveat in both, the A1 table against L02f3, the items' traceability and the absence
+of private infrastructure in the diff, and judged broader review unnecessary (documentation
+only). Eight findings, one medium, all applied:
 
-(Review pending at this commit; findings and resolutions are added after it.)
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| F1 | low | The comparison's bullets summed to 53 keys, not 51 ("49" already counted two folded keys) | Recounted from a key-by-key match: 48 same (47 own line, 1 folded), 1 read once, 1 text changed, 1 disagreement |
+| F2 | medium | The key-to-key matching existed nowhere; Limitations said "recorded in the notebook", which holds totals only | The 51-row table written to the run store (`review/comparison.md`); Limitations points there |
+| F3 | low | "13 of 50 inferences state a confidence" had no recorded method; the reviewer got 12 on the tag's line and 27 by paragraph | Recounted: 12 on the line (the §1 row excluded), 27 by paragraph; command in the ledger; item 2 reworded |
+| F4 | low | This section described the review in the past tense before it ran | Rewritten from the report |
+| F5 | low | Ledger step times were written from memory and disagreed with the artifacts' timestamps (a reader "launched 22:40, finished 22:43" in 8.7 minutes) | Ledger times corrected from file times and the harness report; the notebook carries a correction entry |
+| F6 | info | "Unchanged in revisions 5 and 6" rested on a diff not in the run | Revision 6 and the revision 4→6 diff copied into the run with hashes |
+| F7 | low | "Folded into neighboring lines" was true of one key and not of "coverage by G1 through §5.10", which the second never mentions | Stated as read once, in the comparison and Limitations |
+| F8 | info | The plan entry and index bullets repeated conclusions; "HALF 2" unglossed in the notebook | Plan entry cut to status and links; index bullets shortened; gloss added |
 
 ## Limitations
 
@@ -162,7 +178,10 @@ the run store under `review/`, and its findings and resolutions follow.
   not new claims and were not re-checked; printed-to-PDF page mapping was checked by form-feed
   count instead.
 - The readings differ in grain (51 and 69 lines over the same 22 hunks); the comparison is the
-  operator's matching by section and item, recorded in the notebook, not a mechanical join.
+  operator's matching by section and item, recorded row by row in the run store
+  (`review/comparison.md`), not a mechanical join.
+- One first-reading claim (G1's coverage of the EEPROM-default CTRL bits through §5.10's
+  every-open rule) has no line in the second reading and so still has one reading.
 - The second reading verified the `[kernel]` citations against `include/` and
   `Documentation/` of the pinned tree on this host, not the L02c run's staged copies; the tree
   is the same commit.

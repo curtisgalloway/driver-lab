@@ -9,7 +9,8 @@ Follow-on of the [plan](../IMPLEMENTATION-PLAN.md) named in L02f3. Terms: a **re
 one fresh verifier's pass over a set of spec claims with a verdict per claim; the **first
 reading** is L02c's change check of revision 4; **A1** is the design's criterion of two
 verification readings with no unresolved FAIL. See the [glossary](../GLOSSARY.md) and the
-[evidence](../evidence/AF-1.md).
+[evidence](../evidence/AF-1.md). **HALF 2** is the spec's second part, the Linux
+integration written from kernel headers and documentation, as against HALF 1, the hardware.
 
 ## 2026-09-25T22:33-07:00 — opening: the second reading, not the recall re-measurement
 Goal: close L02c's recorded A1 shortfall for revision 4's changes. The plan offers a second
@@ -48,3 +49,15 @@ target tree's `include/linux/pci.h`. The same shape as L02c's `PAGE_SIZE` (a HAL
 API name that also appears in the driver). Dispositioned on a run-local copy of the whitelist
 rather than by editing the L02c one, and rescanned clean. Lesson for briefs: tell a reader
 that quotes a HALF 2 prototype to name the function, not its parameter types.
+
+## 2026-09-25T22:56-07:00 — correction: the times in this chapter and the ledger were from memory
+The records reviewer compared the ledger's step times with the artifacts' own timestamps and
+found them written after the fact: the brief and the reader's launch were at 22:34, not 22:40
+(the record was written at 22:43 after 8.7 minutes, which the stated times could not hold),
+the revision-4 scan at 22:35, the record's scan and its disposition at 22:44–22:45. The
+entries above keep their headings; the ledger is corrected from the file times. The same
+review found that my count of agreeing keys had double-counted two folded ones (48, not 49,
+with one first-reading claim, G1's coverage of the EEPROM-default bits through §5.10, read
+once), and that no key-to-key table existed anywhere: the matching now lives in the run store
+as a 51-row table. A comparison that is the unit's whole result needs to be an artifact, not
+a number in a sentence.

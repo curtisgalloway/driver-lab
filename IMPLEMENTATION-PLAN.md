@@ -452,11 +452,9 @@ the user's.
   `SPEC-FORMAT.md`, the design's evidence model and `spec_check.py` (a citation parenthetical
   present, the TODO, and the never-alone rule, with tests); the shipped board specs still pass.
 - **AF-1 — a second reading of revision 4's changes.** Status: `complete` 2026-09-25
-  ([evidence](evidence/AF-1.md), [notebook](notebook/AF-1.md)). The second-reading option
-  was taken (the recall re-measurement stays open); a fresh clean-room reading of every
-  changed claim agrees with L02c's on all but one, adjudicated as a form lapse (an
-  `[inference]` without a stated confidence) for the next spec revision; A1's one-reading
-  shortfall for revision 4 is closed, revisions 5 and 6's final text still read once.
+  ([evidence](evidence/AF-1.md), [notebook](notebook/AF-1.md)); the second-reading option
+  was taken, the recall re-measurement stays open. One item for the next spec revision; A1's
+  remaining shortfalls are stated in the evidence.
 - **QF-1 — the four unqualified claims.** Status: `queued`, next.
 - **CF-1 — candidate on revision 6.** Status: `queued`, after QF-1.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.

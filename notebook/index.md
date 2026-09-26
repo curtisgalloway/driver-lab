@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T22:48-07:00
+Updated: 2026-09-25T22:56-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,15 +15,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [AF-1 — a second reading of revision 4's changes](AF-1.md)
-Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:48-07:00
-Outcome: complete; two independent readings of revision 4's changes, one disagreement
-adjudicated as a form lapse; see the [evidence](../evidence/AF-1.md).
-- The second reading (different model, no PDF) agrees with the first on 49 of 51 keys and
-  independently confirms the citation fix L02c had checked by `diff` only.
-- The one disagreement is the spec's own rule, not the manual: an `[inference]` with no
-  confidence, a form the spec applies to 13 of its 50 inferences.
+Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:56-07:00
+Outcome: complete; see the [evidence](../evidence/AF-1.md).
+- The one disagreement between the readings was the spec's own tag rule, not the manual.
 - Both readers independently hung the same caveat on R7's verification test.
-- The record's leak scan flagged a kernel type quoted from a HALF 2 prototype.
+- The record's leak scan flagged a kernel type quoted from a target-tree prototype.
+- Correction (review F5): the ledger's step times had been written from memory.
 
 ### [SF-1 — `[emulated]` in the format](SF-1.md)
 Entries: 2026-09-25T20:33-07:00 through 2026-09-25T21:05-07:00

@@ -14,6 +14,16 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [CS-1 — checksum-preserving corruption of received small frames](CS-1.md)
+Entries: 2026-09-26T09:10-07:00 through 2026-09-26T09:29-07:00
+Outcome: in progress; the check, its tests, two planted defects and the run declaration
+are done, the runs wait on the KVM slot; see the [evidence](../evidence/CS-1.md).
+- TCP's checksum is the same sum as ICMP's, so a word swap reaches the application;
+  `wget`'s MD5 over busybox's own tools is the witness, with no guest-image change.
+- Lowering the peer's MTU bounds both directions' frames (its sends by the MTU, the
+  DUT's by the advertised MSS) and touches nothing on the DUT.
+- On the stored captures a word swap keeps every TCP checksum and changes nothing inside
+  a one-byte ping pattern.
 ### [SR-8 — spec revision 8](SR-8.md)
 Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:17-07:00
 Outcome: complete; revision 8 states the TNCRS attribution rule (a requirement change the

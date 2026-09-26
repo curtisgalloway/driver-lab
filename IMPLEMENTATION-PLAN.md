@@ -489,6 +489,17 @@ the user's.
   change, stated in the header; the current candidate does not yet follow it) and SR-7's
   three wording items. The next candidate round would implement the rule; **awaiting the
   user** (it is the user's Codex launch).
+- **CS-1 — checksum-preserving corruption of received small frames.** Status:
+  `in_progress` 2026-09-26 ([evidence](evidence/CS-1.md), [notebook](notebook/CS-1.md)).
+  From FC-1's open limitation (a checksum-preserving corruption of a reply the DUT
+  receives was detected by no check), approved by the user 2026-09-26. `frame-sizes` now
+  carries 1 MiB over HTTP each way in frames of at most 214 bytes, the peer's MTU
+  lowered to 200 for the streams (which bounds both directions and touches nothing on
+  the DUT), with the delivered bytes checked by MD5; a new claim Q28; two planted
+  defects that swap two 16-bit words, on receive (d25) and on transmit (d26), built; the
+  guest image unchanged; every existing check name unchanged. The run declaration (52
+  isolated runs: the acceptance set ×2 each, `frame-sizes` ×5 each, each defect ×3) is
+  committed; the runs wait on the test host's KVM slot.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part.
 
 ## What is deferred from the immediate path
@@ -588,6 +599,7 @@ first. Review, checks and records follow the
   emulation, CF-1's FWE and half-duplex TNCRS behaviors, which no scenario exercises, and
   revision 8's attribution rule, which needs a link that changes duplex) is blocked on
   hardware.
+  CS-1 (FC-1's open limitation, the checksum-preserving case) is in progress: harness `da4c9407…`, claim Q28 and defects d25/d26 declared, its 52 runs waiting on the KVM slot.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

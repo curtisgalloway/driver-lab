@@ -21,8 +21,9 @@ SPDX-License-Identifier: Apache-2.0
 - **Extract** — the operator's file of what the differential runs recorded (register traces,
   packet captures, kernel logs, verdicts), against which an `[emulated]` claim is verified;
   never the model's source ([SF-1](SF-1.md)).
-- **CF-1** — the queued unit that rebuilds the candidate from revision 6; the reason this
-  revision changes no driver requirement.
+- **CF-1** — the unit that rebuilt the candidate from revision 6 ([CF-1](CF-1.md)), in
+  flight when this unit was approved and merged while it ran; the reason this revision
+  changes no driver requirement.
 
 See the [glossary](../GLOSSARY.md), the [plan](../IMPLEMENTATION-PLAN.md) (follow-ons named
 in L02f3) and the [notebook chapter](../notebook/SR-7.md).
@@ -184,10 +185,11 @@ changes what a driver must do, so nothing is listed for the user under the CF-1 
 
 ## Open items for the user
 
-- **Which revision CF-1's implementer gets.** CF-1's brief names revision 6. Revision 7
-  changes no requirement, so revision 6 stays a valid input; revision 7 is the better text
-  (the pointer form, EM8's warning about small frames on the model, the restored caveat).
-  Recommendation: give CF-1 revision 7 if its brief has not been frozen, otherwise leave it.
+- **The next candidate round's spec.** CF-1 merged on revision 6 while this unit ran
+  ([CF-1](CF-1.md)); revision 7 changes no requirement, so its result stands on revision 7.
+  The next candidate round (CF-1's TNCRS attribution rule, once the revision after this one
+  states it, and the file header's revision number) should be given revision 7 as its spec;
+  the choice is the user's, since that round is the user's Codex launch.
 - **The possible upstream report** (QF-1's F1) is recorded in the plan's backlog as the user
   asked; nothing has been filed.
 

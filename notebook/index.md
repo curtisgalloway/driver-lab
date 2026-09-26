@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T08:57-07:00
+Updated: 2026-09-26T09:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,7 +15,7 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SR-7 — spec revision 7](SR-7.md)
-Entries: 2026-09-26T07:37-07:00 through 2026-09-26T08:57-07:00
+Entries: 2026-09-26T07:37-07:00 through 2026-09-26T09:00-07:00
 Outcome: complete; see the [evidence](../evidence/SR-7.md).
 - A second reading of a sentence finds what a reading of the change in it does not.
 - Write an `[emulated]` entry from the extract's sentences, not from the finding.

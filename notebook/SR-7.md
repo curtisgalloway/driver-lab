@@ -136,3 +136,11 @@ the same entry's "one is mine" undercounts: by the ledger, round 2's header FAIL
 3 to 5's EM8 FAILs were fix-pass sentences, while round 2's other two were in text round 1
 had passed. The 07:49 entry also repeats the adjudication argument the evidence carries (the
 one-job rule, F9); read the evidence for it.
+
+## 2026-09-26T09:00-07:00 — CF-1 merged while this unit ran; rebased
+`origin/main` had four commits beyond the branch base: CF-1 (PR #19), which rebuilt the
+candidate on revision 6 and passed the acceptance set. Revision 7 changes no requirement, so
+CF-1's result stands on it, and the open item "which revision does CF-1 get" answers itself:
+the next candidate round gets revision 7. The plan and index conflicts were resolved by hand
+(both units' entries kept; "next" is QF-2; CF-1's TNCRS attribution rule, a requirement
+change, goes to the revision after this one). Both commits re-applied with their messages.

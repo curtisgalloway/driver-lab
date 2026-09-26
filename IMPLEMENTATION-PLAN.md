@@ -254,7 +254,8 @@ serves as that skill's process log.
 
 Dependencies: L02a → L02b → L02c → L02e → L02f → L02g; L02d needs only L02a and may run in
 parallel with L02b–L02c, and L02f also needs L02d (all of L02d1–L02d3). L02s (spec revision
-5) needs L02e and may run in parallel with L02d; L02f3's feedback builds on it.
+5) needs L02e and may run in parallel with L02d; L02f3's feedback builds on it. Within L02f:
+L02f1 → L02f2 → L02f2b → L02f3.
 Revised 2026-09-25 (user approved, after a Claude–Codex consultation): L02d3 added, L02s made
 a unit, L02f split in three, and L02f and L02g report two separate decisions.
 
@@ -357,10 +358,18 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
 - **Open limitations:** never loaded or run; isolation by instruction and audit only (8 audit
   marker findings, all traced to allowed targets); two low findings from the repair review and
   several spec gaps are open for L02f or the next spec revision; spec §5.4/§9.2 (PSCON bit 11)
-  needs amending.
+  needed amending (done in L02s, revision 5).
 
 ### L02s — Spec revision 5
 
+- **Status:** `complete` 2026-09-25 ([evidence](evidence/L02s.md), [notebook](notebook/L02s.md)).
+  Revision 5, 1,604 lines, SHA-256 `c587f41d…d01b`, landed in private run
+  `e1000-l02s-20260925-01`: revision 4 plus five changed passages. G4 now sets bit 11 as an
+  `[inference]` from §8.4.2 and Table 13-31 (confidence medium, contrary text recorded), and
+  must precede the AN restart for bit 11 as well as 6:5 (§11.1.3). A first fresh
+  `spec-verifier` reading found 2 FAIL and 2 GAP, all fixed; a second passed all 15 changed
+  claims. Open limitations: only changed claims verified; text rendering of the manual only;
+  both verifiers' out-of-scope notes and the §4.7 TNCRS mapping go to L02f3.
 - **Outcome:** a reviewed spec revision 5 that amends §5.4 G4 and §9.2 to set PSCON (PHY
   register 16) bit 11, per the L02e spec error (manual §13.7.12, Table 13-31).
 - **Steps:** a source-backed correction in a new working copy; review of the affected claims
@@ -371,7 +380,8 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
 
 ### L02f — Differential run, repair, and feedback
 
-- **Outcome:** O4, O5, A5, A7. Split 2026-09-25 into three units, each one session.
+- **Outcome:** O4, O5, A5, A7. Split 2026-09-25 into three units, each one session; L02f2b
+  was added between L02f2 and L02f3 the same day.
 - **L02f1 — initial run and attribution.** Status: `complete` 2026-09-25
   ([evidence](evidence/L02f1.md), [notebook](notebook/L02f1.md)). Identities frozen before
   any run; reference 10/10 PASS in isolated runs (A4). The candidate failed all ten scenarios,
@@ -394,8 +404,17 @@ a unit, L02f split in three, and L02f and L02g report two separate decisions.
   `review-swarm` (13 findings, fixed or recorded) and a fresh artifact reviewer (14, all
   fixed). Open: H1 (Q15 unresolved until fixed and requalified); egress blocking and readable
   `/usr` and `/etc` in the sandbox, for the user; spec gaps for L02f3.
-- **L02f3 — spec feedback and reverification.** Fold every `[emulated]` result and spec gap
-  into a versioned spec working copy built on L02s, and reverify the changed claims.
+- **L02f2b — harness fix H1 and Q15 requalification.** Added 2026-09-25 (user decision); a
+  small unit that runs before L02f3. Fix the harness so `down-during-traffic` stops both floods
+  before the interface goes down and waits more than 1 s after carrier before pinging (past the
+  model's receive hold); requalify Q15 by L02d3's method; rerun `down-during-traffic` on the
+  candidate and the reference in isolated runs. Review as for harness work (`review-swarm` plus
+  a fresh reviewer reading the run artifacts). The sandbox questions L02f2 left open are
+  settled as D7 and D8 (see "Decisions and bounded investigations"), and the copied Codex
+  credential in the L02f2 run has been deleted (recorded in that run's ledger).
+- **L02f3 — spec feedback and reverification.** Follows L02f2b. Fold every `[emulated]`
+  result and spec gap into a versioned spec working copy built on L02s, and reverify the
+  changed claims.
 - **Accept, reported as two decisions:** *evaluation complete* (every scenario result recorded,
   failures repaired or recorded as open findings, evidence separating spec gaps, spec errors,
   implementation errors and model limitations); and *candidate qualified for the declared
@@ -446,6 +465,8 @@ an instance of the frozen spec-only trial. Completed evidence remains valid for 
 | D4 | M07/M08 | Which faults and traces can the fixture actually produce? Establish a finite capability inventory and report each unavailable check; do not infer recovery coverage from ordinary traffic |
 | D5 | M14/M15 | Generated-test and companion-skill experiment conditions: freeze tasks, allowed inputs, independent expected outcomes, defect sets, and acceptance thresholds before inspecting outputs |
 | D6 | M16 | Maintenance and feedback representation: select versioned records and conservative dependency invalidation without migrating legacy records into accepted status |
+| D7 | L02f2b (resolved) | Clean-room sandbox network egress. **User decision, 2026-09-25:** audit-only is accepted for L02 (strace records egress; nothing blocks it), a ratified departure from M02a's enforced network denial. An allowlisting proxy only if a later unit needs one. |
+| D8 | L02f2b (resolved) | Clean-room sandbox read scope. **User decision, 2026-09-25:** readable `/usr` and `/etc` are ratified, with the kernel source and module trees (`/usr/src`, `/usr/lib/modules`) hidden, as `cleanroom_sandbox.sh` does. |
 
 Investigations end with evidence-backed choices or explicit blockers, not open-ended exploration.
 Do not invent commands, tool APIs, pin names, or equipment capabilities. A necessary material
@@ -888,26 +909,30 @@ pretending the pilot plan completes an unspecified platform-wide system.
 ## Next session
 
 The work now lives in this repository (`driver-lab`); [TRANSITION.md](TRANSITION.md) records
-the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1 and L02f2 are complete ([L02a](evidence/L02a.md),
+the move. L02a, L02b, L02c, L02e, L02d1–L02d3, L02f1, L02f2 and L02s are complete ([L02a](evidence/L02a.md),
 [L02b](evidence/L02b.md), [L02c](evidence/L02c.md), [L02e](evidence/L02e.md),
 [L02d1](evidence/L02d1.md), [L02d2](evidence/L02d2.md), [L02d3](evidence/L02d3.md), [L02f1](evidence/L02f1.md),
-[L02f2](evidence/L02f2.md)). Do not start two units in one session. Read
+[L02f2](evidence/L02f2.md), [L02s](evidence/L02s.md)). Do not start two units in one session. Read
 [notebook/index.md](notebook/index.md) first.
 
-- **L02s (any time; before L02f3):** spec revision 5, PSCON bit 11.
-- **H1 (decision for the user):** `down-during-traffic` pings inside the model's receive hold
-  after a flood that leaves frames behind, so a driver that reports carrier promptly fails it
-  at random ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Fix the harness (stop both
-  floods before the interface goes down; wait out the hold before pinging), requalify Q15
-  (L02d3's method), and rerun the candidate's `down-during-traffic`, as its own small unit or
-  at the start of L02f3. Until then Q15 has no usable result and neither L02f decision is met.
-- **Sandbox decisions (user):** whether the codified clean-room recipe should block egress
-  rather than audit it (M02a had required enforced network denial), whether readable `/usr`
-  and `/etc` are acceptable against "no read access elsewhere", and deleting this run's
-  credential copy (evidence/L02f2.md, Open items).
-- **L02f3:** spec feedback on top of L02s: V1's E1 gap (the round-1 implementer filed it too:
-  how long to wait for EE_GNT, and what to do when it stays set), the FWE observation, and
-  whether the spec should say anything about flow control (V10).
+- **L02f2b (next):** harness fix H1 and Q15 requalification (user decision, 2026-09-25).
+  `down-during-traffic` pings inside the model's receive hold after a flood that leaves frames
+  behind, so a driver that reports carrier promptly fails it at random
+  ([evidence/L02f2.md](evidence/L02f2.md), V6 and H1). Stop both floods before the interface
+  goes down, wait more than 1 s after carrier before pinging, requalify Q15 (L02d3's method),
+  and rerun `down-during-traffic` on the candidate and the reference. Until then Q15 has no
+  usable result and neither L02f decision is met.
+- **Sandbox decisions (settled by the user, 2026-09-25):** audit-only egress is accepted for L02
+  (D7) and readable `/usr` and `/etc`, with kernel source and module trees hidden, are ratified
+  (D8); the copied Codex credential in the L02f2 run has been deleted (that run's ledger).
+- **L02f3 (after L02f2b):** spec feedback on top of revision 5 (`c587f41d…d01b`): V1's E1 gap
+  (the round-1 implementer filed it too: how long to wait for EE_GNT, and what to do when it
+  stays set), the FWE observation, whether the spec should say anything about flow control
+  (V10), and L02s's carried notes: §4.7 maps TNCRS to a carrier-error count without its
+  full-duplex limit (L02e finding L3), the header's change list, the `[source-observed]` PHY
+  bullet's reported rationale, and listing the TNCRS and gigabit-half-duplex contradictions in
+  G-12 ([evidence/L02s.md](evidence/L02s.md)). Copy the L02c leak-scan whitelist and
+  provenance map onto the test host first; L02s had to scan without them.
 - **L01 second unit (blocked on the fixture):** unchanged; see [evidence/L01.md](evidence/L01.md).
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

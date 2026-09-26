@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T16:45-07:00
+Updated: 2026-09-25T17:20-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,10 +15,17 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [L02f2 — bounded repair and retest](L02f2.md)
-Entries: 2026-09-25T16:45-07:00 through 2026-09-25T16:45-07:00
-Outcome: in progress; blocked on a Codex outage before round 1.
+Entries: 2026-09-25T16:45-07:00 through 2026-09-25T17:20-07:00
+Outcome: complete after one round; the candidate binds and passes 9 of 10 scenarios past probe.
 - The implementer runs under bubblewrap with a fresh Codex home; strace audits every read.
 - The sandbox is codified in `cleanroom-implementer` (`cleanroom_sandbox.sh`, `sandbox_audit.py`).
+- Round 1: E1 waits 10 ms, then proceeds to EERD with a warning; audit PASS after a pipe
+  false positive in the audit was fixed.
+- `down-during-traffic` fails at random (3 of 6): the reply reaches ICMP every time; QEMU
+  holds reception 1 s after any RCTL write, and the candidate's faster carrier puts the ping
+  inside the hold with leftover flood frames. Model plus harness (H1), not the candidate.
+- The operator's machine crashed mid-unit; entries for 16:48 and 16:51 are reconstructed.
+- First past-probe comparison: V7–V16, all `benign`; flow control off goes to L02f3.
 
 ### [L02f1 — differential run and attribution](L02f1.md)
 Entries: 2026-09-25T15:06-07:00 through 2026-09-25T15:56-07:00
@@ -75,8 +82,10 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   read-back, the L4 and M2 probes; caught by run artifacts and the coverage reviewer, not by
   code review.
   [L02d3](L02d3.md) — qualified 22 of 26 claims with planted defects; the 1 µs reset rule
-  stays unqualified.
+  stays unqualified. [L02f2](L02f2.md) — the reverse: a check that fails a correct driver at
+  random (H1, `down-during-traffic`).
 - **Model departures from the manual:** [L02d2](L02d2.md) — no overrun drops, TX drains with
-  the link down; [L02f1](L02f1.md) — EE_GNT always 1 and FWE = 00b in EECD.
+  the link down; [L02f1](L02f1.md) — EE_GNT always 1 and FWE = 00b in EECD;
+  [L02f2](L02f2.md) — a one-second receive hold after every RCTL write.
 - **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
   error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.

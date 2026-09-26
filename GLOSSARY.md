@@ -86,3 +86,8 @@ evaluation; add other terms as the documents that use them are updated.
 | Review swarm | The `review-swarm` skill: four reviewer agents with narrow mandates, a mechanical check that drops findings not quotable from the code, and a referee. |
 | Lab notebook | Append-only, timestamped notes per unit of work (chapters) plus an index, kept as the work happens (`lab-notebook` skill); the driver-porting notebook is `notebook/`. |
 | Process log | A per-project log of where the agent's process cost time, as input for improving instructions and skills; for driver-porting, `PROCESS-NOTES.md`. |
+| Bubblewrap (`bwrap`) | A Linux tool that runs a program in a private view of the file system, showing it only the directories it is given; the clean-room sandbox (`cleanroom_sandbox.sh`) is built on it. |
+| strace | A Linux tool that logs the system calls a program and its children make (files opened, programs run, network connections); `sandbox_audit.py` reads its log. |
+| Canary | A file planted in the workspace and read in a pilot run, to prove the audit log records the agent's reads before the log is trusted. |
+| Repair round | In L02f2, one repair of the candidate by the implementer, then the command-log audit, a build, and an isolated rerun of every scenario. |
+| Receive hold | QEMU's e1000 model delivers no received frame for one second after any write to RCTL; not described in the manual (L02f2, V6). |

@@ -34,7 +34,9 @@ sample under the statistics lock, seeded at the clearing read; every reading cre
 previous sample; the link check drains under the lock) and the header's revision number, and
 nothing else; the other 17 spec hunks were already met or are not driver behavior. On the FC-1
 harness the reference and the updated candidate each passed all ten scenarios in isolated runs,
-twice (40 runs, 944 checks, 0 failed), declared before the first run; every register-level
+twice (40 runs, 944 checks, 0 failed), declared before the first run, and again on CS-1's
+harness, which landed meanwhile (round `a2`: 40 runs, 972 checks, 0 failed, Q28 included, also
+declared first); every register-level
 difference from CF-1's candidate traces is one of the three the rule predicts, or cadence and
 run-to-run variation. The L01 review trio found no bug: seven benign or reference-side
 findings, all decided below, none needing a repair. The rule itself cannot be exercised on the
@@ -50,10 +52,10 @@ Private run `e1000-cf2-20260926-01`.
 | Spec | Revision 8, `e0f17ffa…6326d7` (SR-8's landed copy); the revision-6-to-8 diff given to the implementer `038d97e5…` (21 hunks, 270 lines) |
 | Candidate before | `e1000_l02.c` `a8afc8c4…` (CF-1 round 1; module `ce7e3e2c…`, the one CF-1 and FC-1 ran) |
 | Candidate after (round 1) | `e1000_l02.c` `2ac15713…`, module `e1000_l02.ko` `df37c7ad…`, built with gcc-14 against the pinned v6.12 tree, 0 warnings at default and W=1, module defaults |
-| Harness | `l02harness.py` `884e771c…`, `guest-init.sh` `eccecebe…` (FC-1's final harness; the checkout at `ad247be`, origin/main) |
+| Harness | `l02harness.py` `884e771c…`, `guest-init.sh` `eccecebe…` (FC-1's final harness; the checkout at `ad247be`, origin/main when the unit began). Round `a2`: `l02harness.py` `a1735b9f…` (CS-1's final harness; origin/main at `272d578`), `guest-init.sh` unchanged |
 | Reference module | `e1000.ko` `43242751…` (as every unit since L02d2) |
 | Kernel, QEMU, busybox | `bzImage` `0d96151b…`; 10.2.1+ds-1ubuntu3.2, `qemu-system-x86_64` `0cd4112a…`, KVM, DUT memory 3 GiB; `df12634c…` |
-| Run script and job list | `run1.sh` `281dae8d…`, `jobs-a1.txt` `a847819e…` (CF-1's and L02f3's list, 40 lines) |
+| Run script and job list | `run1.sh` `281dae8d…`, `jobs-a1.txt` `a847819e…` (CF-1's and L02f3's list, 40 lines); round `a2`: `run2.sh` `6d65e4b9…`, the same list |
 
 **Run declaration (round `a1`).** All ten suite scenarios, isolated, for the reference and
 for the round-1 candidate, two repetitions each: 40 runs, eight in parallel, reference and
@@ -170,10 +172,20 @@ compared (`smoke`, `reload`, `link-flap`, `stop-start`, both repetitions). The c
 smallest reset gap per run was 4 to 8 µs (180 resets through the memory BAR, all 4 to 21 µs);
 the reference's about 5.9 ms (I/O window). No reference failure needs explaining (A4).
 
-**Claims.** Q01–Q17 and Q19–Q27 PASS for the updated candidate in both repetitions, on the
-harness on which FC-1 qualified Q27 and reran every earlier qualification's scenario, so 26 of
-27 claims are qualified evidence about the updated candidate on the emulated device within
-their stated scopes; Q18 passes as an observation (`unobservable`, [QF-1](QF-1.md)).
+**Round `a2` on CS-1's harness** (`a1735b9f…`; 40 runs, launched 13:05:04 after the declaration
+commit [`70f4f6f`](https://github.com/curtisgalloway/driver-lab/commit/70f4f6f) at 13:04:55,
+last scenario end 13:06:24): reference 20 of 20, candidate 20 of 20, 972 checks (`a1`'s 944
+plus CS-1's seven added `frame-sizes` checks in each of its four runs; 30 in the scenario, 36
+with the trace rules), 0 failed, every identity as frozen with the `a2` harness hash. Q28's two
+stream checks pass for the candidate in both runs (1 MiB each way, the MD5s equal, 7,090 data
+frames of at most 214 bytes peer to DUT). The candidate's kernel-log lines are identical to
+`a1`'s in all 20 runs; its smallest reset gap per run 5 to 8 µs (180 resets, all 5 to 58 µs).
+
+**Claims.** Q01–Q17 and Q19–Q28 PASS for the updated candidate in both repetitions on the
+harness that qualified them or reran them (FC-1's for Q01–Q27, CS-1's for Q28 and, in round
+`a2`, all of them again), so 27 of 28 claims are qualified evidence about the updated candidate
+on the emulated device within their stated scopes; Q18 passes as an observation
+(`unobservable`, [QF-1](QF-1.md)).
 
 ## Attribution of the differences from CF-1
 
@@ -209,6 +221,18 @@ traces show that the readings happen where the spec puts them (the sweep with it
 poll, every link change) and that they are taken under the statistics lock's serialization
 (no statistics read is ever interleaved with another statistics read); the rule's crediting
 rests on the reviews and on the hardware check listed for HF-1.
+
+**Round `a2` against `a1` (the same module on the two harnesses).** Per run the register sets
+are identical; the STATUS and TNCRS run totals are identical in 19 of 20 runs and the
+sweep, poll and link-check counts in 18. `frame-sizes-2` has one more watchdog tick (one more
+poll and link check; TNCRS 14 against 12, STATUS 20 against 18): the scenario runs 10.7 to
+10.8 s on CS-1's harness (its two 1 MiB streams) against 10.4 s on FC-1's. In two runs one poll
+reading is labeled a link check by the predecessor classifier because an interrupt-handler
+access (an ICR read, an IMS write) landed between the COLC and TNCRS reads; the run totals
+show them to be polls. The late STATUS reads after an open's first link check recur as in
+`a1`. Everything else is `a1`'s control variation plus CS-1's two `wget` phases, which carry
+traffic that did not exist on the earlier harness (the 18 phase-level IMS/IMC entries the
+classifier could not pair include 8 in those phases). Nothing is attributed to the candidate.
 
 ## Review: the L01 review trio
 
@@ -266,11 +290,11 @@ attributed. L02f3's shortfalls stand where this unit did not touch them (Q18 unq
 and d11 under A6; the L02e session audit met by judgment; hardware-only behaviors; one QEMU
 version, one host, KVM only).
 
-**Candidate qualified for the declared scope: met for the 26 qualified claims, not beyond.**
-The scope is the 26 claims qualified in L02d3 (with Q15 in L02f2b), QF-1 and FC-1, each within
-its stated scope, on the emulated 82540EM with the identities frozen above. The updated
+**Candidate qualified for the declared scope: met for the 27 qualified claims, not beyond.**
+The scope is the 27 claims qualified in L02d3 (with Q15 in L02f2b), QF-1, FC-1 and CS-1, each
+within its stated scope, on the emulated 82540EM with the identities frozen above. The updated
 candidate passes every one in isolated runs, twice, on the harness those qualifications ran on
-or were rerun on (FC-1); no blocking finding is open; no mandatory claim in the scope is
+or were rerun on (rounds `a1` and `a2`); no blocking finding is open; no mandatory claim in the scope is
 unresolved. Q18 passes as an observation only (`unobservable`); nothing about hardware behavior
 is claimed, and the behavior this unit changed (which duplex a TNCRS reading is credited to)
 is exercised by no scenario: the model's link never changes duplex, so it rests on the spec's
@@ -282,8 +306,8 @@ rule and the reviews, not on a differential result.
   after a pause for a quota reset; the user's round-1 launch was at 10:32; see the notebook.
   Model cost not measured; the implementer's round was 274,588 input (217,216 cached) and
   3,356 output tokens.
-- Host time: round `a1` (40 runs, 8 at a time) 79 seconds; the reviews about 7 minutes in
-  parallel.
+- Host time: round `a1` (40 runs, 8 at a time) 79 seconds; round `a2` 80 seconds; the reviews
+  about 7 minutes in parallel.
 - Human review effort: none during the unit, beyond launching round 1.
 
 ## Limitations
@@ -300,12 +324,8 @@ rule and the reviews, not on a differential result.
 - The comparison baseline crosses a harness revision (CF-1's `7024864e…` to FC-1's
   `884e771c…`), which changed one scenario's phase names and duration; one cadence difference
   is attributed to it.
-- CS-1's harness (`a1735b9f…`, merged while this unit ran) postdates this unit's runs: the
-  updated candidate ran on `884e771c…`, and CS-1's own acceptance runs on `a1735b9f…` used
-  CF-1's module. The updated candidate has not run on `a1735b9f…`; nothing in CS-1's change
-  touches the DUT's driver path, but the rerun is the first thing a later unit should do.
-- Two repetitions per scenario, one host, one QEMU version, KVM only, eight runs at a time,
-  as CF-1.
+- Two repetitions per scenario per harness, one host, one QEMU version, KVM only, eight runs
+  at a time, as CF-1.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.
 
 ### Review of this file
@@ -335,3 +355,9 @@ applied:
 | R10 | info | The traces do show STATUS.FD = 1 while LU = 0 on the model (80 link checks), which answers A-RR-5 and B's list gap 3 for the model | Recorded as an `[emulated]` observation for the next spec revision |
 
 The reviewer confirmed both decisions as stated and judged broader review unnecessary.
+
+**The harness caveat (decided by the orchestrator in the user's place, 13:03).** The
+artifact review left one limitation standing: CS-1's harness had landed while round `a1` ran,
+and the updated candidate had not run on it. Rather than defer the rerun to a later unit, the
+orchestrator decided to close it in this unit; round `a2` above is that decision carried out,
+declared and committed before its first run, and the limitation is withdrawn.

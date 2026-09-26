@@ -510,9 +510,10 @@ the user's.
   statistics lock, seeded at the clearing read; every reading credited by the previous sample;
   the link check drains under the lock) and the header's revision number, the other 17 spec
   hunks already met or not driver behavior; reference and updated candidate 20 of 20 each on
-  the FC-1 harness `884e771c…`, declared before the run; every trace difference from CF-1's
-  candidate attributed (the three the rule predicts, plus cadence); the L01 review trio found
-  no bug. The rule is unobservable on the model (its link never changes duplex); its hardware
+  the FC-1 harness `884e771c…`, declared before the run, and 20 of 20 again on CS-1's harness
+  `a1735b9f…` (round `a2`, declared first; 27 of 28 claims qualified for the updated
+  candidate); every trace difference from CF-1's candidate attributed (the three the rule
+  predicts, plus cadence); the L01 review trio found no bug. The rule is unobservable on the model (its link never changes duplex); its hardware
   check is on HF-1's list.
 - **HF-1 — hardware.** Status: `blocked` on an 82540EM or the nearest available part. Its
   list: Q18's 1 µs reset rule (`unobservable` in emulation, QF-1); CF-1's FWE write and
@@ -616,10 +617,9 @@ first. Review, checks and records follow the
   change) and SR-7's three wording items. CF-2 is complete (approved by the user
   2026-09-26): the candidate (`2ac15713…`, module `df37c7ad…`) implements revision 8's rule
   and names revision 8 in its header, and passes the acceptance set on the FC-1 harness
-  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed; CS-1's harness
-  `a1735b9f…` landed while CF-2 ran, and its own runs used CF-1's module, so the updated
-  candidate (`df37c7ad…`) has not yet run on it (the first step of any later unit). **No unit
-  is queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
+  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed, and again on
+  CS-1's harness `a1735b9f…`, which landed meanwhile (round `a2`, 20 of 20, Q28 included: 27
+  of 28 claims qualified for the updated candidate `df37c7ad…`). **No unit is queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
   `unobservable` in emulation; CF-1's FWE and half-duplex TNCRS behaviors, which no scenario
   exercises; revision 8's attribution rule, which needs a link that changes duplex) is
   blocked on hardware.

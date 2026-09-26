@@ -69,3 +69,13 @@ first link check happens once per affected open, 26 times in 12 runs, 3 to 16 ac
 my script looked two accesses ahead and I read its "missing" entries by hand. And the link-check
 identity only adds up once a "poll" is seen to include stop's final reading, one per close.
 None touches a verdict or an attribution.
+
+## 2026-09-26T13:08-07:00 — round a2: the same 40 runs on CS-1's harness, 80 seconds
+The orchestrator chose to close the CS-1 caveat now instead of leaving it to a later unit.
+Declared at 13:04 (commit `70f4f6f`), launched 13:05:04, done 13:06:24: 40 of 40, 972 checks
+(CS-1's seven new `frame-sizes` checks in each of four runs), Q28's two stream checks passing
+for the candidate. Against its own `a1` traces the candidate differs only where the harness
+does: `frame-sizes` is 0.4 s longer with the two 1 MiB streams, so one repetition gets an extra
+watchdog tick, and the streams' `wget` phases carry traffic the earlier harness never had. One
+lesson for the classifier: a poll whose COLC-to-TNCRS gap an interrupt-handler access lands in
+looks like a link check by its predecessor; the run totals, not the labels, settle it.

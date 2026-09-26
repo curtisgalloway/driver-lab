@@ -616,8 +616,10 @@ first. Review, checks and records follow the
   change) and SR-7's three wording items. CF-2 is complete (approved by the user
   2026-09-26): the candidate (`2ac15713…`, module `df37c7ad…`) implements revision 8's rule
   and names revision 8 in its header, and passes the acceptance set on the FC-1 harness
-  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed. **No unit is
-  queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
+  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed; CS-1's harness
+  `a1735b9f…` landed while CF-2 ran, and its own runs used CF-1's module, so the updated
+  candidate (`df37c7ad…`) has not yet run on it (the first step of any later unit). **No unit
+  is queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
   `unobservable` in emulation; CF-1's FWE and half-duplex TNCRS behaviors, which no scenario
   exercises; revision 8's attribution rule, which needs a link that changes duplex) is
   blocked on hardware.

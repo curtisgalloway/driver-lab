@@ -126,8 +126,11 @@ identifiers listed are kernel API names (`spin_lock_irqsave`, `netif_carrier_ok`
 All 40 runs in `e1000-cf2-20260926-01`, launched 12:38:07, first scenario 12:38:09, last
 scenario end 12:39:26 Pacific, KVM, eight at a time; every run's `identities.json` matches the
 frozen table (checked by `summary.py`). The declaration commit
-([`a283279`](https://github.com/curtisgalloway/driver-lab/commit/a283279), 12:37:24) precedes
-the launch. No run was repeated or discarded.
+([`67960e1`](https://github.com/curtisgalloway/driver-lab/commit/67960e1), authored 12:37:24)
+precedes the launch. (The branch was rebased onto CS-1's merge after the runs and the reviews,
+so the commits' author times are the ones cited and their hashes are the rebased ones; the
+declaration was `a283279` and the reviewed records `32a38f4` before the rebase, as the run's
+ledger records.) No run was repeated or discarded.
 
 | Scenario | Reference (×2) | Candidate (×2) | Checks per run | Claims |
 | --- | --- | --- | --- | --- |
@@ -282,6 +285,10 @@ rule and the reviews, not on a differential result.
 - The comparison baseline crosses a harness revision (CF-1's `7024864e…` to FC-1's
   `884e771c…`), which changed one scenario's phase names and duration; one cadence difference
   is attributed to it.
+- CS-1's harness (`a1735b9f…`, merged while this unit ran) postdates this unit's runs: the
+  updated candidate ran on `884e771c…`, and CS-1's own acceptance runs on `a1735b9f…` used
+  CF-1's module. The updated candidate has not run on `a1735b9f…`; nothing in CS-1's change
+  touches the DUT's driver path, but the rerun is the first thing a later unit should do.
 - Two repetitions per scenario, one host, one QEMU version, KVM only, eight runs at a time,
   as CF-1.
 - Subagent transcripts are recorded by path in the run's ledger; those paths are temporary.

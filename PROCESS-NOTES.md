@@ -321,3 +321,28 @@ Status: open
 Status: fixed in AGENTS.md ("Run store location") by the `docs/run-store-config` branch; the
 other half of its prevention (inputs copied to the test host when a unit is planned) is in the
 plan's L02f2 entry.
+
+### 2026-09-25T18:12-07:00 — instruction gap: a spec edit's scan inputs stay on another machine
+Chapter: [L02s](notebook/L02s.md)
+What happened: L02s edited the spec on the test host, but the L02c whitelist and provenance
+map the leak scan uses were never copied from the original run store, and reaching that
+machine from an agent session was not possible. The scan ran without a whitelist, and
+revisions 4 and 5 were compared instead.
+Cost: a weaker mechanical check (a comparison, not a fresh classification); about three tool
+calls.
+Prevention: when a spec lands, copy its whitelist and provenance map into the run beside it,
+so any later revision has its scan inputs in the same store.
+Fix belongs in: `cleanroom-spec` (landing step) and the plan's L02f3 entry (copy them before
+revising again)
+Status: open
+
+### 2026-09-25T18:12-07:00 — correction: a bit table's reset column read as update timing
+Chapter: [L02s](notebook/L02s.md)
+What happened: the operator wrote that PSCON bit 11 needed no order relative to the
+auto-negotiation restart because its software-reset column says "Retain"; §11.1.3 says the
+opposite. The fresh verifier caught it.
+Cost: one extra verification round (about 2.6 minutes of agent time).
+Prevention: for any PHY or register write, look for the manual's section on when writes take
+effect before stating an order.
+Fix belongs in: `cleanroom-spec` authoring guidance (a check for "when does the write apply")
+Status: open

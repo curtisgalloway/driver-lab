@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-25T17:45-07:00
+Updated: 2026-09-25T18:12-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,16 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [L02s — spec revision 5](L02s.md)
+Entries: 2026-09-25T17:49-07:00 through 2026-09-25T18:12-07:00
+Outcome: complete; revision 5 sets PSCON bit 11, 15 PASS after one round of fixes.
+- The manual never says "set bit 11": the spec argues it as an `[inference]` from §8.4.2 and
+  Table 13-31, confidence medium, with the contrary sentence recorded.
+- The first verifier caught a wrong ordering claim: "Retain" in the bit table says what a
+  reset keeps, not when a write applies; §11.1.3 makes bit 11 wait for an AN restart.
+- The manual contradicts itself on TNCRS in half duplex (§8.4.2 against §13.7.12).
+- Out-of-scope notes from both verifiers go to L02f3.
 
 ### [L02f2 — bounded repair and retest](L02f2.md)
 Entries: 2026-09-25T16:45-07:00 through 2026-09-25T17:45-07:00
@@ -93,3 +103,5 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   [L02f2](L02f2.md) — a one-second receive hold after every RCTL write.
 - **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
   error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.
+  [L02s](L02s.md) — corrected in revision 5; its own first draft had an ordering error that
+  the verifier caught.

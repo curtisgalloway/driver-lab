@@ -10,6 +10,8 @@ check's PASS is used to support; **qualification** shows that a planted defect
 made that check fail for the intended reason. A **basis** records the identities
 behind a verdict. An **item** is a finding with a recorded disposition.
 A **status index** keeps those verdicts and items together for a campaign.
+A **deployment manifest** declares plugins and model roles; a **contract check**
+validates their output structure and provenance, not the truth of their results.
 
 CR2 extends the CR1 format with verification history and linked revision and
 candidate records. CR3 adds the registry and read-only freshness sweep; CR4 adds
@@ -256,8 +258,10 @@ the stopping rule. See the [glossary](../../GLOSSARY.md).
 The registry is a third file, with `version: 1`, matching `campaign`, `sources`
 (list), `citations` and `premises` (mappings), and `contradictions` (list). The
 last three may be empty. Duplicate keys and source IDs fail. The sweep reads these
-three metadata files only; it never opens source paths, parses a spec or diff,
-hashes files, invokes adapters or executes a harness. Run the existing index
+three metadata files plus deployment settings and class definitions. It never
+opens registered source paths, parses source content or diffs, hashes files,
+invokes adapters or executes a harness. An explicit --target-spec reads only tag
+definitions for manifest validation. Run the existing index
 checker first for evidence links and harness check-name existence. The sweep
 reuses its metadata validation with file inspection disabled.
 
@@ -380,7 +384,7 @@ See the [glossary](../../GLOSSARY.md).
 | `accepted_classes` | Mapping with exactly those claim IDs, each to a nonempty list of accepted evidence classes |
 | `target` | Nonempty description of the device/environment and pin boundary |
 | `rules` | Selected rule identity for each of qualification, result, verification and observation |
-| `reader` | `{name, version}` of the last adopted reading role; CR5 will supply the desired role through its manifest |
+| `reader` | `{name, version}` of the last adopted reading role; the deployment manifest supplies the desired role |
 | `evidence` | Public links supporting the scope declaration |
 
 Run results currently carry emulated evidence only. A scope omitting `emulated`
@@ -441,7 +445,7 @@ another item or a shortfall authorizes them. Unknown/malformed metadata fails
 validation before batching. This is a record guard, not proof of the human's identity.
 
 The queue contains stable campaign/kind/subject IDs, entry IDs, reasons, tiers,
-states, and the reader model for tier-1 work. There is one requalification per
+states, and each unit's role and model from the deployment manifest. There is one requalification per
 claim, one acceptance-set rerun per campaign, and one re-verification of affected
 accuracy history against the current text. Contested hardware/emulator facts join
 re-verification; rerunning an unchanged emulator cannot resolve that conflict.
@@ -453,11 +457,11 @@ reading's whole recorded section set. S4 still demands two independent lineages.
 
 Unmet S4/S5 queues a second reading first, with its coverage gaps. A changed reader
 role queues exactly one comparison reading for each campaign invocation, including
-sufficient campaigns. The default desired role is the constant Claude Fable 5.1,
-matching the latest recorded role; CR5 replaces this input with the manifest.
+sufficient campaigns. The reference reader is Claude Fable 5.1, matching the latest recorded role.
+The manifest supplies the desired role.
 Changing an unrelated registry model identity does not change that role.
 After a reviewed comparison, record its verdicts and update the adopted `scope.reader`;
-merely changing the constant does neither. Repeated sweeps have no side effects.
+merely changing the manifest does neither. Repeated sweeps have no side effects.
 
 Priority is second reading, comparison reading, re-verification, requalification
 by claim ID, acceptance rerun, then other tier-1 work; authorized tier-2 entries
@@ -515,3 +519,132 @@ blockers, ready work or invalid metadata; exit 0 means sufficient with no ready 
 Both commands use exit 2 for usage errors and support `--skill`. No real sweep
 or private adapter invocation is added to public CI; their synthetic tests run
 with the existing campaign-review discovery command.
+
+## Deployment manifest, version 1 (CR5)
+
+The reference is [evals/deployment.yaml](../../evals/deployment.yaml). Both the
+sweep and contract checker accept `--deployment PATH`; otherwise they read the
+`deployment` key beside `run_store` in the user config located by
+`utilities/run-store.py`. With no key, the reference applies. Relative config
+values resolve beside the config file; explicit CLI paths resolve from the working
+directory. An invalid configured manifest fails; it never silently selects the
+reference. These commands do not write user settings.
+
+The closed schema is `{version: 1, plugins: [...]}`. Entries have unique `id`
+strings, `kind` and `via: skill:<name>`. Required additional fields:
+
+| Kind | Fields | Meaning |
+| --- | --- | --- |
+| `source` | `command` | Nonempty argument list for the adapter entry point |
+| `fixture` | `command` | Nonempty argument list for the fixture entry point |
+| `producer` | `class` | Evidence class, without brackets |
+| `role` | `agent`, `model: {name, version}` | Invocation mechanism and model identity; `id` is reader, implementer or reviewer |
+
+All three roles are required. Model names and versions are nonempty strings;
+the version is a recorded model identifier, not a claim that a service exposes
+an immutable weight revision. The reference implementer uses CF-2's recorded
+`gpt-6-astra` identifier for both fields. It does not authorize an implementation.
+The queue assigns readings to reader, implementation to implementer, and other
+units (including fixture/requalification work) to reviewer as the operating agent.
+Every unit reports its `role` and corresponding `model`; tier-2 authorization
+and batch guards still apply independently.
+
+The `via` skill owns arguments, authentication and safety. Reference command
+paths are relative to the repository root; a deployment documents its own command
+working directory and arguments in that skill. Commands are declarations only:
+neither checker nor sweep executes them or interpolates shell strings. No plugin
+loader, scheduler, source-refresh executor or universal invocation wrapper is added.
+
+Producer classes come from the provenance definitions in SPEC-FORMAT.md.
+`--target-spec PATH` additionally reads the explicitly supplied spec's tag-table
+rows (`| \`[class]\` | ... |`); prose mentions do not define a class. Thus
+`kernel` passes with the e1000 spec's table, but is not globally promoted.
+No filesystem search discovers private specs or plugins.
+
+## Output contracts, version 1 (CR5)
+
+From the repository root, capture an adapter's output and supply one existing
+isolated run directory:
+
+```bash
+uv run --with pyyaml python3 skills/campaign-review/scripts/contract_check.py \
+  --source-json adapter-output.json --run-dir isolated-run --json
+```
+
+With neither output flag, check only the manifest. With either or both, check
+those artifacts as well. Missing inputs exit 3; structural findings exit 1;
+usage errors exit 2; satisfied contracts exit 0. `--skill` describes the CLI.
+When `--json` is requested, argument errors also return one JSON findings
+document on stdout with exit 2 and no argparse prose; the sweep follows the
+same rule. Invalid YAML syntax and construction (including invalid dates) yield
+findings with exit 1, not a traceback.
+The JSON report contains `version`, `ok`, `checks` and `findings`, and deliberately
+omits source IDs, input paths, raw details and command strings. JSON duplicate
+keys are rejected. The checker reads only metadata and never starts a guest,
+opens the source bytes or changes a run directory.
+
+### Source adapter
+
+The JSON object requires `id`, `version`, `sha256`, `status`, `checked`, and
+`provenance: {adapter, version, version_method}`. These reuse the registry's
+validator: strings are nonempty, checked is an ISO date string, status is
+`ok`, `blocked` or `unknown`, and hashes are full lowercase SHA-256 values.
+An `ok` source must have a hash; blocked/unknown may use null. `matches_pin`
+is optional and boolean or null. No content fields are accepted. The existing
+pinned-file adapter's `{ok, result, updated, would_update, findings}` envelope
+is also accepted; its `result` must satisfy the same identity contract.
+Envelope success and matching a pin are separate from satisfying this contract.
+A blocked, unknown or drifted observation may be structurally valid.
+
+### Fixture backend
+
+One directory contains `identities.json` and `verdicts.json`. The neutral
+identity representation requires:
+
+- `fixture: {name, version, sha256}` identifying the fixture or emulator;
+- `harness_sha256`, `kernel_sha256`, `image_sha256`, all full hashes;
+- `conditions`, a nonempty mapping including `scenarios: [one scenario name]`.
+
+The native QEMU representation remains supported without changing the harness:
+`qemu_version` and `sha256.qemu` identify the emulator; the sha256 mapping also
+requires `harness:l02harness.py`, `harness:guest-init.sh`, `kernel`, `initramfs`
+and `busybox`. Conditions are `driver`, `accel`, `scenarios` (one name),
+`dut_mem`, `host_kernel` and `python`. Additional identity fields, such as
+private `paths` and module hashes, are allowed but never echoed by the checker.
+
+Verdicts use the existing `{overall, results}` structure. Each result requires
+`scenario`, `verdict` and `checks`; each check has a nonempty `check` name and
+either `verdict: PASS|FAIL|ERROR` or native QEMU `ok: true|false` (mapped to
+PASS|FAIL). Names are unique within each scenario; result-group names are unique
+within the directory. Results may contain only the declared scenario and the
+reserved auxiliary/error groups below. Declaring a reserved name as the requested
+scenario is invalid; adding an undeclared executed scenario is invalid even if it
+passes. Both native QEMU and neutral backends use this rule:
+
+| Reserved group | Required meaning and constraints |
+| --- | --- |
+| `trace` | Postprocessing for the executed scenario. If startup or collection failed before that scenario, only trace ERROR is valid. |
+| `capture` | Capture postprocessing, requiring a result for the declared scenario. Native QEMU emits this only for smoke; neutral backends may capture any declared scenario. |
+| `boot` | Startup failure: ERROR, no completed checks, no executed scenario or between-scenarios result. |
+| `between scenarios` | Collection/infrastructure failure before or after the requested scenario: ERROR, no completed checks. The native harness uses this when guest-log collection fails. |
+
+The requested scenario must appear unless boot or between-scenarios ERROR records
+why it could not run. Trace/capture errors alone cannot justify its absence.
+Neutral backends translate startup/collection failures to these same reserved
+groups; arbitrary auxiliary names are not accepted.
+
+Overall must agree with the worst result-group verdict. PASS groups need completed
+checks and cannot hide failing checks; ERROR checks require ERROR groups. FAIL and
+ERROR scenarios may have zero completed checks: the native harness records an
+initial module-load guest failure as FAIL, and startup/infrastructure failures as
+ERROR. These outcomes remain failures even when the metadata contract is valid.
+
+Contract success means the output is interpretable, even when the driver FAILs
+or the run ERRORs. It does not qualify any claim or prove physical isolation.
+Raw artifacts remain in the original private run for review; the checker only
+requires the two metadata files so the reduced CI fixture can use the same check.
+Test fixtures omit every required provenance field in turn. Real isolation,
+provenance truth, conditions' adequacy and raw-artifact completeness remain the
+artifact reviewer's job. Producer observations and role session records follow
+C8's conventions (tool/model identity, date, sandbox/audit and private transcript
+locator); mechanical checks for them wait for a first private plugin.

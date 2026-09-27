@@ -7,7 +7,6 @@ Exit status: 0 sufficient/no ready work, 1 findings/work, 2 usage, 3 missing inp
 Use || true if findings should not stop a shell. --json emits one object.
 """
 
-import argparse
 from collections import Counter
 import json
 from pathlib import Path
@@ -16,6 +15,8 @@ import sys
 import index_check as check
 import source_registry
 import stopping
+import deployment
+from cli import Parser
 
 # Named formats avoid nested quote conventions and work before Python 3.12.
 # pylint: disable=consider-using-f-string
@@ -25,15 +26,17 @@ name: campaign-sweep
 description: Report campaign freshness, stopping conditions and guarded work.
 ---
 # Campaign sweep version 2
-Run sweep.py CAMPAIGN [--registry SOURCES] [--json]. The default registry is
+Run sweep.py CAMPAIGN [--registry SOURCES] [--deployment MANIFEST]
+[--target-spec SPEC] [--json]. The default registry is
 CAMPAIGN/sources.yaml. First run index_check.py to check file links/check names,
 and refresh applicable registry files with pinned_file_adapter.py locally.
-Only claims.yaml, status.yaml and the registry are opened. No source is parsed,
-hashed or executed. Existing stale/contested states survive; superseded history
+Only index/registry metadata, deployment configuration and class definitions
+are opened. No registered source is parsed, hashed or executed. Existing
+stale/contested states survive; superseded history
 is excluded. Eligible counts are a freshness filter; stopping evaluates S1-S5
 separately. Its queue/batch are proposals only, at most three units, with tier 2
-requiring a user decision on that item. The default reader is Claude Fable 5.1
-until CR5 supplies the manifest role. Unknown classes are R; W never starts work.
+requiring a user decision on that item. Models come from manifest roles; the
+reference reader is Claude Fable 5.1. Unknown classes are R; W never starts work.
 Narrow mappings require exact old/new hashes and reviewer confirmation.
 Missing mappings widen. Missing identities are reported, never invented.
 JSON version 2 changes ok and the exit status to stopping sufficiency/no ready
@@ -305,8 +308,9 @@ def spec_since(entry, basis, source, context):
     return mapping["since"] if mapping else "spec-r{revision}".format(**source)
 
 
-def sweep(claims, status, registry, reader=None):
-    """Compute effective states, retaining old verdicts and never opening files."""
+def sweep(claims, status, registry, reader=None, roles=None):
+    """Compare metadata; supplied roles keep evaluation free of file reads."""
+    roles = deployment.load() if roles is None else roles
     check.validate(claims, status, None)
     source_registry.validate(registry, claims, status)
     context = dict(
@@ -463,16 +467,20 @@ def sweep(claims, status, registry, reader=None):
         eligible_counts=dict(Counter(entries[e]["kind"] for e in accepted)),
         counts=dict(Counter(states.values())),
     )
-    result["stopping"] = stopping.evaluate(claims, status, result, reader=reader)
+    result["stopping"] = stopping.evaluate(
+        claims, status, result, reader=reader, roles=roles
+    )
     result["ok"] = result["stopping"]["sufficient"] and not result["stopping"]["batch"]
     return result
 
 
 def main(argv=None):
-    """Read exactly the three metadata inputs and report, without side effects."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    """Read campaign and deployment metadata and report, without side effects."""
+    parser = Parser(description=__doc__)
     parser.add_argument("campaign", nargs="?", type=Path)
     parser.add_argument("--registry", type=Path)
+    parser.add_argument("--deployment", type=Path)
+    parser.add_argument("--target-spec", type=Path)
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--skill", action="store_true")
     args = parser.parse_args(argv)
@@ -490,12 +498,18 @@ def main(argv=None):
                 check.read_yaml(args.campaign / "claims.yaml"),
                 check.read_yaml(args.campaign / "status.yaml"),
                 check.read_yaml(args.registry or args.campaign / "sources.yaml"),
+                roles=deployment.load(args.deployment, args.target_spec),
             )
             code = 3 if result["unavailable"] else 0 if result["ok"] else 1
         except OSError:
             result["findings"], code = ["Cannot read a required metadata file"], 3
-        except (check.Invalid, check.yaml.YAMLError, UnicodeError) as exc:
-            result["findings"], code = [str(exc)], 1
+        except (ValueError, check.yaml.YAMLError) as exc:
+            detail = (
+                str(exc)
+                if isinstance(exc, check.Invalid)
+                else "invalid input encoding or syntax"
+            )
+            result["findings"], code = [detail], 1
     if args.json:
         print(json.dumps(result, sort_keys=True))
     elif "entries" in result:

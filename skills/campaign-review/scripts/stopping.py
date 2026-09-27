@@ -7,7 +7,6 @@ from collections import defaultdict
 # Nested quotes in f-strings preserve compatibility with Python before 3.12.
 # pylint: disable=inconsistent-quotes
 
-READER = {"name": "Claude Fable", "version": "5.1"}
 BATCH_CAP = 3
 ROUND_CAP = 3
 CAP_DATE = "2026-09-26"
@@ -79,9 +78,9 @@ def select_batch(queue):
     return ready[:BATCH_CAP], ready[BATCH_CAP:]
 
 
-def evaluate(claims_doc, status, freshness, reader=None):
+def evaluate(claims_doc, status, freshness, roles, reader=None):
     """Return stopping conditions, explicit limits and a queue; execute nothing."""
-    reader = dict(READER if reader is None else reader)
+    reader = dict(roles["reader"] if reader is None else reader)
     entries = {e["id"]: e for e in status["entries"]}
     claims = {c["id"]: c for c in claims_doc["claims"]}
     scope = status.get("scope")
@@ -181,8 +180,15 @@ def evaluate(claims_doc, status, freshness, reader=None):
             if tier == 1 or (decision and decision.get("who") == "user")
             else "awaiting decision",
         )
-        if tier == 1:
-            value["model"] = reader
+        role = (
+            "reader"
+            if kind in {"second-reading", "comparison-reading", "re-verification"}
+            else "implementer"
+            if kind == "implementation"
+            else "reviewer"
+        )
+        value["role"] = role
+        value["model"] = dict(reader if role == "reader" else roles[role])
         if decision:
             value["decision"] = decision
         queue.append(value)

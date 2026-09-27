@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+plugins:
+  - id: pinned-file
+    kind: source
+    via: skill:campaign-review
+    command: [python3, skills/campaign-review/scripts/pinned_file_adapter.py]
+  - id: qemu-fixture
+    kind: fixture
+    via: skill:cleanroom-implementer
+    command: [python3, evals/e1000/harness/l02harness.py]
+  - id: qemu-observations
+    kind: producer
+    via: skill:cleanroom-implementer
+    class: emulated
+  - id: reader
+    kind: role
+    via: skill:spec-verifier
+    agent: Claude subagent
+    model: {name: Claude Fable, version: '5.1'}
+  - id: implementer
+    kind: role
+    via: skill:cleanroom-implementer
+    agent: Codex under cleanroom_sandbox.sh with sandbox_audit.py
+    model: {name: gpt-6-astra, version: gpt-6-astra}
+  - id: reviewer
+    kind: role
+    via: skill:campaign-review
+    agent: Claude subagent
+    model: {name: Claude Fable, version: '5.1'}

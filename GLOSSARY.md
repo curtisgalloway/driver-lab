@@ -122,7 +122,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Pinned-file adapter | A local command that hashes a named file, compares it with its expected hash, and returns identity metadata without returning content. |
 | Change map | Reviewed metadata connecting an old and new file hash to changed sections, check names, or scenarios. Missing or uncertain mappings require wider invalidation. |
 | Eligible record | A verdict still current after a sweep's identity checks. This is a freshness filter, not a campaign acceptance decision or an additional reading. |
-| Deployment manifest | A YAML file outside the repository, named from the user config, that declares a deployment's plugins by kind. |
+| Deployment manifest | A YAML file declaring plugins and models by role. The user config can select a private manifest; otherwise the repository reference applies. |
+| Contract check | A structural check of plugin outputs and required provenance; it does not establish source availability, driver correctness or test isolation. |
+| Model role | Reader, implementer or reviewer: a named job mapped to an agent and a model in the deployment manifest. |
 | Plugin (extension point) | A skill, packaged like this repository's own, implementing one extension point for a deployment: source adapter, evidence producer, implementer or reviewer, or fixture/harness backend. |
 | Claim map | Per campaign, the data file linking each claim ID to the harness checks that support it and the planted defects and runs that qualified it; proposed for e1000 as `evals/e1000/claims.yaml`. |
 | Acceptance set / isolated run | The ten e1000 harness scenarios run for the reference and the candidate / one scenario on freshly booted guests, so nothing left over from another scenario reaches it. |

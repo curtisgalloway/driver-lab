@@ -8,7 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 Revision: 2026-09-25, second amendment (L02g folded into L02f3, L02f2b's H1 fix, review and
 record defaults, deferred material moved to [DEFERRED-PLAN.md](DEFERRED-PLAN.md); see
 [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units) under
-L02). Earlier revisions: 2026-09-25 (L02 remaining units revised after a Claude–Codex
+L02). 2026-09-26: the [continuous-review milestones](#cr--continuous-review) CR1–CR8 and
+CR-G added from the design's C1–C8. Earlier revisions: 2026-09-25 (L02 remaining units revised after a Claude–Codex
 consultation; the user approved the changes) and 2026-09-20. No experiment launched by this
 plan.
 
@@ -529,17 +530,432 @@ the user's.
   compare the carrier-error totals per interval; and read STATUS.FD right after G7 with no
   link and record it, so the first interval's duplex is known).
 
+## CR — Continuous review
+
+**Status:** `pending`; no CR milestone has started. Derived 2026-09-26 from the design's
+[Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
+section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
+as pull request #26, `80eb11b`); the decisions taken before approval are in
+[evidence/DESIGN-2026-09-26.md](evidence/DESIGN-2026-09-26.md). The plan's review is
+[evidence/PLAN-CR-2026-09-26.md](evidence/PLAN-CR-2026-09-26.md).
+
+**Terms** (full definitions in the design's Terms block and the [glossary](GLOSSARY.md)):
+
+- **Status index** — `evals/e1000/status.yaml`: one entry per tracked verdict or item, with its
+  basis and status. **Claim map** — `evals/e1000/claims.yaml`: claim ID to harness checks and
+  qualifying defects and runs.
+- **Sweep** — one local command comparing every basis in the index with the current
+  identities; it prints the stale set, the stopping-rule state and the tier-1 queue.
+- **Source registry** — the list of sources by local ID, version and hash that the sweep reads
+  as "current". **Deployment manifest** — the YAML file declaring a deployment's plugins and
+  its models by role.
+- **Tier 0 / 1 / 2** — no model, every change / queued agent units in batches of at most three
+  / only on a person's decision. **Sufficient for scope** — C6's state (S1–S5).
+
+### Conventions for CR
+
+- One topic branch and one pull request per milestone, prefix `driver-porting: CR<n> —`;
+  evidence in `evidence/CR<n>.md`, a notebook chapter in `notebook/CR<n>.md` indexed in
+  [notebook/index.md](notebook/index.md); private material in the run store under run IDs
+  `e1000-cr<n>-<date>-<n>`. Push, pull requests and merges follow [AGENTS.md](AGENTS.md).
+- **Orchestrated execution and quota routing (D9) still apply:** each milestone, and each
+  tier-1 unit inside CR6, is one fresh subagent; routing follows the user's quota strategy,
+  Claude subagents by default and Codex as overflow only for work outside the clean-room
+  separation. No CR milestone launches a clean-room implementer.
+- Review and records follow the [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
+  Code milestones: one independent reviewer reading the diff **and** the sweep's or check's
+  output on the real e1000 index (the artifact); `review-swarm` where named below because the
+  code decides what runs unattended. Data milestones: a reviewer tracing a declared sample of
+  entries to public evidence. Spec readings: `spec-verifier`, as today.
+- **Once CR1 lands, the index is the status record** for e1000's verdicts and open items (C1's
+  one-job rule): this plan and the evidence files link to it rather than restating which items
+  are open. Completed evidence files are not edited to remove their tables.
+- **Proposed locations** (decided here so no milestone re-litigates them; still proposed until
+  built): the method's code as a new skill, `skills/campaign-review/` (a `SKILL.md` for the
+  orchestrator, `scripts/`, `tests/`), so that a private deployment gets it by installing this
+  plugin (C7); the index format in `skills/campaign-review/INDEX-FORMAT.md`; the public reference
+  manifest and registry for the public campaigns as `evals/deployment.yaml` and
+  `evals/e1000/sources.yaml`. YAML is read with PyYAML under `uv run --with pyyaml`, as the
+  ENC28J60 tools do; CI reuses that job's venv. Scripts follow the cli-conventions exit
+  contract `spec_check.py` documents (0 clean, 1 findings, 2 usage error, 3 missing
+  precondition). The skill's `SKILL.md` stays a short orchestrator section.
+- **Guard against over-building (the design's):** the layer adds the index and claim map, the
+  registry, the manifest schema, the sweep, the contract check and their tests. No service,
+  database, scheduler, automated spec edit or automated merge; anything more needs a design
+  change first. A milestone that finds it needs more stops and says so.
+
+### Milestones
+
+| ID | Outcome | Covers | Depends on | Size | Status |
+| --- | --- | --- | --- | --- | --- |
+| CR1 | e1000 claim map and status index: claims, qualifications, candidate results, `[emulated]` observations, open items; index check in CI | C1 (most), C6 S1–S3 data, C3 tier-0 index check | — | one session | `pending` |
+| CR2 | Spec verification history in the index by section (revisions 3–8), and the SR-8 → CF-2 path backfilled | C1 (rest), C5 (backfill) | CR1 | one session | `pending` |
+| CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | `pending` |
+| CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | `pending` |
+| CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | `pending` |
+| CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | `pending` |
+| CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | `pending` |
+| CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | `pending`, conditional |
+| CR-G | Layer acceptance against C1–C8 together | all | CR1–CR7; CR8 or the user's decision on C5 | one session | `pending` |
+
+CR6 and CR7 may run in parallel after CR5. CR8 waits on an outside condition and holds up
+nothing before CR-G. Publishing L01's Pi fixture harness as a second reference backend is not a
+milestone: C8's criterion names the QEMU backend only; it is recorded in the deferred table
+below.
+
+Requirement coverage:
+
+| Req | Where met | Accept criterion checked in |
+| --- | --- | --- |
+| C1 basis and index | CR1, CR2 | CR2 (reviewer traces every entry), CR-G |
+| C2 invalidation | CR3 | CR3 (synthetic change matrix), CR7 (stand-in) |
+| C3 tiers and queue | CR1 (index check), CR3 (detection), CR4 (queue, cap, guard, changed identity → units), CR6 (batch) | CR4, CR6, CR-G |
+| C4 comparison readings | CR4 (trigger), CR5 (roles), CR6 (the reading) | CR6 |
+| C5 findings to a revision | CR2 (SR-8 → CF-2 backfill), CR8 (live item) | CR8, or deferred on a condition (below) |
+| C6 stopping rule | CR4 (evaluation), CR6 (e1000 verdict) | CR6, CR-G |
+| C7 private deployment | CR3 (registry), CR5 (roles), CR7 | CR7 |
+| C8 extension points | CR3 (reference adapter), CR5 (manifest, contract check), CR7 (stubs only) | CR5, CR7 |
+
+**One criterion is deferred on a condition: C5's live item.** It needs a spec revision, and C6
+says a W item never starts one ("W items wait for the next revision made for another reason").
+CR8 therefore runs only when a revision is made for another reason: an R item (CR6's readings
+may produce one), an E item that changes a claim's status in scope, or a stale entry whose text
+must change; or when the user decides to run a revision for the queued items anyway, recorded
+as that decision. The design accepts the layer only when all of C1–C8 are met, so if neither
+has happened by CR-G, CR-G does not accept the layer with C5 partly met on its own authority:
+it asks the user either to accept the layer with C5's live item open under that reopening
+condition (a change to the design's acceptance that only the user can make), or to authorize
+the revision for the queued items (CR8).
+
+### CR1 — e1000 claim map and status index
+
+- **Outcome:** one checked file shows, for the e1000 campaign, each of the 28 claims'
+  qualification and the candidate's result, each `[emulated]` observation EM1–EM8, and every
+  open item from AF-1, SR-7, SR-8 and CF-2 with its class, source and disposition. Before: the
+  same facts sit in prose tables across about a dozen evidence files. After: `status.yaml` and
+  `claims.yaml`, and a checker that CI runs.
+- **Covers:** C1 (claims, qualifications, results, observations, items; basis fields; statuses;
+  rules), C6's S1–S3 data, C3's tier-0 index check. **Depends on:** nothing.
+- **Scope:** the claim map from L02d3, QF-1, FC-1 and CS-1 (claim ID, check names exactly as
+  the harness emits them, qualifying defects and run IDs, scope notes, Q18's shortfall); index
+  entries of kinds `qualification`, `result` (the candidate `df37c7ad…` on CS-1's harness
+  `a1735b9f…`, round `a2`), `observation` and `item`; the index format; the checker.
+  **Excluded:** spec verification entries (CR2); the sweep (CR3); any change to the harness or
+  to completed evidence files.
+- **Steps:**
+  1. Write `skills/campaign-review/INDEX-FORMAT.md` (proposed): entry kinds, the basis fields
+     C1 lists (spec revision and hash, sections read and declared dependencies, source pins,
+     harness hash, emulator and guest identities, candidate module, toolchain, model and
+     version, run IDs), `status` with reason and "stale since", `supersedes`, item `class`
+     (R/E/W), `source` (1/2/3), `disposition` (`queued`, `applied`, `shortfall` with one of the
+     four reasons and a reopening condition, `rejected`), an optional `decision` record (who,
+     date, link), an optional `cost`, and a `rule` field naming the scoring or qualification
+     rule the verdict was reached under (for readings: A1 as written, or A1 as amended
+     2026-09-26), so that M16's rule carries over: verdicts under different rules are not
+     compared without saying so. Content limited to IDs, hashes, verdicts, run IDs and links
+     (C1's rule).
+  2. Write `evals/e1000/claims.yaml` and `evals/e1000/status.yaml` (proposed) from the public
+     evidence. Each claim also lists the spec sections its expected outcome cites (`cites`),
+     which C2's new-revision row needs. Values that exist only in private ledgers (a full hash where the evidence
+     truncates) are filled from the run store and must already be public-safe identities;
+     nothing else from the store is copied.
+  3. Write `skills/campaign-review/scripts/index_check.py` (proposed): schema, allowed values,
+     unique IDs, `supersedes` targets exist and are not themselves current, every claim in the
+     map has a qualification entry, every check name in the map exists in `l02harness.py`, every
+     evidence link resolves to a file in the repository (home paths stay the job of
+     `check-no-private-paths.py`).
+  4. Tests in `skills/campaign-review/tests/` (proposed) with good and bad fixtures; add the
+     test and check steps to `.github/workflows/checks.yml` and the list in AGENTS.md.
+  5. Point the plan's e1000 follow-on status at the index in one line.
+- **Accept:** every claim Q01–Q28 is in the map, with its cited sections, and has a
+  qualification entry (Q18 a shortfall, `unobservable`, with its reopening condition and a
+  `decision` record linking L02f3's user-approved acceptance, which S2 requires for a
+  mandatory claim); every open item in AF-1, SR-7, SR-8 and CF-2
+  appears once with class, source and disposition (A-RR-1 W, per the orchestrator's decision;
+  A-RR-7 carried as the next implementer brief's item; SR-8's item 4 recorded as a records
+  finding, not a spec item); the checker passes on the real files and fails on each bad
+  fixture; CI runs it.
+- **Verify:** `uv run --with pyyaml python3 -m unittest discover -s skills/campaign-review/tests`
+  and `uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals/e1000`
+  (both proposed interfaces); `python3 utilities/check-no-private-paths.py`; `git diff --check`.
+- **Review:** a fresh reviewer traces a declared sample (all items, every fifth claim, every
+  shortfall) to the public evidence, and reads the checker's diff. Regressions: the harness's
+  check names are the claim map's keys, so a later rename breaks the map; the checker must catch
+  that.
+- **Sizing:** data entry from bounded, public tables plus one small checker; the unknown is how
+  much of the basis is recoverable per entry from public files. **Split point:** the claim map,
+  qualifications and results first; observations and items second.
+- **Status:** `pending`.
+
+### CR2 — Spec verification history and the SR-8 → CF-2 backfill
+
+- **Outcome:** the index says, for revision 8, which sections' verification is current and on
+  which reading it rests, and records the R-item path from CF-1's finding through SR-8 and CF-2
+  as linked entries. It confirms or corrects the design's worked example (S4 fails on revision
+  8's TNCRS rule).
+- **Covers:** C1 (verification entries; the accept criterion as a whole), C5 (the backfilled R
+  path). **Depends on:** CR1.
+- **Scope:** `verification` entries for every landed revision (3 to 8) from L02b, L02c, L02s,
+  AF-1, L02f3, SR-7 and SR-8: by default one entry per reading unit, split per section only
+  where a later revision touched part of that unit, so C2 can stale a section without staling a
+  whole reading and the entry count stays small enough to trace; each with the sections read,
+  the evidence classes its verdicts rest on (C2's `[kernel]` and `[source-observed]` rows need
+  them), the dependencies its brief declared (widened to the whole
+  revision when none were recorded, as C2 says), the verifier and model, the round, and the
+  record's `spec_sha256`. Superseded entries stay. The SR-8 → CF-2 chain: CF-1's finding as an
+  R item, SR-8's revision with its requirement-change header, its readings, CF-2's candidate
+  round and results, with `applied` and `supersedes` links. **Excluded:** converting legacy
+  verification records (they stay legacy, M16's rule); re-reading anything.
+- **Steps:** extend the index; extend the checker (a verification entry's `spec_sha256` matches
+  its revision's hash; every revision from 3 to 8 is present; a revision header marked
+  requirement-changing has a matching item chain); tests.
+- **Accept:** C1's criterion: the index and claim map cover every claim, every landed
+  revision's verification and every open item, and a reviewer can trace each entry's basis to a
+  public evidence file and a run ID without opening private content. The SR-8 → CF-2 path is
+  one linked chain. The worked example's S4 statement is confirmed from the entries or
+  corrected in the evidence (not in the design) with the reason.
+- **Verify:** as CR1, plus the checker on the real files.
+- **Review:** a fresh reviewer traces **every** entry (C1 requires each), reading public
+  evidence only; the reviewer records any entry it could not trace.
+- **Sizing:** six revisions' readings from public evidence; the unknown is how the older
+  readings (L02b, L02c) recorded sections. **Split point:** revisions 6–8 first (they decide
+  today's status), 3–5 second.
+- **Status:** `pending`.
+
+### CR3 — The sweep, tier 0
+
+- **Outcome:** `sweep.py` (proposed, `skills/campaign-review/scripts/`) reads a campaign's index
+  and the source registry and prints the stale set with reasons and "stale since". Before: an
+  operator rereads evidence to decide what a QEMU upgrade invalidates. After: one command.
+- **Covers:** C2 (the whole table and the widening rule), C3 (tier-0 detection), C7 (sources
+  identified by ID, version and hash; the sweep never parses a source), C8 (the reference
+  source adapter). **Depends on:** CR2.
+- **Scope:** the registry format and `evals/e1000/sources.yaml` (proposed): the manual pin, the
+  Linux v6.12 files, the QEMU package and binary, the guest kernel and image, the harness files,
+  the candidate and reference modules, the landed spec revision, the toolchain; a **pinned-file
+  adapter** (proposed `scripts/pinned_file_adapter.py`, reusing or wrapping `corpus_check.py`'s
+  pin logic rather than rewriting it) that prints `id`, `version`, `sha256`, `status` and date
+  checked for a file named relative to the repository or the run store (C8's output shape,
+  content never), and can write those values into the registry; the sweep itself only reads
+  the registry; the C2 rules for every row; widening (item → section → document,
+  check → scenario → harness); new-revision staleness of qualifications through the claim
+  map's `cites`; harness diffs mapped to checks by the claim map's check names,
+  widened to all qualifications when a diff cannot be mapped; stale entries excluded from
+  acceptance counts. **Excluded:** the stopping rule and the queue (CR4); the manifest and
+  the contract check (CR5).
+- **Steps:** registry format; adapter; invalidation engine as data-driven rules, one per C2
+  row; the sweep's report (text, and `--json`); tests, including a **synthetic change matrix**
+  (one change per C2 row against a copy of the e1000 index); a short `SKILL.md` section for the
+  orchestrator: run the sweep at the start of each orchestrator session and whenever a known
+  input changes (a host package upgrade, a new manual edition).
+- **Accept:** C2's criterion: each matrix row marks exactly the listed entries stale; a model
+  change marks nothing; a harness diff touching one check stales only that check's claims; an
+  unmappable change widens as stated; an input not in the registry (such as an unrecorded
+  compiler) cannot trigger anything. Run on the real index with the current registry, the sweep
+  reports no stale entry, or each one it reports is explained.
+- **Verify:** the unit tests (under `uv run --with pyyaml`); the sweep locally on the real index (needs the run store,
+  `python3 utilities/run-store.py`; if unconfigured, ask the user); the privacy check.
+- **Review:** one independent reviewer reading the diff, the matrix and the real run's output,
+  checking each rule against C2's table cell by cell.
+- **Sizing:** one engine with table-driven rules and one adapter; the unknown is mapping harness
+  diffs to check names. **Split point:** spec, source and candidate rows first; harness and
+  emulator rows second.
+- **Status:** `pending`.
+
+### CR4 — Stopping rule and the tier-1 queue
+
+- **Outcome:** the sweep also reports each campaign as **sufficient for scope** or lists
+  exactly what blocks it, and emits the tier-1 queue. On e1000 it should report S4 unmet and
+  queue one unit: the second independent reading of revision 8's requirement change.
+- **Covers:** C6 (S1–S5; the item rules; the three-round cap check; shortfall reasons; a
+  person's approval for a shortfall on a mandatory claim), C3 (the queue, the batch cap of
+  three, the tier-2 guard), C4 (a change of the reader role queues one comparison reading per
+  campaign in scope, sufficient ones included; the role itself comes from CR5's manifest, and
+  until then from a constant equal to the reference manifest's value). **Depends on:** CR3.
+- **Scope:** the scope declaration per campaign (S1: claims, accepted classes, target) in the
+  index; S1–S5 evaluation; item rules (W never queues a revision; E only when it changes a
+  claim's status in scope; unknown class treated as R; records findings are not spec items); a
+  report of any revision started after 2026-09-26 with more than three rounds (revision 7's six
+  readings predate the cap and are recorded as historical); the `rule` guard (entries under
+  different rules are reported, not silently compared); the queue: tier-1 units from stale
+  entries (re-verification, requalification, acceptance-set rerun) and from unmet S4/S5 (a
+  second reading), tier-2 entries listed as `awaiting decision` and never batched unless the
+  index holds a `decision` record; a batch of at most three. **Excluded:** running any unit
+  (CR6); the manifest, roles and contract check (CR5).
+- **Steps:** scope block and evaluation; item rules; queue and batch selection; a one-line
+  annotation in [QEMU-DIFFERENTIAL.md](QEMU-DIFFERENTIAL.md)'s A1 row pointing to the design's
+  C5 amendment (approved 2026-09-26), as A6's amendment is recorded there; AGENTS.md: the sweep
+  at the start of each orchestrator session, and a batch as at most three tier-1 units ending
+  in checkpoint commits, pull requests only on "push"; tests.
+- **Accept:** C6's first three criterion parts on e1000 — the sweep reports sufficient or lists
+  exactly what blocks it; every open item has a class and a disposition; no W item alone queues
+  a revision. C3's first criterion part: for each row of CR3's change matrix, one changed
+  identity yields the stale entries **and the tier-1 units that cover them** (the expected unit
+  kind per row, tested). Tests also show: a tier-2 unit never enters a batch without a recorded
+  decision; a fourth queued unit waits for the next batch; a change of reader model queues one
+  comparison reading per campaign; an unknown item class is treated as R; entries under
+  different rules are flagged, not compared. The e1000 report matches the design's
+  worked example, or each difference is explained in the evidence.
+- **Verify:** unit tests; the sweep on the real index; the privacy check.
+- **Review:** `review-swarm` on the diff (the queue decides what runs unattended, and the tier-2
+  guard is an access control), plus the e1000 report as the artifact.
+- **Sizing:** rules over data already in the index; the manifest moved to CR5 to keep this
+  one session. **Split point:** the stopping rule first; the queue and its guards second.
+- **Status:** `pending`.
+
+### CR5 — Deployment manifest and contract check
+
+- **Outcome:** the deployment manifest names a deployment's plugins and its models by role, and
+  `contract_check.py` (proposed) checks a source adapter's JSON and a fixture backend's run
+  directory against C8's table. A deployment runs the same command against its own plugins.
+- **Covers:** C8, C4 (the role change that queues a comparison reading), C7 (models by role).
+  **Depends on:** CR4.
+- **Scope:** the manifest schema (`id`, `kind` of `source`, `producer`, `role` or `fixture`,
+  `via`, `command` where needed, a producer's `class`) and the public reference manifest
+  `evals/deployment.yaml` (proposed) naming only the reference plugins: the pinned-file adapter,
+  the QEMU harness as fixture backend and as `[emulated]` producer, and roles `reader`
+  (`spec-verifier` in a Claude subagent), `implementer` (`cleanroom-implementer` under Codex)
+  and `reviewer`; the queue (CR4) reads each unit's model from the role; the `deployment` key in
+  the user config file, beside `run_store`, defaulting to the reference manifest; the
+  producer-class rule (in `SPEC-FORMAT.md` or the target spec's own tag table, so `[kernel]`
+  passes for e1000); the adapter contract (`id`, `version`, `sha256`, `status`, date,
+  provenance: the adapter's name and version, how the version was determined); the backend
+  contract (one run directory per isolated run, per-check verdicts PASS, FAIL or ERROR by check
+  name, `identities.json` with fixture or emulator identity, harness hash, kernel and image
+  hashes); stubs in test fixtures (an adapter returning invented IDs; a backend returning a
+  canned run directory; one stub per missing provenance field); a canned QEMU run directory
+  reduced from a real `l02harness.py` run (verdicts and identities only) for CI, and the check
+  run locally on a live run directory. **Excluded:** mechanical checks for the producer and
+  role points (conventions until a first private plugin exists, per C8).
+- **Accept:** C8's criterion: the check passes on the reference adapter, the QEMU backend and
+  the stubs, and fails on stubs missing each required provenance field; the manifest schema and
+  the contract check are the only new interfaces; no plugin other than the reference plugins is
+  named in any public file. Changing the reader role's model in a manifest changes the model
+  the queue names, with no code change; a producer with an unknown class is rejected.
+- **Verify:** unit tests under `uv run --with pyyaml`; the check locally on a live QEMU run
+  directory; the privacy check.
+- **Review:** one independent reviewer reading the diff and the check's output on the live
+  run.
+- **Sizing:** one schema and two contracts with fixtures. **Split point:** the manifest and
+  roles first; the contract check second.
+- **Status:** `pending`.
+
+### CR6 — The first tier-1 batch
+
+- **Outcome:** a batch of two tier-1 units, taken from the queue and run with no person starting
+  each: **CR6a**, the second independent reading of revision 8's requirement change, the first
+  tier-1 unit by the orchestrator's decision; and **CR6b**, a comparison reading of the whole
+  of revision 8 by a new reading model (C4), queued by changing the reader role in the
+  manifest. Afterwards the sweep reports e1000 sufficient for its declared scope, or lists
+  what blocks it.
+- **Covers:** C3 (the batch), C4, C6 (the e1000 verdict). **Depends on:** CR5. **Needs the
+  user:** which model is the new reading model for CR6b (the design names models by role and
+  the user selects models). CR6 does not close until two units have run from the queue: without
+  the user's choice, the second unit must be one the queue produced legitimately (for example
+  after a registry refresh stales an entry); otherwise CR6a checkpoints and CR6 waits for the
+  choice.
+- **Scope:** CR6a's brief covers every requirement-changing r7 → r8 hunk SR-8 names: §4.7's
+  row, §5.5's sample, §5.9 L6 and §10.3's placement, with their dependencies. Each unit follows
+  the AF-1 / SR-7 procedure: a fresh `spec-verifier` reader with no sight of earlier records, a
+  brief declaring sections and dependencies, the key-by-key join (`review/comparison.md` in the
+  run store), adjudication against the cited authority, and no verdict changed before
+  adjudication. Each unit's evidence file `evidence/CR6a.md` and `evidence/CR6b.md`; new index
+  entries that supersede, never edit, each with its `rule`; cost per unit (minutes, and tokens
+  where the harness shows them) in the index. **Excluded:** any spec edit (an R item goes to
+  the user as a revision decision, and is CR8's trigger); a candidate round; recall
+  re-measurement.
+- **Accept:** C3's batch criterion: at least two units ran from the queue to reviewed
+  checkpoint commits with no person starting each, cost recorded. C4's criterion: one
+  comparison reading by a different model, joined key by key, every disagreement adjudicated
+  or listed. C6's: the e1000 campaign reaches sufficient, or its blockers are those in the
+  worked example (or new ones this batch found, each with class and disposition).
+- **Verify:** the index checker and the sweep after each unit; the leak scan and privacy check
+  as for any spec reading.
+- **Review:** each unit's adjudication by a fresh reviewer that sees both records and the cited
+  passages; `spec-verifier` is the reading itself.
+- **Sizing:** CR6a is about one AF-1-sized reading (8.7 minutes in AF-1 for changed sections)
+  plus a join; CR6b reads the whole revision and is several times larger; one unit per
+  subagent. **Split point:** the batch is already two units.
+- **Status:** `pending`.
+
+### CR7 — A stand-in private deployment
+
+- **Outcome:** tests create a temporary deployment (root, run store, registry of invented
+  documents, stub plugins only, a manifest reached through the `deployment` key) and run the
+  method in it, showing the public repository needs no change to serve a private one.
+- **Covers:** C7, C8's stub-only clause. **Depends on:** CR5.
+- **Scope:** a generator for the stand-in (in the tests); automated checks of the sweep, C2's
+  invalidation, detection of a registry version or hash change with the stand-in sources
+  unreadable, and a role change changing the queued model; a scan of the public repository for
+  every stand-in ID afterwards; one **live** tier-1 re-verification in a stand-in generated to
+  a scratch directory outside the repository: a `spec-verifier` reading of the stand-in's small
+  invented spec against its invented sources, queued by the sweep. **Excluded:** anything about
+  a real private deployment (the design's non-goal).
+- **Accept:** C7's criterion in full: the stand-in runs the sweep, C2's invalidation and one
+  tier-1 re-verification; with its sources unreadable to the sweep a registry change is still
+  detected; changing the role configuration changes the model the queue names without a code
+  change; the public repository contains none of the stand-in IDs. C8's: the stand-in runs
+  with stub plugins only.
+- **Verify:** unit tests under `uv run --with pyyaml`; the live reading's record in the scratch
+  stand-in (its location is not recorded in the repository); the leak scan; the privacy check.
+- **Review:** one independent reviewer reading the diff, the test output and the live
+  reading's result.
+- **Sizing:** test scaffolding over existing commands plus one short reading. **Split point:**
+  the automated stand-in first; the live reading second.
+- **Status:** `pending`.
+
+### CR8 — One live item through a revision (conditional)
+
+- **Outcome:** one queued W or E item (for example SR-8's item 2, a sentence in §5.5, or
+  CF-2's `[emulated]` note on STATUS.FD) goes through the C5 loop: a revision unit on a working
+  copy of revision 8, the verification C5 requires for its class, and the index updated at each
+  step, old entries superseded.
+- **Covers:** C5 (the live item). **Depends on:** CR2, CR4; and **a revision made for another
+  reason**, or the user's recorded decision to run one for the queued items (see the coverage
+  note above). Until then its status is `pending` with that condition.
+- **Scope:** the SR-n pattern: the queued items that ride along, the header's
+  requirement-change statement, at most three rounds with fixes after round two only deleting
+  or narrowing, then what remains to the user. If the revision changes a requirement, the CF-n
+  candidate round is a tier-2 step launched by the user and is not part of CR8.
+- **Accept:** C5's second criterion: one live W or E item carried through a revision with the
+  index updated at each step; C6's "no W item alone started a revision" still holds, or the
+  user's decision that overrode it is recorded.
+- **Verify / review:** as SR-7 and SR-8 (`spec-verifier`, the leak scan, the index checker and
+  the sweep after landing).
+- **Sizing:** an SR-sized unit. **Split point:** the revision and its readings; nothing smaller.
+- **Status:** `pending`, conditional.
+
+### CR-G — Layer acceptance
+
+- **Outcome:** one acceptance table, C1–C8 criteria against evidence, on the e1000 campaign and
+  the stand-in deployment, as the design's "Acceptance for the layer" section asks.
+- **Checks:** every criterion from its milestone's evidence, rerun where cheap (the index
+  checker, the sweep on the real index, the change matrix, the contract check, the stand-in
+  tests); cross-milestone interactions: the sweep after CR6's entries still reports the same
+  stale set and stopping state; a harness check rename would break the claim map and be
+  caught; the queue still names the reference manifest's models when no `deployment` key is
+  set. The over-building guard: list every file the layer added and confirm it is the index,
+  claim map, registry, manifest schema, sweep, contract check, their tests and docs. C5's live
+  item met by CR8, or the user's decision on it (see the coverage note) recorded. The full CI
+  list locally (AGENTS.md's final-checkpoint rule).
+- **Plan updates:** the deferred table's rows for M03–M04 and M16–M17 and DEFERRED-PLAN's M16
+  and D6 already point here (this revision); CR-G records the final state there.
+- **Review:** `review-swarm` over the layer's combined diff, plus a fresh reviewer checking the
+  acceptance table against the evidence files.
+- **Sizing:** verification and one table, no new code. **Status:** `pending`.
+
 ## What is deferred from the immediate path
 
 | Work | Disposition |
 | --- | --- |
 | Complete source sanitization, related-controller removals and harness isolation (remaining M02) | Preserve the current artifacts and audit findings. Resume only for an explicitly selected spec-only experiment; not required for L01. |
-| Generic execution contracts and synthetic replay (M03–M04) | Use a brief, evidence table and ordinary build/test logs for L01. Build shared machinery only after demonstrated need. |
+| Generic execution contracts and synthetic replay (M03–M04) | Use a brief, evidence table and ordinary build/test logs for L01. Build shared machinery only after demonstrated need. L02's hand-run loop is that need for the record and invalidation half only, which the [CR milestones](#cr--continuous-review) build without M03/M04 (2026-09-26); replay stays here. |
 | Frozen spec-only trial and dual blinded attribution (M05/M08) | L01 permits logged outside assistance and repairs; keep these experimental conditions separate. |
 | Fixture and meaningful test qualification (parts of M06–M07) | Keep the necessary hardware identity, expected outcomes and negative controls in L01; do not require the generic experimental infrastructure. |
 | Paired authoring/implementation and complete documentary scoring (M09–M13, P01) | Optional follow-on to answer comparative questions; no immediate gate. |
 | Test-authoring experiments and companion-skill ablation (M14–M15) | Exercise useful existing skills in L01; defer controlled comparisons. |
-| Automated maintenance/invalidation and full pilot qualification (M16–M17) | Preserve versioned evidence now; defer general machinery and broader claims. |
+| Automated maintenance/invalidation and full pilot qualification (M16–M17) | M16a (record and invalidation) and D6 are absorbed into the [CR milestones](#cr--continuous-review) for campaigns with a claim list, and M16b (feedback) partly, through C5 and C7 (2026-09-26). Replay of old attempts with archived tools and M17 stay deferred. |
+| L01's Pi fixture harness (`l01hw.py`, only in its private run) as a second public reference fixture backend for C8 | Not needed for C8's criterion, which names the QEMU backend. Publish only after L01 completes, with a privacy pass, the harness defects its review found fixed or recorded, and the CR5 contract check passing on it (2026-09-26). |
 | The candidate's two link-check callers (`link_work` and the watchdog) are not serialized against each other beyond the statistics lock; the carrier decision can interleave and leave the carrier stale for up to one 2 s tick after a link flap (CF-2, A-RR-7; pre-existing since L02e; no statistic affected) | Deferred to the next implementer round's brief, whenever one is launched: one serialization for the carrier decision, or one work item for both callers. Not a round on its own. |
 
 The detail behind these rows is in the [deferred plan](DEFERRED-PLAN.md): decisions D1–D6, the
@@ -611,6 +1027,8 @@ subagent and one PR (implementer routing: D9). Read [notebook/index.md](notebook
 first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
+- **Continuous review:** the [CR milestones](#cr--continuous-review) are planned, none
+  started; the next eligible one is CR1 (the e1000 claim map and status index).
 - **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
   [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
   2026-09-25; the order is the orchestrator's):

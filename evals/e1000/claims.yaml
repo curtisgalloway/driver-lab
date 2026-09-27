@@ -1,0 +1,882 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+campaign: e1000
+harness: evals/e1000/harness/l02harness.py
+claims:
+- id: Q01
+  title: The interface's MAC is the one in the EEPROM
+  mandatory: true
+  cites:
+  - '5.3'
+  checks:
+  - MAC matches QEMU's
+  - MAC matches QEMU's (load 1)
+  - MAC matches QEMU's (load 2)
+  - MAC matches QEMU's (load 3)
+  scenarios: &id001
+  - smoke
+  - frame-sizes
+  - ring-wrap
+  - rx-overrun
+  - link-flap
+  - link-loss-tx
+  - stop-start
+  - down-during-traffic
+  - reload
+  - itr
+  scope: MAC equality only; not proof of EEPROM origin.
+  defects:
+  - id: d01
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d01-smoke
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-smoke
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q02
+  title: Carrier comes up when the interface comes up with a link
+  mandatory: true
+  cites:
+  - '5.9'
+  - '5.10'
+  - '10.3'
+  checks:
+  - carrier within 15 s
+  - carrier within 15 s after the cycles
+  - carrier within 15 s (load 1)
+  - carrier within 15 s (load 2)
+  - carrier within 15 s (load 3)
+  scenarios: *id001
+  scope: Shown after restart, not a first-bring-up defect.
+  defects:
+  - id: d02
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d02-stop-start
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-stop-start
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q03
+  title: Frames pass both ways
+  mandatory: true
+  cites:
+  - '6.1'
+  - '6.2'
+  - '10.3'
+  checks:
+  - DUT pings peer
+  - DUT pings peer (load 1)
+  - DUT pings peer (load 2)
+  - DUT pings peer (load 3)
+  - DUT pings peer after the cycles
+  - DUT pings peer after the link returns
+  - DUT pings peer after the overrun
+  - DUT pings peer afterwards
+  - DUT pings peer before the flood
+  - DUT pings peer before the link drops
+  - DUT pings peer before the traffic
+  - DUT pings peer to raise interrupts
+  - peer pings DUT
+  - peer pings DUT (load 1)
+  - peer pings DUT (load 2)
+  - peer pings DUT (load 3)
+  - peer pings DUT after the cycles
+  - peer pings DUT after the link returns
+  - peer pings DUT after the overrun
+  - peer pings DUT afterwards
+  - peer pings DUT before the flood
+  - peer pings DUT before the link drops
+  - peer pings DUT before the traffic
+  - peer pings DUT to raise interrupts
+  scenarios: *id001
+  scope: Reused suite runs restricted to the first smoke scenario on fresh guests.
+  defects:
+  - id: m2
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m2-tx-no-rs-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: m3
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q04
+  title: Frames of 1513 and 1514 bytes are received
+  mandatory: true
+  cites:
+  - '6.4'
+  checks:
+  - DUT pings peer with 1513-byte frames
+  - DUT pings peer with 1514-byte frames
+  - peer pings DUT with 1513-byte frames
+  - peer pings DUT with 1514-byte frames
+  scenarios:
+  - frame-sizes
+  scope: 1513- and 1514-byte reception, both directions.
+  defects:
+  - id: d03
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d03-frame-sizes
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-frame-sizes
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q05
+  title: Frames of 60 to 1514 bytes are transmitted at their size
+  mandatory: true
+  cites:
+  - '6.2'
+  - '6.4'
+  checks:
+  - the DUT sent echo requests and replies of 60, 61, 1513 and 1514 bytes
+  scenarios:
+  - frame-sizes
+  scope: 1514-byte transmission only; other sizes have no separate planted defect.
+  defects:
+  - id: d04
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d04-frame-sizes
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-frame-sizes
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q06
+  title: Short frames go out padded to 60 bytes
+  mandatory: true
+  cites:
+  - '4.5'
+  - '5.7'
+  - '6.4'
+  checks:
+  - no frame the DUT sent was shorter than 60 bytes
+  - DUT pings peer with 42-byte frames
+  scenarios:
+  - frame-sizes
+  scope: Capture detects absent padding; the peer accepts runts, so the ping alone does not.
+  defects:
+  - id: d05
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d05-frame-sizes
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-frame-sizes
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q07
+  title: Transmission survives the transmit ring wrapping
+  mandatory: true
+  cites:
+  - '4.5'
+  - '6.2'
+  - '6.3'
+  checks:
+  - DUT sends 1500 pings back to back, none lost
+  - 4 MiB over HTTP DUT to peer arrives intact
+  scenarios:
+  - ring-wrap
+  scope: Malformed ring geometry stops sustained transmission before a successful wrap.
+  defects:
+  - id: d06
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-ring-wrap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q08
+  title: Reception survives the receive ring wrapping
+  mandatory: true
+  cites:
+  - '4.4'
+  - '6.1'
+  - '6.3'
+  checks:
+  - peer sends 1500 pings back to back, none lost
+  - 4 MiB over HTTP peer to DUT arrives intact
+  scenarios:
+  - ring-wrap
+  scope: Failed replenishment stops reception before a successful wrap.
+  defects:
+  - id: m5
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-m5-ring-wrap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-ring-wrap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q09
+  title: Data arrives intact
+  mandatory: true
+  cites:
+  - '6.1'
+  - '6.2'
+  - '8.4'
+  checks:
+  - 4 MiB over HTTP peer to DUT arrives intact
+  - 4 MiB over HTTP DUT to peer arrives intact
+  scenarios:
+  - ring-wrap
+  scope: Receive corruption detected as a stalled transfer; transmit corruption unqualified.
+  defects:
+  - id: d16b
+    run_ids:
+    - e1000-l02d3-20260925-01/q3-d16b-ring-wrap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-ring-wrap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q10
+  title: Reception recovers after the receive ring ran dry
+  mandatory: true
+  cites:
+  - '6.3'
+  - '7.2'
+  checks:
+  - DUT pings peer after the overrun
+  - peer pings DUT after the overrun
+  scenarios:
+  - rx-overrun
+  scope: Recovery after the receive ring ran dry.
+  defects:
+  - id: m5
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-m5-rx-overrun
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-rx-overrun
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q11
+  title: Carrier falls when the link drops
+  mandatory: true
+  cites:
+  - '5.9'
+  - '10.3'
+  checks:
+  - carrier drops within 10 s of link loss
+  scenarios:
+  - link-flap
+  - link-loss-tx
+  scope: Carrier falling, independently of traffic recovery.
+  defects:
+  - id: d07
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d07-link-flap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-flap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q12
+  title: Carrier returns when the link returns
+  mandatory: true
+  cites:
+  - '5.9'
+  - '10.3'
+  checks:
+  - carrier returns within 15 s
+  scenarios:
+  - link-flap
+  - link-loss-tx
+  scope: Carrier returning; subsequent ping failures are consequences.
+  defects:
+  - id: d02
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d02-link-flap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-flap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q13
+  title: Traffic resumes after the link returns
+  mandatory: true
+  cites:
+  - '5.9'
+  - '6.1'
+  - '6.2'
+  - '10.3'
+  checks:
+  - DUT pings peer after the link returns
+  - peer pings DUT after the link returns
+  scenarios:
+  - link-flap
+  - link-loss-tx
+  scope: Recovery after link return; carrier falls and returns normally.
+  defects:
+  - id: d08
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d08-link-flap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-flap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: d08
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-loss-tx
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q14
+  title: The interface works after repeated down/up
+  mandatory: true
+  cites:
+  - '5.10'
+  - '10.3'
+  checks:
+  - 20 down/up cycles
+  - DUT pings peer after the cycles
+  - peer pings DUT after the cycles
+  scenarios:
+  - stop-start
+  scope: Broken restart after repeated down/up.
+  defects:
+  - id: d15
+    run_ids:
+    - e1000-l02d3-20260925-01/q2-d15-stop-start
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-stop-start
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q15
+  title: The interface works after going down under traffic
+  mandatory: true
+  cites:
+  - '5.10'
+  - '10.3'
+  checks:
+  - interface goes down during traffic
+  - interface comes back up
+  - DUT pings peer afterwards
+  - peer pings DUT afterwards
+  scenarios:
+  - down-during-traffic
+  scope: Broken restart, not a defect specific to traffic; requalified in L02f2b.
+  defects:
+  - id: d15
+    run_ids:
+    - e1000-l02f2b-20260925-01/h1-d15-1
+    - e1000-l02f2b-20260925-01/h1-d15-2
+    - e1000-l02f2b-20260925-01/h1-d15-3
+    - e1000-l02f2b-20260925-01/h1-d15-4
+    control_runs:
+    - e1000-l02f2b-20260925-01/h1-ref1
+    - e1000-l02f2b-20260925-01/h1-ref2
+    - e1000-l02f2b-20260925-01/h1-ref3
+    - e1000-l02f2b-20260925-01/h1-ref4
+    - e1000-l02f2b-20260925-01/h1-ref5
+    - e1000-l02f2b-20260925-01/h1-ref6
+    - e1000-l02f2b-20260925-01/h1-ref7
+    - e1000-l02f2b-20260925-01/h1-ref8
+    - e1000-l02f2b-20260925-01/h1-ref9
+    - e1000-l02f2b-20260925-01/h1-ref10
+    outcome: detected
+    evidence:
+    - evidence/L02f2b.md#requalification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q16
+  title: The module unloads and loads again, repeatedly
+  mandatory: true
+  cites:
+  - '10.2'
+  - '10.3'
+  checks:
+  - insmod (load 2)
+  - bound to a PCI device (load 2)
+  - DUT pings peer (load 2)
+  - peer pings DUT (load 2)
+  - rmmod (load 2)
+  - insmod (load 3)
+  - bound to a PCI device (load 3)
+  - DUT pings peer (load 3)
+  - peer pings DUT (load 3)
+  - rmmod (load 3)
+  scenarios:
+  - reload
+  scope: Binding on reload after leaked PCI regions; first load passes.
+  defects:
+  - id: d10
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d10-reload
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-reload
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q17
+  title: No kernel warning, call trace, transmit hang or watchdog timeout
+  mandatory: true
+  cites:
+  - '10.3'
+  checks:
+  - kernel log has no warnings, call traces or transmit hangs
+  scenarios: &id002
+  - smoke
+  - frame-sizes
+  - ring-wrap
+  - rx-overrun
+  - link-flap
+  - link-loss-tx
+  - stop-start
+  - down-during-traffic
+  - reload
+  - itr
+  scope: Transmit hangs and watchdog timeouts; other kernel-log patterns not separately planted.
+  defects:
+  - id: m2
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m2-tx-no-rs-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: m3
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: d06
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-ring-wrap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: d08
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d08-link-flap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-flap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: d08
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-link-loss-tx
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q18
+  title: "At least 1 \xB5s from a global reset to the next register access"
+  mandatory: true
+  cites:
+  - '4.1'
+  - '5.2'
+  checks:
+  - each CTRL.RST write is followed by at least 1 us before the next register access (SDM
+    13.4.1)
+  scenarios: *id002
+  scope: Reset timing remains unobservable; a PASS is an observation only.
+  defects:
+  - id: d22
+    run_ids:
+    - qf1-20260926-01/q1-d22-smoke-1
+    - qf1-20260926-01/q1-d22-smoke-2
+    - qf1-20260926-01/q1-d22-smoke-3
+    - qf1-20260926-01/q1-d22-smoke-4
+    - qf1-20260926-01/q1-d22-smoke-5
+    - qf1-20260926-01/q1-d22-smoke-6
+    - qf1-20260926-01/q1-d22-smoke-7
+    - qf1-20260926-01/q1-d22-smoke-8
+    control_runs:
+    - qf1-20260926-01/q1-ref-smoke-1
+    - qf1-20260926-01/q1-ref-smoke-2
+    outcome: unobservable
+    evidence:
+    - evidence/QF-1.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q19
+  title: Ring lengths are nonzero multiples of 128 bytes
+  mandatory: true
+  cites:
+  - '4.4'
+  - '4.5'
+  - '8.3'
+  checks:
+  - RDLEN and TDLEN are written as nonzero multiples of 128 (SDM 13.4.27, 13.4.38)
+  scenarios: *id002
+  scope: Both ring lengths, using d06 and m4.
+  defects:
+  - id: d06
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-ring-wrap
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  - id: m4
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q20
+  title: Ring bases are 16-byte aligned
+  mandatory: true
+  cites:
+  - '4.4'
+  - '4.5'
+  - '8.3'
+  checks:
+  - RDBAL and TDBAL are written 16-byte aligned (SDM 13.4.25, 13.4.36)
+  scenarios: *id002
+  scope: TDBAL only.
+  defects:
+  - id: d12
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d12-smoke
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-smoke
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q21
+  title: Tail writes stay inside the ring
+  mandatory: true
+  cites:
+  - '6.3'
+  checks:
+  - every RDT and TDT write stays inside the ring (SDM 3.2.6, 3.4)
+  scenarios: *id002
+  scope: Receive tail only.
+  defects:
+  - id: m4
+    run_ids:
+    - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
+    control_runs:
+    - e1000-l02d-20260924-01/r010
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q22
+  title: Head registers are written only while that direction is disabled
+  mandatory: true
+  cites:
+  - '4.4'
+  - '4.5'
+  - '5.6'
+  - '5.7'
+  - '6.3'
+  checks:
+  - RDH and TDH are written only while the receiver or transmitter is disabled (SDM 13.4.28,
+    13.4.39)
+  scenarios: *id002
+  scope: RDH only.
+  defects:
+  - id: d13
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d13-smoke
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-smoke
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q23
+  title: ITR is written with its reserved bits clear
+  mandatory: true
+  cites:
+  - '4.3'
+  checks:
+  - ITR is written with its reserved bits 31:16 clear (SDM 13.4.18)
+  scenarios: *id002
+  scope: Reserved ITR bits.
+  defects:
+  - id: d14
+    run_ids:
+    - e1000-l02d3-20260925-01/q1-d14-smoke
+    control_runs:
+    - e1000-l02d3-20260925-01/q1-ref-smoke
+    outcome: detected
+    evidence:
+    - evidence/L02d3.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q24
+  title: The interface comes up, and the module unloads, without error
+  mandatory: true
+  cites:
+  - '10.3'
+  checks:
+  - interface up
+  - rmmod
+  - interface up (load 1)
+  - rmmod (load 1)
+  - interface up (load 2)
+  - rmmod (load 2)
+  - interface up (load 3)
+  - rmmod (load 3)
+  scenarios: *id001
+  scope: First-line open failure and leaked module reference; later open failures not planted.
+  defects:
+  - id: d19
+    run_ids:
+    - qf1-20260926-01/q1-d19-smoke-1
+    - qf1-20260926-01/q1-d19-smoke-2
+    - qf1-20260926-01/q1-d19-smoke-3
+    control_runs:
+    - qf1-20260926-01/q1-ref-smoke-1
+    - qf1-20260926-01/q1-ref-smoke-2
+    outcome: detected
+    evidence:
+    - evidence/QF-1.md#qualification
+  - id: d20
+    run_ids:
+    - qf1-20260926-01/q1-d20-smoke-1
+    - qf1-20260926-01/q1-d20-smoke-2
+    - qf1-20260926-01/q1-d20-smoke-3
+    control_runs:
+    - qf1-20260926-01/q1-ref-smoke-1
+    - qf1-20260926-01/q1-ref-smoke-2
+    outcome: detected
+    evidence:
+    - evidence/QF-1.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q25
+  title: Frames of 60 and 61 bytes are received
+  mandatory: true
+  cites:
+  - '6.4'
+  checks:
+  - DUT pings peer with 60-byte frames
+  - DUT pings peer with 61-byte frames
+  - peer pings DUT with 60-byte frames
+  - peer pings DUT with 61-byte frames
+  scenarios:
+  - frame-sizes
+  scope: 60/61-byte arrival, not content; d21b is specific, d21 and d21c are not qualifying.
+  defects:
+  - id: d21b
+    run_ids:
+    - qf1-20260926-01/q2-d21b-frame-sizes-1
+    - qf1-20260926-01/q2-d21b-frame-sizes-2
+    - qf1-20260926-01/q2-d21b-frame-sizes-3
+    control_runs:
+    - qf1-20260926-01/q1-ref-frame-sizes-1
+    - qf1-20260926-01/q1-ref-frame-sizes-2
+    outcome: detected
+    evidence:
+    - evidence/QF-1.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q26
+  title: The module loads and binds to the device
+  mandatory: true
+  cites:
+  - '2'
+  - '10.2'
+  - '10.3'
+  checks:
+  - insmod
+  - bound to a PCI device
+  - insmod (load 1)
+  - bound to a PCI device (load 1)
+  scenarios: *id001
+  scope: Init error and one probe-rejection point, not a wrong PCI ID table.
+  defects:
+  - id: d17
+    run_ids:
+    - qf1-20260926-01/q1-d17-smoke-1
+    - qf1-20260926-01/q1-d17-smoke-2
+    - qf1-20260926-01/q1-d17-smoke-3
+    control_runs:
+    - qf1-20260926-01/q1-ref-smoke-1
+    - qf1-20260926-01/q1-ref-smoke-2
+    outcome: detected
+    evidence:
+    - evidence/QF-1.md#qualification
+  - id: d18
+    run_ids:
+    - qf1-20260926-01/q1-d18-smoke-1
+    - qf1-20260926-01/q1-d18-smoke-2
+    - qf1-20260926-01/q1-d18-smoke-3
+    control_runs:
+    - qf1-20260926-01/q1-ref-smoke-1
+    - qf1-20260926-01/q1-ref-smoke-2
+    outcome: detected
+    evidence:
+    - evidence/QF-1.md#qualification
+  evidence:
+  - evidence/L02d3.md
+  - evals/e1000/RECALL-r3.md
+- id: Q27
+  title: Frames of 60 and 61 bytes are received and transmitted with their content intact
+  mandatory: true
+  cites:
+  - '6.1'
+  - '6.2'
+  - '6.4'
+  checks:
+  - the DUT's kernel counted no ICMP checksum errors while the pings ran
+  - the DUT echoed the peer's 60- and 61-byte echo requests byte for byte
+  - the DUT's 60- and 61-byte echo requests reached the peer with the pattern payload intact
+  scenarios:
+  - frame-sizes
+  scope: ICMP checksum and one-byte pattern; checksum-preserving receive corruption is outside
+    this claim.
+  defects:
+  - id: d21c
+    run_ids:
+    - fc1-20260926-01/f2-d21c-frame-sizes-1
+    - fc1-20260926-01/f2-d21c-frame-sizes-2
+    control_runs:
+    - fc1-20260926-01/f2-ref-frame-sizes-1
+    - fc1-20260926-01/f2-ref-frame-sizes-2
+    outcome: detected
+    evidence:
+    - evidence/FC-1.md#qualification
+  - id: d24
+    run_ids:
+    - fc1-20260926-01/f2-d24-frame-sizes-1
+    - fc1-20260926-01/f2-d24-frame-sizes-2
+    control_runs:
+    - fc1-20260926-01/f2-ref-frame-sizes-1
+    - fc1-20260926-01/f2-ref-frame-sizes-2
+    outcome: detected
+    evidence:
+    - evidence/FC-1.md#qualification
+  evidence:
+  - evidence/FC-1.md
+  - evals/e1000/RECALL-r3.md
+- id: Q28
+  title: A 1 MiB TCP stream in frames of at most 214 bytes is received and transmitted with
+    its content intact, as the MD5 of the delivered bytes shows
+  mandatory: true
+  cites:
+  - '6.1'
+  - '6.2'
+  - '6.4'
+  checks:
+  - 1 MiB over HTTP in small frames peer to DUT arrives intact
+  - 1 MiB over HTTP in small frames DUT to peer arrives intact
+  scenarios:
+  - frame-sizes
+  scope: One word-swap shape per direction, at most 214-byte frames; not the copybreak boundary.
+  defects:
+  - id: d25
+    run_ids:
+    - cs1-20260926-01/c2-d25-frame-sizes-1
+    - cs1-20260926-01/c2-d25-frame-sizes-2
+    - cs1-20260926-01/c2-d25-frame-sizes-3
+    control_runs:
+    - cs1-20260926-01/c2-ref-frame-sizes-1
+    - cs1-20260926-01/c2-ref-frame-sizes-2
+    - cs1-20260926-01/c2-ref-frame-sizes-3
+    - cs1-20260926-01/c2-ref-frame-sizes-4
+    - cs1-20260926-01/c2-ref-frame-sizes-5
+    outcome: detected
+    evidence:
+    - evidence/CS-1.md#qualification
+  - id: d26
+    run_ids:
+    - cs1-20260926-01/c2-d26-frame-sizes-1
+    - cs1-20260926-01/c2-d26-frame-sizes-2
+    - cs1-20260926-01/c2-d26-frame-sizes-3
+    control_runs:
+    - cs1-20260926-01/c2-ref-frame-sizes-1
+    - cs1-20260926-01/c2-ref-frame-sizes-2
+    - cs1-20260926-01/c2-ref-frame-sizes-3
+    - cs1-20260926-01/c2-ref-frame-sizes-4
+    - cs1-20260926-01/c2-ref-frame-sizes-5
+    outcome: detected
+    evidence:
+    - evidence/CS-1.md#qualification
+  evidence:
+  - evidence/CS-1.md
+  - evals/e1000/RECALL-r3.md

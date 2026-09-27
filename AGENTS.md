@@ -42,6 +42,8 @@ python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --st
 uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
 uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
+uv run --with pyyaml python3 -m unittest discover -s skills/campaign-review/tests
+uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals/e1000
 python3 <public-skills>/plugins/agent-workflow/skills/agent-agnostic-skills/scripts/portability_scan.py \
   skills/cleanroom-implementer/scripts
 ```

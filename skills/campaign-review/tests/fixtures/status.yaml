@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+campaign: synthetic
+bases:
+  frozen:
+    spec_revision: 8
+    spec_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    sections_read: []
+    dependencies: null
+    source_pins: []
+    harness_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    guest_init_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    emulator: null
+    guest: null
+    reference_module_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    candidate_module_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    toolchain: gcc-14
+    model: null
+    missing: []
+entries:
+- id: q-Q01
+  kind: qualification
+  basis: frozen
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Frozen evidence.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - synthetic/defect
+  evidence:
+  - evidence.md
+  claim: Q01
+  validated_harness_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

@@ -1,0 +1,2595 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+campaign: e1000
+bases:
+  l02d3:
+    spec_revision: 4
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    sections_read: &id005 []
+    dependencies: null
+    source_pins: &id006
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 3cc6765d4ce34e8e4cf265712317cc780d7e96b4719c8f3c298adad003c94a0d
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: &id007
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest: &id008
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  l02f2b:
+    spec_revision: 4
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 57ef191bba2434cc85042a67f44b22013600501a54be1400718e47ec820fe453
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator:
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  qf1:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: &id009 []
+    dependencies: null
+    source_pins: &id010
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 7024864e0e9ced31e29462a74b421a9919d28d78c09223d8b2a67db561d31623
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: &id011
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest: &id012
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  fc1:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 884e771c655d627a4b4af11d0526e1445579dad674146b5db8c8121b99e8c03d
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator:
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  cs1:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator:
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  cf2-a2:
+    spec_revision: 8
+    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator:
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: aa86b2d6aa5498c7ad4bea777a0f4a0c73457351a70ac99f59f1eecf730f5cc1
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: df37c7ad143d7a04bf6655ce4e6f8770788677049e6973e6e1a4d294c88eee65
+    toolchain: gcc-14
+    model:
+      role: implementer
+      name: gpt-6-astra
+      version: gpt-6-astra
+    missing:
+    - exact compiler version not recorded
+  l02f3:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: &id001 []
+    dependencies: null
+    source_pins: &id002
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 705694b972dc71b315d7922531a2790c72e1d7a57db08f390c107fb1d2c062cf
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: &id003
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest: &id004
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: null
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: gcc-14
+    model: null
+    missing:
+    - initramfs varies by module; recover from per-run identities
+    - exact compiler version not recorded
+    - qualification operator model version not recorded
+  af1:
+    spec_revision: 4
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model:
+      role: reader
+      name: Claude Fable
+      version: '5.1'
+    missing:
+    - dependencies not declared; widen to whole revision
+  sr7:
+    spec_revision: 7
+    spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - dependencies not declared; widen to whole revision
+    - Reader/reviewer model version not recovered from public evidence.
+  sr8:
+    spec_revision: 8
+    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - dependencies not declared; widen to whole revision
+    - Reader/reviewer model version not recovered from public evidence.
+  cf2-review:
+    spec_revision: 8
+    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+    sections_read: []
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: 884e771c655d627a4b4af11d0526e1445579dad674146b5db8c8121b99e8c03d
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator:
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: aa86b2d6aa5498c7ad4bea777a0f4a0c73457351a70ac99f59f1eecf730f5cc1
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: df37c7ad143d7a04bf6655ce4e6f8770788677049e6973e6e1a4d294c88eee65
+    toolchain: gcc-14
+    model: null
+    missing:
+    - dependencies not declared; widen to whole revision
+    - Reader/reviewer model version not recovered from public evidence.
+    - exact compiler version not recorded
+  observation-EM1:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id001
+    dependencies: null
+    source_pins: *id002
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id003
+    guest: *id004
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM2:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id001
+    dependencies: null
+    source_pins: *id002
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id003
+    guest: *id004
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM3:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id001
+    dependencies: null
+    source_pins: *id002
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id003
+    guest: *id004
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM4:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id005
+    dependencies: null
+    source_pins: *id006
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id007
+    guest: *id008
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM5:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id005
+    dependencies: null
+    source_pins: *id006
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id007
+    guest: *id008
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM6:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *id001
+    dependencies: null
+    source_pins: *id002
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id003
+    guest: *id004
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM7:
+    spec_revision: 7
+    spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
+    sections_read: *id001
+    dependencies: null
+    source_pins: *id002
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id003
+    guest: *id004
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+  observation-EM8:
+    spec_revision: 7
+    spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
+    sections_read: *id009
+    dependencies: null
+    source_pins: *id010
+    harness_sha256: null
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *id011
+    guest: *id012
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing:
+    - Observation aggregates historical runs; no single harness or module basis.
+    - Exact toolchain and operator model versions not recorded.
+    - Guest initramfs varies by module; per-run identities remain private.
+entries:
+- id: qualification-Q01
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d01-smoke
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q01
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q01
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q01
+  round: a2
+  qualification: qualification-Q01
+  qualified_evidence: true
+- id: qualification-Q02
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d02-stop-start
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q02
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q02
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q02
+  round: a2
+  qualification: qualification-Q02
+  qualified_evidence: true
+- id: qualification-Q03
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d-20260924-01/mut-m2-tx-no-rs-r5
+  - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q03
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q03
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q03
+  round: a2
+  qualification: qualification-Q03
+  qualified_evidence: true
+- id: qualification-Q04
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d03-frame-sizes
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q04
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q04
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q04
+  round: a2
+  qualification: qualification-Q04
+  qualified_evidence: true
+- id: qualification-Q05
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d04-frame-sizes
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q05
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q05
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q05
+  round: a2
+  qualification: qualification-Q05
+  qualified_evidence: true
+- id: qualification-Q06
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d05-frame-sizes
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q06
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q06
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q06
+  round: a2
+  qualification: qualification-Q06
+  qualified_evidence: true
+- id: qualification-Q07
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q07
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q07
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q07
+  round: a2
+  qualification: qualification-Q07
+  qualified_evidence: true
+- id: qualification-Q08
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-m5-ring-wrap
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q08
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q08
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q08
+  round: a2
+  qualification: qualification-Q08
+  qualified_evidence: true
+- id: qualification-Q09
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q3-d16b-ring-wrap
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q09
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q09
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q09
+  round: a2
+  qualification: qualification-Q09
+  qualified_evidence: true
+- id: qualification-Q10
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-m5-rx-overrun
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q10
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q10
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q10
+  round: a2
+  qualification: qualification-Q10
+  qualified_evidence: true
+- id: qualification-Q11
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d07-link-flap
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q11
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q11
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q11
+  round: a2
+  qualification: qualification-Q11
+  qualified_evidence: true
+- id: qualification-Q12
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d02-link-flap
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q12
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q12
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q12
+  round: a2
+  qualification: qualification-Q12
+  qualified_evidence: true
+- id: qualification-Q13
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d08-link-flap
+  - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q13
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q13
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q13
+  round: a2
+  qualification: qualification-Q13
+  qualified_evidence: true
+- id: qualification-Q14
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q2-d15-stop-start
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q14
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q14
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q14
+  round: a2
+  qualification: qualification-Q14
+  qualified_evidence: true
+- id: qualification-Q15
+  kind: qualification
+  basis: l02f2b
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f2b-20260925-01/h1-d15-1
+  - e1000-l02f2b-20260925-01/h1-d15-2
+  - e1000-l02f2b-20260925-01/h1-d15-3
+  - e1000-l02f2b-20260925-01/h1-d15-4
+  evidence:
+  - evidence/L02f2b.md#requalification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q15
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q15
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q15
+  round: a2
+  qualification: qualification-Q15
+  qualified_evidence: true
+- id: qualification-Q16
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d10-reload
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q16
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q16
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q16
+  round: a2
+  qualification: qualification-Q16
+  qualified_evidence: true
+- id: qualification-Q17
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d-20260924-01/mut-m2-tx-no-rs-r5
+  - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
+  - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+  - e1000-l02d3-20260925-01/q1-d08-link-flap
+  - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q17
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q17
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q17
+  round: a2
+  qualification: qualification-Q17
+  qualified_evidence: true
+- id: qualification-Q18
+  kind: qualification
+  basis: qf1
+  verdict: shortfall
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01/q1-d22-smoke-1
+  - qf1-20260926-01/q1-d22-smoke-2
+  - qf1-20260926-01/q1-d22-smoke-3
+  - qf1-20260926-01/q1-d22-smoke-4
+  - qf1-20260926-01/q1-d22-smoke-5
+  - qf1-20260926-01/q1-d22-smoke-6
+  - qf1-20260926-01/q1-d22-smoke-7
+  - qf1-20260926-01/q1-d22-smoke-8
+  evidence:
+  - evidence/QF-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q18
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+  shortfall:
+    reason: unobservable
+    reopen: Hardware or a timing-capable tool that can show a reset access inside 2 us.
+  decision:
+    who: user
+    date: '2026-09-25'
+    link: evidence/L02f3.md#the-two-decisions
+- id: result-Q18
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q18
+  round: a2
+  qualification: qualification-Q18
+  qualified_evidence: false
+- id: qualification-Q19
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d06-ring-wrap
+  - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q19
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q19
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q19
+  round: a2
+  qualification: qualification-Q19
+  qualified_evidence: true
+- id: qualification-Q20
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d12-smoke
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q20
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q20
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q20
+  round: a2
+  qualification: qualification-Q20
+  qualified_evidence: true
+- id: qualification-Q21
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q21
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q21
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q21
+  round: a2
+  qualification: qualification-Q21
+  qualified_evidence: true
+- id: qualification-Q22
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d13-smoke
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q22
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q22
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q22
+  round: a2
+  qualification: qualification-Q22
+  qualified_evidence: true
+- id: qualification-Q23
+  kind: qualification
+  basis: l02d3
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01/q1-d14-smoke
+  evidence:
+  - evidence/L02d3.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q23
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q23
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q23
+  round: a2
+  qualification: qualification-Q23
+  qualified_evidence: true
+- id: qualification-Q24
+  kind: qualification
+  basis: qf1
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01/q1-d19-smoke-1
+  - qf1-20260926-01/q1-d19-smoke-2
+  - qf1-20260926-01/q1-d19-smoke-3
+  - qf1-20260926-01/q1-d20-smoke-1
+  - qf1-20260926-01/q1-d20-smoke-2
+  - qf1-20260926-01/q1-d20-smoke-3
+  evidence:
+  - evidence/QF-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q24
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q24
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q24
+  round: a2
+  qualification: qualification-Q24
+  qualified_evidence: true
+- id: qualification-Q25
+  kind: qualification
+  basis: qf1
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01/q2-d21b-frame-sizes-1
+  - qf1-20260926-01/q2-d21b-frame-sizes-2
+  - qf1-20260926-01/q2-d21b-frame-sizes-3
+  evidence:
+  - evidence/QF-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q25
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q25
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q25
+  round: a2
+  qualification: qualification-Q25
+  qualified_evidence: true
+- id: qualification-Q26
+  kind: qualification
+  basis: qf1
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01/q1-d17-smoke-1
+  - qf1-20260926-01/q1-d17-smoke-2
+  - qf1-20260926-01/q1-d17-smoke-3
+  - qf1-20260926-01/q1-d18-smoke-1
+  - qf1-20260926-01/q1-d18-smoke-2
+  - qf1-20260926-01/q1-d18-smoke-3
+  evidence:
+  - evidence/QF-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q26
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q26
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-smoke-1
+  - e1000-cf2-20260926-01/a2-cand-smoke-2
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
+  - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
+  - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
+  - e1000-cf2-20260926-01/a2-cand-link-flap-1
+  - e1000-cf2-20260926-01/a2-cand-link-flap-2
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
+  - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
+  - e1000-cf2-20260926-01/a2-cand-stop-start-1
+  - e1000-cf2-20260926-01/a2-cand-stop-start-2
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
+  - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
+  - e1000-cf2-20260926-01/a2-cand-reload-1
+  - e1000-cf2-20260926-01/a2-cand-reload-2
+  - e1000-cf2-20260926-01/a2-cand-itr-1
+  - e1000-cf2-20260926-01/a2-cand-itr-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q26
+  round: a2
+  qualification: qualification-Q26
+  qualified_evidence: true
+- id: qualification-Q27
+  kind: qualification
+  basis: fc1
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - fc1-20260926-01/f2-d21c-frame-sizes-1
+  - fc1-20260926-01/f2-d21c-frame-sizes-2
+  - fc1-20260926-01/f2-d24-frame-sizes-1
+  - fc1-20260926-01/f2-d24-frame-sizes-2
+  evidence:
+  - evidence/FC-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q27
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q27
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q27
+  round: a2
+  qualification: qualification-Q27
+  qualified_evidence: true
+- id: qualification-Q28
+  kind: qualification
+  basis: cs1
+  verdict: qualified
+  rule: isolated-defect-specific-A6-2026-09-25
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - cs1-20260926-01/c2-d25-frame-sizes-1
+  - cs1-20260926-01/c2-d25-frame-sizes-2
+  - cs1-20260926-01/c2-d25-frame-sizes-3
+  - cs1-20260926-01/c2-d26-frame-sizes-1
+  - cs1-20260926-01/c2-d26-frame-sizes-2
+  - cs1-20260926-01/c2-d26-frame-sizes-3
+  evidence:
+  - evidence/CS-1.md#qualification
+  - evidence/L02f3.md
+  - evidence/QF-1.md
+  - evidence/FC-1.md
+  - evidence/CS-1.md
+  - evidence/CF-2.md
+  claim: Q28
+  validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: result-Q28
+  kind: result
+  basis: cf2-a2
+  verdict: PASS
+  rule: isolated-acceptance-set-2-repetitions
+  status:
+    state: current
+    reason: Recorded verdict within the linked evidence scope.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
+  - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
+  evidence:
+  - evidence/CF-2.md#run-results-round-a1
+  claim: Q28
+  round: a2
+  qualification: qualification-Q28
+  qualified_evidence: true
+- id: EM1
+  kind: observation
+  basis: observation-EM1
+  verdict: EEPROM grant remains set; EERD works anyway.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f3-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02f1.md
+  - evidence/L02f2.md
+  sections:
+  - '4.1'
+  - '5.3'
+  - '12.5'
+  evidence_class: emulated
+- id: EM2
+  kind: observation
+  basis: observation-EM2
+  verdict: FWE reads 00b.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f1-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02f1.md
+  sections:
+  - '4.1'
+  - '12.5'
+  evidence_class: emulated
+- id: EM3
+  kind: observation
+  basis: observation-EM3
+  verdict: About one second of no reception after examined RCTL writes, then a burst.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f2b-20260925-01
+  - e1000-l02f3-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02f2b.md
+  - evidence/L02f2.md
+  sections:
+  - '12.5'
+  evidence_class: emulated
+- id: EM4
+  kind: observation
+  basis: observation-EM4
+  verdict: No drops or counts when the receive ring is full.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d3-20260925-01
+  - e1000-l02f2-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02d2.md
+  - evidence/L02f2.md
+  sections:
+  - '6.3'
+  - '12.5'
+  evidence_class: emulated
+- id: EM5
+  kind: observation
+  basis: observation-EM5
+  verdict: Transmit ring drains with link down.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02d-20260924-01
+  - e1000-l02f2-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02d2.md
+  - evidence/L02f2.md
+  sections:
+  - '12.5'
+  evidence_class: emulated
+- id: EM6
+  kind: observation
+  basis: observation-EM6
+  verdict: Reset gaps observed; not qualification of the minimum delay.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f3-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  sections:
+  - '5.2'
+  - '12.5'
+  evidence_class: emulated
+- id: EM7
+  kind: observation
+  basis: observation-EM7
+  verdict: Flow control is unexercised by the suite.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-l02f2-20260925-01
+  evidence:
+  - evidence/L02f3.md
+  - evidence/L02f2.md
+  - evidence/SR-7.md
+  sections:
+  - '12.5'
+  evidence_class: emulated
+- id: EM8
+  kind: observation
+  basis: observation-EM8
+  verdict: Short received frames reach the host at their wire length.
+  rule: emulated-observation-not-hardware
+  status:
+    state: current
+    reason: Observation retained within its original runs; no hardware claim.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01
+  evidence:
+  - evidence/QF-1.md
+  - evidence/SR-7.md
+  sections:
+  - '6.4'
+  - '12.5'
+  evidence_class: emulated
+- id: AF-1-1
+  kind: item
+  basis: af1
+  verdict: State confidence and verification for the BAR-type inference.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: AF-1-2
+  kind: item
+  basis: af1
+  verdict: Clarify when inferences require the full form.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: AF-1-3
+  kind: item
+  basis: af1
+  verdict: Align the statistics-validity wording.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: AF-1-4
+  kind: item
+  basis: af1
+  verdict: Mention the part-scoped statistics-clearing citation.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: AF-1-5
+  kind: item
+  basis: af1
+  verdict: Clarify the EEPROM reload test caveat.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: AF-1-6
+  kind: item
+  basis: af1
+  verdict: Scope the missing micro-sign statement to cited places.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7
+- id: SR-7-1
+  kind: item
+  basis: sr7
+  verdict: Extend the micro-sign page list.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr7-20260926-01
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-7.md
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 8
+- id: SR-7-2
+  kind: item
+  basis: sr7
+  verdict: Allow verification marked none needed with a reason.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr7-20260926-01
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-7.md
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 8
+- id: SR-7-3
+  kind: item
+  basis: sr7
+  verdict: Name a prior reset-test iteration as another zero-bit cause.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr7-20260926-01
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-7.md
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 8
+- id: SR-8-1
+  kind: item
+  basis: sr8
+  verdict: Mention an earlier software write as another zero-bit cause.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.
+- id: SR-8-2
+  kind: item
+  basis: sr8
+  verdict: Explain the unspecified first duplex sample before link-up.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr8-20260926-01
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/SR-8.md
+  - evidence/CF-2.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.
+  aliases:
+  - A-RR-5
+- id: SR-8-3
+  kind: item
+  basis: sr8
+  verdict: Put a one-clause premise beside the inference tags.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.
+- id: SR-8-4
+  kind: item
+  basis: sr8
+  verdict: Record that the pinned kernel tree is a directory, not a checkout.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-8.md
+  class: W
+  source: 3
+  target: records
+  disposition:
+    state: queued
+    destination: Next records maintenance.
+- id: A-RR-1
+  kind: item
+  basis: cf2-review
+  verdict: Say at least at the poll and each link change.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  - evidence/DESIGN-2026-09-26.md
+  class: W
+  source: 1
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.
+  decision:
+    who: orchestrator
+    date: '2026-09-26'
+    link: DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+- id: A-RR-2
+  kind: item
+  basis: cf2-review
+  verdict: No candidate change for statistics while link is down.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: R
+  source: 1
+  target: candidate
+  disposition:
+    state: rejected
+    reason: The candidate follows the spec where the manual is silent.
+- id: A-RR-3
+  kind: item
+  basis: cf2-review
+  verdict: Reference reports TNCRS at every duplex; no candidate change.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: R
+  source: 1
+  target: candidate
+  disposition:
+    state: rejected
+    reason: The candidate already follows the manual.
+- id: A-RR-4
+  kind: item
+  basis: cf2-review
+  verdict: 'Possible upstream report: TNCRS omitted from total transmit errors.'
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: E
+  source: 1
+  target: upstream
+  disposition:
+    state: queued
+    destination: User decision on outward reporting.
+- id: A-RR-6
+  kind: item
+  basis: cf2-review
+  verdict: No count lost during stop; reseeding follows the spec.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: R
+  source: 1
+  target: candidate
+  disposition:
+    state: rejected
+    reason: No driver change required by the finding.
+- id: A-RR-7
+  kind: item
+  basis: cf2-review
+  verdict: Serialize the carrier decision shared by link work and watchdog.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: R
+  source: 1
+  target: candidate
+  disposition:
+    state: queued
+    destination: Next implementer brief; no standalone round.
+- id: CF-2-RLEC-comment
+  kind: item
+  basis: cf2-review
+  verdict: Remove the stale RLEC overlaps these (spec gap) comment.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for
+      traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md#round-1-the-update-and-its-checks
+  class: W
+  source: 1
+  target: candidate
+  disposition:
+    state: queued
+    destination: Next implementer brief; no standalone round.
+- id: CF-2-AR-10
+  kind: item
+  basis: cf2-review
+  verdict: Add the observation that STATUS.FD reads 1 with LU clear.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  class: E
+  source: 1
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.
+- id: HF-1
+  kind: item
+  basis: cf2-review
+  verdict: 'Hardware-only checks: reset, receive overrun, link-loss transmission, flow control,
+    FWE, TNCRS and the initial duplex sample.'
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-cf2-20260926-01
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/CF-2.md
+  - evidence/SR-8.md
+  class: E
+  source: 1
+  target: hardware
+  disposition:
+    state: shortfall
+    reason: out of scope
+    reopen: Hardware fixture with a 10/100 partner that can switch duplex.
+    destination: HF-1
+- id: QF-1-F1-upstream
+  kind: item
+  basis: qf1
+  verdict: 'Possible upstream report: reference probe-error cleanup warns.'
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - qf1-20260926-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/QF-1.md
+  - evidence/SR-7.md
+  class: E
+  source: 1
+  target: upstream
+  disposition:
+    state: queued
+    destination: User decision on outward reporting.
+- id: AF-1-reading-coverage
+  kind: item
+  basis: af1
+  verdict: G1 coverage through section 5.10 lacks a second reading.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  evidence:
+  - evidence/AF-1.md
+  class: E
+  source: 3
+  target: review
+  disposition:
+    state: queued
+    destination: CR2 verification-history backfill; preserve the recorded limitation.
+- id: recall-r3
+  kind: item
+  basis: af1
+  verdict: Recall was measured on revision 3 only.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SR-7.md
+  - evidence/CF-2.md
+  class: E
+  source: 3
+  target: review
+  disposition:
+    state: shortfall
+    reason: out of scope
+    reopen: A scope-widening revision or a user-authorized recall remeasurement.
+- id: SR-8-independent-reading
+  kind: item
+  basis: sr8
+  verdict: Requirement-changing revision 8 has sequential readings only.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/SR-8.md
+  - evidence/DESIGN-2026-09-26.md
+  class: E
+  source: 3
+  target: review
+  disposition:
+    state: queued
+    destination: CR2 records the history; CR6 supplies the independent reading.
+- id: SF-1-pointers
+  kind: item
+  basis: af1
+  verdict: Give emulated pointers the required parenthetical form.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - af1-20260925-01
+  - e1000-sr7-20260926-01
+  evidence:
+  - evidence/AF-1.md
+  - evidence/SF-1.md
+  - evidence/SR-7.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 7

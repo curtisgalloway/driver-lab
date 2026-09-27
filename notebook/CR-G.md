@@ -39,3 +39,11 @@ turns their requirement-change units from `awaiting decision` to ready, as the g
 They sort after all tier-1 work, so the sweep's first batch is three requalifications. Those
 would be staled again by revision 10, which changes §10.3; the user's order (revision 10 first)
 is the one to follow, and the evidence says so.
+
+## 2026-09-27T11:05-07:00 — review: the acceptance claim outran the open C6 question
+The reviewer's two main points were about wording, not numbers (every figure checked): the
+records said "accepted" while leaving C6's literal clause to the user, and the plan criteria
+cited for C6 each covered their own moment, not CR8's blockers. Now "met subject to the user's
+reading". Its third point was new: `stopping.py` holds every reading unit while any revision
+reports "limit reached", and revision 9 always will, so the second reading after revision 10
+will not come out of the queue on its own. Recorded for the next unit; no code here.

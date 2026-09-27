@@ -7,6 +7,12 @@ to copy from:
 - source-anchored specs and reviews for source you own,
 - board experts that supply the per-SoC facts both need.
 
+**Scope:** this project's goal is generating hardware specs and measuring and maintaining their
+quality. Writing a driver for a particular target OS is not; turning specs into Fuchsia drivers
+belongs to a separate bring-up project that consumes them. A driver written from a spec, such as
+the clean-room Linux candidates in the e1000 and ENC28J60 campaigns, is used here as one quality
+signal for the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality).
+
 ## Which one do I want?
 
 | Situation | Skill |

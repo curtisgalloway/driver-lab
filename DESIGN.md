@@ -8,7 +8,34 @@ SPDX-License-Identifier: Apache-2.0
 **Revisions:** 2026-09-26, the [continuous
 review](#continuous-review-keeping-specs-right-as-evidence-changes) section (C1–C8) added and
 the evidence-loop, lifecycle §6, shipped/proposed and Limits sections amended; approved by the
-user the same day ([evidence](evidence/DESIGN-2026-09-26.md)).
+user the same day ([evidence](evidence/DESIGN-2026-09-26.md)). 2026-09-27, the
+[scope](#scope-specs-and-their-quality) section added at the user's direction.
+
+## Scope: specs and their quality
+
+This project's goal is **generating hardware specs and measuring and maintaining their
+quality**: board specs, clean-room driver specs, anchored specs and reviews, their verification,
+and the [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) that
+keeps them right as evidence and models change. The deliverable is a spec someone can trust,
+with a record of why.
+
+Writing a driver for a particular target OS is **not** this project's goal. Using these specs to
+bring up Fuchsia on a board belongs to a separate project, bringup-kit, which consumes finished
+specs. A
+driver written from a spec is one **quality signal** for the spec: the clean-room Linux
+candidates in L01 and L02, run against the upstream reference driver on the same OS, test
+whether the spec was sufficient to implement from. A driver for another OS, such as a Fuchsia
+driver from bringup-kit, may later be added as a further signal; it is not a milestone here.
+
+In practice: this repository holds the skills, the method, and the reference campaigns
+(ENC28J60, e1000) that measure how good the specs they produce are. Work here improves those
+skills and their quality signals (verification readings, blind requirement lists, qualified
+checks, same-OS differential candidates, continuous review). Real bring-up work, including
+writing and checking the specs for a particular board such as a Raspberry Pi 5, happens in the
+consuming project, which installs these skills and runs them there; it is not planned here.
+What that work teaches about the skills comes back here as changes to them.
+`cleanroom-implementer` stays in this repository as the tool that produces candidate drivers
+for the quality signals and as the handoff contract for consumers.
 
 ## Terms
 

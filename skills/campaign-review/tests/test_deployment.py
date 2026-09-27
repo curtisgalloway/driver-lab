@@ -148,6 +148,26 @@ class DeploymentTests(unittest.TestCase):
             self.assertEqual(unit["model"], roles[unit["role"]])
         self.assertTrue(any(u["role"] == "reviewer" for u in queue))
 
+    def test_cli_without_deployment_key_names_reference_models(self):
+        """CR-G cross-milestone check: no config key means the reference roles."""
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "sweep.py"),
+                str(ROOT / "evals/e1000"),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        queue = json.loads(proc.stdout)["stopping"]["queue"]
+        roles = deployment.validate(check.read_yaml(deployment.REFERENCE))
+        self.assertTrue(queue)
+        for unit in queue:
+            self.assertEqual(unit["model"], roles[unit["role"]])
+
     def test_implementer_role_does_not_bypass_authorization(self):
         claims, status, registry = inputs()
         item = entry(status, "A-RR-4")

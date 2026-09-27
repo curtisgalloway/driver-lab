@@ -5,6 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # Hardware specifications: from source investigation to measured quality
 
+**Revisions:** 2026-09-26, the [continuous
+review](#continuous-review-keeping-specs-right-as-evidence-changes) section (C1–C8) added and
+the evidence-loop, lifecycle §6, shipped/proposed and Limits sections amended; approved by the
+user the same day ([evidence](evidence/DESIGN-2026-09-26.md)).
+
 ## Terms
 
 - **Skill:** instructions in a `SKILL.md` file that tell an agent when and how to perform a task.
@@ -259,15 +264,22 @@ evidence, and that evidence belongs in the spec rather than in a test log nobody
    constant can be re-derived.
 3. A contradiction produces a conflict entry, as above, not a silent edit.
 4. Only claims that depend on the changed fact are re-verified; the rest of the verification record
-   stands. A hash change today marks the whole record stale, which is correct but coarse.
+   stands. A hash change today marks the whole record stale, which is correct but coarse; the
+   L02 follow-ons scoped re-verification by hand, and the proposed [continuous
+   review](#continuous-review-keeping-specs-right-as-evidence-changes) layer (C1, C2) records
+   what each verdict rests on so the scoping can be computed.
 5. An answered spec gap is folded in the same way, with the evidence that answered it.
 
 The first place this loop runs is the ENC28J60 Linux rebuild (L01 in
 [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md)): its differential tests against the original
 driver produce exactly these results. A settled `[hardware]` result closes a claim without a person
 reviewing it, which is the scalable path. Humans are needed for conflicts the table's assumptions do
-not resolve. Dependency-scoped re-verification is the deferred M16 work; until it exists, a changed
-spec is re-verified whole.
+not resolve. The L02 differential campaign ran the same loop on an emulator: its `[emulated]`
+results and spec gaps became spec revisions 6 to 8 (L02f3, SR-7, SR-8), and two of those revisions
+reached the candidate (CF-1, CF-2). Dependency-scoped re-verification was the deferred M16 work;
+the [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) section
+proposes pulling its record and invalidation half forward. Until that is built, a changed spec is
+re-verified by changed sections and their dependencies, chosen by the operator, or whole.
 
 ### When there is no existing driver
 
@@ -514,6 +526,404 @@ pin. On the anchored route, `anchor_check.py --drift` identifies unchanged, move
 citations; `--rewrite` moves safe anchors and marks changed ones stale. Removing a stale marker
 requires re-verifying the claim. None of those operations establishes behavior on the actual board.
 
+Revisiting is not a one-time step at the end of this walkthrough. Field evidence, updated sources
+and better models each change what a spec's verdicts rest on; the next section proposes how those
+changes are recorded, which verdicts they make stale, what re-review they trigger at what cost,
+and when a spec is good enough for its declared scope that further corrections become recorded
+shortfalls rather than work.
+
+## Continuous review: keeping specs right as evidence changes
+
+**Status: approved by the user 2026-09-26. Nothing in this section is built yet.**
+Requirements C1–C8 below; each has acceptance criteria. Four points were decided by the user
+on 2026-09-26 before approval and are written below as decided: the A1 amendment (C5), the round cap
+(C6), a comparison reading per new reading model (C4), and a standing tier-1 queue (C3); two
+further choices were made by the orchestrator in the user's place and are marked as such.
+
+### Terms
+
+- **Basis** — the identities a verdict rests on: spec revision and the sections read, source
+  pins, harness, emulator or fixture, candidate build, reading or implementing model, run IDs.
+- **Status index** — one small file per campaign listing each tracked verdict, its basis and
+  its status; the "small latest-status index" M16 proposed ([deferred plan](DEFERRED-PLAN.md)).
+- **Campaign** — one device's spec, candidate, checks and evidence under one declared scope;
+  L02's e1000 work is one.
+- **Stale** — a verdict whose basis changed. It is not shown wrong; it cannot be cited as
+  current until re-checked. **Contested** — a verdict newer evidence contradicts; it has a
+  conflict entry. **Superseded** — replaced by a newer verdict, kept for history.
+- **Sweep** — the mechanical comparison of every basis in the index against the current
+  identities, producing the stale set and a queue of re-review units.
+- **Cost tier** — how a unit is started: tier 0 runs on every change with no model, tier 1
+  is queued and run by agents without a person starting each unit, tier 2 waits for a person.
+- **Item** — a finding for a later spec revision, with a class: **R** (changes what a driver
+  must do), **E** (changes the evidence for a claim, not the requirement), **W** (wording or
+  form only).
+- **Sufficient for scope** — the stopping rule's state (C6): the spec meets its declared scope
+  and further work starts only from a trigger.
+- **Shortfall** — a gap in the declared scope that is recorded with a reason and a reopening
+  condition instead of being worked.
+- **Deployment** — one installation of this method with its own sources, run store, specs,
+  models and fixtures; the public repository is one, and a private one may exist elsewhere.
+- **Plugin** — a skill, packaged the way this repository packages its own, that implements one
+  extension point (C8) for a deployment; a **reference plugin** is one this repository ships,
+  such as the QEMU harness. A **marketplace** is the catalog a harness installs plugins from.
+- **Source registry** — a deployment's list of its sources by local ID, version and hash.
+  **Deployment manifest** — the YAML file, outside the repository, that declares its plugins.
+- **Acceptance set** — the ten harness scenarios run for the reference and the candidate, each
+  in an **isolated run** (freshly booted guests, one scenario). **L01 review trio** — a
+  reference-driver review, a requirements review and `review-swarm` on the candidate's diff.
+- **Mandatory claim** — a claim in the declared scope that the scope does not mark optional;
+  for L02, every one of Q01–Q28.
+
+See the [glossary](GLOSSARY.md).
+
+### Why, and what already works by hand
+
+The goal is a system that produces reliable specs, tests them, and keeps reviewing and
+correcting them as the evidence changes and the models improve, while accepting that good
+fixtures and specs reach diminishing returns long before every last correction is made. The
+L02 follow-ons ran every part of that loop by hand:
+
+- **Independent re-reading and comparison:** [AF-1](evidence/AF-1.md) and [SR-7](evidence/SR-7.md)
+  gave already-verified changes a second reading by a fresh reader that never saw the first,
+  joined the two records key by key and adjudicated each disagreement against the cited text.
+- **Checks proven before they are cited:** [L02d3](evidence/L02d3.md) qualified 22 claims with
+  planted defects (Q15 again in L02f2b), [QF-1](evidence/QF-1.md) three more, and FC-1 and CS-1
+  one each (Q27, Q28); the one that could not be qualified is recorded with its reason (Q18,
+  `unobservable`).
+- **Revision to candidate:** [CF-1](evidence/CF-1.md) and [CF-2](evidence/CF-2.md) gave a
+  clean-room implementer the spec diff only, reran the acceptance set declared before the run,
+  and attributed every trace difference.
+- **Scoped invalidation by reasoning:** after L02f2b changed one scenario and requalified Q15,
+  [L02f3](evidence/L02f3.md) carried the other 21 qualifications to the final harness because
+  the diff touched only that scenario.
+- **Field evidence into the format:** [SF-1](evidence/SF-1.md) turned `[emulated]` from a
+  proposal into a class with checker rules after it had been used.
+
+What is missing is the bookkeeping that would let this happen without an operator rereading
+every evidence file: which verdicts rest on what, which went stale when something changed,
+where the queued items are (today in tables across AF-1, SR-7, SR-8 and CF-2), and when to
+stop. SR-7 needed six sequential readings, and the FAILs in rounds 3 to 5 were sentences its
+own fix passes had written; SR-7 and SR-8 drew the lesson that a fix pass which adds words needs
+its own reading, but no rule said when that loop should end.
+
+### Three sources of change
+
+Three kinds of change are expected to require re-review. New tools and new data sources belong
+to the second.
+
+| Source | Examples here | What it can make stale | What it triggers (tier) | What a person decides | How it reaches a spec revision |
+| --- | --- | --- | --- | --- | --- |
+| **1. Field evidence**: findings from writing drivers and testing them on hardware or an emulator | L01-hw's reference driver failing C6 and C7 in all three runs; CF-2's review findings (A-RR-1 to A-RR-7); QF-1's F2 (the model delivers runts), which became EM8; a hardware result that contradicts an `[emulated]` observation (HF-1's list) | The facts it contradicts become *contested*, with a conflict entry; the claims that use them as a premise become *stale*. A candidate or reference defect makes nothing in the spec stale unless attribution finds a spec gap or error | Attribution inside the unit that found it; re-verification of the contested fact's dependents (tier 1) | A conflict that the evidence model's assumptions do not settle; whether a requirement changes (SR-8: the user chose the attribution rule); any hardware run | An item of class R, E or W, recorded where it was found and listed in the index |
+| **2. Updated sources**: new document editions and errata, new reference-driver or kernel releases, new tools and data sources (an emulator version, a trace tool, a register database) | A new edition of the 8254x manual; a Linux release changing `e1000`; a QEMU package upgrade on the test host; a tool that could time a reset below 1 µs (Q18) | Verdicts citing the changed sections; if the change cannot be mapped to sections, every verdict citing that document. Emulator or harness changes: see C2. A new tool invalidates nothing; it can reopen a shortfall | Detection at tier 0 (identity comparison); re-verification, requalification or the acceptance-set rerun at tier 1 | Whether to adopt the new edition or release as the pin; whether a new tool is worth qualifying (C6) | An E or R item; the new pin recorded in the revision header |
+| **3. Better models and tools**: the same inputs re-read or re-implemented by a stronger model | A newer reading model re-reading revision 8; a newer implementer model writing a fresh candidate from revision 8 | Nothing. A new model is not evidence that old verdicts are wrong | A comparison reading (tier 1); a fresh independent implementation (tier 2) | Adjudications the cited authority does not settle; launching an implementer | Only disagreements that survive adjudication become items (C4) |
+
+The stopping rule (C6) applies to all three: every item any source produces gets a class, and
+C6 decides whether it becomes work or a recorded shortfall.
+
+### C1 — Record what every verdict rests on
+
+Reuse what exists before adding anything:
+
+- **Verification records** already carry `spec_sha256`, `verified`, `verifier` and `sources`
+  with pins ([`spec-verifier`](skills/spec-verifier/SKILL.md)), and their bodies are keyed by
+  section and item. C1 requires `verifier` to name the model and its version, which the L02
+  records already do in prose.
+- **Evidence files** already freeze identities before a run ("Frozen before execution" in
+  CF-1, CF-2 and QF-1): spec revision and hash, candidate source and module, harness files,
+  reference module, kernel, emulator, run script, run IDs. **Per-run `identities.json`** and
+  the **run ledgers** hold the full values privately.
+- **The claim list** Q01–Q28 (L02d3, QF-1, FC-1, CS-1) says, in prose tables, which check
+  supports each claim and which defect qualified it.
+
+Two files are new. A **claim map** per campaign (`evals/e1000/claims.yaml`) turns those prose
+tables into data: claim ID, the harness checks by name, and the qualifying defects and runs; the
+harness itself stays unchanged. And a **status index** per campaign (for the public e1000 campaign,
+`evals/e1000/status.yaml`), with one entry per tracked verdict: the spec revision's
+verification by section, each claim's qualification, the candidate's result per claim, each
+`[emulated]` observation, and each open item. An entry holds the verdict, its basis (the
+identities above; for a reading, the sections it read and the dependencies its brief declared,
+as the SR-7 and SR-8 operators chose them by hand; plus the toolchain, which today is recorded
+only as a name such as `gcc-14`),
+a link to the public evidence, the run IDs, and a status (`current`, `stale`, `contested` or
+`superseded`) with the reason. Items carry their class, their source (1, 2 or 3 above) and a
+disposition (`queued`, `applied` with the revision, `shortfall` with the reason, or
+`rejected`).
+
+Rules: a verdict is never edited; a new verdict is a new entry that supersedes the old one,
+and every attempt stays in the run store. Legacy verification records stay legacy; converting
+their format does not make them current (M16). The index holds only IDs, hashes, verdicts, run
+IDs and links, the same kind of content public evidence files already carry; everything else
+stays in the private ledgers. Under the 2026-09-25 rule of one job per record, the index becomes
+the status record for a campaign's verdicts and items: the plan links to it instead of repeating
+status, and evidence files keep their conclusions and findings, not a running list of open items.
+
+**Accept:** the e1000 index and claim map built from the existing evidence cover every claim,
+every landed spec revision's verification and every open item in AF-1, SR-7, SR-8 and CF-2; a
+reviewer can trace each entry's basis to a public evidence file and a run ID without opening
+private content.
+
+### C2 — Invalidate conservatively, scoped by dependency
+
+| Change | Becomes stale | Stays current |
+| --- | --- | --- |
+| New spec revision | Verification of the changed sections and of every entry whose recorded dependencies include them (the review default in [AGENTS.md](AGENTS.md): "the changed claims and their dependencies"); an entry with no recorded dependencies, the whole revision's verification; the candidate's conformance only if the revision header says a driver requirement changed (SR-8 did, SR-7 did not); the qualification of claims whose expected outcome cites a changed section | Verification of unchanged sections with recorded dependencies outside the change; other qualifications |
+| New document edition or erratum | Verdicts citing the changed sections; every verdict citing that document when the change cannot be mapped | Verdicts citing other sources |
+| Reference driver or kernel release | `[source-observed]` and `[kernel]` verdicts at the old pin; the reference control runs if its module changes | Verdicts on the manual |
+| Harness change | Qualification of the claims whose check code changed, found from the diff and confirmed by the reviewer (L02f3's reasoning); all qualifications when that cannot be established | Qualifications of untouched checks |
+| Emulator, guest kernel or guest image change | Every `[emulated]` observation, every qualification and every candidate result on that emulator | Spec verdicts that do not cite `[emulated]` observations |
+| Candidate build change | The candidate's results | Qualifications, which rest on the reference and the defects |
+| Hardware result contradicting an `[emulated]` observation | The observation becomes contested, with a conflict entry (the general conflict entry is still proposed; for e1000 it goes in the spec's §12 tables beside EM1–EM8); claims that use it as a premise become stale | The candidate's emulated results, which stay true of the emulator |
+| New fixture | Nothing: a result on a new board is a new scope, not a replacement | Earlier fixture results, within their scope |
+| New reading or implementing model | Nothing (see C4) | Everything |
+
+When a mapping is uncertain, widen to the enclosing unit (item to section to document; check
+to scenario to harness) rather than guess. A stale verdict stays readable and is reported as
+"stale since" the change; it cannot count toward acceptance. Only recorded identities can
+invalidate: an input that was never recorded, such as the compiler before
+[PROCESS-NOTES](PROCESS-NOTES.md) flagged it, cannot trigger anything, which is why C1 adds
+the toolchain.
+
+**Accept:** a synthetic change matrix, one change per row above, run against a copy of the e1000
+index, marks exactly the listed entries stale; a model change marks nothing stale; a harness
+diff touching one check stales only that check's claims; an unmappable change widens as stated.
+
+### C3 — Triggers and cost tiers
+
+| Tier | Runs | Work | Cost |
+| --- | --- | --- | --- |
+| 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec_check.py`, leak scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
+| 1 | From the sweep's queue, as a standing queue (decided by the user, 2026-09-26), at most three units per batch | Re-verification of stale sections and their dependents (one `spec-verifier` reading: 8.7 minutes in AF-1, 7.7 in SR-7); requalification of claims whose checks changed; the acceptance set rerun after an emulator or candidate change (40 isolated runs); a comparison reading by a new reading model (C4) | Bounded agent time, recorded per unit |
+| 2 | Only on a person's decision | Requirement changes; clean-room implementer rounds (launched by the user, as in CF-1 and CF-2); a fresh implementation by a new implementer model; hardware runs (HF-1); a new blind list or recall re-measurement; adopting a new source edition as the pin; accepting a shortfall on a mandatory claim | Model, equipment and review time |
+
+Tier-1 units run the way the follow-ons ran: `orchestrate-milestones` gives each unit a fresh
+subagent and one pull request, and `quota-strategy` routes the work (decision D9 in the
+[plan](IMPLEMENTATION-PLAN.md)). The user approved a standing tier-1 queue with a batch cap on
+2026-09-26; the orchestrator set the cap at three units per batch under the `quota-strategy`
+rules (an orchestrator decision, made in the user's place). No person starts each unit; pushing and
+merging still follow [AGENTS.md](AGENTS.md): a batch ends in checkpoint commits on topic branches,
+and pull requests open only on the user's explicit "push". There is no
+daemon and no database: the sweep is one command that reads the index and the current
+identities, and a scheduled run is optional where the environment allows it.
+
+**Accept:** given the e1000 index and one changed identity, the sweep lists the stale entries and
+the tier-1 units that cover them; one batch of at least two tier-1 units runs from the queue to
+reviewed checkpoint commits with no person starting each unit, and records its cost; a tier-2 unit
+never starts from the queue without a recorded decision.
+
+### C4 — Better models are compared, never trusted
+
+When the deployment's reading model changes, one fresh reader using the new model re-reads the
+current revision of each campaign in scope, under the same brief format and without sight of
+any earlier record (the `spec-verifier` rule). The operator joins the new record to the last
+one key by key, as AF-1 and SR-7 did (`review/comparison.md` in the run store). Agreements
+count as an additional independent reading. Disagreements are adjudicated against the cited
+authority; only those that survive adjudication become items, and a person decides the ones the
+authority does not settle. A new model's FAIL is a disagreement, not a verdict, until then.
+
+This is one tier-1 unit per spec per new reading model, including specs already sufficient for
+their scope (decided by the user, 2026-09-26): it is the cheapest check on whether the spec is
+still converged.
+A fresh implementation by a new implementer model is tier 2: it is useful as a second
+independent implementation from the same spec, whose behavioral differences on the acceptance
+set expose ambiguity, but it is launched only when the spec is not yet sufficient or the user
+asks. Agreement between models raises repeatability, not truth: they can share a misreading.
+
+**Accept:** one comparison reading of the e1000 spec's current revision by a different model,
+joined key by key, with every disagreement adjudicated or listed and no verdict changed before
+adjudication.
+
+### C5 — Findings reach a revision, and the candidate, through the existing loop
+
+1. An item is recorded in the evidence file of the unit that found it, with its class and
+   source, and listed in the index.
+2. A spec revision unit (the SR-n pattern) takes the queued R and E items and any W items, edits
+   a working copy of the last landed revision (never the landed file), and states in its header
+   whether a driver requirement changes.
+3. `spec-verifier` reads the changed sections and their dependencies. Text that changes a driver
+   requirement needs two independent readings (A1's standard; the AF-1 and SR-7 procedure)
+   before the revision is sufficient for scope; wording-only and evidence-only changes need one
+   reading plus the leak scan. **This amends A1** in the [QEMU differential
+   design](QEMU-DIFFERENTIAL.md#acceptance-criteria), which asked for two readings with no such
+   split (SR-7 recorded revision 7, which changed no requirement, as not meeting it); the user
+   approved the amendment on 2026-09-26.
+4. If a requirement changed, a candidate update unit (the CF-n pattern) gives the clean-room
+   implementer the revision diff only, audits the session, reruns the acceptance set declared
+   before the run, attributes every trace difference, and ends with the L01 review trio.
+5. The index records the new verdicts; the old ones become superseded.
+
+The independence rules stay as they are: readers never see earlier records or the author's
+reasoning; the implementer never sees the reference driver, the emulator's source or the
+evidence; checks are qualified before they are cited and requalified when their code changes.
+
+**Accept:** the SR-8 → CF-2 path backfilled into the index as the worked R-item path, each step
+linked; and one live W or E item carried through a revision with the index updated at each
+step. No new candidate round or new model is needed to accept the layer.
+
+### C6 — Stopping rule: sufficient for the declared scope
+
+A campaign is **sufficient for its declared scope** when:
+
+- **S1** The scope is declared: the claims, the evidence classes accepted for them, and the
+  target (for L02: Q01–Q28 on the emulated 82540EM at the pinned identities).
+- **S2** Every mandatory claim in scope is qualified and passes, or is a recorded shortfall.
+- **S3** No FAIL is open that is about a claim's truth or support (an accuracy FAIL, as against
+  one about form or wording), and no R item is open; form and wording FAILs may stay queued.
+- **S4** Every text that states a driver requirement has had two independent readings.
+- **S5** The most recent independent re-reading (C4 or a second reading) produced no R item.
+
+After that, only a trigger creates work, and not every trigger does:
+
+- An R item, a contested fact in scope, or a stale entry in scope reopens the campaign.
+- An E item reopens it only if it changes a claim's status in scope.
+- A W item never starts a revision. W items wait for the next revision made for another reason.
+- When an item's class is in doubt, it is R until a person decides otherwise. Findings about the
+  records rather than the spec (SR-8's item 4) are not spec items.
+- A fix pass that adds words needs its own reading (SR-7, SR-8). At most three verification
+  rounds per revision, whatever the FAILs' class; fixes after round two may only delete or
+  narrow text; after round three, what remains goes to the user as a list (decided by the user,
+  2026-09-26).
+- A shortfall names one reason: `unobservable` (the instrument cannot show it, as for Q18),
+  `blocked` (equipment, as for HF-1), `out of scope`, or `not worth it` (an E or W item whose
+  cost exceeds its effect, such as adding L02d3's unlabeled model leniencies to §12.5). It also
+  names what would reopen it: a hardware fixture, a timing-capable tool, a revision that
+  touches the passage.
+- A person approves a shortfall on a mandatory claim; the operator records the others.
+
+**Worked example (e1000, as of 2026-09-26, to be confirmed by the first sweep).** S1 holds (28
+claims, all mandatory). S2 holds, with Q18 a shortfall (`unobservable`; reopened by hardware or
+a timing-capable tool) that L02f3's acceptance, closed under the user-approved plan revision,
+already accepted; HF-1's hardware-only behaviors are `out of scope` for the emulated scope and
+reopen when hardware arrives. S3 holds: SR-8's items 1–3 and CF-2's `[emulated]` note are W or
+E, item 4 concerns the records; CF-2's A-RR-1 ("at least" at the poll) is W: it permits extra
+readings without changing the minimum (an orchestrator decision, made in the user's place on
+2026-09-26). S4 does not hold:
+revision 8's TNCRS rule (§4.7, §5.5, §5.9 L6) was read by sequential readings only (SR-8). So
+one tier-1 unit, a second independent reading of revision 8's changes, stands between the
+campaign and sufficient; it is the first tier-1 unit once this design is approved (an
+orchestrator decision, made in the user's place). The queued W items ride along with whatever revision comes next; the
+candidate's A-RR-7 serialization item stays in the next implementer brief, not a round of its
+own; recall measured on revision 3 stays a recorded limitation, since no revision since then
+widened the scope.
+
+**Accept:** the sweep reports each campaign as sufficient or lists exactly what blocks it; every
+open item has a class and a disposition; no W item alone started a revision; the e1000 campaign
+reaches sufficient, or its blockers are those in the worked example.
+
+### C7 — Deployable in a private environment
+
+The method must run unchanged in a separate private environment whose sources, run store,
+specs and evidence stay inside it, with nothing flowing back to this repository.
+
+- **The public repository contains** the method: the skills, the formats (`SPEC-FORMAT.md`,
+  the index schema), the checkers and the sweep, the invalidation and trigger rules, the
+  orchestration conventions, the reference plugins (C8), and public-device campaigns (e1000,
+  ENC28J60) as worked examples.
+- **A deployment supplies** its sources and a source registry, its spec roots (the existing
+  layer mechanism: `product` or `local` roots found through pointers, never by search), its run
+  store (already configured per user, `run_store` in `~/.config/driver-lab/config.toml`), a
+  campaign directory for its index and evidence, its models and agent CLIs by role, its
+  fixtures and emulators, its clean-room sandbox settings, and its publication policy.
+- **Sources are identified by a local ID, a version and a hash.** Change detection compares
+  those; the sweep never parses a source. The hash may come from the deployment's own adapter
+  (C8) when the method's code may not read the bytes.
+- **Models are named by role** (reader, implementer, reviewer), so C4's trigger names whatever
+  that deployment uses.
+- **Nothing flows back.** The existing rules already point this way: a public root cannot
+  reference internal resources or private skills, vendor and local facts do not flow into
+  public specs ([vendor guide](skills/board-expert/VENDOR-GUIDE.md)), and the run store path is
+  never written into this repository. The method needs no return channel; the public repository
+  never names a deployment's sources, plugins or campaigns.
+
+**Accept:** a stand-in private deployment (a temporary root, run store and registry of invented
+documents, created by the tests) runs the sweep, C2's invalidation and one tier-1 re-verification;
+with the stand-in sources unreadable to the sweep, a version or hash change in the registry is
+still detected; changing the role configuration changes the model the queue names without a code
+change; afterwards a scan of the public repository finds none of the stand-in IDs.
+
+### C8 — Extension points for tools that cannot be public
+
+Four extension points, each implemented by a plugin. A plugin is a skill, packaged as this
+repository packages its own (`.claude-plugin/plugin.json`, installed through the deployment's
+own marketplace), declared the way an overlay already declares a vendor tool: an entry with a
+`kind` and `via: skill:<name>`, where the named skill owns invocation, authentication and safety
+([vendor guide](skills/board-expert/VENDOR-GUIDE.md), "Wrap a tool"). What is new is that an
+entry the sweep or a harness calls without a model also names a `command` that prints JSON.
+
+| Extension point | Called by | Input | Output | Provenance it must record | Reference plugins |
+| --- | --- | --- | --- | --- | --- |
+| **Source adapter**: identifies a document or data source (a data-sheet store, a register database) | The sweep (tier 0); readers, through the skill | A local source ID | `id`, `version`, `sha256`, `status` (`ok`, `blocked` or `unknown`), date checked; never content | The adapter's name and version; how the version was determined | A pinned-file adapter over `corpus.yaml`-style entries (as `corpus_check.py` does for ENC28J60, and L02a's manual pin for e1000) |
+| **Evidence producer**: emits tagged observations (a simulator, a trace tool, a register dumper) | Tier-1 units | Target identity, what to observe, run ID, run directory | Observations, each with one evidence class and its citation (tool, version, run ID), phrased as what was observed from outside the tool | Tool name, version and hash; target identity; conditions | The QEMU harness's register trace and captures, class `[emulated]` |
+| **Implementer or reviewer**: a model or agent CLI in a role | Tier-1 and tier-2 units | A brief, the allowed inputs, a workspace | The artifact and a session record; for a clean-room implementer, its access audit | Agent or CLI, model and version, date, sandbox profile, audit verdict, transcript path (in the private ledger) | Codex under `cleanroom_sandbox.sh` with `sandbox_audit.py`; Claude subagents as `spec-verifier` readers and reviewers |
+| **Fixture or harness backend**: runs scenarios against a driver (an emulator, a board with SPI, a proprietary bench) | Tier-1 units | Modules (reference, candidate, planted defects), scenarios, repetition count, run ID | One run directory per isolated run: per-check verdicts (PASS, FAIL, ERROR) by check name, raw artifacts, and `identities.json`; the claim map (C1) links check names to claims | Fixture or emulator identity, harness hash, kernel and image hashes, conditions | `evals/e1000/harness/l02harness.py` (QEMU, tested in CI); L01's Pi fixture harness, which today lives only in its private run and would have to be published to serve as a public reference |
+
+**Discovery and configuration.** A deployment manifest (YAML) lists the entries: `id`, `kind`
+(`source`, `producer`, `role` or `fixture`), `via`, `command` where needed, and for a producer
+its `class`. Its path is a `deployment` key in the same user config file that already holds
+`run_store`, so it lives outside the repository. With no key set, the public reference
+manifest for the public campaigns applies. A producer that declares a class not in
+`SPEC-FORMAT.md` or in the target spec's own tag table (the e1000 spec defines `[kernel]` there) is
+rejected; a new general class goes through the format, the evidence model and the checker as
+`[emulated]` did in SF-1.
+
+**Testing without the private plugins.** Only the two points called without a model, the source
+adapter and the fixture backend, get a mechanical contract check now: the public repository runs
+it against the reference plugins and against stubs in its test fixtures (an adapter returning
+invented IDs, a backend returning canned run directories), and a deployment runs the same
+command against its own plugins, locally. The evidence producer and the implementer or reviewer
+points are documented conventions, checked by the unit's reviewer as today; their mechanical
+checks are added when a first private plugin of that kind exists.
+
+**Accept:** the contract check passes on the reference adapter, the QEMU backend and the stubs,
+and fails on stubs missing each required provenance field; the stand-in deployment of C7 runs
+with stub plugins only; the manifest schema and the contract check are the only new interfaces;
+no plugin is named in any public file other than the reference plugins.
+
+### Acceptance for the layer, and a guard against over-building
+
+The layer is accepted when C1–C8's criteria are met on the e1000 campaign and the stand-in
+deployment. It adds an index file and a claim map per campaign, a manifest schema, the sweep, the
+contract check and their tests; anything more (a service, a database, a scheduler, automated spec edits,
+automated merges) needs its own design change. Every spec change still goes through a revision
+unit and a person still decides everything in tier 2.
+
+### Relation to M16, D6, R1, R7 and R8
+
+- **D6 is absorbed and resolved** by C1 and C2: versioned records are the existing records plus
+  the status index; conservative dependency invalidation is C2's table; legacy records are not
+  migrated into current status.
+- **M16 is split.** Its record and invalidation half (M16a) is **pulled forward** as C1–C3 for
+  campaigns with a claim list, without waiting for M03/M04: L02 showed that frozen-identity
+  tables, per-run identities and the run ledgers are enough, so this supersedes M16's dependency
+  on M03/M04 for that scope. Its acceptance rules carry over: changed or unavailable evidence
+  cannot keep unqualified acceptance, incompatible policy versions cannot be compared (here: a
+  verdict under one scoring or qualification rule is not compared with one under another without
+  saying so), unrelated capabilities stay scoped, old attempts stay.
+  Its feedback half (M16b) is partly absorbed: C5 is the feedback path and C7 covers private
+  material. **Replay of old attempts with archived tools stays deferred** with M03/M04 and the
+  spec-only experiment.
+- **R1, R7, R8** ([validation proposal](VALIDATION-PROPOSAL.md#1-outcome-and-scope)) gain C1–C2
+  (identities and staleness), C2–C3 (maintenance and preserved attempts) and C5 (recorded
+  feedback disposition) as their coverage outside the deferred experiment.
+
+The plan entries are updated when a plan is derived from this design, not in this revision: D6 and
+M16 in the deferred plan, and in the implementation plan's deferred table the rows "Automated
+maintenance/invalidation and full pilot qualification (M16–M17)" and "Generic execution contracts
+and synthetic replay (M03–M04)" ("build shared machinery only after demonstrated need"): L02's
+hand-run loop is offered as that demonstrated need, for the record and invalidation half only.
+
+### What this revision does not cover
+
+- The paired experiment M09–M13, P01 and the scored ENC28J60 comparison stay deferred.
+- Replay of old attempts with archived tools (M16b, with M03/M04).
+- Automated recall re-measurement: the blind list is a baseline, not amended after the fact
+  (CF-2), and a new one is tier 2.
+- Hardware automation, and any change to how fixtures are qualified (L01, HF-1).
+- Board specs without a claim list: their verification records keep today's whole-file
+  staleness; general board and SoC claim identities remain the proposal's open choice.
+- Automatic spec edits, pushes or merges.
+- The contents or configuration of any private deployment.
+
 ## Evaluation: measure omissions and errors separately
 
 ### Why verification is not a quality score
@@ -685,6 +1095,15 @@ workflows, feedback automation, and broader evaluation infrastructure are deferr
 integration is a separately scoped follow-on in a companion package. The proposal explicitly does
 not authorize implementation or a paid evaluation campaign.
 
+The [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) layer
+(C1–C8) was approved by the user on 2026-09-26; none of it is built yet. What exists is the
+loop run by hand in the L02 follow-ons: second independent readings with key-by-key comparison
+(AF-1, SR-7), qualified checks (L02d3, QF-1, FC-1, CS-1), versioned spec revisions reaching the
+candidate (CF-1, CF-2), and `[emulated]` adopted into the format from use (SF-1). The status
+index, the sweep, the deployment manifest, the plugin contract check and the stopping rule are
+designed, not built. The layer absorbs decision D6 and pulls forward the record and invalidation half of
+M16; replay with archived tools stays deferred.
+
 ### Reading sources that disagree
 
 Some discrepancies are historical text lag; others affect interpretation today:
@@ -757,6 +1176,14 @@ The files do not establish a scored skill comparison, a working driver produced 
 qualified physical fixture for all proposed validation. They also leave general board/SoC claim
 identities, policy placement, record migration, and follow-on hardware setup as proposal choices.
 Consult the proposal's open-design section rather than assuming those interfaces exist.
+
+Continuous review, as proposed, narrows but does not close these limits. It can only invalidate
+what was recorded: an input missing from a verdict's basis cannot make it stale. A newer model
+that agrees with an older one adds repeatability, not truth, and a model-family blind spot
+survives every re-reading by that family. The stopping rule deliberately leaves known shortfalls
+open; "sufficient for the declared scope" is a statement about that scope and its recorded
+evidence, not about the hardware beyond it. A private deployment's results say nothing about
+this repository's campaigns, and the reverse.
 
 Finally, no amount of this substitutes for running the driver on the hardware. A test that passes
 under one revision, load, or timing condition does not prove a sequence universally unnecessary.

@@ -100,3 +100,19 @@ evaluation; add other terms as the documents that use them are updated.
 | Run ledger | The private per-run record in the run store: identities, commands, artifacts, attempts and reviewer references. Public evidence files cite it by run ID; distinct from the requirement ledger and the provenance ledger. |
 | Settling interval | In the QEMU harness, a documented, bounded wait after carrier returns and before recovery pings, longer than the model's receive hold plus a margin and confirmed from traces (L02f2b). |
 | Acceptance stage | The closing part of L02f3 (formerly the separate unit L02g): a final isolated run set, the A1–A7 acceptance table, and an independent review. |
+| Basis | The identities a verdict rests on: spec revision and sections read, source pins, harness, emulator or fixture, candidate build and toolchain, the model that read or implemented, and run IDs (continuous review, proposed 2026-09-26). |
+| Campaign | One device's spec, candidate, checks and evidence under one declared scope; L02's e1000 work is one. |
+| Status index | One small file per campaign listing each tracked verdict with its basis and status (`current`, `stale`, `contested`, `superseded`), plus the open items; M16's "latest-status index". |
+| Stale / contested / superseded | A verdict whose basis changed, not shown wrong but not citable as current / one that newer evidence contradicts, with a conflict entry / one replaced by a newer verdict and kept for history. |
+| Sweep | The mechanical comparison of every basis in a status index against the current identities, producing the stale set and a queue of re-review units. |
+| Cost tier | How re-review work starts: tier 0 on every change with no model; tier 1 queued and run by agents in batches a person authorizes; tier 2 only on a person's decision. |
+| Item (R / E / W) | A finding for a later spec revision: R changes what a driver must do, E changes the evidence for a claim, W changes wording or form only. |
+| Sufficient for scope | The stopping rule's state: the declared scope is met or its gaps are recorded shortfalls, and further work starts only from a trigger. |
+| Shortfall | A gap in the declared scope recorded with a reason (`unobservable`, `blocked`, `out of scope`, `not worth it`) and a condition that would reopen it, instead of being worked. |
+| Deployment | One installation of the method with its own sources, run store, specs, models and fixtures; a private one keeps all of them inside it. |
+| Source registry | A deployment's list of its sources by local ID, version and hash, so change detection works without reading the content. |
+| Deployment manifest | A YAML file outside the repository, named from the user config, that declares a deployment's plugins by kind. |
+| Plugin (extension point) | A skill, packaged like this repository's own, implementing one extension point for a deployment: source adapter, evidence producer, implementer or reviewer, or fixture/harness backend. |
+| Claim map | Per campaign, the data file linking each claim ID to the harness checks that support it and the planted defects and runs that qualified it; proposed for e1000 as `evals/e1000/claims.yaml`. |
+| Acceptance set / isolated run | The ten e1000 harness scenarios run for the reference and the candidate / one scenario on freshly booted guests, so nothing left over from another scenario reaches it. |
+| L01 review trio | The three reviews a candidate change gets: a reference-driver review, a requirements review against the blind list, and `review-swarm` on the diff. |

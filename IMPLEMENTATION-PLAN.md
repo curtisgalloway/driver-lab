@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (CR6a, CR6b); later milestones pending. Derived 2026-09-26 from the design's
+**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (reviewed; landing); later milestones pending. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
@@ -590,8 +590,8 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 | CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | complete (PR #31; [evidence](evidence/CR3.md)) |
 | CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | complete (PR #32; [evidence](evidence/CR4.md)) |
 | CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | complete (PR #33; [evidence](evidence/CR5.md)) |
-| CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | complete ([CR6a](evidence/CR6a.md), [CR6b](evidence/CR6b.md)) |
-| CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | `pending` |
+| CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | complete (PR #34; [CR6a](evidence/CR6a.md), [CR6b](evidence/CR6b.md)) |
+| CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | complete; reviewed ([evidence](evidence/CR7.md)) |
 | CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | `pending`, conditional |
 | CR-G | Layer acceptance against C1–C8 together | all | CR1–CR7; CR8 or the user's decision on C5 | one session | `pending` |
 
@@ -873,7 +873,7 @@ the revision for the queued items (CR8).
 - **Sizing:** CR6a is about one AF-1-sized reading (8.7 minutes in AF-1 for changed sections)
   plus a join; CR6b reads the whole revision and is several times larger; one unit per
   subagent. **Split point:** the batch is already two units.
-- **Status:** complete. [CR6a](evidence/CR6a.md): revision 8 has two independent lineages;
+- **Status:** complete (merged as PR #34). [CR6a](evidence/CR6a.md): revision 8 has two independent lineages;
   its one R item was decided by the user (option b, no driver change) and is CR8's trigger.
   [CR6b](evidence/CR6b.md): the Codex `gpt-6-astra` comparison reading, adjudicated; twelve R
   findings go to the user as one revision decision. C4 met with one deviation: the PASS lines
@@ -905,7 +905,12 @@ the revision for the queued items (CR8).
   reading's result.
 - **Sizing:** test scaffolding over existing commands plus one short reading. **Split point:**
   the automated stand-in first; the live reading second.
-- **Status:** `pending`.
+- **Status:** complete: automated and live validation pass; independently reviewed, three
+  findings fixed.
+  The actual reading passed all four facts and the staged post-reading sweep clears
+  the queue. The user installed the private update (the orchestrator's harness blocked
+  it) and reran the stand-in's sweep: sufficient, empty queue. See
+  [evidence](evidence/CR7.md).
 
 ### CR8 — One live item through a revision (conditional)
 
@@ -1034,8 +1039,9 @@ first. Review, checks and records follow the
 - **Continuous review:** [CR1](evidence/CR1.md) is complete (PR #29, the e1000 claim map
   and status index); [CR2](evidence/CR2.md) is complete (PR #30, verification history).
   [CR3](evidence/CR3.md) is complete (PR #31). [CR4](evidence/CR4.md) is complete (PR #32).
-  [CR5](evidence/CR5.md) is complete (PR #33). [CR6](evidence/CR6b.md) is complete; its R items
-  wait for the user's revision decision (CR8).
+  [CR5](evidence/CR5.md) is complete (PR #33). [CR6](evidence/CR6b.md) is complete (PR #34); its R items
+  wait for the user's revision decision (CR8). [CR7](evidence/CR7.md) has passed automated
+  and live validation, its private update is installed, and it was independently reviewed.
 - **e1000 follow-on verdicts and item dispositions:** see the [status index](evals/e1000/status.yaml) and [claim map](evals/e1000/claims.yaml).
 - **L01 complete for its declared hardware scope** (L01c, 2026-09-26): see
   [evidence/L01-hw.md](evidence/L01-hw.md). The candidate passes the ten revised checks on the

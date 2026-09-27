@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T22:42:58-07:00
+Updated: 2026-09-27T06:49:42-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -14,6 +14,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [CR7 — a stand-in private deployment](CR7.md)
+Entries: 2026-09-26T22:56:17-07:00 through 2026-09-27T07:05:00-07:00
+Outcome: complete; reviewed, three findings fixed;
+see the [evidence](../evidence/CR7.md).
+
 ### [CR6 — the first tier-1 batch](CR6.md)
 Entries: 2026-09-26T21:09:39-07:00 through 2026-09-26T22:42:58-07:00
 Outcome: CR6a and CR6b complete; twelve R items and the CR6a decision for CR8; see the
@@ -21,28 +26,23 @@ Outcome: CR6a and CR6b complete; twelve R items and the CR6a decision for CR8; s
 
 ### [CR5 — deployment manifest and contract check](CR5.md)
 Entries: 2026-09-26T20:40:20-07:00 through 2026-09-26T20:58:45-07:00
-Outcome: orchestrator-directed review fixes implemented; checkpoint pending;
-see the [evidence](../evidence/CR5.md).
+Outcome: complete (PR #33); see the [evidence](../evidence/CR5.md).
 
 ### [CR4 — stopping rule and guarded queue](CR4.md)
 Entries: 2026-09-26T19:59:33-07:00 through 2026-09-26T20:18:50-07:00
-Outcome: orchestrator-directed review fixes implemented; checkpoint pending;
-see the [evidence](../evidence/CR4.md).
+Outcome: complete (PR #32); see the [evidence](../evidence/CR4.md).
 
 ### [CR3 — tier-0 sweep](CR3.md)
 Entries: 2026-09-26T19:28:29-07:00 through 2026-09-26T19:44:51-07:00
-Outcome: review fixes implemented and locally verified; checkpoint pending;
-see the [evidence](../evidence/CR3.md).
+Outcome: complete (PR #31); see the [evidence](../evidence/CR3.md).
 
 ### [CR2 — spec verification history and the TNCRS revision chain](CR2.md)
 Entries: 2026-09-26T18:28:20-07:00 through 2026-09-26T18:59:32-07:00
-Outcome: review fixes implemented; checkpoint pending; see the
-[evidence](../evidence/CR2.md).
+Outcome: complete (PR #30); see the [evidence](../evidence/CR2.md).
 
 ### [CR1 — e1000 claim map and status index](CR1.md)
 Entries: 2026-09-26T17:48:29-07:00 through 2026-09-26T18:05:49-07:00
-Outcome: review fixes implemented; checkpoint pending; see the
-[evidence](../evidence/CR1.md).
+Outcome: complete (PR #29); see the [evidence](../evidence/CR1.md).
 
 ### [L01-hw — the candidate and the reference on the Pi 4 fixture](L01-hw.md)
 Entries: 2026-09-26T14:01-07:00 through 2026-09-26T17:18:37-07:00

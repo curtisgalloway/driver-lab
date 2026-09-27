@@ -84,7 +84,7 @@ scope:
   - evidence/CR6b.md
 revision_range:
 - 3
-- 8
+- 9
 revisions:
   '3':
     started: '2026-09-23'
@@ -235,6 +235,71 @@ revisions:
     - evidence/CR2-provenance.md
     run_ids: &cr2_84
     - e1000-sr8-20260926-01
+  '9':
+    started: '2026-09-27'
+    spec_sha256: 0fd7bc0a6bd4ad181af26a7e5f20d50c1fbaa312a3248470aca31623f03f261a
+    drafts:
+      verify-r9-round1: 5b779706d8cb84e20d72b40d618d8387a12836a7555d16f4f306324126b9c002
+      verify-r9-round2: 9c53a94f189d10675e1adff093f0a610f7c2dc89f60d212463a6d0858ddba6e7
+      verify-r9-round3: 1f5984476728128f970f886eb853b954962bfe9e2a8f9e0e99bcb0b12f1e7cc8
+    requirement_change: true
+    changed_sections:
+    - '1'
+    - '4.0'
+    - '4.1'
+    - '4.5'
+    - '4.7'
+    - '4.8'
+    - '5.2'
+    - '5.3'
+    - '5.5'
+    - '5.6'
+    - '5.7'
+    - '5.9'
+    - '5.10'
+    - '6.1'
+    - '6.2'
+    - '6.3'
+    - '6.4'
+    - '6.5'
+    - '7.4'
+    - '7.5'
+    - '8.1'
+    - '8.2'
+    - '8.4'
+    - '9.1'
+    - '9.4'
+    - '10.3'
+    - '11'
+    - '12.1'
+    - '12.2'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    items:
+    - CR6b-R-RLEC-r9
+    - CR6b-R-L6-lock-r9
+    - CR6b-R-PIF-r9
+    - CR6b-R-ring-len-r9
+    - CR6b-R-napi-schedule-r9
+    - CR6b-R-ndo-open-r9
+    - CR6b-R-ndo-stop-r9
+    - CR6b-R-probe-regions-r9
+    - CR6b-R-probe-dma-r9
+    - CR6b-R-remove-order-r9
+    - CR6b-R-stats-cancel-r9
+    - CR6b-R-mtu-r9
+    - CR6b-evidence-items-r9
+    - CR6b-wording-items-r9
+    - CR6a-link-down-reading-decided-r9
+    - SR-8-1-r9
+    - SR-8-2-r9
+    - SR-8-3-r9
+    - A-RR-1-r9
+    evidence:
+    - evidence/CR8.md
+    run_ids:
+    - cr8-20260927-01
 bases:
   l02d3:
     spec_revision: 4
@@ -1228,6 +1293,183 @@ bases:
       version: gpt-6-astra
     missing:
     - Exact compiler version not recovered.
+  verify-r9-round1:
+    spec_revision: 9
+    spec_sha256: 5b779706d8cb84e20d72b40d618d8387a12836a7555d16f4f306324126b9c002
+    sections_read:
+    - '1'
+    - '4.0'
+    - '4.1'
+    - '4.5'
+    - '4.7'
+    - '4.8'
+    - '5.2'
+    - '5.3'
+    - '5.5'
+    - '5.6'
+    - '5.7'
+    - '5.9'
+    - '5.10'
+    - '6.1'
+    - '6.2'
+    - '6.3'
+    - '6.4'
+    - '6.5'
+    - '7.4'
+    - '7.5'
+    - '8.1'
+    - '8.2'
+    - '8.4'
+    - '9.1'
+    - '9.4'
+    - '10.3'
+    - '11'
+    - '12.1'
+    - '12.2'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model:
+      role: reader
+      name: gpt-6-astra
+      version: gpt-6-astra
+    missing:
+    - The manual was read as its text rendering only (no PDF); micro-sign rendering is UNVERIFIABLE.
+    - 'No complete dependency declaration: the brief asked for the changed claims and every claim they depend
+      on, found by the reader; whole-revision widening applies.'
+  verify-r9-round2:
+    spec_revision: 9
+    spec_sha256: 9c53a94f189d10675e1adff093f0a610f7c2dc89f60d212463a6d0858ddba6e7
+    sections_read:
+    - '1'
+    - '4.0'
+    - '4.1'
+    - '4.5'
+    - '4.7'
+    - '4.8'
+    - '5.2'
+    - '5.3'
+    - '5.5'
+    - '5.6'
+    - '5.7'
+    - '5.9'
+    - '5.10'
+    - '6.1'
+    - '6.2'
+    - '6.3'
+    - '6.4'
+    - '6.5'
+    - '7.4'
+    - '7.5'
+    - '8.1'
+    - '8.2'
+    - '8.4'
+    - '9.1'
+    - '9.4'
+    - '10.3'
+    - '11'
+    - '12.1'
+    - '12.2'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model:
+      role: reader
+      name: gpt-6-astra
+      version: gpt-6-astra
+    missing:
+    - The manual was read as its text rendering only (no PDF); micro-sign rendering is UNVERIFIABLE.
+    - 'No complete dependency declaration: the brief asked for the changed claims and every claim they depend
+      on, found by the reader; whole-revision widening applies.'
+  verify-r9-round3:
+    spec_revision: 9
+    spec_sha256: 1f5984476728128f970f886eb853b954962bfe9e2a8f9e0e99bcb0b12f1e7cc8
+    sections_read:
+    - '1'
+    - '4.0'
+    - '4.1'
+    - '4.5'
+    - '4.7'
+    - '4.8'
+    - '5.2'
+    - '5.3'
+    - '5.5'
+    - '5.6'
+    - '5.7'
+    - '5.9'
+    - '5.10'
+    - '6.1'
+    - '6.2'
+    - '6.3'
+    - '6.4'
+    - '6.5'
+    - '7.4'
+    - '7.5'
+    - '8.1'
+    - '8.2'
+    - '8.4'
+    - '9.1'
+    - '9.4'
+    - '10.3'
+    - '11'
+    - '12.1'
+    - '12.2'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    dependencies: null
+    source_pins:
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model:
+      role: reader
+      name: gpt-6-astra
+      version: gpt-6-astra
+    missing:
+    - The manual was read as its text rendering only (no PDF); micro-sign rendering is UNVERIFIABLE.
+    - 'No complete dependency declaration: the brief asked for the changed claims and every claim they depend
+      on, found by the reader; whole-revision widening applies.'
 entries:
 - id: qualification-Q01
   kind: qualification
@@ -2976,8 +3218,8 @@ entries:
   verdict: Mention an earlier software write as another zero-bit cause.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by SR-8-1-r9.
     stale_since: null
   supersedes: []
   run_ids:
@@ -2996,8 +3238,8 @@ entries:
   verdict: Explain the unspecified first duplex sample before link-up.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by SR-8-2-r9.
     stale_since: null
   supersedes: []
   run_ids:
@@ -3020,8 +3262,8 @@ entries:
   verdict: Put a one-clause premise beside the inference tags.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by SR-8-3-r9.
     stale_since: null
   supersedes: []
   run_ids:
@@ -3060,8 +3302,8 @@ entries:
   verdict: Say at least at the poll and each link change.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by A-RR-1-r9.
     stale_since: null
   supersedes: []
   run_ids:
@@ -5431,10 +5673,9 @@ entries:
   verdict: 68 PASS, 0 FAIL, 1 UNVERIFIABLE
   rule: A1-as-written
   status:
-    state: current
-    reason: Final revision-8 text read once after fixes; sequential rounds do not establish a second independent
-      reading.
-    stale_since: null
+    state: stale
+    reason: Spec revision 9 (CR8) changed sections this reading covered or depends on.
+    stale_since: revision-9
   supersedes:
   - verify-r8-round1
   run_ids: *cr2_84
@@ -5462,10 +5703,9 @@ entries:
   verdict: 60 PASS, 1 FAIL, 1 UNVERIFIABLE
   rule: A1-as-written
   status:
-    state: current
-    reason: Second independent reading of revision 8's changes and their declared dependencies; its FAIL
-      was adjudicated as an accuracy finding (R item).
-    stale_since: null
+    state: stale
+    reason: Spec revision 9 (CR8) changed sections this reading covered or depends on.
+    stale_since: revision-9
   supersedes: []
   run_ids: &cr6_4
   - cr6-20260926-01
@@ -5497,9 +5737,9 @@ entries:
   verdict: 'FAIL stands: section 4.7 gated-reading clause false under the rule; link-down reading unsupported.'
   rule: A1-as-written
   status:
-    state: current
-    reason: Adjudication of the one disagreement between verify-r8-round2 and verify-r8-cr6a.
-    stale_since: null
+    state: stale
+    reason: Spec revision 9 (CR8) changed sections this reading covered or depends on.
+    stale_since: revision-9
   supersedes: []
   run_ids: *cr6_4
   evidence: *cr6_5
@@ -5545,8 +5785,8 @@ entries:
     with its reason. No change to what a driver must do.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: The user chose option b, so the requirement stands and only its support changes (class E).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6a-link-down-reading-decided-r9.
     stale_since: null
   supersedes:
   - CR6a-link-down-reading
@@ -5612,9 +5852,9 @@ entries:
   verdict: 681 PASS, 98 FAIL, 19 UNVERIFIABLE, 2 GAP
   rule: A1-as-written
   status:
-    state: current
-    reason: Comparison reading (C4) of the whole of revision 8 by a new reading model; FAILs adjudicated.
-    stale_since: null
+    state: stale
+    reason: Spec revision 9 (CR8) changed sections this reading covered or depends on.
+    stale_since: revision-9
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_7
@@ -5669,9 +5909,9 @@ entries:
   verdict: 'Of 119 non-PASS lines: 84 upheld or partly (14 R, 41 E, 28 W, 1 already recorded), 16 rejected, 19 input limitations.'
   rule: A1-as-written
   status:
-    state: current
-    reason: Adjudication of the CR6b comparison reading's disagreements by four fresh reviewers.
-    stale_since: null
+    state: stale
+    reason: Spec revision 9 (CR8) changed sections this reading covered or depends on.
+    stale_since: revision-9
   supersedes: []
   run_ids: *cr6_4
   evidence: *cr6_7
@@ -5698,8 +5938,8 @@ entries:
   verdict: Section 4.7 offers RLEC alone or RUC plus ROC, which can differ (RUC and ROC require a good CRC).
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_RLEC
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-RLEC-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5717,8 +5957,8 @@ entries:
   verdict: Section 5.9 L6 samples STATUS.FD outside the statistics lock; a poll in between can be overwritten.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_L6_lock
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-L6-lock-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5736,8 +5976,8 @@ entries:
   verdict: Section 6.1 says software may re-check PIF packets; the manual says it must examine them.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_PIF
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-PIF-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5755,8 +5995,8 @@ entries:
   verdict: Section 6.3's ring length limit is 65528 descriptors under LEN[19:7], not 64K.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_ring_len
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-ring-len-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5774,8 +6014,8 @@ entries:
   verdict: Section 10.3 masks interrupts before napi_schedule_prep(); the cited kernel pattern masks only after it succeeds.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_napi_schedule
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-napi-schedule-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5793,8 +6033,8 @@ entries:
   verdict: Section 10.3 ndo_open enables NAPI after unmasking and forcing LSC; the device can stay masked.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_ndo_open
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-ndo-open-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5812,8 +6052,8 @@ entries:
   verdict: In section 10.3 ndo_stop, a poll can unmask after the stop masks interrupts.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_ndo_stop
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-ndo-stop-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5831,8 +6071,8 @@ entries:
   verdict: Section 10.3 probe requests the BAR twice (explicit request, then managed iomap).
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_probe_regions
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-probe-regions-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5850,8 +6090,8 @@ entries:
   verdict: Section 10.3 probe's DMA-mask fallback cites the kernel document's wrong-code example.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_probe_dma
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-probe-dma-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5869,8 +6109,8 @@ entries:
   verdict: Section 10.3 remove releases regions before disabling the device, against the cited PCI document.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_remove_order
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-remove-order-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5888,8 +6128,8 @@ entries:
   verdict: Section 10.3 never cancels the periodic statistics timer or work.
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_stats_cancel
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-stats-cancel-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5907,8 +6147,8 @@ entries:
   verdict: Section 10.3 does not show the MTU stays within 1500 without ndo_change_mtu (class in doubt).
   rule: C6-item-classification-2026-09-26
   status: &cr6_st_CR6b_R_mtu
-    state: current
-    reason: Adjudicated finding of the CR6b comparison reading (review/adjudication-cr6b).
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-R-mtu-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5927,8 +6167,8 @@ entries:
     evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Adjudicated findings of the CR6b comparison reading; none changes what a driver must do.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-evidence-items-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -5950,8 +6190,8 @@ entries:
     listed in evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Adjudicated findings of the CR6b comparison reading; wording and form only.
+    state: superseded
+    reason: Applied in spec revision 9 (CR8); replaced by CR6b-wording-items-r9.
     stale_since: null
   supersedes: []
   run_ids: *cr6_4
@@ -6133,3 +6373,719 @@ entries:
   - result-Q28
   scope: Historical aggregate; Q18 PASS is unqualified. TNCRS duplex attribution remains unobservable
     on this model; implementation review and trace attribution are recorded in the public evidence.
+- id: verify-r9-round1
+  sequence: 27
+  kind: verification
+  basis: verify-r9-round1
+  verdict: 344 PASS, 17 FAIL, 3 UNVERIFIABLE, 1 GAP
+  rule: A1-as-written
+  status:
+    state: superseded
+    reason: Draft reading; a later round or the deletion-only landing replaced the text it read.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  text: verify-r9-round1
+  sections:
+  - '1'
+  - '4.0'
+  - '4.1'
+  - '4.5'
+  - '4.7'
+  - '4.8'
+  - '5.2'
+  - '5.3'
+  - '5.5'
+  - '5.6'
+  - '5.7'
+  - '5.9'
+  - '5.10'
+  - '6.1'
+  - '6.2'
+  - '6.3'
+  - '6.4'
+  - '6.5'
+  - '7.4'
+  - '7.5'
+  - '8.1'
+  - '8.2'
+  - '8.4'
+  - '9.1'
+  - '9.4'
+  - '10.3'
+  - '11'
+  - '12.1'
+  - '12.2'
+  - '12.3'
+  - '12.5'
+  - '12.6'
+  evidence_classes:
+  - databook
+  - standard
+  - source-observed
+  - inference
+  - kernel
+  - emulated
+  verifier: Codex CLI, read-only sandbox
+  round: '1'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions:
+  - 9
+  scope: Revision-8-to-9 changes and their dependencies. Draft 2 read; clean-room line FAIL (four source-observed
+    reason clauses, removed in draft 3); FAILs and the GAP adjudicated and applied.
+  reading_id: verify-r9-round1
+  cost:
+    seconds: 506
+    tokens: 207372
+- id: verify-r9-round2
+  sequence: 28
+  kind: verification
+  basis: verify-r9-round2
+  verdict: 301 PASS, 2 FAIL, 3 UNVERIFIABLE
+  rule: A1-as-written
+  status:
+    state: superseded
+    reason: Draft reading; a later round or the deletion-only landing replaced the text it read.
+    stale_since: null
+  supersedes:
+  - verify-r9-round1
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  text: verify-r9-round2
+  sections:
+  - '1'
+  - '4.0'
+  - '4.1'
+  - '4.5'
+  - '4.7'
+  - '4.8'
+  - '5.2'
+  - '5.3'
+  - '5.5'
+  - '5.6'
+  - '5.7'
+  - '5.9'
+  - '5.10'
+  - '6.1'
+  - '6.2'
+  - '6.3'
+  - '6.4'
+  - '6.5'
+  - '7.4'
+  - '7.5'
+  - '8.1'
+  - '8.2'
+  - '8.4'
+  - '9.1'
+  - '9.4'
+  - '10.3'
+  - '11'
+  - '12.1'
+  - '12.2'
+  - '12.3'
+  - '12.5'
+  - '12.6'
+  evidence_classes:
+  - databook
+  - standard
+  - source-observed
+  - inference
+  - kernel
+  - emulated
+  verifier: Codex CLI, read-only sandbox
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions:
+  - 9
+  scope: Revision-8-to-9 changes and their dependencies. Draft 3 read; clean-room PASS; two FAILs (ndo_stop
+    stale-poll claim, timeout-recovery quiescence) fixed by deletion; the missing mechanisms queued for
+    the user as CR8-R-poll-tail-reopen and CR8-R-timeout-quiescence.
+  reading_id: verify-r9-round2
+  cost:
+    seconds: 866
+    tokens: 221510
+- id: verify-r9-round3
+  sequence: 29
+  kind: verification
+  basis: verify-r9-round3
+  verdict: 338 PASS, 2 FAIL, 3 UNVERIFIABLE
+  rule: A1-as-written
+  status:
+    state: superseded
+    reason: Draft reading; a later round or the deletion-only landing replaced the text it read.
+    stale_since: null
+  supersedes:
+  - verify-r9-round2
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  text: verify-r9-round3
+  sections:
+  - '1'
+  - '4.0'
+  - '4.1'
+  - '4.5'
+  - '4.7'
+  - '4.8'
+  - '5.2'
+  - '5.3'
+  - '5.5'
+  - '5.6'
+  - '5.7'
+  - '5.9'
+  - '5.10'
+  - '6.1'
+  - '6.2'
+  - '6.3'
+  - '6.4'
+  - '6.5'
+  - '7.4'
+  - '7.5'
+  - '8.1'
+  - '8.2'
+  - '8.4'
+  - '9.1'
+  - '9.4'
+  - '10.3'
+  - '11'
+  - '12.1'
+  - '12.2'
+  - '12.3'
+  - '12.5'
+  - '12.6'
+  evidence_classes:
+  - databook
+  - standard
+  - source-observed
+  - inference
+  - kernel
+  - emulated
+  verifier: Codex CLI, read-only sandbox
+  round: '3'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions:
+  - 9
+  scope: Revision-8-to-9 changes and their dependencies. Draft 4 read (the third and last round the cap
+    allows); clean-room PASS; two wording FAILs fixed by deletion, with the header claim of a complete
+    list deleted; the landed text differs from draft 4 by those three deletions and has not been read.
+  reading_id: verify-r9-round3
+  cost:
+    seconds: 835
+    tokens: 225632
+- id: CR6b-R-RLEC-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 4.7 offers RLEC alone or RUC plus ROC, which can differ (RUC and ROC require a good
+    CRC).
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Applied in spec revision 9 (CR8). Fix option decided by the orchestrator within the user''s
+      scope: RLEC alone.'
+    stale_since: null
+  supersedes:
+  - CR6b-R-RLEC
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-L6-lock-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 5.9 L6 samples STATUS.FD outside the statistics lock; a poll in between can be overwritten.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-L6-lock
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-PIF-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 6.1 says software may re-check PIF packets; the manual says it must examine them.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Applied in spec revision 9 (CR8). Fix option decided by the orchestrator within the user''s
+      scope: the driver drops PIF multicast packets not in the joined list.'
+    stale_since: null
+  supersedes:
+  - CR6b-R-PIF
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-ring-len-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 6.3's ring length limit is 65528 descriptors under LEN[19:7], not 64K.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-ring-len
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-napi-schedule-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 masks interrupts before napi_schedule_prep(); the cited kernel pattern masks only
+    after it succeeds.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-napi-schedule
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-ndo-open-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 ndo_open enables NAPI after unmasking and forcing LSC; the device can stay masked.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-ndo-open
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-ndo-stop-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: In section 10.3 ndo_stop, a poll can unmask after the stop masks interrupts.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Applied in spec revision 9 (CR8). Fix option decided by the orchestrator within the user''s
+      scope: a mask lock and a stopping flag.'
+    stale_since: null
+  supersedes:
+  - CR6b-R-ndo-stop
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-probe-regions-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 probe requests the BAR twice (explicit request, then managed iomap).
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Applied in spec revision 9 (CR8). Fix option decided by the orchestrator within the user''s
+      scope: one unmanaged ownership model.'
+    stale_since: null
+  supersedes:
+  - CR6b-R-probe-regions
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-probe-dma-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 probe's DMA-mask fallback cites the kernel document's wrong-code example.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-probe-dma
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-remove-order-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 remove releases regions before disabling the device, against the cited PCI document.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-remove-order
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-stats-cancel-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 never cancels the periodic statistics timer or work.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-R-stats-cancel
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-R-mtu-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: Section 10.3 does not show the MTU stays within 1500 without ndo_change_mtu (class in doubt).
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Applied in spec revision 9 (CR8). Fix option decided by the orchestrator within the user''s
+      scope: max_mtu set explicitly to 1500.'
+    stale_since: null
+  supersedes:
+  - CR6b-R-mtu
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-evidence-items-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: 41 adjudicated evidence findings (citations, authority, confidence, verification, emulated
+    scope), listed in evidence/CR6b.md.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-evidence-items
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: E
+  source: 3
+  target: spec
+  impact:
+    claims: []
+    changes_status: false
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6b-wording-items-r9
+  kind: item
+  basis: verify-r8-cr6b
+  verdict: 28 adjudicated form findings (source-observed markers, missing confidence or verification clauses,
+    cross-references), listed in evidence/CR6b.md.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6b-wording-items
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6b.md
+  - evidence/CR8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: CR6a-link-down-reading-decided-r9
+  kind: item
+  basis: verify-r8-cr6a
+  verdict: Keep the link-down reading as a stated design choice; replace section 4.7's false justifying
+    clause with its reason. No change to what a driver must do.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - CR6a-link-down-reading-decided
+  run_ids:
+  - cr6-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR6a.md
+  - evidence/CR8.md
+  class: E
+  source: 3
+  target: spec
+  impact:
+    claims: []
+    changes_status: false
+  disposition:
+    state: applied
+    revision: 9
+  decision:
+    who: user
+    date: '2026-09-26'
+    link: evidence/CR6a.md#the-users-decision
+- id: SR-8-1-r9
+  kind: item
+  basis: sr8
+  verdict: Mention an earlier software write as another zero-bit cause.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - SR-8-1
+  run_ids:
+  - e1000-sr8-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/SR-8.md
+  - evidence/CR8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: SR-8-2-r9
+  kind: item
+  basis: sr8
+  verdict: Explain the unspecified first duplex sample before link-up.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - SR-8-2
+  run_ids:
+  - e1000-sr8-20260926-01
+  - e1000-cf2-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/SR-8.md
+  - evidence/CF-2.md
+  - evidence/CR8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: SR-8-3-r9
+  kind: item
+  basis: sr8
+  verdict: Put a one-clause premise beside the inference tags.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - SR-8-3
+  run_ids:
+  - e1000-sr8-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/SR-8.md
+  - evidence/CR8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+- id: A-RR-1-r9
+  kind: item
+  basis: cf2-review
+  verdict: Say at least at the poll and each link change.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Applied in spec revision 9 (CR8).
+    stale_since: null
+  supersedes:
+  - A-RR-1
+  run_ids:
+  - e1000-cf2-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CF-2.md
+  - evidence/DESIGN-2026-09-26.md
+  - evidence/CR8.md
+  class: W
+  source: 1
+  target: spec
+  disposition:
+    state: applied
+    revision: 9
+  decision:
+    who: orchestrator
+    date: '2026-09-26'
+    link: DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+- id: CR8-R-poll-tail-reopen
+  kind: item
+  basis: verify-r9-round2
+  verdict: Section 10.3 does not order a poll that stalls after napi_complete_done() across a close and
+    the next open; it can unmask during the new open's poll.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Round-2 FAIL; under the round cap only the overstating text was deleted; the mechanism is
+      unspecified.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: User decision (evidence/CR8.md, remainder list); the next spec revision.
+- id: CR8-R-timeout-quiescence
+  kind: item
+  basis: verify-r9-round2
+  verdict: Section 10.3's transmit-timeout recovery does not exclude a concurrent ndo_start_xmit or a
+    completion-driven queue wake while it resets.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Round-2 FAIL; under the round cap only the overstating text was deleted; the mechanism is
+      unspecified.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: User decision (evidence/CR8.md, remainder list); the next spec revision.

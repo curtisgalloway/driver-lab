@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (reviewed; landing); later milestones pending. Derived 2026-09-26 from the design's
+**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (reviewed; landing); CR8 complete (revision 9; two remainder items with the user); CR-G pending. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
@@ -592,7 +592,7 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 | CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | complete (PR #33; [evidence](evidence/CR5.md)) |
 | CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | complete (PR #34; [CR6a](evidence/CR6a.md), [CR6b](evidence/CR6b.md)) |
 | CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | complete; reviewed ([evidence](evidence/CR7.md)) |
-| CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | `pending`, conditional |
+| CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | complete ([evidence](evidence/CR8.md)); revision 9, two remainder R items with the user |
 | CR-G | Layer acceptance against C1–C8 together | all | CR1–CR7; CR8 or the user's decision on C5 | one session | `pending` |
 
 CR6 and CR7 may run in parallel after CR5. CR8 waits on an outside condition and holds up
@@ -931,7 +931,11 @@ the revision for the queued items (CR8).
 - **Verify / review:** as SR-7 and SR-8 (`spec-verifier`, the leak scan, the index checker and
   the sweep after landing).
 - **Sizing:** an SR-sized unit. **Split point:** the revision and its readings; nothing smaller.
-- **Status:** `pending`, conditional.
+- **Status:** complete, 2026-09-27 ([evidence](evidence/CR8.md)). Run on the user's decision
+  to make revision 9 for CR6b's R findings; spec revision 9 landed after the three-round cap
+  (Codex `gpt-6-astra`), changing requirements on a driver. C5's live-item criterion met. Two R
+  items go to the user (the remainder list in the evidence); the second independent reading of
+  revision 9 (tier 1) and the CF-n candidate round (tier 2) are next.
 
 ### CR-G — Layer acceptance
 
@@ -1042,6 +1046,8 @@ first. Review, checks and records follow the
   [CR5](evidence/CR5.md) is complete (PR #33). [CR6](evidence/CR6b.md) is complete (PR #34); its R items
   wait for the user's revision decision (CR8). [CR7](evidence/CR7.md) has passed automated
   and live validation, its private update is installed, and it was independently reviewed.
+  [CR8](evidence/CR8.md) is complete: spec revision 9 applied CR6b's findings; two R items
+  from its rounds await the user's decision, then CR-G.
 - **e1000 follow-on verdicts and item dispositions:** see the [status index](evals/e1000/status.yaml) and [claim map](evals/e1000/claims.yaml).
 - **L01 complete for its declared hardware scope** (L01c, 2026-09-26): see
   [evidence/L01-hw.md](evidence/L01-hw.md). The candidate passes the ten revised checks on the

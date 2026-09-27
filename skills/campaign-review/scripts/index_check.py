@@ -42,6 +42,14 @@ RULES = {
     "A1-as-written",
     "A1-amended-2026-09-26",
 }
+EVIDENCE_CLASSES = {
+    "databook",
+    "standard",
+    "source-observed",
+    "inference",
+    "kernel",
+    "emulated",
+}
 SKILL = """---
 name: campaign-index-check
 description: Validate a campaign's claim map, status index and evidence links.
@@ -400,10 +408,32 @@ def check_entry(entry, bases, root):
         "result": ("claim", "round", "qualification", "qualified_evidence"),
         "observation": ("sections", "evidence_class"),
         "item": ("class", "source", "target", "disposition"),
+        "verification": (
+            "text",
+            "sections",
+            "evidence_classes",
+            "verifier",
+            "round",
+            "independence",
+            "purpose",
+            "covers_revisions",
+            "scope",
+            "reading_id",
+        ),
+        "candidate_round": (
+            "round",
+            "applied_items",
+            "verification",
+            "results",
+            "scope",
+        ),
     }
     kind = entry.get("kind")
     require(isinstance(kind, str) and kind in fields, "invalid entry kind")
-    mapping(entry, common + fields[kind], ("decision", "cost", "shortfall", "aliases"))
+    optional = ("decision", "cost")
+    if kind != "verification":
+        optional += ("shortfall", "aliases")
+    mapping(entry, common + fields[kind], optional)
     string(entry["id"])
     require(ID.fullmatch(entry["id"]), "invalid entry ID")
     string(entry["basis"])
@@ -465,6 +495,59 @@ def check_entry(entry, bases, root):
     elif kind == "observation":
         strings(entry["sections"], nonempty=True, pattern=SECTION)
         require(entry["evidence_class"] == "emulated", "invalid observation class")
+    elif kind == "verification":
+        for key in ("text", "verifier", "round", "scope", "reading_id"):
+            string(entry[key])
+        require(ID.fullmatch(entry["reading_id"]), "invalid reading ID")
+        strings(entry["sections"], nonempty=True, pattern=SECTION)
+        strings(entry["evidence_classes"], nonempty=True)
+        require(
+            set(entry["evidence_classes"]) <= EVIDENCE_CLASSES,
+            "invalid verification evidence class",
+        )
+        require(
+            entry["rule"] in {"A1-as-written", "A1-amended-2026-09-26"},
+            "invalid verification rule",
+        )
+        require(
+            isinstance(entry["independence"], str)
+            and entry["independence"]
+            in {"independent", "sequential", "adjudication", "gate"},
+            "invalid reading independence",
+        )
+        require(
+            isinstance(entry["purpose"], str)
+            and entry["purpose"] in {"accuracy", "transfer", "acceptance"},
+            "invalid reading purpose",
+        )
+        require(
+            (entry["independence"] == "gate") == (entry["purpose"] != "accuracy"),
+            "gate cannot count as accuracy",
+        )
+        covered = entry["covers_revisions"]
+        require(
+            isinstance(covered, list)
+            and bool(covered)
+            and all(type(r) is int and r > 0 for r in covered),
+            "invalid covered revisions",
+        )
+        require(len(covered) == len(set(covered)), "duplicate covered revision")
+        basis = bases[entry["basis"]]
+        require(
+            set(entry["sections"]) <= set(basis["sections_read"]),
+            "verification sections outside reading basis",
+        )
+        require(
+            basis["model"] is not None and basis["model"]["role"] == "reader",
+            "verification requires reader model",
+        )
+    elif kind == "candidate_round":
+        string(entry["round"])
+        string(entry["scope"])
+        for key in ("applied_items", "verification", "results"):
+            strings(entry[key], nonempty=key != "results", pattern=ID)
+        sha(bases[entry["basis"]]["candidate_module_sha256"], nullable=False)
+        sha(bases[entry["basis"]]["harness_sha256"], nullable=False)
     else:
         require(
             isinstance(entry["class"], str) and entry["class"] in {"R", "E", "W"},
@@ -509,10 +592,194 @@ def check_entry(entry, bases, root):
             string(disp.get("reason"))
 
 
+def check_history(status_doc, by_id, root):
+    """Bind readings to exact texts and requirement changes to applied findings."""
+    span = status_doc["revision_range"]
+    require(
+        isinstance(span, list)
+        and len(span) == 2
+        and all(type(r) is int and r > 0 for r in span)
+        and span[0] <= span[1],
+        "invalid revision range",
+    )
+    revisions = status_doc["revisions"]
+    require(isinstance(revisions, dict), "revisions must be a mapping")
+    require(
+        set(revisions) == {str(r) for r in range(span[0], span[1] + 1)},
+        "missing or unexpected revision in declared range",
+    )
+    bases = status_doc["bases"]
+    reading_groups = {}
+    for entry in by_id.values():
+        if entry["kind"] == "verification":
+            reading_groups.setdefault(entry["reading_id"], []).append(entry)
+    for group in reading_groups.values():
+        first = group[0]
+        sections = []
+        for entry in group:
+            for key in (
+                "basis",
+                "text",
+                "verdict",
+                "round",
+                "verifier",
+                "independence",
+                "purpose",
+                "covers_revisions",
+                "rule",
+                "evidence_classes",
+                "run_ids",
+                "evidence",
+                "scope",
+            ):
+                require(entry[key] == first[key], "inconsistent reading slices")
+            sections.extend(entry["sections"])
+        require(len(sections) == len(set(sections)), "overlapping reading slices")
+        require(
+            set(sections) == set(bases[first["basis"]]["sections_read"]),
+            "missing reading section slice",
+        )
+    for number, revision in revisions.items():
+        mapping(
+            revision,
+            (
+                "spec_sha256",
+                "drafts",
+                "requirement_change",
+                "changed_sections",
+                "items",
+                "evidence",
+                "run_ids",
+            ),
+        )
+        sha(revision["spec_sha256"], nullable=False)
+        require(isinstance(revision["drafts"], dict), "drafts must be a mapping")
+        for key, value in revision["drafts"].items():
+            require(ID.fullmatch(key) and key != "landed", "invalid draft ID")
+            sha(value, nullable=False)
+            require(value != revision["spec_sha256"], "draft duplicates landed hash")
+        changed = revision["requirement_change"]
+        require(
+            type(changed) is bool or (changed is None and int(number) == span[0]),
+            "invalid requirement-change header",
+        )
+        strings(
+            revision["changed_sections"], nonempty=changed is not None, pattern=SECTION
+        )
+        strings(revision["items"], pattern=ID)
+        links(root, revision["evidence"])
+        strings(revision["run_ids"], nonempty=True)
+        applied_r = []
+        for item_id in revision["items"]:
+            item = by_id.get(item_id)
+            require(
+                item is not None
+                and item["kind"] == "item"
+                and item["target"] == "spec"
+                and item["disposition"]
+                == {"state": "applied", "revision": int(number)},
+                "revision item must be applied to this spec revision",
+            )
+            if item["class"] == "R":
+                applied_r.append(item_id)
+        require(
+            bool(applied_r) == (changed is True),
+            "requirement-change header needs matching R item chain",
+        )
+        readings = [
+            e
+            for e in by_id.values()
+            if e["kind"] == "verification"
+            and int(number) in e["covers_revisions"]
+            and e["purpose"] == "accuracy"
+        ]
+        require(bool(readings), f"revision {number}: missing verification")
+    for entry in by_id.values():
+        kind = entry["kind"]
+        if (
+            kind == "item"
+            and entry["target"] == "spec"
+            and entry["disposition"]["state"] == "applied"
+        ):
+            destination = revisions.get(str(entry["disposition"]["revision"]))
+            require(destination is not None, "applied spec item destination is missing")
+            require(
+                entry["id"] in destination["items"],
+                "applied spec item missing from destination header",
+            )
+        if kind not in {"verification", "candidate_round"}:
+            continue
+        basis = bases[entry["basis"]]
+        number = basis["spec_revision"]
+        revision = revisions.get(str(number))
+        require(revision is not None, "unknown history revision")
+        if kind == "verification":
+            text = entry["text"]
+            expected = (
+                revision["spec_sha256"]
+                if text == "landed"
+                else revision["drafts"].get(text)
+            )
+            require(
+                expected is not None and basis["spec_sha256"] == expected,
+                "verification spec_sha256 does not match revision text",
+            )
+            require(
+                number in entry["covers_revisions"]
+                and all(
+                    str(r) in revisions and r <= number
+                    for r in entry["covers_revisions"]
+                ),
+                "covered revision does not match reading basis",
+            )
+            if text != "landed":
+                require(
+                    entry["status"]["state"] == "superseded",
+                    "draft reading must remain superseded",
+                )
+            if entry["status"]["state"] == "current":
+                require(
+                    number == span[1] or basis["dependencies"] is not None,
+                    "older reading without dependencies must widen, not stay current",
+                )
+        else:
+            require(
+                basis["spec_sha256"] == revision["spec_sha256"],
+                "candidate round spec hash does not match landed revision",
+            )
+            for item_id in entry["applied_items"]:
+                require(
+                    item_id in revision["items"] and by_id[item_id]["class"] == "R",
+                    "candidate round lacks matching applied R item",
+                )
+            for reading_id in entry["verification"]:
+                reading = by_id.get(reading_id)
+                require(
+                    reading is not None
+                    and reading["kind"] == "verification"
+                    and reading["purpose"] == "accuracy"
+                    and reading["text"] == "landed"
+                    and bases[reading["basis"]]["spec_revision"] == number,
+                    "candidate round lacks landed verification link",
+                )
+            for result_id in entry["results"]:
+                result = by_id.get(result_id)
+                require(
+                    result is not None
+                    and result["kind"] == "result"
+                    and result["basis"] == entry["basis"]
+                    and result["round"] == entry["round"],
+                    "candidate round result basis or round mismatch",
+                )
+
+
 def validate(claims_doc, status_doc, root):
     """Validate the paired documents and their cross-references."""
     mapping(claims_doc, ("version", "campaign", "harness", "claims"))
-    mapping(status_doc, ("version", "campaign", "bases", "entries"))
+    mapping(
+        status_doc,
+        ("version", "campaign", "revision_range", "revisions", "bases", "entries"),
+    )
     require(
         type(claims_doc["version"]) is int
         and claims_doc["version"] == 1
@@ -651,6 +918,7 @@ def validate(claims_doc, status_doc, root):
             if target not in seen:
                 seen.add(target)
                 pending.extend(by_id[target]["supersedes"])
+    check_history(status_doc, by_id, root)
     return dict(claims=len(claims), **Counter(e["kind"] for e in entries))
 
 

@@ -5,6 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # Hardware specifications: from source investigation to measured quality
 
+**Revisions:** 2026-09-26, the [continuous
+review](#continuous-review-keeping-specs-right-as-evidence-changes) section (C1–C8) added and
+the evidence-loop, lifecycle §6, shipped/proposed and Limits sections amended; approved by the
+user the same day ([evidence](evidence/DESIGN-2026-09-26.md)).
+
 ## Terms
 
 - **Skill:** instructions in a `SKILL.md` file that tell an agent when and how to perform a task.
@@ -529,9 +534,9 @@ shortfalls rather than work.
 
 ## Continuous review: keeping specs right as evidence changes
 
-**Status: proposed 2026-09-26, a draft for the user's approval. Nothing in this section is
-built.** Requirements C1–C8 below; each has acceptance criteria. Four points were decided by
-the user on 2026-09-26 and are written below as decided: the A1 amendment (C5), the round cap
+**Status: approved by the user 2026-09-26. Nothing in this section is built yet.**
+Requirements C1–C8 below; each has acceptance criteria. Four points were decided by the user
+on 2026-09-26 before approval and are written below as decided: the A1 amendment (C5), the round cap
 (C6), a comparison reading per new reading model (C4), and a standing tier-1 queue (C3); two
 further choices were made by the orchestrator in the user's place and are marked as such.
 
@@ -901,7 +906,7 @@ unit and a person still decides everything in tier 2.
   (identities and staleness), C2–C3 (maintenance and preserved attempts) and C5 (recorded
   feedback disposition) as their coverage outside the deferred experiment.
 
-The plan entries are updated when a plan is derived from this design, not in this draft: D6 and
+The plan entries are updated when a plan is derived from this design, not in this revision: D6 and
 M16 in the deferred plan, and in the implementation plan's deferred table the rows "Automated
 maintenance/invalidation and full pilot qualification (M16–M17)" and "Generic execution contracts
 and synthetic replay (M03–M04)" ("build shared machinery only after demonstrated need"): L02's
@@ -1091,12 +1096,12 @@ integration is a separately scoped follow-on in a companion package. The proposa
 not authorize implementation or a paid evaluation campaign.
 
 The [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) layer
-(C1–C8) is proposed as of 2026-09-26 and awaits approval; none of it is built. What exists is the
+(C1–C8) was approved by the user on 2026-09-26; none of it is built yet. What exists is the
 loop run by hand in the L02 follow-ons: second independent readings with key-by-key comparison
 (AF-1, SR-7), qualified checks (L02d3, QF-1, FC-1, CS-1), versioned spec revisions reaching the
 candidate (CF-1, CF-2), and `[emulated]` adopted into the format from use (SF-1). The status
 index, the sweep, the deployment manifest, the plugin contract check and the stopping rule are
-proposed. The layer absorbs decision D6 and pulls forward the record and invalidation half of
+designed, not built. The layer absorbs decision D6 and pulls forward the record and invalidation half of
 M16; replay with archived tools stays deferred.
 
 ### Reading sources that disagree

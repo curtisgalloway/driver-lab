@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T20:58:45-07:00
+Updated: 2026-09-26T22:42:58-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,11 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [CR6 — the first tier-1 batch](CR6.md)
+Entries: 2026-09-26T21:09:39-07:00 through 2026-09-26T22:42:58-07:00
+Outcome: CR6a and CR6b complete; twelve R items and the CR6a decision for CR8; see the
+[CR6a](../evidence/CR6a.md) and [CR6b](../evidence/CR6b.md) evidence.
 
 ### [CR5 — deployment manifest and contract check](CR5.md)
 Entries: 2026-09-26T20:40:20-07:00 through 2026-09-26T20:58:45-07:00

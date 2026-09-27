@@ -3,11 +3,12 @@
 """Stopping-rule, queue, policy and authorization regressions over real metadata."""
 
 import copy
-from pathlib import Path
 import unittest
 
-from test_sweep import check, inputs, source, sweep
+from test_sweep import BASELINE, BASELINE_DEPLOYMENT, check, deployment, inputs, source, sweep
 import stopping
+
+ROLES = deployment.load(BASELINE_DEPLOYMENT)
 
 
 def entry(status, eid):
@@ -51,15 +52,15 @@ class StoppingTests(unittest.TestCase):
             self.item(eid)["impact"] = dict(claims=[], changes_status=False)
 
     def report(self):
-        return sweep.sweep(self.claims, self.status, self.registry)["stopping"]
+        return sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)[
+            "stopping"
+        ]
 
     def item(self, eid="SR-8-1"):
         return entry(self.status, eid)
 
     def test_real_blockers_and_first_batch(self):
-        self.status = check.read_yaml(
-            Path(__file__).resolve().parents[3] / "evals/e1000/status.yaml"
-        )
+        self.status = check.read_yaml(BASELINE)
         report = self.report()
         self.assertFalse(report["sufficient"])
         self.assertEqual(
@@ -100,6 +101,7 @@ class StoppingTests(unittest.TestCase):
                 self.status,
                 self.registry,
                 reader=dict(name="new reader", version="2"),
+                roles=ROLES,
             )["stopping"]
             self.assertTrue(result["sufficient"])
             units = [u for u in result["queue"] if u["kind"] == "comparison-reading"]
@@ -199,7 +201,7 @@ class StoppingTests(unittest.TestCase):
 
     def test_version_two_preserves_freshness_independently_of_ok(self):
         complete_readings(self.status)
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertEqual(result["version"], 2)
         self.assertTrue(result["ok"])
         self.assertTrue(result["entries"])
@@ -215,11 +217,11 @@ class StoppingTests(unittest.TestCase):
         for value in self.status["entries"]:
             if value["status"]["state"] == "stale":
                 value["status"].update(state="superseded", stale_since=None)
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertFalse(result["entries"])
         self.assertTrue(result["fresh"])
         source(self.registry, "candidate")["status"] = "unknown"
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertFalse(result["fresh"])
         self.assertFalse(result["ok"])
 
@@ -324,6 +326,25 @@ class StoppingTests(unittest.TestCase):
         report = self.report()
         self.assertEqual(report["round_cap"][-1]["state"], "limit reached")
         self.assertNotIn("e1000:second-reading:current", report["batch"])
+
+    def test_adjudication_is_not_a_round(self):
+        self.status["revisions"]["8"]["started"] = "2026-09-27"
+        adjudication = copy.deepcopy(entry(self.status, "verify-r8-round2"))
+        adjudication.update(
+            id="synthetic-adjudication",
+            reading_id="synthetic-adjudication",
+            independence="adjudication",
+            round="adjudication",
+            sequence=23,
+            supersedes=[],
+        )
+        self.status["entries"].append(adjudication)
+        report = self.report()
+        self.assertNotIn(8, [r["revision"] for r in report["round_cap"]])
+        adjudication["independence"] = "independent"
+        report = self.report()
+        row = next(r for r in report["round_cap"] if r["revision"] == 8)
+        self.assertEqual(row["state"], "limit reached")
 
     def test_mandatory_item_shortfall_needs_its_own_user_decision(self):
         value = self.item()

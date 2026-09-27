@@ -17,8 +17,8 @@ plugins:
   - id: reader
     kind: role
     via: skill:spec-verifier
-    agent: Codex CLI, read-only sandbox, no network
-    model: {name: gpt-6-astra, version: gpt-6-astra}
+    agent: Claude subagent
+    model: {name: Claude Fable, version: '5.1'}
   - id: implementer
     kind: role
     via: skill:cleanroom-implementer

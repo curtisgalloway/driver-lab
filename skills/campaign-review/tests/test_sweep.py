@@ -14,6 +14,12 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "skills/campaign-review/scripts"
+# The e1000 index as CR5 left it: tests pin its report, so later index
+# entries (CR6 onward) do not change what the mechanism tests expect.
+BASELINE = ROOT / "skills/campaign-review/tests/fixtures/e1000-status-cr5.yaml"
+# The reference manifest as CR5 left it, whose reader matches BASELINE's
+# adopted scope.reader; CR6b changed the live reference reader.
+BASELINE_DEPLOYMENT = ROOT / "skills/campaign-review/tests/fixtures/deployment-cr5.yaml"
 sys.path.insert(0, str(SCRIPTS))
 import index_check as check  # pylint: disable=wrong-import-position
 import pinned_file_adapter as adapter  # pylint: disable=wrong-import-position
@@ -25,7 +31,7 @@ import deployment  # pylint: disable=wrong-import-position
 def inputs():
     """Copy e1000 and align active qualification context to isolate each mutation."""
     claims = check.read_yaml(ROOT / "evals/e1000/claims.yaml")
-    status = check.read_yaml(ROOT / "evals/e1000/status.yaml")
+    status = check.read_yaml(BASELINE)
     registry = check.read_yaml(ROOT / "evals/e1000/sources.yaml")
     for entry in status["entries"]:
         if entry["kind"] == "qualification":
@@ -127,7 +133,9 @@ def matrix():
                 id=name, kind=name, version="new identity", sha256="a" * 64, file=None
             )
             registry["sources"].append(row)
-        result = sweep.sweep(claims, status, registry)
+        result = sweep.sweep(
+            claims, status, registry, roles=deployment.load(BASELINE_DEPLOYMENT)
+        )
         actual_stale = sorted(
             e["id"]
             for e in result["entries"]
@@ -180,7 +188,7 @@ class SweepTests(unittest.TestCase):
 
     def setUp(self):
         self.claims, self.status, self.registry = inputs()
-        self.roles = deployment.load(deployment.REFERENCE)
+        self.roles = deployment.load(BASELINE_DEPLOYMENT)
 
     def run_sweep(self):
         return sweep.sweep(self.claims, self.status, self.registry, roles=self.roles)
@@ -210,7 +218,7 @@ class SweepTests(unittest.TestCase):
         self.assertEqual(len(result["entries"]), 83)
 
     def test_real_index(self):
-        self.status = check.read_yaml(ROOT / "evals/e1000/status.yaml")
+        self.status = check.read_yaml(BASELINE)
         result = self.run_sweep()
         self.assertEqual(
             newly_affected(result),

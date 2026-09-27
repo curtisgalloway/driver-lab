@@ -395,7 +395,7 @@ the user. Stale shortfalls retain their reason/approval but do not count as curr
 Revision headers may record `started` (ISO date). Revisions started through
 2026-09-26 are historical for the cap; later revisions, or unknown dates, are
 subject to it. Counts deduplicate section slices and count accuracy reading units,
-including independent follow-up readings; numeric rounds provide a lower bound
+including independent follow-up readings but not adjudications; numeric rounds provide a lower bound
 when earlier attempts are missing. At round three, further reading/revision units
 are held for the user; more than three is also a stopping-rule violation. The
 orchestrator must also enforce C6's deletion/narrowing-only fixes after round two;
@@ -457,7 +457,11 @@ reading's whole recorded section set. S4 still demands two independent lineages.
 
 Unmet S4/S5 queues a second reading first, with its coverage gaps. A changed reader
 role queues exactly one comparison reading for each campaign invocation, including
-sufficient campaigns. The reference reader is Claude Fable 5.1, matching the latest recorded role.
+sufficient campaigns. The reference reader was Claude Fable 5.1 through CR6a; CR6 changed it to
+Codex `gpt-6-astra` for its comparison reading, and the index's `scope.reader` stays the adopted
+reader until that reading is adjudicated; CR6b adopted it after adjudication. Tests pin CR5's
+manifest and index as fixtures. A whole-text reading of the landed revision covers every
+earlier revision whose changed sections it read, so its `covers_revisions` may list them all.
 The manifest supplies the desired role.
 Changing an unrelated registry model identity does not change that role.
 After a reviewed comparison, record its verdicts and update the adopted `scope.reader`;

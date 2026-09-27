@@ -33,13 +33,17 @@ def reading_groups(status):
 
 
 def round_report(status, groups):
-    """Unknown start dates do not exempt a revision from the new round cap."""
+    """Unknown start dates do not exempt a revision from the new round cap.
+
+    An adjudication settles a disagreement between readings; it is not a round.
+    """
     rows = []
     for revision, header in status["revisions"].items():
         readings = [
             group[0]
             for group in groups.values()
             if status["bases"][group[0]["basis"]]["spec_revision"] == int(revision)
+            and group[0]["independence"] != "adjudication"
         ]
         count = max(
             [len(readings)]

@@ -17,6 +17,8 @@ import yaml
 HERE = Path(__file__).resolve().parent
 SCRIPT = HERE.parent / "scripts" / "index_check.py"
 ROOT = HERE.parents[2]
+# The e1000 index as CR5 left it (see test_sweep.BASELINE).
+BASELINE = HERE / "fixtures" / "e1000-status-cr5.yaml"
 SPEC = importlib.util.spec_from_file_location("index_check", SCRIPT)
 checker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checker)
@@ -439,7 +441,7 @@ class IndexTests(unittest.TestCase):
 
     def test_unknown_applied_class_is_a_requirement_in_history(self):
         claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")
-        status = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        status = checker.read_yaml(BASELINE)
         item = next(e for e in status["entries"] if e["id"] == "CF-1-TNCRS")
         item["class"] = "unknown"
         checker.validate(claims, status, ROOT)
@@ -449,7 +451,7 @@ class IndexTests(unittest.TestCase):
 
     def test_real_campaign(self):
         claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")
-        status = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        status = checker.read_yaml(BASELINE)
         counts = checker.validate(claims, status, ROOT)
         self.assertEqual(
             counts,
@@ -579,7 +581,7 @@ class IndexTests(unittest.TestCase):
 
     def test_real_applied_spec_item_requires_destination(self):
         claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")
-        original = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        original = checker.read_yaml(BASELINE)
         for new_item in (False, True):
             with self.subTest(new_item=new_item):
                 status = copy.deepcopy(original)
@@ -602,6 +604,7 @@ class IndexTests(unittest.TestCase):
                     checker.validate(claims, status, ROOT)
 
     def test_real_public_provenance(self):
+        # A live consistency check, not a pinned report: read the current index.
         status = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
         entries = {e["id"]: e for e in status["entries"]}
         link = "evidence/CR2-provenance.md"

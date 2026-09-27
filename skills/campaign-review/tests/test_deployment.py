@@ -13,7 +13,7 @@ import unittest
 from unittest import mock
 import uuid
 
-from test_sweep import ROOT, SCRIPTS, check, inputs, sweep
+from test_sweep import BASELINE_DEPLOYMENT, ROOT, SCRIPTS, check, inputs, sweep
 from test_stopping import complete_readings, entry
 import deployment
 
@@ -28,7 +28,9 @@ class DeploymentTests(unittest.TestCase):
         self.env = mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.root)})
         self.env.start()
         self.addCleanup(self.env.stop)
-        self.document = check.read_yaml(deployment.REFERENCE)
+        # Manifests built here start from CR5's reference, whose reader matches
+        # the frozen index's adopted scope.reader.
+        self.document = check.read_yaml(BASELINE_DEPLOYMENT)
 
     def save(self, document=None, name="deployment.yaml"):
         path = self.root / name
@@ -36,10 +38,10 @@ class DeploymentTests(unittest.TestCase):
         return path
 
     def test_reference_and_default(self):
-        self.assertEqual(deployment.load(), deployment.validate(self.document))
-        self.assertEqual(
-            deployment.load()["reader"], {"name": "Claude Fable", "version": "5.1"}
-        )
+        reference = check.read_yaml(deployment.REFERENCE)
+        reader = next(p for p in reference["plugins"] if p["id"] == "reader")
+        self.assertEqual(deployment.load(), deployment.validate(reference))
+        self.assertEqual(deployment.load()["reader"], reader["model"])
 
     def test_user_config_and_explicit_override_preserve_run_store(self):
         settings = deployment.module_at(
@@ -54,7 +56,8 @@ class DeploymentTests(unittest.TestCase):
         )
         self.assertEqual(deployment.load(), deployment.validate(self.document))
         self.assertEqual(
-            deployment.load(deployment.REFERENCE)["reader"]["name"], "Claude Fable"
+            deployment.load(deployment.REFERENCE),
+            deployment.validate(check.read_yaml(deployment.REFERENCE)),
         )
         with mock.patch.dict(os.environ, {"DRIVER_LAB_RUNS": ""}):
             self.assertEqual(settings.run_store()[0], Path("runs"))
@@ -100,7 +103,9 @@ class DeploymentTests(unittest.TestCase):
         for eid in ("AF-1-reading-coverage", "SR-8-independent-reading"):
             entry(status, eid)["impact"] = dict(claims=[], changes_status=False)
         before = copy.deepcopy(status)
-        original = sweep.sweep(claims, status, registry)
+        original = sweep.sweep(
+            claims, status, registry, roles=deployment.load(BASELINE_DEPLOYMENT)
+        )
         self.assertTrue(original["stopping"]["sufficient"])
         model = {"name": uuid.uuid4().hex, "version": "2"}
         self.document["plugins"][3]["model"] = model

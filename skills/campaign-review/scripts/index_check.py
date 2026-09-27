@@ -126,6 +126,9 @@ def local_file(root, value):
     require(
         part and not Path(part).is_absolute(), "expected repository-relative file link"
     )
+    if root is None:
+        require(".." not in Path(part).parts, "link escapes repository")
+        return Path(part)
     path = (root / part).resolve()
     require(path.is_relative_to(root), "link escapes repository")
     require(path.is_file(), f"link does not resolve to a file: {value}")
@@ -774,7 +777,7 @@ def check_history(status_doc, by_id, root):
 
 
 def validate(claims_doc, status_doc, root):
-    """Validate the paired documents and their cross-references."""
+    """Validate documents; root=None checks metadata without opening source files."""
     mapping(claims_doc, ("version", "campaign", "harness", "claims"))
     mapping(
         status_doc,
@@ -789,8 +792,12 @@ def validate(claims_doc, status_doc, root):
     )
     string(claims_doc["campaign"])
     require(claims_doc["campaign"] == status_doc["campaign"], "campaign mismatch")
-    names = harness_check_names(local_file(root, claims_doc["harness"]))
-    require(bool(names), "no harness check names found")
+    names = (
+        harness_check_names(local_file(root, claims_doc["harness"]))
+        if root is not None
+        else None
+    )
+    require(names is None or bool(names), "no harness check names found")
     claims = claims_doc["claims"]
     require(isinstance(claims, list) and bool(claims), "claims must be a nonempty list")
     by_claim = {}
@@ -820,7 +827,10 @@ def validate(claims_doc, status_doc, root):
         strings(claim["checks"], nonempty=True)
         claim_id = claim["id"]
         for name in claim["checks"]:
-            require(name in names, f"{claim_id}: unknown harness check: {name}")
+            require(
+                names is None or name in names,
+                f"{claim_id}: unknown harness check: {name}",
+            )
         strings(claim["scenarios"], nonempty=True, pattern=ID)
         links(root, claim["evidence"])
         require(isinstance(claim["defects"], list), "defects must be a list")

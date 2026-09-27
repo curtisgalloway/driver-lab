@@ -12,11 +12,11 @@ behind a verdict. An **item** is a finding with a recorded disposition.
 A **status index** keeps those verdicts and items together for a campaign.
 
 CR2 extends the CR1 format with verification history and linked revision and
-candidate records; the sweep, stopping-rule evaluation and execution queue are
-later milestones. A clean index
+candidate records. CR3 adds the registry and read-only freshness sweep described
+below; stopping-rule evaluation and the execution queue remain later milestones. A clean index
 check does not establish that a campaign is sufficient for scope.
 
-Two YAML files live in a campaign directory. Both have `version: 1` and the same
+The claim map and status index live in a campaign directory. Both have `version: 1` and the same
 nonempty `campaign` ID. Mappings are closed: unknown and duplicate keys fail.
 Use strings for dates and hashes. Lists of IDs and links must not repeat members.
 The index contains public-safe IDs, hashes, verdicts, scope and disposition
@@ -182,9 +182,8 @@ on every slice. A reconstructed union of cross-check locations is not a complete
 declaration and must not be presented as one. When no complete set is recoverable,
 `null` requires whole-revision widening. Thus section slicing does not promise
 fine-grained freshness when the recorded dependency information cannot support it.
-An older reading with null dependencies cannot remain current. The later sweep
-will evaluate changed identities and dependency overlap; this checker does not
-implement that sweep.
+An older reading with null dependencies cannot remain current. The sweep evaluates
+changed identities and dependency overlap; this checker does not implement those rules.
 
 Candidate-round entries link the header's applied R items, landed accuracy
 readings and per-claim results on the exact same basis and round. Historical
@@ -244,3 +243,158 @@ the artifact reviewer traces those to evidence.
 
 Exit codes: 0 clean, 1 findings, 2 usage, 3 missing input/PyYAML. `--json` emits
 one object with `ok`, `counts`, `findings`; `--skill` prints embedded usage.
+
+## Source registry: sources.yaml (version 1)
+
+**Terms:** a pinned-file adapter returns identity metadata for opaque bytes; a
+change map narrows a change using reviewed metadata bound to its exact old and
+new hashes. An eligible record is current after identity checks, not accepted by
+the stopping rule. See the [glossary](../../GLOSSARY.md).
+
+The registry is a third file, with `version: 1`, matching `campaign`, `sources`
+(list), `citations` and `premises` (mappings), and `contradictions` (list). The
+last three may be empty. Duplicate keys and source IDs fail. The sweep reads these
+three metadata files only; it never opens source paths, parses a spec or diff,
+hashes files, invokes adapters or executes a harness. Run the existing index
+checker first for evidence links and harness check-name existence. The sweep
+reuses its metadata validation with file inspection disabled.
+
+Each source has these required fields:
+
+| Field | Meaning |
+| --- | --- |
+| `id`, `kind`, `version` | Local identity, kind below, and operator-declared version string |
+| `sha256` | Observed full hash, or null when unavailable/not recorded; never fabricated from a version string |
+| `expected_sha256` | Adopted file pin used by the adapter's comparison; a refresh never changes it |
+| `status` | `ok` (identity available), `blocked` (file inaccessible), `unknown` (no local file supplied) |
+| `checked` | ISO date of the observation or historical pin check; importing metadata is not a new byte check |
+| `provenance` | `{adapter, version, version_method}`; adapter name/version and how the source version was determined |
+| `file` | `{root: repository or run_store, path: relative/path}` or null for externally supplied identities; absolute paths, traversal and symlink escapes are rejected |
+
+`kind` is `spec`, `document`, `kernel`, `reference`, `harness`, `guest_init`,
+`emulator`, `guest_kernel`, `guest_image`, `guest_busybox`, `candidate`, `toolchain`,
+`model`, or `fixture`. Kinds bind to the corresponding index basis fields.
+Artifacts compared by hash require a non-null `sha256` when `status` is `ok`;
+otherwise the registry is invalid (JSON findings, exit 1). Use `blocked` or
+`unknown` when the hash is unavailable. The compiler compares by its nonempty
+version string; model and fixture changes do not invalidate prior verdicts, so
+these three kinds permit null hashes. Kind, status and file-root values must be
+strings before their allowed values are checked.
+
+Source documents and kernel files match `source_pins.id`; optional `pin` overrides that
+match (the eight Linux files share the `linux` commit pin). Optional `commit`
+compares the recorded upstream commit. Per-file drift against `expected_sha256`
+also invalidates readings at that shared commit, even if its version stays fixed.
+Optional `bindings` is a nonempty list of basis IDs limiting an artifact's scope;
+the candidate initramfs uses this because its contents include a particular module.
+
+A `spec` source also requires positive integer `revision`. Landed revision
+headers supply changed sections and requirement changes; every intervening
+header matters. The earliest applicable header is the reported stale-since
+revision. When a new revision has not been indexed yet, a reviewed hash-bound
+change map supplies its sections, with an optional source `requirement_change`
+boolean. Without that boolean, a missing header conservatively means a
+requirement change. Without mapped sections, the whole document is affected.
+
+`toolchain.version` compares the recorded compiler string. A change to a recorded
+compiler invalidates run verdicts using it; null basis values cannot trigger it.
+For e1000, `gcc-14` remains an incomplete identity with null binary hash, explicitly
+documented in the provenance. Neither a hidden package upgrade nor an unregistered
+compiler can be detected. Model and fixture identities cause no invalidation.
+
+`recorded-pin` provenance means an operator imported a historical public pin or
+run identity. Its `ok` is availability of that recorded identity, not live proof
+of the host's state. The public e1000 registry carries those snapshots for the
+manual, Linux files, emulator package/binary, guest kernel/BusyBox, reference
+module and compiler. Five available files were refreshed locally for CR3; the
+evidence lists them. A deployment must refresh its external identities when the
+host changes. The sweep does not silently reach out to that host.
+
+### Change and dependency mappings
+
+Optional `changes` on a source is a list with one record per prior hash:
+
+```yaml
+changes:
+- from_sha256: <full old hash>
+  to_sha256: <full observed current hash>
+  since: <change ID or date>
+  reviewed: true
+  sections: null
+  checks: [<exact emitted check name>]
+  scenarios: null
+  evidence: [<reviewed diff artifact or run ID>]
+```
+
+All fields are required; `sections`, `checks`, and `scenarios` are lists or null.
+The current hash must match `to_sha256`, and narrowing applies only to entries
+whose old hash matches `from_sha256`. `reviewed: false` cannot narrow anything.
+An explicitly empty reviewed list means no changes at that level; use null for
+unknown. A reviewer must confirm the map covers the entire diff, including shared
+helpers and deleted checks. The sweep maps names to claims using `claims.checks`.
+Unknown check names or absent check mapping widen to the supplied enclosing
+scenarios using `claims.scenarios`; absent/unknown scenarios widen to every
+qualification. A mapped check change affects every claim using that check.
+All end-to-end mappings must be supplied for multiple prior hashes, or the
+unmapped bases widen. Qualification comparisons use `validated_harness_sha256`,
+not the original run's older harness.
+
+This metadata boundary is deliberate: the operator/reviewer reads diffs and
+supplies the maps; the sweep cannot infer semantic dependencies from source text.
+Changes inside a shared helper must use all affected scenarios or the whole
+harness, not a nearby check name. No automatic diff parser claims otherwise.
+
+`citations` maps entry ID → source ID → cited source section IDs, distinct from
+spec section IDs. A document change intersects these with its mapped sections.
+Use the enclosing section for uncertain item mappings. Missing citation or change
+detail widens to all verification verdicts citing that document. Parent IDs cover
+descendants (`5` includes `5.10`; `5.1` does not). `source_pins` on run records are
+context, not a claim that a run is a manual reading.
+
+`premises` maps claim ID → nonempty observation-ID list. A hardware contradiction
+is `{observation, since, conflict}`, where `conflict` is a relative conflict-record
+locator (for e1000, the spec's §12 conflict table). It marks the observation
+contested and premise qualifications stale. Without an exact premise mapping,
+the sweep widens to claims whose spec sections overlap the observation's sections.
+The same rules apply to observations already contested in the index, even without
+a registry contradiction. When the original contention has no recorded date,
+dependent staleness cites `index:<observation ID>` rather than inventing one.
+Readings tagged `emulated` follow stale/contested observations through their sections
+and declared dependencies; null dependencies widen to the reading unit. Candidate
+results remain true of the emulator. Conflict locators are reported for the
+operator to record; the sweep never edits the spec or invents hardware evidence.
+
+### Adapter and report
+
+```bash
+uv run --with pyyaml python3 skills/campaign-review/scripts/pinned_file_adapter.py evals/e1000/sources.yaml spec --json
+uv run --with pyyaml python3 skills/campaign-review/scripts/sweep.py evals/e1000 --json
+```
+
+The adapter supports `--root`, `--run-store`, `--write` and `--dry-run`. With no
+explicit run store it reuses `utilities/run-store.py` configuration; it never
+searches. It wraps `corpus_check.check_blob` for hashing and pin comparison.
+JSON contains `result` with C8's identity fields/provenance and `matches_pin`,
+plus `ok`, `updated`, `would_update` and `findings`. Missing sources produce
+blocked/unknown with null observed hash, without leaking an absolute path or
+content. `--write` updates observation fields only and drops obsolete change maps
+if the hash changes. It never adopts a new expected pin or guesses a version.
+
+Sweep JSON contains `entries` (all stale/contested records, previous state,
+reasons and stale-since), `stale_controls` (reference control run IDs from the
+claim map), `conflicts`, `unavailable`, `unmapped_harness`, state `counts`,
+`eligible` record IDs and `eligible_counts`. Eligibility is only a freshness
+filter: it does not count independent readings, prove qualification, apply S1–S5,
+or declare sufficient-for-scope. Existing stale/contested states persist, even
+if today's hashes match; superseded entries remain history. Stale and contested
+entries never appear in eligible counts. A reference-module change reports its
+control runs separately because CR1 did not make them independent index entries.
+
+The sweep supports `--registry` to select deployment-owned metadata. Blocked or
+unknown source observations are explicit incomplete-precondition findings, not
+identity changes; they cannot prove freshness. Exit 3 takes precedence over
+stale findings when any source is unavailable. Otherwise exit 1 means stale or
+contested verdicts/controls (or invalid metadata), and exit 0 means no findings.
+Both commands use exit 2 for usage errors and support `--skill`. No real sweep
+or private adapter invocation is added to public CI; their synthetic tests run
+with the existing campaign-review discovery command.

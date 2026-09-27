@@ -1,0 +1,275 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+campaign: e1000
+sources:
+- id: 8254x-sdm
+  kind: document
+  version: '4.0'
+  sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+- id: linux-Makefile
+  kind: kernel
+  version: v6.12
+  sha256: 789af8834dcf4d8251226a976c665143100da5e48967f5b6e9afd305b4ff1bae
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: 789af8834dcf4d8251226a976c665143100da5e48967f5b6e9afd305b4ff1bae
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000-h
+  kind: kernel
+  version: v6.12
+  sha256: b210b51829faf870d4b6563d2f82afb6c6ae33fad95ea7a4858bb404d32fd872
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: b210b51829faf870d4b6563d2f82afb6c6ae33fad95ea7a4858bb404d32fd872
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_ethtool-c
+  kind: kernel
+  version: v6.12
+  sha256: b120b1fcbceede9811cffdb1be4e72867456a8bc3eb3cf067799de6fb68c9ec2
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: b120b1fcbceede9811cffdb1be4e72867456a8bc3eb3cf067799de6fb68c9ec2
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_hw-c
+  kind: kernel
+  version: v6.12
+  sha256: ef8b207d22cac4560e71196077a9e1f50f697ad86e4f79bf1e68caf57d96a298
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: ef8b207d22cac4560e71196077a9e1f50f697ad86e4f79bf1e68caf57d96a298
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_hw-h
+  kind: kernel
+  version: v6.12
+  sha256: e3c8b99f42b640c98560341017474978ca0c23452dc0754eb63fc67009380ea3
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: e3c8b99f42b640c98560341017474978ca0c23452dc0754eb63fc67009380ea3
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_main-c
+  kind: kernel
+  version: v6.12
+  sha256: cbf3e1c7443bbb9d51e299bb6d017d08c99dd9ba3aa5c58383deefab7b8d5c60
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: cbf3e1c7443bbb9d51e299bb6d017d08c99dd9ba3aa5c58383deefab7b8d5c60
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_osdep-h
+  kind: kernel
+  version: v6.12
+  sha256: 14ee85dc1070095ded89a137c791082f7dc3b30b036c177de179220f3d1b72a7
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: 14ee85dc1070095ded89a137c791082f7dc3b30b036c177de179220f3d1b72a7
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: linux-e1000_param-c
+  kind: kernel
+  version: v6.12
+  sha256: 25a3debe1be12609f76d347043f6e160376d344f54d72e9b5cf17bbd5d2fec7c
+  status: ok
+  checked: '2026-09-23'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: L02a published file pins; metadata imported, bytes not rechecked
+      locally.
+  file: null
+  expected_sha256: 25a3debe1be12609f76d347043f6e160376d344f54d72e9b5cf17bbd5d2fec7c
+  pin: linux
+  commit: adc218676eef25575469234709c2d87185ca223a
+- id: qemu-e1000
+  kind: emulator
+  version: 10.2.1+ds-1ubuntu3.2
+  sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: Imported from L02a or CF-2 run identities; not a live host probe.
+  file: null
+  expected_sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+- id: guest-kernel
+  kind: guest_kernel
+  version: CF-2 guest
+  sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: Imported from L02a or CF-2 run identities; not a live host probe.
+  file: null
+  expected_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+- id: guest-busybox
+  kind: guest_busybox
+  version: CF-2 busybox
+  sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: Imported from L02a or CF-2 run identities; not a live host probe.
+  file: null
+  expected_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+- id: guest-image-candidate
+  kind: guest_image
+  version: CF-2 a2 candidate
+  sha256: aa86b2d6aa5498c7ad4bea777a0f4a0c73457351a70ac99f59f1eecf730f5cc1
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: pinned-file
+    version: '1'
+    version_method: operator-declared registry version
+  file:
+    root: run_store
+    path: e1000-cf2-20260926-01/runs/a2-cand-smoke-2/initramfs.cpio.gz
+  expected_sha256: aa86b2d6aa5498c7ad4bea777a0f4a0c73457351a70ac99f59f1eecf730f5cc1
+  bindings:
+  - cf2-a2
+- id: harness
+  kind: harness
+  version: CS-1
+  sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: pinned-file
+    version: '1'
+    version_method: operator-declared registry version
+  file:
+    root: repository
+    path: evals/e1000/harness/l02harness.py
+  expected_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
+- id: guest-init
+  kind: guest_init
+  version: CS-1
+  sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: pinned-file
+    version: '1'
+    version_method: operator-declared registry version
+  file:
+    root: repository
+    path: evals/e1000/harness/guest-init.sh
+  expected_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+- id: candidate
+  kind: candidate
+  version: CF-2 r1
+  sha256: df37c7ad143d7a04bf6655ce4e6f8770788677049e6973e6e1a4d294c88eee65
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: pinned-file
+    version: '1'
+    version_method: operator-declared registry version
+  file:
+    root: run_store
+    path: e1000-cf2-20260926-01/build/r1/e1000_l02.ko
+  expected_sha256: df37c7ad143d7a04bf6655ce4e6f8770788677049e6973e6e1a4d294c88eee65
+- id: reference
+  kind: reference
+  version: CF-2 reference
+  sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: Imported from L02a or CF-2 run identities; not a live host probe.
+  file: null
+  expected_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+- id: spec
+  kind: spec
+  version: revision 8
+  sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: pinned-file
+    version: '1'
+    version_method: operator-declared registry version
+  file:
+    root: run_store
+    path: e1000-sr8-20260926-01/docs/e1000-spec.md
+  expected_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+  revision: 8
+- id: toolchain
+  kind: toolchain
+  version: gcc-14
+  sha256: null
+  status: ok
+  checked: '2026-09-26'
+  provenance:
+    adapter: recorded-pin
+    version: '1'
+    version_method: CF-2 recorded gcc-14 only; exact compiler build and binary hash
+      are unknown.
+  file: null
+  expected_sha256: null
+citations: {}
+premises: {}
+contradictions: []

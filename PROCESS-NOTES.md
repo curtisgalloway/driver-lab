@@ -400,3 +400,15 @@ from the condition (an unreachable host is a stop, not a state).
 Fix belongs in: the lab-notebook skill (entry time read from the clock) and a note in the
 harness-authoring guidance for remote fixtures (`ssh -n` in loops; reachability first).
 Status: open
+
+### 2026-09-26T17:09:11-07:00 — diagnostic verbosity and a capture that outlived its check
+Chapter: [L01-hw](notebook/L01-hw.md)
+What happened: the declared reference debug value was a mask, but its parameter expects a
+bit count and silently selected default logging. Separately, a C3 timeout bypassed capture
+cleanup; the orphaned writer caused a size/hash mismatch during artifact retrieval.
+Cost: a separately declared diagnostic and a second artifact copy, both retained.
+Prevention: read the module parameter conversion before declaring diagnostics; put capture
+cleanup in an exception-safe path and verify file stability before accepting a transfer.
+Fix belongs in: the private hardware harness and fixture-run guidance.
+Status: diagnostic corrected in a declared additional run; the C3 cleanup gap remains a
+recorded limitation of the frozen harness, with the orphan stopped explicitly.

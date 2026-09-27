@@ -17,6 +17,9 @@ SPDX-License-Identifier: Apache-2.0
   built-in Ethernet, in its own network namespace, so DUT traffic crosses the switch.
 - **Check** — one declared pass/fail question (C1–C9 below); a check *covers* a condition
   only when the run also records evidence that the condition occurred.
+- **RSTP / BPDU** — the switch protocol that prevents Ethernet loops / its control frame,
+  which advertises whether a port is forwarding ordinary traffic.
+- **ARP** — the exchange that discovers an Ethernet neighbor before IPv4 traffic can flow.
 - **Planted defect** — a deliberate edit to a disposable copy of the candidate, used to show
   that a check can fail (a *negative control*).
 
@@ -25,20 +28,14 @@ unit) and the [first unit](L01.md).
 
 ## Status
 
-**Blocked, results substantial.** Round p1 (two primary runs per driver, defect d1) and the
-first five runs of round r2 (one per driver, defects d2–d4) completed on 2026-09-26. **The
-candidate passed every declared check in all three of its primary runs** except one C7
-verdict on a rule the round-r2 declaration loosened for the candidate's accounting (review
-R7: the reference's overrun counter stays unjudged, so "symmetric" overstated it); no failure in any run is
-attributable to the candidate or to a spec gap, so **no repair brief was prepared and repair
-round 2 stays unused.** The reference failed C6 and C7 in all three of its runs, the same way
-each time. Three of five planted-defect controls were caught by the declared check (one of them, d1,
-with an r2 verdict still to be re-verified from its artifacts, and one spurious C7 PASS in
-d1's own run that the review found, R1). Still to
-do: defects d5 and d6, the diagnostic reference run, and retrieval of the r2 artifacts from
-the fixture (the connection to it failed twice on 2026-09-26, once mid-round; the second time
-this unit stopped rather than loop). This file is written in two parts: the declaration
-(committed before the primary runs) and the results.
+**Scoped L01 acceptance complete; L01c independent review pending.** The unchanged
+candidate passed all ten r3 checks. All five original negative controls were caught across
+p1/r2; r3 qualified the repaired checks with four controls, including removal with no
+flood. Every declared job and capture is retained and the final fixture copy is verified.
+The reference's immediate-reopen C6 failure is attributed to switch forwarding delay,
+not an interrupt stall. No original-candidate failure or spec gap required a repair;
+repair round 2 remains unused. Historical verdicts and superseded interpretations remain
+visible below. The orchestrator reviews the code and artifacts before landing.
 
 Private run ID: `enc28j60-l01-hw-20260926-01`, in the driver-porting run store: ledger, the
 harness, module builds, every run's `result.json`, command log, kernel log and packet
@@ -154,7 +151,7 @@ driver under the new rule (harness `19840f97…`), the five remaining defects (d
 each), and a diagnostic run of the reference with its own debug messages on (C6, C7, C8
 only; not a primary run; it exists to attribute the reference's C6 and C7 failures).
 
-## Results
+## Results (p1/r2 history)
 
 ### Verdicts
 
@@ -189,14 +186,15 @@ iperf3 server report, and the post-flood 1 MiB taking 68 s. The term is not spec
 declared next round should judge `rx_over_errors` for the candidate. The candidate's own
 C7 passes are not affected (their `rx_over_errors` were 18–30).
 
-The r2 verdicts (ref r2-1, cand r2-1, d2, d3, d4) are read from the runner's log; their
-`result.json`, logs and captures are on the fixture, not yet in the run store. **Every
+At the L01b checkpoint, the r2 verdicts (ref r2-1, cand r2-1, d2, d3, d4) were read
+from the runner's log. L01c retrieved and verified their JSON, logs, and captures and
+confirmed every verdict. **Every
 number below is from the two p1 runs per driver and d1, whose artifacts are in the store;
 "three runs" claims are verdict-level only** (review R4).
 
 ### The candidate
 
-The same verdicts in three runs; the numbers are p1's two. Carrier 0.1 s after `up` (it never parks the chip in
+The same verdicts in three p1/r2 runs; the numbers are p1's two. Carrier 0.1 s after `up` (it never parks the chip in
 power-save, so the PHY link survives a `down`); 5 interrupts during the open. Pings 1.0–1.25
 ms average in both directions from the first request. TCP 4.08–4.09 Mb/s peer to DUT and
 2.94 Mb/s DUT to peer over the 10 Mb/s half-duplex link, 1 MiB and 4 MiB intact each way by
@@ -228,27 +226,24 @@ the DUT counting one received frame per cycle
   mechanism shows in C3: the first ten peer-to-DUT pings of run p1-1 came back with RTTs of
   2053, 1854, 1651, … 223 ms — ten requests answered at one instant, two seconds after the
   open — and then 1.2 ms; run p1-2's first five: 1004, 804, 601, 398, 194 ms. Averages 571
-  ms and 151 ms against 1.1–1.5 ms the other way. **Reading:** the reference services its
+  ms and 151 ms against 1.1–1.5 ms the other way. **Historical reading, withdrawn by L01c below:** the reference services its
   receive ring only from its interrupt thread, and after an open that thread is not being
   run by received frames; it runs when something else happens (a transmit completion, a
   link change), which TCP supplies continuously and an idle link does not. **The cause is
   open** (review R3 corrected an earlier draft that blamed the errata's PKTIF issue: the
   candidate enables the same packet interrupt on the same part and is woken by received
   frames at once, its 0.7–1.4 ms RTTs being interrupt latency, not its 100 ms poll, so
-  "the pin is not driven for packets" is contradicted by the candidate's own data). The
-  diagnostic run with the reference's interrupt logging, which would show what its thread
-  is and is not woken by, did not run. Attribution: reference driver behavior on this
-  fixture; not a fixture or harness effect (the candidate under the same harness, same
-  minute, answers every ping).
+  "the pin is not driven for packets" is contradicted by the candidate's own data). At that checkpoint the diagnostic had not run. The initial attribution excluded the
+  fixture; the retrieved captures contradict that exclusion. See L01c's C6 attribution
+  below, which supersedes this interpretation.
 - **C7.** Recovery passed every time (10 of 10 pings, 1 MiB intact) but **the reference's
   counters never moved during the flood** (41–55 % of the datagrams lost, `rx_dropped`,
   `rx_errors`, `rx_over_errors` all 0), so the check's "the condition occurred" term is
   unmet. Attribution: the reference's accounting. It books an overrun only when the ring's
-  free space is zero at the moment its handler runs, and its handler runs late (above), so
-  an overflow the chip handled and the peer's loss counters show is invisible to it. The
-  overflow condition is demonstrated for the candidate (its own counter), inferred for the
-  reference from the offered rate, the loss and the candidate's counter under the same
-  flood.
+  free space is zero at the moment its handler runs. The earlier explanation also invoked
+  delayed interrupt service; L01c withdraws that inference. UDP loss does not locate the
+  drop inside the chip. Overflow is demonstrated for the candidate by its dedicated
+  counter; it remains unproven for the reference despite the offered rate and losses.
 - **`rmmod` hang, once in four attempts** (development run 3, not a primary run): `rmmod`
   under the ping flood blocked in `free_irq` → `__synchronize_irq`, waiting for the threaded
   handler to return; the task stayed in D state and the fixture needed a reboot, which the
@@ -266,9 +261,9 @@ the DUT counting one received frame per cycle
   later completion reads as one); the causal chain is source review, the counter pattern
   is hardware. No rule judged it; it belongs in a declared next round.
 
-Neither of the failing checks is a spec question: the spec's requirements (poll `EPKTCNT`;
-wake the chip before reset; clear the abort flags before each attempt) are the ones the
-candidate followed and the reference does not.
+Neither failure demonstrates a candidate spec gap. C6 reflects fixture forwarding state;
+C7 lacks specific reference overflow evidence. The first unit's source-review requirements
+remain separate evidence and are not proved by these two reference failures.
 
 ### Planted defects (negative controls)
 
@@ -276,10 +271,10 @@ candidate followed and the reference does not.
 | --- | --- | --- | --- |
 | d1 wrap pointer rejected | C5 (C3, C9 as consequences) | C3 (TCP 0 Mb/s peer to DUT, rx_errors 83 with 83 driver log lines, the 1 MiB receive corrupt), C4b (two frames lost to a reset), C5 (the 4 MiB receive stalled to the harness's 240 s limit), C9 (433 "I/O or engine failure -5; resetting" lines over the run; an earlier draft said three, the summary's truncation, review R2); 166 carrier changes over the run | **Yes.** A defect that only fires on a wrapped next-packet pointer failed the wrap check and the traffic check, which is also the evidence that wraps occur in a 1 MiB transfer. C5 failed by stall rather than by its counter rule; the counter and message evidence is in C3 and C9. |
 | d2 ERXRDPT even (erratum 14) | an experiment | no check failed | Experiment result: on this B7 part, one full run with an even read pointer (about 700 ring traversals, 20 stop/start cycles, a flood) showed nothing. One run; it does not say the erratum is harmless, only that these checks did not see it. Not counted as a control. |
-| d3 FCS kept | C4b only | C4b only (verdict from the log; the "+4 on every length" reason is to be confirmed from its artifacts) | **Yes** by verdict, and specific: nothing else failed. |
-| d4 no INTIE | C2 (C3 on its interrupt term) | C2, C3, C4a, C5 (stalled to the limit), C6, C7 (verdicts from the log) | **Yes** for C2 and C3 by verdict; the reason is to be confirmed from its artifacts. The other four failures are polling-only throughput and latency (numbers pending retrieval); C4a's failure was not declared and its rows are still on the fixture. |
-| d5 ETXND short | C4a, C3 | not run | pending |
-| d6 RXERIF not cleared | C7 (the r2 rule's control) | not run | pending |
+| d3 FCS kept | C4b only | C4b only; L01c verified all 15 delivered lengths equal max(60, L) + 4 | **Yes**, specific to the declared length defect. |
+| d4 no INTIE | C2 (C3 on its interrupt term) | C2, C3, C4a, C5 (timeout), C6, C7; retrieved artifacts confirm zero interrupts in C2 and C3 and missing 65/256/1000/1499-byte C4a frames | **Yes** for C2 and C3; the other failures are consequences of the planted polling-only defect. |
+| d5 ETXND short | C4a, C3 | C4a rejects 14/15 cases: padding hides the 18-byte case, other short frames have damaged content, frames above 60 bytes arrive one byte short; C3/C7 time out, C5 cannot connect, C6 answers no pings | **Yes**, C4a proves the named truncation; C3 is a consequential timeout. |
+| d6 RXERIF not cleared | C7 (the r2 rule's control) | C7 only: 29,928 overflows during flood and 48,253 during the idle window; recovery pings and transfer intact | **Yes**, the idle-counter bound fails decisively. |
 
 ### Requirement-to-evidence table
 
@@ -291,13 +286,13 @@ stated; "source-reviewed" means the first unit's reviews A and B and nothing on 
 | --- | --- | --- |
 | Register map, bank switching, MAC/MII dummy byte (REG) | tested indirectly | every check drives the map; the revision read at every probe (C1), the MAC address programmed and answering (C3), PHY reads deciding carrier (C2, C6) |
 | Reset and initialization: wake before SRC, CLKRDY, MAC/PHY configuration (INIT) | tested | C1 (probe after every preceding driver's state, including the reference leaving the chip in power-save), C2 (carrier), C4a (hardware padding to 60 with zeros and CRC generation, since the peer's NIC accepted every frame) |
-| Transmit: control byte, ETXST/ETXND, TSV, one packet in flight (TX) | tested | C4a 15 sizes, C3/C5 TCP, 1,400+ ordinary collisions counted per run; d5 pending |
+| Transmit: control byte, ETXST/ETXND, TSV, one packet in flight (TX) | tested | C4a 15 sizes, C3/C5 TCP, 1,400+ ordinary collisions counted per run; d5 detects truncation |
 | Late-collision retransmit bound (TX-010, S-02, L5) | untested | no late collision occurred (switch link, no hub); the 17-attempt bound and the 2 s deadline are source-reviewed only |
 | Receive: next-packet pointer, slot check, FCS strip, odd ERXRDPT, PKTDEC (RX) | tested | C4b 15 sizes at exact lengths, C5 ≥ 733 ring traversals intact; d1 shows the wrap path fails when broken; d3 shows the length rule is checked; d2's even ERXRDPT unobservable in one run |
-| Receive overflow (RXERIF) | tested | C7: `rx_over_errors` 18–30 per flood, counters settle, recovery; d6 pending |
-| Corrupt next-pointer recovery (§11.5, B-08) | exercised, not injected | d1 turned every wrap into that fault: each time the driver reset and traffic resumed (three "resetting" episodes, TCP recovered); no real corruption was injected |
-| Interrupts: INTIE mask/unmask, sources, EPKTCNT over PKTIF (IRQ) | tested | C2 5 interrupts at open, ~8,000 per traffic check; d4 shows the interrupt term fails without INTIE; the reference's C6 shows what relying on PKTIF costs on this part |
-| PHY and link: LSTAT, PHIR acknowledge, PHIE (PHY) | tested | C2, C6 (60 carrier transitions) |
+| Receive overflow (RXERIF) | tested | C7: `rx_over_errors` 18–30 per flood, counters settle, recovery; d6 detects an unacknowledged overflow flag |
+| Corrupt next-pointer recovery (§11.5, B-08) | exercised, not injected | d1 exercised the reset path 433 times without a kernel warning; receive traffic did not recover while the planted fault recurred; no real pointer corruption was injected |
+| Interrupts: INTIE mask/unmask, sources, EPKTCNT over PKTIF (IRQ) | tested | C2 5 interrupts at open, ~8,000 per traffic check; d4 shows the interrupt term fails without INTIE; the reference's C6 is switch-forwarding evidence, not evidence against PKTIF |
+| PHY and link: LSTAT, PHIR acknowledge, PHIE (PHY) | tested | C2, C6 (carrier return and replies; administrative carrier-down is not driver evidence) |
 | Open/stop, queue discipline, removal (NET) | tested | C6, C8 (0.1 s under flood), C9 |
 | TX timeout (watchdog) | untested | never triggered; the path is source-reviewed only |
 | Receive filters: unicast, broadcast, multicast, promiscuous (FILT) | tested incidentally | ARP (broadcast) and IPv6 ND/MLD (multicast) worked in every run; the DUT was promiscuous throughout (the capture sets it), so the "normal" filter was in force only in C1–C2; no dedicated check |
@@ -334,8 +329,8 @@ the candidate is silent.
 - The p1 harness (`cb42e46b…`) was overwritten in the store by the r2 patch; reconstructed
   by reversing that patch, hash-verified, and kept as `harness/p1/l01hw.py` (R5).
 
-None changes a candidate verdict; R1 changes d1's C7 cell (above). A declared next round
-should fix R1, R9, R10 and R11 in the harness before more runs.
+None changes an original candidate verdict; R1 changes d1's C7 cell (above).
+L01c applies the repairs in the separately declared r3 harness below.
 
 ### Decisions made in the user's place
 
@@ -361,17 +356,17 @@ swarm (no shared machinery or access control changed):
 
 | Finding | Severity | Resolution |
 | --- | --- | --- |
-| R1 C7's overflow term not specific; d1's C7 PASS spurious | high | d1's cell footnoted; the term named a harness defect for the next declared round |
+| R1 C7's overflow term not specific; d1's C7 PASS spurious | high | d1's historical cell footnoted; r3 judges the selected counter plus a receive-traffic floor; reference counter ambiguity remains explicit |
 | R2 "three" reset messages for d1 was a truncation; TCP 0 Mb/s, receive timed out, 166 carrier changes | medium | corrected in the defect table |
-| R3 the C6 reading blamed the PKTIF erratum and "1.2 ms from the poll", contradicted by the candidate's own packet interrupts | medium | cause stated as open; the diagnostic run named as the next evidence |
-| R4 "three runs" ranges rest on p1's two; r2 and d2–d4 are verdict lines | medium | every number scoped to p1; r2 statements marked verdict-only |
+| R3 the C6 reading blamed the PKTIF erratum and "1.2 ms from the poll", contradicted by the candidate's own packet interrupts | medium | L01c capture analysis attributes C6 to switch forwarding state after PHY power-down; prior interrupt-stall reading withdrawn |
+| R4 "three runs" ranges rest on p1's two; r2 and d2–d4 are verdict lines | medium | p1 numbers remain scoped; L01c retrieved, hash-verified, and inspected r2 artifacts, confirming the logged verdicts |
 | R5 the p1 harness not in the store | medium | reconstructed by reversing the r2 patch, hash `cb42e46b…` verified, stored |
 | R6 reference transmit errors after the flood unreported | medium | added, tied to R-02 as consistent, for a declared next round |
 | R7 the r2 rule called "symmetric" | medium | reworded: loosened for the candidate's accounting; the reference's overrun counter stays unjudged |
 | R8 same configuration confirmed; criteria revisions supported | low | no change |
-| R9 C6's carrier-drop term vacuous | low | recorded as a harness defect |
-| R10 C5's time clause never reached | low | recorded as a harness defect |
-| R11 C8's flood not evidenced; its stop fails | low | recorded as a harness defect |
+| R9 C6's carrier-drop term vacuous | low | r3 withdraws that coverage and judges carrier return plus replies |
+| R10 C5's time clause never reached | low | r3 converts timeout into failure data and retains counters/logs under a shared deadline |
+| R11 C8's flood not evidenced; its stop fails | low | r3 requires packet timestamps overlapping removal and explicitly terminates its ping |
 | R12 three ledger contradictions (d1's driver "left bound"; a reboot that never happened; "every probe logs the revision") | low | ledger corrected |
 | R13 identities consistent; public files clean; the private harness and runner embed a user name, a host and a key path | low | they stay private; noted in the ledger |
 
@@ -381,8 +376,8 @@ artifacts are retrieved; R2, R3 and R7 needed correction before the checkpoint (
 
 ### Limits
 
-- The r2 artifacts, d5, d6 and the diagnostic run are on or for the fixture; their absence
-  leaves the C6 reading above unconfirmed and two negative controls unrun.
+- L01b's missing r2 artifacts and two unrun controls were resolved in L01c. The reference
+  overflow evidence still depends on its nonspecific drop counter.
 - Every check ran on one board, one switch, one silicon revision, at 12 MHz; nothing here
   speaks to B1/B4 parts, full duplex, hubs, or other SPI clocks.
 - The reference's overflow condition is inferred, not counted (above).
@@ -427,7 +422,6 @@ failure, a hung unload, or an attributable original-candidate failure.
 | m3-d5 | C6 | C6 fails replies with shortened transmit frames; this qualifies its surviving traffic term |
 | m3-d6 | C7 | C7 fails its idle-counter bound with RXERIF unacknowledged |
 | h3-no-flood | C8 | original candidate with a harness copy replacing only the ping command with `true`; C8 must fail traffic evidence even if unload succeeds |
-
 | diag-r3-ref-debug10 | C6 | reference C6 still expected to fail; verbosity 10 enables interrupt messages, unlike r2's out-of-range value |
 
 Five private harness regression tests exercise timeout retention, C6's surviving
@@ -454,5 +448,128 @@ control remain private; the following hashes freeze the executable inputs.
 - Add one separately declared `debug=10` C6 diagnostic, because the driver interprets debug as a bit count and `0x2fe` silently selects default logging.
 - Save local commits in a separate writable checkout and provide a bundle, because the supplied worktree's shared Git metadata is read-only.
 - Preserve and recopy the changing d5 capture after stopping its orphaned writer, because a size/hash mismatch cannot be accepted as a verified transfer.
+- Attribute C6 to fixture forwarding state, because paired captures show the DUT-side port withholding traffic while the peer-side port forwards.
+- Mark scoped L01 acceptance complete while leaving review pending, because the acceptance criteria are met and review is the orchestrator's next gate.
 
 Declaration amended 2026-09-26T17:02:01-07:00, still before any r3 run: add the verbosity-10 diagnostic after the six listed jobs.
+
+### Completed r2 and C6 attribution
+
+All remaining declared jobs ran once after the explicitly void interrupted d5 attempt.
+The completed r2 fixture copy comprises 134 files, including every capture; its size and
+SHA-256 comparisons had no mismatches. An initial copy differed in d5's C3 peer capture:
+a C3 exception had bypassed capture cleanup, leaving its writer alive. Both transfer
+attempts and manifests are retained; the writer was stopped before the verified recopy.
+This is a harness artifact-lifetime failure, separate from the planted transmit defect.
+
+The original diagnostic reproduced 0/20 good C6 cycles, carrier returning in 1.97–2.07 s,
+and C7's missing overflow evidence; C8 and C9 passed. Its `debug=0x2fe` did **not** enable
+interrupt messages: the reference passes it to `netif_msg_init`, which interprets the
+value as a count of low bits and substitutes defaults for values at least 32. The
+separately declared verbosity-10 run tests the intended diagnostic without rewriting r2.
+
+**C6 attribution: fixture forwarding delay after the reference powers down the link.**
+During the diagnostic's C6 window, the peer capture contains 60 outgoing ARP requests;
+none reaches the DUT capture. The DUT receives 20 spanning-tree control frames, all
+advertising a designated port with neither Learning nor Forwarding set. The peer-side
+port advertises Forwarding in all 50 of its control frames. Thus receiving and interrupt
+service are not globally stalled, and the two switch ports are in different forwarding
+states. After the final C6 cycle the DUT-side port begins advertising Learning/Forwarding
+and ARP reaches the DUT, which replies. The reference's close routine powers down the
+PHY; the candidate keeps the physical link up. This explains why identical administrative
+commands expose the switch delay only with the reference. The earlier PKTIF/interrupt
+interpretation is withdrawn, including its assertion that the fixture was excluded.
+
+The captured flags describe the sending port's state; see the
+[Cisco RSTP explanation](https://www.cisco.com/c/en/us/support/docs/lan-switching/spanning-tree-protocol/24062-146.html).
+The attribution is an inference from the captures plus the reference's close behavior,
+not a controlled switch-configuration experiment. No switch setting was changed. It
+explains this failure immediately after reopening; it does not certify other reference behavior.
+
+### L01c validation limits
+
+The five new private harness regression tests pass. Repository checks pass for
+os-investigator (7), board-expert (42), ENC28J60 (105), and e1000 (70); the author manifest
+matches, the spec check passes with nine existing unverified-spec warnings, and the
+portability scan reports zero findings. The cleanroom suite has 59 passes and two failures
+in unchanged code: a temporary project resolves to an ancestor harness directory, moving
+the event log outside the test's expected directory; and a sandbox smoke test where this
+session cannot create a nested namespace. These remain visible validation limits for the
+orchestrator; no unrelated tooling was changed.
+
+### R3 primary results
+
+The declaration was committed as `7f3c72b` before deployment or execution. The unchanged
+candidate passed all ten checks. C5 transferred 4 MiB each way in 14.1 s with at least
+732.1 receive-ring traversals and no unexplained receive error. C6 passed 20/20 cycles
+with carrier returning within 0.10 s. C7 recorded 21 overflows during 3,480 received flood
+frames, two in the real 3 s idle window, and intact recovery with no transmit error.
+C8 removed the module in 0.10 s with 1,451 captured requests in the preceding second,
+36 during removal, and 2,924 DUT receive packets before removal.
+
+The reference passed nine checks; only C6 failed. Its C8 removal took 0.11 s with
+1,494 requests in the preceding second and 37 during removal. Its C7 PASS arose from
+one `rx_dropped` among 3,619 received flood frames. **This is not verified overflow:**
+the reference shares that counter with unrelated drops. Its post-flood transfer again
+completed while booking 441 transmit errors and zero transmit packets, consistent with
+the previously reviewed abort-status accounting defect. The unchanged C7 rule records
+that accounting but does not judge it. Neither observation is a candidate failure.
+
+### R3 control results and failure attribution
+
+| Run | Failed checks | Attribution and qualification |
+| --- | --- | --- |
+| m3-d1 | C5, C7, C9 | Planted wrap defect. C5 returns a normal FAIL at 240.4 s, preserving 959 unexplained receive errors and 959 driver messages; its second transfer is explicitly skipped after the shared deadline. C7 rejects zero overflow counts despite one unrelated receive error, 49 received flood frames, 10/10 recovery pings and an intact transfer. C9 retains all 1,207 reset messages. |
+| m3-d5 | C6 | Planted transmit truncation. Carrier returns within 0.17 s, but no cycle passes its three-reply term; the surviving C6 check can fail. |
+| m3-d6 | C7 | Planted missing overflow acknowledgement. The real 3 s idle window records 71,968 overflows, exceeding five; 23,272 occurred during 3,351 received flood frames. |
+| h3-no-flood | C8 | Planted harness failure, not candidate behavior. Removal exits zero in 0.10 s; ping is not alive and both request counts are zero. Five background receive packets alone do not qualify traffic. |
+
+No job was silently repeated. No original-candidate failure or spec gap was found, so
+no repair brief was written and repair round 2 remains unused. Historical reference C7
+failures are missing counter evidence from the reference's accounting; reference C6 is
+attributed to the fixture's forwarding state. The development removal hang remains
+reference behavior with its saved stack and no established internal cause. Historical
+C3/C7 exceptions on d5 are triggered by its planted transmit defect; the lost capture
+cleanup is separately attributed to the harness. The first artifact-copy mismatch and
+unrelated local validation failures are also retained, not driver verdicts.
+
+The representative controls now qualify receive wrap, frame lengths, interrupt activity,
+transmit truncation, stop/start replies, overflow acknowledgement, and removal-traffic
+evidence. The reference's nonspecific overflow counter and the unobservable or excluded
+requirements in the requirement table remain limitations. Administrative carrier-down
+alone is no longer claimed as shutdown evidence. The frozen harness still lacks an
+exception-safe C3 capture lifetime; its affected d5 capture extends beyond C3 and must
+be interpreted with the command timestamps, not as a C3-only time window.
+
+### Final diagnostic, acceptance, and handoff
+
+`diag-r3-ref-debug10` failed C6 only and unloaded normally. Its 535-line log includes
+22 receive-interrupt entries, 22 link-interrupt entries, and 122 transmit-completion
+entries. Receive entries report one queued packet at a time; the handler is demonstrably
+active. This is consistent with the capture-based fixture attribution and contradicts
+an assertion that no interrupt servicing occurs during C6.
+
+The final transfer verified **186 remote files, 1,093,934,823 bytes**, by size and
+SHA-256, with zero mismatches. The run store retains all failed, development, void, and
+primary runs; both transfer attempts; the frozen p1/r2/r3 harnesses; the negative control;
+regression tests; module identities; and the regenerated summary. The Pi 4 fixture has
+no driver bound after the last run.
+
+| L01 acceptance criterion | Disposition |
+| --- | --- |
+| Agreed candidate behavior checks pass | Met: r3 candidate 10/10; original module unchanged |
+| Relevant critical source-review findings resolved | Met by the first unit's retained repair/reviews; no new candidate defect found |
+| Representative negative controls fail as expected | Met: original five controls caught across p1/r2; four r3 controls qualify the repaired checks |
+| Hardware/boot identities and unavailable coverage recorded | Met: identities retained per run; requirement table and limitations retained |
+| Final driver/spec revisions and evidence retained | Met: unchanged pinned candidate/reference, original spec lineage, frozen harness hashes, complete verified artifacts |
+
+This accepts only the documented candidate behavior on this fixture. It does not turn
+reference drop counts into overflow proof, establish physical carrier shutdown from an
+administrative flag, or close the explicitly untested requirements. Independent review
+of L01c remains the orchestrator's next gate; no review was launched by this implementer.
+
+The supplied worktree's Git metadata was read-only. Local checkpoint commits therefore
+live on the same topic-branch name in a separate writable checkout, with a portable bundle
+in the private run store. The original worktree retains the matching record edits but its
+branch cannot be advanced by this session. Importing those commits is a handoff action,
+not a missing fixture run. Nothing was pushed and no pull request was opened.

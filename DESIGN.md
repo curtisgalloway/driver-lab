@@ -530,7 +530,10 @@ shortfalls rather than work.
 ## Continuous review: keeping specs right as evidence changes
 
 **Status: proposed 2026-09-26, a draft for the user's approval. Nothing in this section is
-built.** Requirements C1–C8 below; each has acceptance criteria.
+built.** Requirements C1–C8 below; each has acceptance criteria. Four points were decided by
+the user on 2026-09-26 and are written below as decided: the A1 amendment (C5), the round cap
+(C6), a comparison reading per new reading model (C4), and a standing tier-1 queue (C3); two
+further choices were made by the orchestrator in the user's place and are marked as such.
 
 ### Terms
 
@@ -685,12 +688,14 @@ diff touching one check stales only that check's claims; an unmappable change wi
 | Tier | Runs | Work | Cost |
 | --- | --- | --- | --- |
 | 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec_check.py`, leak scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
-| 1 | From the sweep's queue, in batches the user authorizes with a cap per batch | Re-verification of stale sections and their dependents (one `spec-verifier` reading: 8.7 minutes in AF-1, 7.7 in SR-7); requalification of claims whose checks changed; the acceptance set rerun after an emulator or candidate change (40 isolated runs); a comparison reading by a new reading model (C4) | Bounded agent time, recorded per unit |
+| 1 | From the sweep's queue, as a standing queue (decided by the user, 2026-09-26), at most three units per batch | Re-verification of stale sections and their dependents (one `spec-verifier` reading: 8.7 minutes in AF-1, 7.7 in SR-7); requalification of claims whose checks changed; the acceptance set rerun after an emulator or candidate change (40 isolated runs); a comparison reading by a new reading model (C4) | Bounded agent time, recorded per unit |
 | 2 | Only on a person's decision | Requirement changes; clean-room implementer rounds (launched by the user, as in CF-1 and CF-2); a fresh implementation by a new implementer model; hardware runs (HF-1); a new blind list or recall re-measurement; adopting a new source edition as the pin; accepting a shortfall on a mandatory claim | Model, equipment and review time |
 
 Tier-1 units run the way the follow-ons ran: `orchestrate-milestones` gives each unit a fresh
 subagent and one pull request, and `quota-strategy` routes the work (decision D9 in the
-[plan](IMPLEMENTATION-PLAN.md)). The person authorizes a batch, not each unit; pushing and
+[plan](IMPLEMENTATION-PLAN.md)). The user approved a standing tier-1 queue with a batch cap on
+2026-09-26; the orchestrator set the cap at three units per batch under the `quota-strategy`
+rules (an orchestrator decision, made in the user's place). No person starts each unit; pushing and
 merging still follow [AGENTS.md](AGENTS.md): a batch ends in checkpoint commits on topic branches,
 and pull requests open only on the user's explicit "push". There is no
 daemon and no database: the sweep is one command that reads the index and the current
@@ -711,8 +716,9 @@ count as an additional independent reading. Disagreements are adjudicated agains
 authority; only those that survive adjudication become items, and a person decides the ones the
 authority does not settle. A new model's FAIL is a disagreement, not a verdict, until then.
 
-This happens at most once per new reading model per campaign, including campaigns already
-sufficient for their scope: it is the cheapest check on whether the spec is still converged.
+This is one tier-1 unit per spec per new reading model, including specs already sufficient for
+their scope (decided by the user, 2026-09-26): it is the cheapest check on whether the spec is
+still converged.
 A fresh implementation by a new implementer model is tier 2: it is useful as a second
 independent implementation from the same spec, whose behavioral differences on the acceptance
 set expose ambiguity, but it is launched only when the spec is not yet sufficient or the user
@@ -731,11 +737,11 @@ adjudication.
    whether a driver requirement changes.
 3. `spec-verifier` reads the changed sections and their dependencies. Text that changes a driver
    requirement needs two independent readings (A1's standard; the AF-1 and SR-7 procedure)
-   before the revision is sufficient for scope. **Proposed A1 amendment, for the user's
-   approval:** W-only and E-only changes need one reading. A1 in the [QEMU differential
-   design](QEMU-DIFFERENTIAL.md#acceptance-criteria) asks for two readings with no such split,
-   and SR-7 recorded revision 7, which changed no requirement, as not meeting it; like the A6
-   amendment of 2026-09-25, this changes an acceptance criterion and needs approval.
+   before the revision is sufficient for scope; wording-only and evidence-only changes need one
+   reading plus the leak scan. **This amends A1** in the [QEMU differential
+   design](QEMU-DIFFERENTIAL.md#acceptance-criteria), which asked for two readings with no such
+   split (SR-7 recorded revision 7, which changed no requirement, as not meeting it); the user
+   approved the amendment on 2026-09-26.
 4. If a requirement changed, a candidate update unit (the CF-n pattern) gives the clean-room
    implementer the revision diff only, audits the session, reruns the acceptance set declared
    before the run, attributes every trace difference, and ends with the L01 review trio.
@@ -768,10 +774,10 @@ After that, only a trigger creates work, and not every trigger does:
 - A W item never starts a revision. W items wait for the next revision made for another reason.
 - When an item's class is in doubt, it is R until a person decides otherwise. Findings about the
   records rather than the spec (SR-8's item 4) are not spec items.
-- A fix pass that adds words needs its own reading (SR-7, SR-8). After the second round, fixes
-  only delete or narrow text. Sequential verification rounds on one revision stop after three
-  whatever the FAILs' class; a person decides what remains: withdraw the passage, accept a
-  shortfall, or carry it to the next revision.
+- A fix pass that adds words needs its own reading (SR-7, SR-8). At most three verification
+  rounds per revision, whatever the FAILs' class; fixes after round two may only delete or
+  narrow text; after round three, what remains goes to the user as a list (decided by the user,
+  2026-09-26).
 - A shortfall names one reason: `unobservable` (the instrument cannot show it, as for Q18),
   `blocked` (equipment, as for HF-1), `out of scope`, or `not worth it` (an E or W item whose
   cost exceeds its effect, such as adding L02d3's unlabeled model leniencies to §12.5). It also
@@ -784,11 +790,13 @@ claims, all mandatory). S2 holds, with Q18 a shortfall (`unobservable`; reopened
 a timing-capable tool) that L02f3's acceptance, closed under the user-approved plan revision,
 already accepted; HF-1's hardware-only behaviors are `out of scope` for the emulated scope and
 reopen when hardware arrives. S3 holds: SR-8's items 1–3 and CF-2's `[emulated]` note are W or
-E, item 4 concerns the records; CF-2's A-RR-1 ("at least" at the poll) relaxes what a driver
-must do, so by the tie-break it is R until the user classes it. S4 does not hold:
+E, item 4 concerns the records; CF-2's A-RR-1 ("at least" at the poll) is W: it permits extra
+readings without changing the minimum (an orchestrator decision, made in the user's place on
+2026-09-26). S4 does not hold:
 revision 8's TNCRS rule (§4.7, §5.5, §5.9 L6) was read by sequential readings only (SR-8). So
 one tier-1 unit, a second independent reading of revision 8's changes, stands between the
-campaign and sufficient. The queued W items ride along with whatever revision comes next; the
+campaign and sufficient; it is the first tier-1 unit once this design is approved (an
+orchestrator decision, made in the user's place). The queued W items ride along with whatever revision comes next; the
 candidate's A-RR-7 serialization item stays in the next implementer brief, not a round of its
 own; recall measured on revision 3 stays a recorded limitation, since no revision since then
 widened the scope.

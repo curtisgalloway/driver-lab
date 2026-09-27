@@ -78,8 +78,8 @@ captures, the planted-defect diffs and the reviewer's report.
 
 ## Test design
 
-The DUT interface is moved into a network namespace (`10.99.0.2/24`); the peer is a macvlan
-on the built-in Ethernet in a second namespace (`10.99.0.1/24`), so every DUT frame goes to
+The DUT interface is moved into a network namespace (on a dedicated test subnet); the peer is a macvlan
+on the built-in Ethernet in a second namespace (on that test subnet), so every DUT frame goes to
 the switch and back. Control traffic stays on the built-in interface, whose configuration is
 untouched. Captures run on both ends for the whole run and at full size during the traffic
 check. Exact frame sizes use raw sockets at both ends (an experimental ethertype, a sequence
@@ -388,3 +388,71 @@ artifacts are retrieved; R2, R3 and R7 needed correction before the checkpoint (
 - The reference's overflow condition is inferred, not counted (above).
 - The operator wrote the harness and read the reference; a harness bias toward the
   candidate's accounting is possible and is what the independent review is for.
+
+## L01c continuation
+
+### Round r3 declaration
+
+Declared 2026-09-26T16:58:43-07:00, before any r3 run. The original candidate and reference modules are
+unchanged. One full reference run and one full candidate run, in that order; then one
+run per control below. No silent retries; preserve every attempt and stop for transport
+failure, a hung unload, or an attributable original-candidate failure.
+
+- **C6 (R9):** judge carrier returning within 10 s and all three replies in each of
+  20 cycles. Keep administrative carrier-down time as information only: the kernel
+  clears LOWER_UP independently of the driver's shutdown. Physical shutdown remains
+  source-reviewed, not established by that observation.
+- **C5 (R10):** a shared 240 s budget covers both 4 MiB transfers. A transfer timeout
+  becomes recorded failure data; collect counters and driver messages afterward. Skip
+  the second direction only if the shared budget is exhausted, and record why. Stop
+  only this run's transfer children. All original integrity/error/wrap terms remain.
+- **C8 (R11):** retain the removal rule, require the ping process alive at removal,
+  at least ten captured echo requests in the preceding second, at least one during
+  the removal command, and positive DUT receive growth before removal. Retain the
+  timestamped capture and ping output; explicitly stop the privileged ping afterward.
+  Remove the 5,000-packet cap so a fast sender cannot finish before removal starts.
+- **C7 (R1):** require positive `rx_over_errors` for the candidate or `rx_dropped`
+  for the reference, plus at least 100 received frames during the flood. The reference
+  counter still cannot distinguish overflow from other drops; a pass alone cannot
+  establish reference overflow. Keep the r2 allowance of at most five idle overflows
+  and no other receive error. Actually wait 3 s: r2's field said 3 s but its code slept
+  2 s. The post-flood transmit counters remain diagnostic, not a new pass rule.
+- C1–C4 and C9 otherwise retain their declared checks and expectations.
+
+| Run | Checks beyond automatic C1/C2/C9 | Expected result and reason |
+| --- | --- | --- |
+| r3-ref-1 | full sequence | C6 fails as before; C7 likely fails its overflow evidence; other checks pass, C8 hang remains possible |
+| r3-cand-1 | full sequence | all ten checks pass |
+| m3-d1 | C5, C7 | C5 fails wrap corruption/stall with retained counters/log; C7 must reject an unrelated receive-error-only overflow claim |
+| m3-d5 | C6 | C6 fails replies with shortened transmit frames; this qualifies its surviving traffic term |
+| m3-d6 | C7 | C7 fails its idle-counter bound with RXERIF unacknowledged |
+| h3-no-flood | C8 | original candidate with a harness copy replacing only the ping command with `true`; C8 must fail traffic evidence even if unload succeeds |
+
+| diag-r3-ref-debug10 | C6 | reference C6 still expected to fail; verbosity 10 enables interrupt messages, unlike r2's out-of-range value |
+
+Five private harness regression tests exercise timeout retention, C6's surviving
+terms, C7's unrelated-error rejection, and C8's packet overlap. The harness and its
+control remain private; the following hashes freeze the executable inputs.
+
+- `harness/r3/l01hw.py`: `cf16e0dd75779d593efaf7cae99e6d6ae6c69282ac4fafb2e62d1128727e7a0d`
+- `harness/r3/rawframe.py`: `d267ae51cc255f1bb5c124004e4dd652b8da8cea11cfa43c869edd6751c7cfea`
+- `harness/r3/blob.py`: `93509dad10ed61b218af9dd3942a4030a87e478e79834d04f45a6e942396b673`
+- `harness/r3/test_l01hw.py`: `52d449cec53e6a249d224c7d5787bbbfd8729f8c3da523deb99cb8c177b16b56`
+- `harness/r3/no-flood/l01hw.py`: `e963e437951eb4e12cf7b87ddbc46be4e490049a8a44e0ad6051c0815c5f7d54`
+
+### L01c decisions
+
+- Keep the harness and tests in the private run store, anchored by hashes in git, because they embed fixture configuration.
+- Use the surviving C6 terms and explicitly withdraw carrier-drop coverage, because administrative down cannot prove driver shutdown.
+- Use one shared C5 deadline and record an unattempted second direction on exhaustion, because the declared limit applies to the whole check.
+- Require C8 packet overlap and remove its packet-count cap, because a launched process does not prove traffic during removal.
+- Fix R1 along with R9–R11 and require 100 received frames, because the review demonstrated a false positive from one unrelated error and only 63 received frames.
+- Correct the C7 wait to 3 s while retaining r2 verdicts, because the existing code did not implement the declared duration.
+- Run each r3 job once and restrict controls to the affected checks, because the earlier full runs already cover their other effects.
+- Keep post-flood transmit counters diagnostic, because changing that acceptance rule is unnecessary to qualify these repairs.
+- Leave unrelated cleanroom-tooling test failures outside this unit, because no corresponding source changed; record the validation limit.
+- Add one separately declared `debug=10` C6 diagnostic, because the driver interprets debug as a bit count and `0x2fe` silently selects default logging.
+- Save local commits in a separate writable checkout and provide a bundle, because the supplied worktree's shared Git metadata is read-only.
+- Preserve and recopy the changing d5 capture after stopping its orphaned writer, because a size/hash mismatch cannot be accepted as a verified transfer.
+
+Declaration amended 2026-09-26T17:02:01-07:00, still before any r3 run: add the verbosity-10 diagnostic after the six listed jobs.

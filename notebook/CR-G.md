@@ -47,3 +47,15 @@ cited for C6 each covered their own moment, not CR8's blockers. Now "met subject
 reading". Its third point was new: `stopping.py` holds every reading unit while any revision
 reports "limit reached", and revision 9 always will, so the second reading after revision 10
 will not come out of the queue on its own. Recorded for the next unit; no code here.
+
+## 2026-09-27T11:12-07:00 — the user accepted the explained blockers; the swarm's fixes
+The user decided C6's last clause is met in the plan's form, so the layer is accepted and
+e1000's sufficiency is the queue's work. The orchestrator's `review-swarm` (two runs, split by
+size) kept 16 findings; all fixed by its decision, with the reviewer's round-cap hold. The one
+that mattered most: the adapter's `--write` could erase a recorded pin with a `blocked`
+observation's null hash. The round-cap fix exposed a neighbor it does not change: independent
+follow-up readings count as rounds (a CR4 decision), so a revision that spends three
+sequential rounds then exceeds the cap at its own second reading. Revision 10 should stop at
+two rounds, or that rule needs a decision first. The name-walker fixes (both branches of a
+runtime conditional, except handlers, runtime loops) leave the real harness's 109 names
+unchanged.

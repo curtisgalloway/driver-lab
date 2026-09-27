@@ -47,7 +47,7 @@ class StoppingTests(unittest.TestCase):
     def setUp(self):
         self.claims, self.status, self.registry = inputs()
         # Synthetic no-impact declarations isolate each test's own trigger.
-        # The real-report test reloads the unchanged public status index.
+        # The real-report test reloads the frozen CR5 index fixture (BASELINE).
         for eid in ("AF-1-reading-coverage", "SR-8-independent-reading"):
             self.item(eid)["impact"] = dict(claims=[], changes_status=False)
 
@@ -317,15 +317,37 @@ class StoppingTests(unittest.TestCase):
         source(self.registry, "candidate")["status"] = "unknown"
         self.assertFalse(self.report()["sufficient"])
 
-    def test_third_round_sends_remaining_readings_to_user(self):
+    def test_reached_cap_holds_no_queued_reading(self):
+        """A capped revision's findings go to the user; later readings still run.
+
+        Revision 8 stands in for a capped revision (CR8's revision 9): its third
+        round reaches the cap, and the independent second reading that the next
+        text needs, a comparison reading and re-verification all stay ready.
+        """
         complete_readings(self.status)
         self.status["entries"] = [
             e for e in self.status["entries"] if e["id"] != "synthetic-full-2"
         ]
         self.status["revisions"]["8"]["started"] = "2026-09-27"
-        report = self.report()
+        roles = copy.deepcopy(ROLES)
+        roles["reader"] = {"name": "another reader", "version": "1"}
+        report = sweep.sweep(self.claims, self.status, self.registry, roles=roles)[
+            "stopping"
+        ]
         self.assertEqual(report["round_cap"][-1]["state"], "limit reached")
-        self.assertNotIn("e1000:second-reading:current", report["batch"])
+        self.assertFalse(report["sufficient"])
+        units = {u["id"]: u for u in report["queue"]}
+        for kind in ("second-reading", "comparison-reading"):
+            with self.subTest(kind=kind):
+                self.assertEqual(units[f"e1000:{kind}:current"]["state"], "ready")
+        self.assertEqual(report["batch"][0], "e1000:second-reading:current")
+        self.assertTrue(
+            all(
+                u["state"] == "ready"
+                for u in report["queue"]
+                if u["kind"] == "re-verification"
+            )
+        )
 
     def test_adjudication_is_not_a_round(self):
         self.status["revisions"]["8"]["started"] = "2026-09-27"

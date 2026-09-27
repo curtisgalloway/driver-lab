@@ -11,13 +11,17 @@ class Parser(argparse.ArgumentParser):
     """Keep normal argparse help; emit structured usage failures for --json."""
 
     def __init__(self, *, error_fields=None, **kwargs):
+        # An abbreviated --js would select --json without being detected below.
+        kwargs.setdefault("allow_abbrev", False)
         super().__init__(**kwargs)
         self.error_fields = error_fields or {}
         self.json_requested = False
 
     def parse_args(self, args=None, namespace=None):
         args = list(sys.argv[1:] if args is None else args)
-        self.json_requested = "--json" in args
+        self.json_requested = any(
+            a == "--json" or a.startswith("--json=") for a in args
+        )
         return super().parse_args(args, namespace)
 
     def error(self, message):

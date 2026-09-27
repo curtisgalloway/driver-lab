@@ -107,7 +107,7 @@ an instance of the frozen spec-only trial. Completed evidence remains valid for 
 | D3 | M03/M04 | Exact record/schema placement and status mapping: inspect existing score/replay interfaces; approve a compatible sidecar design with separate result dimensions, no changed frozen denominator |
 | D4 | M07/M08 | Which faults and traces can the fixture actually produce? Establish a finite capability inventory and report each unavailable check; do not infer recovery coverage from ordinary traffic |
 | D5 | M14/M15 | Generated-test and companion-skill experiment conditions: freeze tasks, allowed inputs, independent expected outcomes, defect sets, and acceptance thresholds before inspecting outputs |
-| D6 | M16 | Maintenance and feedback representation: select versioned records and conservative dependency invalidation without migrating legacy records into accepted status. **Absorbed and resolved 2026-09-26** by the design's C1–C2; built by the plan's [CR milestones](IMPLEMENTATION-PLAN.md#cr--continuous-review) and found met at [CR-G](evidence/CR-G.md), subject to the user's reading of C6's last clause (2026-09-27) |
+| D6 | M16 | Maintenance and feedback representation: select versioned records and conservative dependency invalidation without migrating legacy records into accepted status. **Absorbed and resolved 2026-09-26** by the design's C1–C2; built by the plan's [CR milestones](IMPLEMENTATION-PLAN.md#cr--continuous-review) and accepted at [CR-G](evidence/CR-G.md) (2026-09-27, by the user's decision on C6's last clause) |
 
 ## Sequence and dependencies
 
@@ -128,7 +128,7 @@ an instance of the frozen spec-only trial. Completed evidence remains valid for 
 | M13 | Paired execution, attribution, and separate results | M08-physical, M11, M12, physical check qualification from M07/M09 | deferred |
 | M14 | Independent assessment of implementer-authored tests | M02/M04 environment; M05/M07-offline for diagnostic trial, or M13 for paired inputs; D5 and separate authorization | deferred, design-gated |
 | M15 | Companion-skill use and bounded repair demonstrated | M05/M07-offline for diagnostic use; M08 or M13 attribution for repair; D5 and separate authorization | deferred, design-gated |
-| M16 | Maintenance/feedback invalidation and replay | M03, M04, D6; reconstruction prioritized | M16a (record and invalidation) absorbed into the [CR milestones](IMPLEMENTATION-PLAN.md#cr--continuous-review) (2026-09-26) and found met at [CR-G](evidence/CR-G.md), subject to the user's reading of C6's last clause (2026-09-27); M16b (feedback) partly absorbed through C5 and C7; replay deferred |
+| M16 | Maintenance/feedback invalidation and replay | M03, M04, D6; reconstruction prioritized | M16a (record and invalidation) absorbed into the [CR milestones](IMPLEMENTATION-PLAN.md#cr--continuous-review) (2026-09-26) and accepted at [CR-G](evidence/CR-G.md) (2026-09-27, by the user's decision on C6's last clause); M16b (feedback) partly absorbed through C5 and C7; replay deferred |
 | M17 | Final pilot verification and qualification decision | M13–M16 and required physical evidence | deferred |
 | P01 | Fresh review of the same frozen practice spec | Own D2 budget/reviewers | deferred, independent work |
 
@@ -442,8 +442,9 @@ half (M16a) is absorbed into the implementation plan's
 without the M03/M04 dependency; its acceptance rules below carry over there (the policy-version
 rule as the index's `rule` field). The feedback half (M16b) is partly absorbed through the
 design's C5 and C7; replay of old attempts with archived tools stays deferred here with
-M03/M04. **2026-09-27:** [CR-G](evidence/CR-G.md) found the CR layer's criteria met on the
-e1000 campaign and the stand-in deployment, subject to the user's reading of C6's last clause;
+M03/M04. **2026-09-27:** the CR layer was accepted at [CR-G](evidence/CR-G.md) on the e1000
+campaign and the stand-in deployment (C6's last clause in the plan's form, by the user's
+decision);
 M16a's four rules carried over there (changed or unavailable evidence loses current status,
 verdicts under different rules are not compared, unrelated capabilities stay scoped, old
 attempts stay). The text below is kept as written.

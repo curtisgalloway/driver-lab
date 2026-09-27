@@ -3,17 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 """Hash opaque pinned files; optionally update their registry observations.
 
-Exit status: 0 matched, 1 drift/findings, 2 usage, 3 missing precondition.
-Use || true when findings should not stop a shell pipeline. --json is one object.
+Exit status: 0 matched (or hashed with no pin to compare), 1 drift/findings,
+2 usage, 3 missing precondition. Use || true when findings should not stop a
+shell pipeline. --json is one object.
 """
 
-import argparse
 import datetime
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
+import cli
 import index_check as check
 import source_registry
 
@@ -31,9 +34,11 @@ Run pinned_file_adapter.py REGISTRY ID [--root REPOSITORY] [--run-store STORE]
 Only files named relative to repository or run_store are opened. Symlink escapes
 are blocked. A version is operator-declared, never guessed from content. Drift
 does not adopt an edition or replace expected_sha256. --write updates observed
-sha256/status/date/provenance and discards obsolete hash-bound change maps.
-No file: unknown; missing/unreadable file: blocked. No content is printed.
-Exits: 0 matched, 1 drift/findings, 2 usage, 3 missing precondition. Use || true
+sha256/status/date/provenance and discards obsolete hash-bound change maps, only
+when the file was hashed (status ok); otherwise the registry is left unchanged.
+Writes replace the registry atomically. No file: unknown; missing/unreadable
+file: blocked. No content is printed. Exits: 0 matched, or hashed with no pin
+to compare (matches_pin null), 1 drift/findings, 2 usage, 3 missing precondition. Use || true
 if negative findings should not terminate a shell. JSON is one object.
 """
 
@@ -92,9 +97,25 @@ def inspect(source, root, run_store=None):
     return result
 
 
+def replace_text(path, text):
+    """Write beside the target, then replace it, so a failed write leaves it whole."""
+    path = Path(path)
+    handle, temp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(temp, path)
+    except BaseException:
+        Path(temp).unlink(missing_ok=True)
+        raise
+
+
 def main(argv=None):
     """Run a local adapter observation and optional explicit registry write."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = cli.Parser(
+        description=__doc__,
+        error_fields=dict(result=None, updated=False, would_update=False),
+    )
     parser.add_argument("registry", nargs="?", type=Path)
     parser.add_argument("id", nargs="?")
     parser.add_argument("--root", type=Path, default=Path.cwd())
@@ -127,7 +148,12 @@ def main(argv=None):
                 if result["matches_pin"] is False
                 else 0
             )
-            if args.write:
+            if args.write and result["status"] != "ok":
+                findings.append(
+                    "not written: source status is {}; "
+                    "the registry is unchanged".format(result["status"])
+                )
+            elif args.write:
                 if result["sha256"] != source["sha256"]:
                     source.pop("changes", None)
                 for key in ("sha256", "status", "checked", "provenance"):
@@ -138,20 +164,22 @@ def main(argv=None):
                         "# SPDX-FileCopyrightText: 2026 contributors\n"
                         "# SPDX-License-Identifier: Apache-2.0\n"
                     )
-                    args.registry.write_text(
+                    replace_text(
+                        args.registry,
                         header + check.yaml.safe_dump(registry, sort_keys=False),
-                        encoding="utf-8",
                     )
                     updated = True
         except OSError:
             findings, code = ["Cannot read or write a required file"], 3
-        except (check.Invalid, check.yaml.YAMLError, UnicodeError) as exc:
+        except (ValueError, check.yaml.YAMLError) as exc:
             findings, code = [str(exc)], 1
     payload = dict(
         ok=code == 0,
         result=result,
         updated=updated,
-        would_update=bool(args.write and args.dry_run),
+        would_update=bool(
+            args.write and args.dry_run and result and result["status"] == "ok"
+        ),
         findings=findings,
     )
     if args.json:

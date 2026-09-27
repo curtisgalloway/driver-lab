@@ -56,3 +56,32 @@ Private run `cr6-20260926-01` holds the brief, inputs and ledger.
   earlier is in it, and the brief forbids the rest of the store. That is an instruction, not a
   wall, the same as for the Claude readers.
 - The launch is the orchestrator's; the unit resumes at the join.
+
+## 2026-09-26T22:32:55-07:00 — CR6b reading, join and adjudication
+
+- The Codex record is at a much finer grain than any earlier record (800 lines against 555 for
+  revision 3's whole-text reading), so a key-by-key join of the PASS lines was not possible:
+  they were joined by section, and only the 119 non-PASS lines key by key, by the adjudicators.
+- Most R findings are in HALF 2's kernel protocol order (NAPI masking, open/stop ordering,
+  resource ownership). Revision 3's readers checked those bullets' `file:line` citations,
+  which all hold; nobody had read the order the citations describe. A comparison reading by
+  another model family found what re-reading changed hunks never looked at.
+- One adjudicator per section group kept 119 lines to about six minutes each. Several
+  adjudicators classed accuracy findings W where the fix is only words; the operator moved
+  those seven to E, since C6's W is wording or form, not a false claim.
+- Recording the whole-text reading as covering revisions 3–8 renewed 63 stale accuracy slices,
+  and the historical re-verification unit left the queue. S4 for revisions 3–6 is now 1/2.
+- The round-cap fix: `round_report` now skips adjudication entries; the new test failed first.
+- The user's CR6a decision (option b) is recorded as a replacement item of class E with the
+  decision on it; S5 still names CR6a's reading until a later independent reading replaces it,
+  which CR6b now has (with its own R items).
+
+## 2026-09-26T22:42:58-07:00 — CR6b records review; a correction
+
+- Correction to the previous entry: the whole-text reading did not renew the 63 stale accuracy
+  slices; it discharged them from the queue, and they stay stale in the index as history.
+- The records reviewer found that the user's option (b) for CR6a's item was given before CR6b's
+  adjudications tied two more findings to the same rule; the decision stands as recorded, and
+  the revision decision now asks the user to confirm it.
+- It also found no record of the user naming `gpt-6-astra`; the orchestrator chose it under the
+  approved plan, and the report asks for confirmation.

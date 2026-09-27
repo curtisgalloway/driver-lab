@@ -327,6 +327,25 @@ class StoppingTests(unittest.TestCase):
         self.assertEqual(report["round_cap"][-1]["state"], "limit reached")
         self.assertNotIn("e1000:second-reading:current", report["batch"])
 
+    def test_adjudication_is_not_a_round(self):
+        self.status["revisions"]["8"]["started"] = "2026-09-27"
+        adjudication = copy.deepcopy(entry(self.status, "verify-r8-round2"))
+        adjudication.update(
+            id="synthetic-adjudication",
+            reading_id="synthetic-adjudication",
+            independence="adjudication",
+            round="adjudication",
+            sequence=23,
+            supersedes=[],
+        )
+        self.status["entries"].append(adjudication)
+        report = self.report()
+        self.assertNotIn(8, [r["revision"] for r in report["round_cap"]])
+        adjudication["independence"] = "independent"
+        report = self.report()
+        row = next(r for r in report["round_cap"] if r["revision"] == 8)
+        self.assertEqual(row["state"], "limit reached")
+
     def test_mandatory_item_shortfall_needs_its_own_user_decision(self):
         value = self.item()
         value["class"] = "E"

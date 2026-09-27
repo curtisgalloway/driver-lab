@@ -92,6 +92,18 @@ recommendation first:
    driver does less; the false clause goes with the requirement; the widened SR-8-2 remains a W
    sentence.
 
+## The user's decision
+
+On 2026-09-26 the user chose **option (b)**, asked by the orchestrator as a structured
+question: keep the link-down reading as a stated design choice and replace the false clause
+with its real reason. Nothing changes in what a driver must do, so the item is no longer R:
+the index records the decision on a replacement entry, `CR6a-link-down-reading-decided`, class
+E (the requirement's support, not the requirement), with no claim in scope affected. The
+reading's accuracy FAIL stays open, and blocks S3, until a revision replaces the clause: that
+revision is CR8, and this decision is its trigger. `SR-8-2` stays W, widened to every interval
+that starts with the link down, for the same revision; the widening is recorded in the
+replacement item's disposition, and SR-8-2's own entry stays as recorded until CR8 applies it. The spec was not edited.
+
 ## After this unit
 
 `SR-8-independent-reading` is superseded by `SR-8-independent-reading-CR6a` (applied: the

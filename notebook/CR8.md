@@ -61,3 +61,13 @@ be canceled synchronously from `ndo_stop`, which holds it. Both fixed by where t
 not by new machinery: the flag is cleared just before I2, and remove() cancels the timeout work
 after `unregister_netdev()`. One FAIL was half wrong: §14.4 states the RDTR sentence twice,
 once for every part and once for two other families; X9 now says so.
+
+## 2026-09-27T08:18-07:00 — round 2: two concurrency gaps a deletion can only expose
+Round 2 (14.4 minutes): 306 verdicts, 2 FAIL, clean-room PASS with all four reason clauses
+cleared. Both FAILs were in the recovery and shutdown protocol HALF 2 now spells out: a poll
+tail that stalls across a close and reopen can still unmask during the new open's poll, and the
+transmit-timeout recovery does not keep a transmit from running while it resets. Neither can be
+fixed by deleting words, and after round two nothing else is allowed, so the claims that
+overstated them were deleted and the mechanisms go to the user. The lesson is the pre-check's
+again: once a spec starts naming a concurrency protocol, every interleaving it does not name
+becomes a finding.

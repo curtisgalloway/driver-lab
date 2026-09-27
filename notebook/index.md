@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T15:50-07:00
+Updated: 2026-09-26T17:18:37-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -15,23 +15,14 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [L01-hw — the candidate and the reference on the Pi 4 fixture](L01-hw.md)
-Entries: 2026-09-26T14:01-07:00 through 2026-09-26T15:50-07:00
-Outcome: blocked before completion (the fixture connection); the candidate 10 of 10 in three
-primary runs but one C7 verdict on a rule since made symmetric, the reference 8 of 10 three
-times on the same two checks, three of five defect controls caught, no repair needed; see the
-[evidence](../evidence/L01-hw.md).
-- Both drivers build against 6.18 with no source change; the allowed adaptation was empty.
-- R-03 is a hardware fact: the reference delivers the FCS in every received frame.
-- After an open the reference answers nothing until its handler runs for another reason;
-  ten pings answered at one instant two seconds later, then 1.2 ms; the candidate's 100 ms
-  `EPKTCNT` poll answers from the first.
-- TCP receive overflows the 6.5 KiB ring as a matter of course on this fixture; a rule that
-  demands zero drops fails both drivers for neither's fault.
-- The LAN's own multicast, arriving at wire speed into a promiscuous DUT, overflows the ring
-  in an idle window; the settle rule was made symmetric and tolerant in a declared round.
-- `rmmod` of the reference under a flood hung once in four attempts, in `free_irq`.
-- Dead ends: a run driver whose `ssh` ate the job list; a runner that read "no answer" as
-  "driver bound".
+Entries: 2026-09-26T14:01-07:00 through 2026-09-26T17:18:37-07:00
+Outcome: scoped L01 acceptance complete; L01c independent review and checkpoint-bundle
+import pending. See the [evidence](../evidence/L01-hw.md).
+- Reopen-cycle captures revealed the switch's non-forwarding state; the earlier interrupt
+  and poll-latency explanations were withdrawn.
+- A verbosity mask silently selected defaults where a bit count was required.
+- A capture orphan survived its failed check and changed during artifact transfer.
+- The shared Git metadata was read-only; local commits survived in a separate checkout.
 
 ### [CF-2 — the candidate on spec revision 8](CF-2.md)
 Entries: 2026-09-26T12:32-07:00 through 2026-09-26T13:08-07:00

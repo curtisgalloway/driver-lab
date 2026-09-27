@@ -67,6 +67,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Device tree / DTB | A hardware description supplied to a kernel / its compiled binary form. |
 | GPIO / IRQ | General-purpose input/output pin / an interrupt request that signals an event to a processor. |
 | FCS | Ethernet frame check sequence: the error-detection bytes that a capture may include or strip. |
+| STP / RSTP | Spanning Tree Protocol / Rapid Spanning Tree Protocol: Ethernet switches exchange control frames to prevent loops. A port can have physical carrier while still withholding ordinary traffic. |
+| BPDU | Bridge Protocol Data Unit: a spanning-tree control frame advertising a switch port's role and state, including whether it is learning addresses or forwarding traffic. |
+| ARP | Address Resolution Protocol: the exchange that discovers the Ethernet destination for an IPv4 neighbor before sending ordinary IPv4 traffic. |
 | defconfig | A kernel's starting configuration; the resolved build configuration must still be recorded. |
 | Evidence channel | A means of collecting observations, such as a traffic peer or instrument capture; its suitability must be established for the observation. |
 | Test envelope | The approved equipment configuration, operations, rates, duration, and other limits of a test. |

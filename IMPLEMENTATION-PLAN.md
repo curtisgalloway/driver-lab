@@ -68,18 +68,15 @@ using it diagnostically cannot change its frozen acceptance result.
 
 ## L01 — Implement and verify the Linux driver
 
-**Status:** `in_progress`. First unit complete 2026-09-22 ([evidence](evidence/L01.md)):
-buildable candidate, three independent reviews plus a repair review, spec gaps separated from
-implementation errors, repair round 1 of 2 used. Second unit started 2026-09-26 on the Pi 4
-fixture ([evidence](evidence/L01-hw.md)): the candidate passed every declared check in three
-primary runs (one C7 verdict on a rule since made symmetric), the reference failed C6 and C7
-in all three of its runs, three of five planted-defect controls caught; no failure attributable
-to the candidate or the spec, so repair round 2 is unused. Blocked before completion on the
-fixture connection: defects d5 and d6, the diagnostic reference run and the r2 artifacts
-remain.
+**Status:** `complete` for scoped implementation and hardware acceptance
+([first-unit evidence](evidence/L01.md), [hardware evidence](evidence/L01-hw.md)). The
+unchanged candidate passed all ten r3 checks; repaired harness terms were qualified with
+negative controls, and all fixture artifacts were verified. No further candidate/spec
+repair was needed; repair round 1 of 2 remains the only one used. L01c's independent
+artifact/code review and import of its local checkpoint bundle remain before landing.
 
-**Priority:** active next milestone. A diagnostic engineering pass, not the frozen reconstruction
-trial. Reuse the pinned ENC28J60 spec, Linux v6.12 source/toolchain and Pi 4 preparation. The
+**Priority:** acceptance recorded; review and landing next. A diagnostic engineering pass,
+not the frozen reconstruction trial. Reuse the pinned ENC28J60 spec, Linux v6.12 source/toolchain and Pi 4 preparation. The
 existing requirement ledger is a review checklist, not a new scoring project. Keep its locked
 bytes and the historical spec intact; improvements go into separately versioned working copies.
 
@@ -966,9 +963,10 @@ unfinished, not waived or complete.
 
 **Active blockers:**
 
-- **L01 second unit:** the fixture's SSH connection failed twice on 2026-09-26 (the forwarded
-  1Password agent refusing to sign); d5, d6, the diagnostic run and the r2 artifact retrieval
-  remain ([evidence/L01-hw.md](evidence/L01-hw.md)).
+- **L01c landing:** independent review remains; the supplied worktree's Git metadata was
+  read-only, so its local commits must be imported from the retained checkpoint bundle.
+  Fixture work is finished. Two unchanged cleanroom tests fail under this session's
+  environment; their diagnoses are recorded in [the evidence](evidence/L01-hw.md).
 
 ## Decisions and bounded investigations
 
@@ -1052,12 +1050,12 @@ first. Review, checks and records follow the
   CS-1 (FC-1's open limitation, the checksum-preserving case) is complete: the harness is
   `a1735b9f…`, claim Q28 is qualified, and the candidate passes it 5 of 5; 27 of 28 claims
   are qualified, Q18 `unobservable`.
-- **L01 second unit (in progress, blocked on the fixture connection):** see
-  [evidence/L01-hw.md](evidence/L01-hw.md). To finish: from the run store's
-  `run-primaries.sh`, run `jobs-r2.txt`'s remaining lines (m2-d5, m2-d6, diag-ref-debug), copy
-  every `runs/*` directory from the fixture into the run store (captures included), regenerate
-  `runs/SUMMARY.md`, fill the pending cells of the defect table and the C6 reading's
-  confirmation, then the acceptance decision and the review's resolutions. The harness and the
-  declarations are frozen; do not change a rule without a new declared round.
+- **L01 hardware acceptance complete; L01c ready for review:** read
+  [evidence/L01-hw.md](evidence/L01-hw.md), the private ledger, r3 harness/tests, captures,
+  and summary. Review the C6 fixture attribution and the R1/R9/R10/R11 qualifications.
+  Import the local checkpoint bundle into the topic branch; its original worktree contains
+  the matching record edits. Investigate the two environment-dependent validation failures
+  before landing. No candidate repair is pending; additional hardware runs require a named
+  unanswered question or a review finding, with a fresh declaration.
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

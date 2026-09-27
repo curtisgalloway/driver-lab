@@ -456,9 +456,13 @@ def evaluate(claims_doc, status, freshness, roles, reader=None):
         "acceptance-set-rerun": 4,
     }
     queue.sort(key=lambda u: (u["tier"], priority.get(u["kind"], 5), u["id"]))
+    # A reached cap ends that revision's own sequential fix-and-reread rounds; its
+    # remaining findings go to the user as items. The queue never emits such a
+    # round, so a reached cap holds no queued unit: independent and comparison
+    # readings, re-verification of any revision and non-reading work stay ready.
+    # An exceeded cap (awaiting decision) still holds reading work.
     cap_blocked = any(r["state"] == "awaiting decision" for r in rounds)
-    cap_reached = any(r["state"] == "limit reached" for r in rounds)
-    if cap_blocked or cap_reached or not scope:
+    if cap_blocked or not scope:
         for value in queue:
             if not scope or value["kind"] in {
                 "second-reading",

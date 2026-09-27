@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (PR #35); CR8 complete (revision 9; two remainder items with the user); CR-G pending. Derived 2026-09-26 from the design's
+**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (PR #35); CR8 complete (PR #36; revision 9); CR-G complete (the layer's [acceptance table](evidence/CR-G.md); the layer accepted by the user's decision of 2026-09-27); next, revision 10 for CR8's two remainder items, decided by the user. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
@@ -592,8 +592,8 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 | CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | complete (PR #33; [evidence](evidence/CR5.md)) |
 | CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | complete (PR #34; [CR6a](evidence/CR6a.md), [CR6b](evidence/CR6b.md)) |
 | CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | complete; reviewed ([evidence](evidence/CR7.md)) |
-| CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | complete ([evidence](evidence/CR8.md)); revision 9, two remainder R items with the user |
-| CR-G | Layer acceptance against C1–C8 together | all | CR1–CR7; CR8 or the user's decision on C5 | one session | `pending` |
+| CR8 | One live W or E item carried through a spec revision, the index updated at each step | C5 (live item) | CR2, CR4; **a revision made for another reason**, or the user's decision (see below) | one session | complete (PR #36; [evidence](evidence/CR8.md)); revision 9; the two remainder R items decided by the user for revision 10 |
+| CR-G | Layer acceptance against C1–C8 together | all | CR1–CR7; CR8 or the user's decision on C5 | one session | complete ([evidence](evidence/CR-G.md)); C1–C8 met (six with stated limits; C6's last clause in the plan's form, by the user's decision); the layer accepted |
 
 CR6 and CR7 may run in parallel after CR5. CR8 waits on an outside condition and holds up
 nothing before CR-G. Publishing L01's Pi fixture harness as a second reference backend is not a
@@ -931,7 +931,7 @@ the revision for the queued items (CR8).
 - **Verify / review:** as SR-7 and SR-8 (`spec-verifier`, the leak scan, the index checker and
   the sweep after landing).
 - **Sizing:** an SR-sized unit. **Split point:** the revision and its readings; nothing smaller.
-- **Status:** complete, 2026-09-27 ([evidence](evidence/CR8.md)). Run on the user's decision
+- **Status:** complete, 2026-09-27, merged as PR #36 ([evidence](evidence/CR8.md)). Run on the user's decision
   to make revision 9 for CR6b's R findings; spec revision 9 landed after the three-round cap
   (Codex `gpt-6-astra`), changing requirements on a driver. C5's live-item criterion met. Two R
   items go to the user (the remainder list in the evidence); the second independent reading of
@@ -954,19 +954,32 @@ the revision for the queued items (CR8).
   and D6 already point here (this revision); CR-G records the final state there.
 - **Review:** `review-swarm` over the layer's combined diff, plus a fresh reviewer checking the
   acceptance table against the evidence files.
-- **Sizing:** verification and one table, no new code. **Status:** `pending`.
+- **Sizing:** verification and one table, no new code. **Status:** complete, 2026-09-27
+  ([evidence](evidence/CR-G.md)); **the layer is accepted.** C1–C5, C7 and C8 are met on their
+  milestones' evidence, five with stated limits. C6's last clause is met in the form CR4's and
+  CR6's criteria give it, extended by CR-G to CR8's blockers (every blocker explained, classed
+  and queued), not literally (e1000 is not yet sufficient); the user decided on 2026-09-27 to
+  accept the explained blockers, leaving e1000's sufficiency to the queue. A fresh reviewer
+  checked the table (15 findings, all applied), and `review-swarm` over the layer's code (two
+  runs, 14 arms) kept 16 findings, all fixed by the orchestrator's decision, with the round-cap
+  hold the reviewer found (a reached cap no longer holds queued readings). Open: independent
+  follow-up readings count toward a revision's round cap, so a revision with three sequential
+  rounds exceeds the cap at its second reading. The cheap checks, the three
+  cross-milestone checks and the full CI list pass; one test was added (no deployment key → the
+  reference manifest's models). The user's decisions on CR8's two R items (option a each) are
+  in the index, for revision 10.
 
 ## What is deferred from the immediate path
 
 | Work | Disposition |
 | --- | --- |
 | Complete source sanitization, related-controller removals and harness isolation (remaining M02) | Preserve the current artifacts and audit findings. Resume only for an explicitly selected spec-only experiment; not required for L01. |
-| Generic execution contracts and synthetic replay (M03–M04) | Use a brief, evidence table and ordinary build/test logs for L01. Build shared machinery only after demonstrated need. L02's hand-run loop is that need for the record and invalidation half only, which the [CR milestones](#cr--continuous-review) build without M03/M04 (2026-09-26); replay stays here. |
+| Generic execution contracts and synthetic replay (M03–M04) | Use a brief, evidence table and ordinary build/test logs for L01. Build shared machinery only after demonstrated need. L02's hand-run loop is that need for the record and invalidation half only, which the [CR milestones](#cr--continuous-review) built without M03/M04 (2026-09-26) and [CR-G](evidence/CR-G.md) accepted (2026-09-27, the user's decision on C6's last clause); replay stays here. |
 | Frozen spec-only trial and dual blinded attribution (M05/M08) | L01 permits logged outside assistance and repairs; keep these experimental conditions separate. |
 | Fixture and meaningful test qualification (parts of M06–M07) | Keep the necessary hardware identity, expected outcomes and negative controls in L01; do not require the generic experimental infrastructure. |
 | Paired authoring/implementation and complete documentary scoring (M09–M13, P01) | Optional follow-on to answer comparative questions; no immediate gate. |
 | Test-authoring experiments and companion-skill ablation (M14–M15) | Exercise useful existing skills in L01; defer controlled comparisons. |
-| Automated maintenance/invalidation and full pilot qualification (M16–M17) | M16a (record and invalidation) and D6 are absorbed into the [CR milestones](#cr--continuous-review) for campaigns with a claim list, and M16b (feedback) partly, through C5 and C7 (2026-09-26). Replay of old attempts with archived tools and M17 stay deferred. |
+| Automated maintenance/invalidation and full pilot qualification (M16–M17) | M16a (record and invalidation) and D6 are absorbed into the [CR milestones](#cr--continuous-review) for campaigns with a claim list, and M16b (feedback) partly, through C5 and C7 (2026-09-26); built, and accepted on e1000 and the stand-in deployment at [CR-G](evidence/CR-G.md) (2026-09-27, by the user's decision on C6's last clause). Replay of old attempts with archived tools and M17 stay deferred. |
 | L01's Pi fixture harness (`l01hw.py`, only in its private run) as a second public reference fixture backend for C8 | Not needed for C8's criterion, which names the QEMU backend. Publish only after L01 completes, with a privacy pass, the harness defects its review found fixed or recorded, and the CR5 contract check passing on it (2026-09-26). |
 | The candidate's two link-check callers (`link_work` and the watchdog) are not serialized against each other beyond the statistics lock; the carrier decision can interleave and leave the carrier stale for up to one 2 s tick after a link flap (CF-2, A-RR-7; pre-existing since L02e; no statistic affected) | Deferred to the next implementer round's brief, whenever one is launched: one serialization for the carrier decision, or one work item for both callers. Not a round on its own. |
 
@@ -1046,8 +1059,14 @@ first. Review, checks and records follow the
   [CR5](evidence/CR5.md) is complete (PR #33). [CR6](evidence/CR6b.md) is complete (PR #34); its R items
   wait for the user's revision decision (CR8). [CR7](evidence/CR7.md) has passed automated
   and live validation, its private update is installed, and it was independently reviewed.
-  [CR8](evidence/CR8.md) is complete: spec revision 9 applied CR6b's findings; two R items
-  from its rounds await the user's decision, then CR-G.
+  [CR8](evidence/CR8.md) is complete (PR #36): spec revision 9 applied CR6b's findings.
+  [CR-G](evidence/CR-G.md) is complete: the layer is accepted (C1–C8 met, C6's last clause in
+  the plan's form by the user's decision of 2026-09-27). **Next:** revision 10 for CR8's two R items, as the user decided (option (a)
+  each: the poll's `napi_complete_done()` and unmask decision under the mask lock; recovery
+  through the stack's own close and open under RTNL), with `CR8-W-attestation-kernel` riding
+  along (at most two sequential rounds, or decide first whether independent follow-up readings
+  count toward the round cap); then a second independent reading of the new text; then the
+  candidate round (CF-n), which the user launches.
 - **e1000 follow-on verdicts and item dispositions:** see the [status index](evals/e1000/status.yaml) and [claim map](evals/e1000/claims.yaml).
 - **L01 complete for its declared hardware scope** (L01c, 2026-09-26): see
   [evidence/L01-hw.md](evidence/L01-hw.md). The candidate passes the ten revised checks on the

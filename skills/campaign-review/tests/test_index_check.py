@@ -393,6 +393,44 @@ class IndexTests(unittest.TestCase):
         p.write_text(p.read_text().replace("interface up", "interface ready"))
         self.reject("unknown harness check")
 
+    def test_runtime_conditional_handler_and_loop_names(self):
+        with (self.root / "harness.py").open("a") as out:
+            out.write(
+                "\n\ndef scenario_extra(c, mode=None):\n"
+                '    c.check("fast path" if mode else "slow path", True)\n'
+                "    c.check(f\"link {'up' if mode else 'down'}\", True)\n"
+                "    try:\n"
+                "        pass\n"
+                "    except OSError:\n"
+                '        c.check("recovered after error", True)\n'
+                "    for item in c.items():\n"
+                '        c.check("each item seen", True)\n'
+            )
+        for name in (
+            "fast path",
+            "slow path",
+            "link up",
+            "link down",
+            "recovered after error",
+            "each item seen",
+        ):
+            with self.subTest(name=name):
+                self.claims["claims"][0]["checks"] = [name]
+                checker.validate(self.claims, self.status, self.root)
+
+    def test_usage_errors_are_json(self):
+        for args in (["--json"], ["--json", "--bogus"], ["--json=1"]):
+            with self.subTest(args=args):
+                proc = self.run_cli(*args)
+                self.assertEqual(proc.returncode, 2)
+                payload = json.loads(proc.stdout)
+                self.assertFalse(payload["ok"])
+                self.assertEqual(payload["counts"], {})
+                self.assertEqual(len(payload["findings"]), 1)
+        proc = self.run_cli(self.root, "--js")
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("unrecognized arguments: --js", proc.stderr)
+
     def test_formatted_name_is_exact(self):
         self.claims["claims"][0]["checks"] = ["interface up (load 999)"]
         self.reject("unknown harness check")

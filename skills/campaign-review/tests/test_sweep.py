@@ -5,7 +5,9 @@
 
 import copy
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -310,17 +312,20 @@ class SweepTests(unittest.TestCase):
         )
         self.assertEqual(newly_affected(result), expected)
         self.assertEqual(result["unmapped_harness"], [])
+        reviewed = copy.deepcopy(row["changes"][0])
         for mapping in [
             dict(checks=None, scenarios=None),
             dict(checks=["MAC matches QEMU's"], scenarios=None, reviewed=False),
             dict(checks=["unknown check"], scenarios=["unknown scenario"]),
         ]:
-            row["changes"][0].update(mapping)
-            result = self.run_sweep()
-            self.assertEqual(
-                newly_affected(result), [f"qualification-Q{i:02}" for i in range(1, 29)]
-            )
-            self.assertEqual(result["unmapped_harness"], ["harness"])
+            with self.subTest(mapping=mapping):
+                row["changes"][0] = dict(copy.deepcopy(reviewed), **mapping)
+                result = self.run_sweep()
+                self.assertEqual(
+                    newly_affected(result),
+                    [f"qualification-Q{i:02}" for i in range(1, 29)],
+                )
+                self.assertEqual(result["unmapped_harness"], ["harness"])
 
     def test_mapping_must_cover_exact_old_hash(self):
         row = mutate(self.registry, "harness", checks=["MAC matches QEMU's"])
@@ -487,21 +492,34 @@ class SweepTests(unittest.TestCase):
                     self.assertEqual(proc.stderr, "")
 
     def test_cli_json_skill_and_errors(self):
-        def run(*args):
-            return subprocess.run(
-                [sys.executable, str(SCRIPTS / "sweep.py"), *map(str, args)],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-        proc = run(ROOT / "evals/e1000", "--json")
-        self.assertEqual(proc.returncode, 1)
-        # The live e1000 report after CR8 (revision 9 stales every revision-8 basis).
-        self.assertEqual(json.loads(proc.stdout)["counts"]["stale"], 144)
-        self.assertEqual(run().returncode, 2)
-        self.assertTrue(run("--skill").stdout.startswith("---\n"))
         with tempfile.TemporaryDirectory() as temp:
+            # No user config or run store: the reference manifest applies.
+            env = dict(os.environ, XDG_CONFIG_HOME=temp)
+            env.pop("DRIVER_LAB_RUNS", None)
+            campaign = Path(temp) / "campaign"
+            campaign.mkdir()
+            shutil.copy(ROOT / "evals/e1000/claims.yaml", campaign / "claims.yaml")
+            shutil.copy(BASELINE, campaign / "status.yaml")
+            shutil.copy(BASELINE_SOURCES, campaign / "sources.yaml")
+
+            def run(*args):
+                return subprocess.run(
+                    [sys.executable, str(SCRIPTS / "sweep.py"), *map(str, args)],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env=env,
+                )
+
+            # The frozen CR5 index and CR7 registry, so new entries cannot move it.
+            proc = run(campaign, "--json")
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(json.loads(proc.stdout)["counts"]["stale"], 96)
+            proc = run(ROOT / "evals/e1000", "--json")
+            self.assertIn(proc.returncode, (0, 1))
+            self.assertIn("stale", json.loads(proc.stdout)["counts"])
+            self.assertEqual(run().returncode, 2)
+            self.assertTrue(run("--skill").stdout.startswith("---\n"))
             proc = run(temp, "--json")
             self.assertEqual(proc.returncode, 3)
             self.assertFalse(json.loads(proc.stdout)["ok"])
@@ -586,7 +604,88 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(adapter.main([str(self.path), "candidate", "--json"]), 3)
             self.assertFalse(json.loads(output.call_args.args[0])["ok"])
 
+    def test_blocked_write_leaves_registry_unchanged(self):
+        self.source["sha256"] = "c" * 64
+        self.source["changes"] = [
+            dict(
+                from_sha256="d" * 64,
+                to_sha256="c" * 64,
+                since="reviewed change",
+                reviewed=True,
+                sections=None,
+                checks=None,
+                scenarios=None,
+                evidence=["synthetic reviewed diff"],
+            )
+        ]
+        self.path.write_text(check.yaml.safe_dump(self.registry))
+        self.file.unlink()
+        original = self.path.read_bytes()
+        for args in (("--write",), ("--write", "--dry-run")):
+            with self.subTest(args=args):
+                proc = self.cli(*args)
+                self.assertEqual(proc.returncode, 3)
+                payload = json.loads(proc.stdout)
+                self.assertEqual(payload["result"]["status"], "blocked")
+                self.assertFalse(payload["updated"])
+                self.assertFalse(payload["would_update"])
+                self.assertIn("registry is unchanged", payload["findings"][0])
+                self.assertEqual(self.path.read_bytes(), original)
+
+    def test_failed_write_keeps_registry_whole(self):
+        original = self.path.read_bytes()
+        with mock.patch.object(adapter.os, "replace", side_effect=OSError), mock.patch(
+            "builtins.print"
+        ) as output:
+            code = adapter.main(
+                [str(self.path), "candidate", "--root", str(self.root), "--json"]
+                + ["--write"]
+            )
+        self.assertEqual(code, 3)
+        self.assertFalse(json.loads(output.call_args.args[0])["updated"])
+        self.assertEqual(self.path.read_bytes(), original)
+        self.assertEqual(
+            sorted(p.name for p in self.root.iterdir()), ["opaque", "sources.yaml"]
+        )
+
+    def test_invalid_date_and_usage_errors_are_json(self):
+        text = self.path.read_text()
+        self.assertIn("checked: '2026-09-23'", text)
+        self.path.write_text(
+            text.replace("checked: '2026-09-23'", "checked: 2026-13-45", 1)
+        )
+        proc = self.cli()
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertFalse(json.loads(proc.stdout)["ok"])
+        self.assertEqual(proc.stderr, "")
+        for args in (["--json"], ["--json", "--bogus"], ["--json=1"]):
+            with self.subTest(args=args):
+                proc = subprocess.run(
+                    [sys.executable, str(SCRIPTS / "pinned_file_adapter.py"), *args],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(proc.returncode, 2)
+                payload = json.loads(proc.stdout)
+                self.assertFalse(payload["ok"])
+                self.assertIsNone(payload["result"])
+
     def test_duplicate_keys_and_unknown_id(self):
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "pinned_file_adapter.py"),
+                str(self.path),
+                "not-registered",
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("not registered", json.loads(proc.stdout)["findings"][0])
         with self.path.open("a") as out:
             out.write("version: 1\n")
         self.assertEqual(self.cli().returncode, 1)

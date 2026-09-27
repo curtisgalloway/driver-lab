@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-27T08:45:00-07:00
+Updated: 2026-09-27T11:12:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,11 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [CR-G — acceptance of the continuous-review layer](CR-G.md)
+Entries: 2026-09-27T10:05-07:00 through 2026-09-27T11:12-07:00
+Outcome: complete; the layer accepted (the user's decision on C6's last clause); reviewer's 15
+and the swarm's 16 findings fixed; see the [evidence](../evidence/CR-G.md).
 
 ### [CR8 — spec revision 9 through the three-round cap](CR8.md)
 Entries: 2026-09-27T07:22-07:00 through 2026-09-27T08:45-07:00

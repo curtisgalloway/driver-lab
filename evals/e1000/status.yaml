@@ -7050,9 +7050,8 @@ entries:
     the next open; it can unmask during the new open's poll.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Round-2 FAIL; under the round cap only the overstating text was deleted; the mechanism is
-      unspecified.
+    state: superseded
+    reason: Replaced by CR8-R-poll-tail-reopen-decided after the user's decision (option a), 2026-09-27.
     stale_since: null
   supersedes: []
   run_ids:
@@ -7072,9 +7071,8 @@ entries:
     completion-driven queue wake while it resets.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Round-2 FAIL; under the round cap only the overstating text was deleted; the mechanism is
-      unspecified.
+    state: superseded
+    reason: Replaced by CR8-R-timeout-quiescence-decided after the user's decision (option a), 2026-09-27.
     stale_since: null
   supersedes: []
   run_ids:
@@ -7135,3 +7133,61 @@ entries:
   disposition:
     state: queued
     destination: Next spec revision made for another reason.
+- id: CR8-R-poll-tail-reopen-decided
+  kind: item
+  basis: verify-r9-round2
+  verdict: 'Option (a): the poll calls napi_complete_done() and makes its unmask decision under the mask
+    lock, so the stopping flag orders against both.'
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: The user's decision after CR8; not yet applied.
+    stale_since: null
+  supersedes:
+  - CR8-R-poll-tail-reopen
+  run_ids:
+  - cr8-20260927-01
+  - crg-20260927-01
+  evidence:
+  - evidence/CR8.md
+  - evidence/CR-G.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Revision 10 (next follow-on unit), with CR8-R-timeout-quiescence-decided and
+      CR8-W-attestation-kernel riding along; before the CF-n candidate round.
+  decision:
+    who: user
+    date: '2026-09-27'
+    link: evidence/CR-G.md#the-users-decisions-after-cr8
+- id: CR8-R-timeout-quiescence-decided
+  kind: item
+  basis: verify-r9-round2
+  verdict: 'Option (a): transmit-timeout recovery goes through the stack''s own close and open under
+    RTNL, which quiesce transmit.'
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: The user's decision after CR8; not yet applied.
+    stale_since: null
+  supersedes:
+  - CR8-R-timeout-quiescence
+  run_ids:
+  - cr8-20260927-01
+  - crg-20260927-01
+  evidence:
+  - evidence/CR8.md
+  - evidence/CR-G.md
+  class: R
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Revision 10 (next follow-on unit), with CR8-R-poll-tail-reopen-decided and
+      CR8-W-attestation-kernel riding along; before the CF-n candidate round.
+  decision:
+    who: user
+    date: '2026-09-27'
+    link: evidence/CR-G.md#the-users-decisions-after-cr8

@@ -35,8 +35,9 @@ are opened. No registered source is parsed, hashed or executed. Existing
 stale/contested states survive; superseded history
 is excluded. Eligible counts are a freshness filter; stopping evaluates S1-S5
 separately. Its queue/batch are proposals only, at most three units, with tier 2
-requiring a user decision on that item. Models come from manifest roles; the
-reference reader is Claude Fable 5.1. Unknown classes are R; W never starts work.
+requiring a user decision on that item. Models come from manifest roles: the
+reader role reads (reference: Codex gpt-6-astra) and the reviewer role reviews
+(reference: Claude Fable 5.1). Unknown classes are R; W never starts work.
 Narrow mappings require exact old/new hashes and reviewer confirmation.
 Missing mappings widen. Missing identities are reported, never invented.
 JSON version 2 changes ok and the exit status to stopping sufficiency/no ready

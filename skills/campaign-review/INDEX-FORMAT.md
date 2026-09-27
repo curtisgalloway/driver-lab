@@ -396,8 +396,12 @@ Revision headers may record `started` (ISO date). Revisions started through
 2026-09-26 are historical for the cap; later revisions, or unknown dates, are
 subject to it. Counts deduplicate section slices and count accuracy reading units,
 including independent follow-up readings but not adjudications; numeric rounds provide a lower bound
-when earlier attempts are missing. At round three, further reading/revision units
-are held for the user; more than three is also a stopping-rule violation. The
+when earlier attempts are missing. At round three the revision's own fix-and-reread
+loop ends and its remaining findings go to the user as items; the report says
+`limit reached`, and no queued unit is held for it, because the queue never emits
+a further round of that revision (CR-G): independent and comparison readings,
+re-verification and non-reading work stay ready. More than three is a stopping-rule
+violation (`awaiting decision`), which does hold reading work. The
 orchestrator must also enforce C6's deletion/narrowing-only fixes after round two;
 this metadata checker does not inspect text edits.
 

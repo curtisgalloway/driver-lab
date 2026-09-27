@@ -10,7 +10,6 @@ object with ok, counts and findings. No private run store is opened.
 
 from __future__ import annotations
 
-import argparse
 import ast
 from collections import Counter
 import datetime
@@ -207,6 +206,35 @@ def maybe_literal(node, env):
         return None
 
 
+def name_candidates(node, env):
+    """Possible literal names; a conditional with a runtime test yields both.
+
+    Formatted parts follow literal()'s rules: a part that cannot be resolved,
+    converted or formatted leaves no candidate, so a changed name fails closed.
+    """
+    if isinstance(node, ast.IfExp):
+        test = maybe_literal(node.test, env)
+        if test is None and not isinstance(node.test, ast.Constant):
+            return name_candidates(node.body, env) + name_candidates(node.orelse, env)
+        return name_candidates(node.body if test else node.orelse, env)
+    if isinstance(node, ast.JoinedStr):
+        options = [""]
+        for part in node.values:
+            if isinstance(part, ast.Constant):
+                values = [part.value]
+            elif part.conversion != -1 or part.format_spec is not None:
+                return [None]
+            else:
+                values = [
+                    format(v) for v in name_candidates(part.value, env) if v is not None
+                ]
+            options = [o + v for o in options for v in values]
+            if not options or len(options) > 64:
+                return [None]
+        return options
+    return [maybe_literal(node, env)]
+
+
 def bind(target, value, env):
     """Bind a literal assignment or loop target."""
     if isinstance(target, ast.Name):
@@ -244,9 +272,9 @@ def harness_check_names(path):
                         for k in call.keywords
                     ):
                         continue
-                    name = maybe_literal(call.args[0], env)
-                    if isinstance(name, str):
-                        names.add(name)
+                    for name in name_candidates(call.args[0], env):
+                        if isinstance(name, str):
+                            names.add(name)
             elif isinstance(call.func, ast.Name) and call.func.id in funcs:
                 name = call.func.id
                 if name in stack:
@@ -282,12 +310,20 @@ def harness_check_names(path):
                         child = dict(env)
                         bind(node.target, value, child)
                         walk(node.body, child, stack)
+                else:
+                    calls(node.iter, env, stack)
+                    child = dict(env)
+                    for target in ast.walk(node.target):
+                        if isinstance(target, ast.Name):
+                            child[target.id] = None
+                    walk(node.body, child, stack)
             elif isinstance(node, ast.If):
                 calls(node.test, env, stack)
                 walk(node.body, dict(env), stack)
                 walk(node.orelse, dict(env), stack)
             elif isinstance(node, ast.Try):
-                for body in [node.body, node.orelse, node.finalbody]:
+                handlers = [h.body for h in node.handlers]
+                for body in [node.body, *handlers, node.orelse, node.finalbody]:
                     walk(body, dict(env), stack)
             else:
                 calls(node, env, stack)
@@ -1055,7 +1091,10 @@ def read_yaml(path):
 
 def main(argv=None):
     """Run the read-only public index check."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    # Imported here: library users may load this module by its file path alone.
+    import cli  # pylint: disable=import-outside-toplevel
+
+    parser = cli.Parser(description=__doc__, error_fields={"counts": {}})
     parser.add_argument("campaign", type=Path, nargs="?")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")

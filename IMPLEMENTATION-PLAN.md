@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (reviewed; landing); CR8 complete (revision 9; two remainder items with the user); CR-G pending. Derived 2026-09-26 from the design's
+**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 complete (PR #32); CR5 complete (PR #33); CR6 complete (PR #34; CR6a, CR6b); CR7 complete (PR #35); CR8 complete (revision 9; two remainder items with the user); CR-G pending. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in

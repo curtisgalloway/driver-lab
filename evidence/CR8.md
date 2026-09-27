@@ -36,17 +36,18 @@ role), the cap: round 1 **344 PASS, 17 FAIL, 3 UNVERIFIABLE, 1 GAP** with the cl
 FAIL; round 2 **301 PASS, 2 FAIL, 3 UNVERIFIABLE**, clean-room PASS; round 3 **338 PASS, 2
 FAIL, 3 UNVERIFIABLE**, clean-room PASS. Every FAIL after round 2 was fixed by deletion, as the
 cap requires, and the landed text differs from round 3's by three deletions that no reader
-has read. Revision 9 is 1,800 lines, SHA-256
+has read; one round-3 FAIL is only partly fixed by its deletion and is queued as a W item. Revision 9 is 1,800 lines, SHA-256
 `0fd7bc0a6bd4ad181af26a7e5f20d50c1fbaa312a3248470aca31623f03f261a`, landed in private run
 `cr8-20260927-01` with its ledger line. C5's live-item criterion is met (below). The remainder
 list goes to the user.
 
 ## The user's decisions this unit ran under
 
-Recorded 2026-09-26/27 and relayed by the orchestrator:
+Recorded 2026-09-26/27 and relayed by the orchestrator; the relay's exact text is saved in the run as
+`review/orchestrator-relay-decisions.md` (SHA-256 `27768d41…4230`), which the quotations below are from:
 
-1. **Scope:** "one revision (revision 9) applies all 12 CR6b R findings, the E and W aggregate
-   items bound for CR8, and the CR6a TNCRS fix."
+1. **Scope:** "one revision (revision 9) applies all 12 CR6b R findings (`CR6b-R-*`), the E and
+   W aggregate items bound for CR8, and the CR6a TNCRS fix."
 2. **TNCRS, option (b):** "keep §4.7's link-down TNCRS reading as a stated design choice and
    replace the false justifying clause with its real reason (no change to what a driver must
    do)", folding in CR6b's related findings, with SR-8-2 riding "as a wording fix if it fits".
@@ -74,7 +75,7 @@ wait for "the next revision made for another reason", which this is.
 | Authoring pre-check | Before round 1, one fresh Claude Opus 5.5 reviewer read draft 1's hunks against the manual and the kernel documentation (557 s, 199,314 tokens): 18 findings, one error (a delayed link work canceled with the plain-work call) and two races the draft left (the link task re-enabling the carrier after `ndo_stop`; a shared-line interrupt reading ICR inside R6's 1 µs); all applied. Not a verification round; no reader saw it |
 | Rounds | Each round: a new workspace holding only the brief and its inputs (revision 8, the working copy, the diff, both leak-scan reports, the M1–M8 observations extract, the verifier and format texts), no earlier record; `codex exec` in its read-only sandbox, launched by the orchestrator, which checked the brief's and inputs' hashes first. The brief asked, per hunk, whether what a driver must do changed, and asked the clean-room check to judge the four reason clauses and G-4 |
 | Adjudication | The implementer, against the cited authority, before any fix; every decision in the run's ledger |
-| Leak scans | L02c whitelist against the 7 reference driver files at the pinned commit: revision 8 clean; every draft and the landed text 0 shared runs, 0 all-caps identifiers, and five lowercase identifiers (a delayed-work cancel, a multicast-address test, the maximum-MTU field, the running-state test, the irq-saving spinlock call), each a Linux interface HALF 2 now names and cites from `include/`, the class SR-8 and CR6a judged; the three records: the same five names |
+| Leak scans | L02c whitelist against the 7 reference driver files at the pinned commit: revision 8 clean; every draft and the landed text 0 shared runs and 0 all-caps identifiers; lowercase identifiers four in drafts 1 and 2 (a delayed-work cancel, a multicast-address test, the maximum-MTU field, the irq-saving spinlock call) and five from draft 3 on (adding the running-state test), each a Linux interface HALF 2 now names and cites from `include/`, the class SR-8 and CR6a judged; the three records: the same names (four in round 1's, five in rounds 2 and 3's) |
 
 ## Revision 9
 
@@ -108,8 +109,8 @@ states its premise inline (SR-8-3); §12.6's row records the correction.
 confidences and verification clauses across §1, §4.0–§4.8, §5.2–§5.10, §6.2–§6.4, §7.4, §8.1,
 §8.2, §8.4, §9.1, §9.4, §11 M4, §12.1, §12.2, §12.3, §12.5 and §12.6, including R6's margin (an
 assumed posted-write latency, confidence medium, what no check shows, the open question on
-configuration reads) and R7's test (read CTRL bit 20 after the 5 ms wait; a third cause of an
-early 0). Three passages correct HALF 2 or a conditional recommendation to agree with rules
+configuration reads) and R7's test (read CTRL bit 20 after the 5 ms wait; the earlier-write
+cause of an early 0 widened from an earlier iteration of the test to any earlier write). Three passages correct HALF 2 or a conditional recommendation to agree with rules
 already in the spec, with no new requirement: CTRL_EXT handling, probe step 7 (E5's choices)
 and the receive length with SECRC = 1.
 
@@ -125,13 +126,17 @@ judged the rest of G-4 clean. Rounds 2 and 3 passed all five.
 | --- | --- | --- | --- | --- | --- |
 | 1 | draft 2 (`5b779706…`) | 344 PASS, 17 FAIL, 3 UNVERIFIABLE, 1 GAP | FAIL (the four clauses) | 8.4, 207,372 | 16 FAILs and the GAP upheld and fixed, one partly (X9: §14.4 states the RDTR sentence twice, once for every part); the clauses rewritten |
 | 2 | draft 3 (`9c53a94f…`) | 301 PASS, 2 FAIL, 3 UNVERIFIABLE | PASS | 14.4, 221,510 | Both FAILs upheld; both are missing mechanisms, so under the cap only the overstating text was deleted (remainder below) |
-| 3 | draft 4 (`1f598447…`) | 338 PASS, 2 FAIL, 3 UNVERIFIABLE | PASS | 13.9, 225,632 | Both FAILs wording (a quotation's capitalization; "§8 alone"), fixed by deletion; the header's "every changed passage named" deleted with them, since the §12.3 fix is not in its list |
+| 3 | draft 4 (`1f598447…`) | 338 PASS, 2 FAIL, 3 UNVERIFIABLE | PASS | 13.9, 225,632 | Both FAILs wording. The E3 quotation's capitalization: fixed by deleting the quotation marks. §12.3's attestation naming only §8's kernel citations: deleting "alone" removed the false "only", but the bullet still omits §4.7's citation, so it is partly fixed and queued as `CR8-W-attestation-kernel`. The header's "every changed passage named" was deleted too, since the §12.3 change is not in its list |
 
-The three UNVERIFIABLE lines are the same in every round: the header's attribution to the
-CR6b reading and its statement about CF-2's candidate (records the brief excluded) and the
-manual's micro sign at R6 (no PDF). Every round's per-hunk requirement answers matched the
-header's items. Round 3 found no remaining race in the interrupt, open, stop and remove
-sequences as written.
+The UNVERIFIABLE lines are input limits: in rounds 2 and 3, the header's attribution to the
+CR6b reading, its statement about CF-2's candidate (records the brief excluded) and the manual's
+micro sign at R6 (no PDF); round 1 read the two header claims as one line and marked R6's stated
+posted-write assumption UNVERIFIABLE instead. Rounds 2 and 3's per-hunk requirement answers
+matched the header's items; round 1's did not match draft 2's header, which was its
+Header/revision/2 FAIL (three HALF 2 corrections unnamed), fixed in draft 3. Round 3 found no
+remaining race in the interrupt, open, stop and remove sequences as written; it read a text in
+which round 2's two mechanisms were still unspecified (only their overstating sentences had
+been deleted) and did not flag them again, so its note does not settle them.
 
 ## Remainder for the user
 
@@ -151,20 +156,23 @@ Other open items after this unit:
   lineage, and none read the landed bytes. The sweep queues the second reading (tier 1). It is
   held ("awaiting decision") while R items are open.
 - **The next candidate round** (CF-n on revision 9) is tier 2, the user's launch.
-- **CF-2-AR-10** stays queued for a later revision.
+- **CF-2-AR-10** stays queued for a later revision (a replacement entry, `CF-2-AR-10-r9`, gives
+  it that destination, since revision 9 was the one its old destination named).
+- **`CR8-W-attestation-kernel`** (W): §12.3's HALF 1 attestation still names only §8's kernel
+  citations, though §4.7's octet note now cites the kernel too; for the next revision.
 
 ## After this unit
 
 The index records revision 9's header (requirement change, 32 changed sections, the 19
 applied items), the three rounds as draft readings with their cost, each applied item as a new
 entry `<id>-r9` (disposition `applied`, revision 9) that supersedes the queued one, and the two
-remainder items. The revision-8 readings are stale since revision 9. `sources.yaml` pins the
+remainder items, the partly fixed attestation (W) and CF-2-AR-10's replacement. The revision-8 readings are stale since revision 9. `sources.yaml` pins the
 spec at revision 9; the pinned-file adapter matches. The sweep after landing (exit 1):
 
 | Condition | Before CR8 | After CR8 |
 | --- | --- | --- |
 | S2 | 13 stale qualifications | every qualification but Q23's stale (revision 9 changed sections all but one claim cites); Q23 has no qualified PASS in an accepted class |
-| S3 | AF-1's item; twelve open R items; four readings with accuracy FAILs | AF-1's item; the two remainder R items |
+| S3 | AF-1's item; twelve open R items; four readings with accuracy FAILs | AF-1's item; the two remainder R items (the W item does not block) |
 | S4 | revisions 3–6 at 1/2 | revisions 3–6, 8 and 9 at 0/2 (the whole-text CR6b reading is stale) |
 | S5 | CR6b produced R items | unchanged: CR6b is still the latest independent reading |
 | Round cap | revision 8 pre-cap history | revision 9: three rounds, "limit reached", remainder to the user |
@@ -182,7 +190,7 @@ decision started it.
 
 | Check | Result |
 | --- | --- |
-| `index_check.py evals/e1000` | OK: 28 claims, 69 items, 102 verification entries |
+| `index_check.py evals/e1000` | OK: 28 claims, 71 items, 102 verification entries |
 | `sweep.py evals/e1000` | not sufficient, as above; exit 1 |
 | `pinned_file_adapter.py` on the spec | matches the pin |
 | `campaign-review` tests | 115 OK. The baseline tests now also read the source registry as it stood before this unit (`tests/fixtures/e1000-sources-cr7.yaml`), since the live registry pins revision 9, which the frozen index does not have; the live sweep's stale count is 144 |
@@ -199,7 +207,30 @@ decision started it.
 
 ## Review
 
-Written after the records review; see the run's `review/`.
+After the pre-review checkpoint, one fresh, read-only Claude Opus 5.5 reviewer read this file,
+the index and registry changes, the test change and every run artifact (records, workspaces,
+drafts, logs, scans, ledger); its report is in the run store under `review/`. It confirmed
+every hash, line and hunk count, verdict count, time and token figure, the header table
+against the landed header, the 32 changed sections (recomputed from the diff), all twelve R
+fixes located in the landed text, the superseded and stale entries, that each round's workspace
+held no earlier record and that every change after round 2 is a deletion, the frozen test
+fixture byte for byte, the sweep table against live runs before and after, and the absence of
+private infrastructure. Two medium findings, seven low and three informational, all applied:
+
+| ID | Sev | Finding | Resolution |
+| --- | --- | --- | --- |
+| RR-1 | medium | The user's decisions were quoted with no run artifact holding the words | The relay text saved in the run and cited; quotations checked against it |
+| RR-2 | medium | Round 3's §12.3 FAIL was recorded as fixed; the deletion removed only "alone" | Recorded as partly fixed; `CR8-W-attestation-kernel` queued |
+| RR-3 | low | "The same three UNVERIFIABLE in every round" is wrong for round 1 | Stated per round |
+| RR-4 | low | Round 1's per-hunk answers did not match draft 2's header | Said, with the FAIL it was |
+| RR-5 | low | Four kernel identifiers in drafts 1–2, not five | Stated per draft |
+| RR-6 | low | Round 3's "no remaining race" note needs its context | Caveat added |
+| RR-7 | low | The notebook used a word the house style avoids | Reworded |
+| RR-8 | low | The plan still said CR7 was landing | "CR7 complete (PR #35)" |
+| RR-9 | low | CF-2-AR-10's destination was the revision that passed it | Replacement entry `CF-2-AR-10-r9` |
+| RR-10 | info | The ledger said "; it" became ". Because"; it was a pure deletion | Ledger corrected |
+| RR-11 | info | "A third cause" is a widening of the second | Reworded here |
+| RR-12 | info | The notebook said revision 9 staled 27 qualifications; 13 were already stale | Correction entry |
 
 ## Limitations
 

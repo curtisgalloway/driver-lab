@@ -77,9 +77,17 @@ Round 3 (13.9 minutes): 343 verdicts, 2 FAIL, both wording (a quotation that cha
 manual's capitalization; "§8 alone" in the attestation, no longer true once §4.7 cites the
 kernel). Deleting the quotation marks and "alone" fixed them, and because the §12.3 change was
 not in the header's list, the header's "every changed passage named" went too: a deletion is
-the only honest fix left once the claim of completeness is false. The index had to say what
+the only fix the cap allows once the claim of completeness is false. The index had to say what
 that means: all three rounds are draft readings, superseded, and revision 9 has no reading of
 its landed bytes, so S4 counts it 0/2 and the sweep queues the second reading. The two round-2
 mechanisms became R items for the user with options, and every revision-8 reading went stale,
 which is also what stales 27 qualifications: revision 9 touched a section almost every claim
 cites.
+
+## 2026-09-27T09:00-07:00 — correction after the records review
+Two entries above overstate. The 08:45 entry says every revision-8 reading going stale "is also
+what stales 27 qualifications": 13 were already stale before this unit; revision 9 staled the
+other 14. And the §12.3 deletion did not fully fix round 3's FAIL: removing "alone" removed a
+false "only", but the attestation still does not name §4.7's kernel citation, which is now a W
+item for the next revision. The reviewer also found the user's decisions quoted from a relay
+the run did not hold; the relay text is now saved there.

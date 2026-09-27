@@ -3453,8 +3453,8 @@ entries:
   verdict: Add the observation that STATUS.FD reads 1 with LU clear.
   rule: C6-item-classification-2026-09-26
   status:
-    state: current
-    reason: Disposition recorded from linked evidence; applied items retained for traceability.
+    state: superseded
+    reason: Destination passed; replaced by CF-2-AR-10-r9 (CR8).
     stale_since: null
   supersedes: []
   run_ids:
@@ -6574,9 +6574,7 @@ entries:
   purpose: accuracy
   covers_revisions:
   - 9
-  scope: Revision-8-to-9 changes and their dependencies. Draft 4 read (the third and last round the cap
-    allows); clean-room PASS; two wording FAILs fixed by deletion, with the header claim of a complete
-    list deleted; the landed text differs from draft 4 by those three deletions and has not been read.
+  scope: Revision-8-to-9 changes and their dependencies. Draft 4 read (the third and last round the cap allows); clean-room PASS; two wording FAILs; the E3 quotation fixed by deletion; the section 12.3 attestation only partly (the deleted word removed the false exhaustiveness but the bullet still omits section 4.7's kernel citation, queued as CR8-W-attestation-kernel); the header claim of a complete list deleted; the landed text differs from draft 4 by those three deletions and has not been read.
   reading_id: verify-r9-round3
   cost:
     seconds: 835
@@ -7089,3 +7087,51 @@ entries:
   disposition:
     state: queued
     destination: User decision (evidence/CR8.md, remainder list); the next spec revision.
+- id: CF-2-AR-10-r9
+  impact:
+    claims: []
+    changes_status: false
+  kind: item
+  basis: cf2-review
+  verdict: Add the observation that STATUS.FD reads 1 with LU clear.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: 'Revision 9 (CR8) did not take it: an emulated entry needs an observations-extract item of
+      its own and a reading.'
+    stale_since: null
+  supersedes:
+  - CF-2-AR-10
+  run_ids:
+  - e1000-cf2-20260926-01
+  - cr8-20260927-01
+  evidence:
+  - evidence/CF-2.md
+  - evidence/CR8.md
+  class: E
+  source: 1
+  target: spec
+  disposition:
+    state: queued
+    destination: A later spec revision, with an observations-extract item built from CF-2's traces.
+- id: CR8-W-attestation-kernel
+  kind: item
+  basis: verify-r9-round3
+  verdict: Section 12.3's HALF 1 attestation names only section 8's kernel citations; section 4.7's octet
+    note now cites the kernel too.
+  rule: C6-item-classification-2026-09-26
+  status:
+    state: current
+    reason: Round-3 FAIL only partly fixed by the deletion the cap allowed.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - cr8-20260927-01
+  evidence:
+  - evidence/CR8.md
+  class: W
+  source: 3
+  target: spec
+  disposition:
+    state: queued
+    destination: Next spec revision made for another reason.

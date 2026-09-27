@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 review fixes implemented and locally verified, awaiting checkpoint; later milestones pending. Derived 2026-09-26 from the design's
+**Status:** CR1 complete (PR #29); CR2 complete (PR #30); CR3 complete (PR #31); CR4 review fixes implemented; checkpoint pending; later milestones pending. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
@@ -587,8 +587,8 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 | --- | --- | --- | --- | --- | --- |
 | CR1 | e1000 claim map and status index: claims, qualifications, candidate results, `[emulated]` observations, open items; index check in CI | C1 (most), C6 S1–S3 data, C3 tier-0 index check | — | one session | complete (PR #29) |
 | CR2 | Spec verification history in the index by section (revisions 3–8), and the SR-8 → CF-2 path backfilled | C1 (rest), C5 (backfill) | CR1 | one session | complete (PR #30; [evidence](evidence/CR2.md)) |
-| CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | review fixes implemented; checkpoint pending ([evidence](evidence/CR3.md)) |
-| CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | `pending` |
+| CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | complete (PR #31; [evidence](evidence/CR3.md)) |
+| CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | review fixes implemented; checkpoint pending ([evidence](evidence/CR4.md)) |
 | CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | `pending` |
 | CR6 | First tier-1 batch from the queue: the second reading of revision 8's requirement change, and a comparison reading by a new reading model | C3 (batch), C4, C6 (e1000 verdict) | CR5; the user names the new reading model | two unit sessions plus the orchestrator's batch close | `pending` |
 | CR7 | A stand-in private deployment, created by the tests, runs the method end to end with stub plugins only | C7, C8 (stub-only clause) | CR5 | one session | `pending` |
@@ -757,8 +757,7 @@ the revision for the queued items (CR8).
 - **Sizing:** one engine with table-driven rules and one adapter; the unknown is mapping harness
   diffs to check names. **Split point:** spec, source and candidate rows first; harness and
   emulator rows second.
-- **Status:** review fixes implemented and locally verified; checkpoint pending;
-  [evidence](evidence/CR3.md).
+- **Status:** complete (PR #31); [evidence](evidence/CR3.md).
 
 ### CR4 — Stopping rule and the tier-1 queue
 
@@ -799,7 +798,7 @@ the revision for the queued items (CR8).
   guard is an access control), plus the e1000 report as the artifact.
 - **Sizing:** rules over data already in the index; the manifest moved to CR5 to keep this
   one session. **Split point:** the stopping rule first; the queue and its guards second.
-- **Status:** `pending`.
+- **Status:** review fixes implemented; checkpoint pending. See [evidence](evidence/CR4.md).
 
 ### CR5 — Deployment manifest and contract check
 
@@ -1028,8 +1027,8 @@ first. Review, checks and records follow the
 
 - **Continuous review:** [CR1](evidence/CR1.md) is complete (PR #29, the e1000 claim map
   and status index); [CR2](evidence/CR2.md) is complete (PR #30, verification history).
-  [CR3](evidence/CR3.md) has review fixes implemented and locally verified, awaiting
-  checkpoint; CR4 follows that checkpoint.
+  [CR3](evidence/CR3.md) is complete (PR #31). [CR4](evidence/CR4.md) has review fixes implemented;
+  its checkpoint remains with the orchestrator.
 - **e1000 follow-on verdicts and item dispositions:** see the [status index](evals/e1000/status.yaml) and [claim map](evals/e1000/claims.yaml).
 - **L01 complete for its declared hardware scope** (L01c, 2026-09-26): see
   [evidence/L01-hw.md](evidence/L01-hw.md). The candidate passes the ten revised checks on the

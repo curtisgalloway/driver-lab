@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-26T19:44:51-07:00
+Updated: 2026-09-26T20:18:50-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,11 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [CR4 — stopping rule and guarded queue](CR4.md)
+Entries: 2026-09-26T19:59:33-07:00 through 2026-09-26T20:18:50-07:00
+Outcome: orchestrator-directed review fixes implemented; checkpoint pending;
+see the [evidence](../evidence/CR4.md).
 
 ### [CR3 — tier-0 sweep](CR3.md)
 Entries: 2026-09-26T19:28:29-07:00 through 2026-09-26T19:44:51-07:00

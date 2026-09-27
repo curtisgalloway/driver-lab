@@ -45,6 +45,17 @@ The registry's snapshot provenance is not a live host check. Sources absent from
 the registry cannot trigger detection. Run the sweep locally; public CI runs the
 tests and index check, not private-source refreshes or the real sweep.
 
-CR3 reports freshness only. Do not infer a sufficient-for-scope verdict,
-start a candidate round, edit a spec or perform an outward action from a queued
-item alone. Follow the campaign's authorization and review instructions.
+The sweep also evaluates S1–S5 and prints the guarded queue and first batch.
+Read every blocker: current result counts alone do not establish sufficiency.
+Keep unknown classes conservative (R); W items ride the next revision and never
+start one. Respect the report's policy mismatches, shortfall approval requirements
+and round-cap findings. Historical stale gate records are not new reading work.
+
+A batch contains at most three units, each ending in a reviewed checkpoint commit.
+Tier-2 units require their own recorded user decision; approval for a different
+entry does not authorize them. Resweep after each checkpoint before selecting the
+next unit: a new finding can invalidate the remaining batch. Push and merge remain
+subject to the deployment's authorization rules; this repository opens pull
+requests only on explicit "push". The sweep never runs a unit. CR6 runs the first
+batch; CR5 supplies the role manifest. Until then the reader constant is Claude
+Fable 5.1. Changing it queues a comparison per campaign, including sufficient ones.

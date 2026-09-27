@@ -201,7 +201,7 @@ the workstation. The QEMU model and the reference driver are read only by the ev
 
 | ID | Criterion |
 | --- | --- |
-| A1 | The spec covers the core path, with two verification readings and no unresolved FAIL. |
+| A1 | The spec covers the core path, with two verification readings and no unresolved FAIL. Amended 2026-09-26 (user approved): [C5](DESIGN.md#c5--findings-reach-a-revision-and-the-candidate-through-the-existing-loop) requires two independent readings for requirement changes, one reading plus the leak scan for wording/evidence changes. |
 | A2 | The candidate builds warning-free against the pinned tree, and its command-log audit is clean. |
 | A3 | The harness runs every scenario unattended on the test host against both drivers, and stores traces, captures, and verdicts per run. |
 | A4 | The reference driver passes the scenarios. Any reference failure is explained by the manual before the candidate is judged. |

@@ -107,7 +107,7 @@ class IndexTests(unittest.TestCase):
                 False,
             ),
             ("unknown claim", ("entries", 0, "claim"), "Q99", "unknown claim", False),
-            ("unknown rule", ("entries", 0, "rule"), "new-rule", "unknown rule", False),
+            ("empty rule", ("entries", 0, "rule"), "", "nonempty string", False),
             ("unknown field", ("entries", 0, "surprise"), 1, "unknown fields", False),
             ("empty runs", ("entries", 0, "run_ids"), [], "nonempty list", False),
             (
@@ -283,7 +283,7 @@ class IndexTests(unittest.TestCase):
         checker.validate(self.claims, self.status, self.root)
         original = copy.deepcopy(item)
         for field, value, expected in [
-            ("class", "X", "invalid item class"),
+            ("class", "", "nonempty string"),
             ("source", True, "invalid item source"),
             ("target", "driver", "invalid item target"),
             ("disposition", {"state": "applied"}, "needs revision"),
@@ -436,6 +436,16 @@ class IndexTests(unittest.TestCase):
         proc = self.run_cli("--skill")
         self.assertEqual(proc.returncode, 0)
         self.assertTrue(proc.stdout.startswith("---\n"))
+
+    def test_unknown_applied_class_is_a_requirement_in_history(self):
+        claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")
+        status = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        item = next(e for e in status["entries"] if e["id"] == "CF-1-TNCRS")
+        item["class"] = "unknown"
+        checker.validate(claims, status, ROOT)
+        status["revisions"]["8"]["requirement_change"] = False
+        with self.assertRaisesRegex(checker.Invalid, "matching R item chain"):
+            checker.validate(claims, status, ROOT)
 
     def test_real_campaign(self):
         claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")

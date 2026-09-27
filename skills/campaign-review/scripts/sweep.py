@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Report C2 invalidation from metadata only, without changing the index.
+"""Report freshness, S1–S5 and a guarded queue without changing the index.
 
-Exit status: 0 no findings, 1 stale/contested entries, 2 usage, 3 missing inputs.
+Exit status: 0 sufficient/no ready work, 1 findings/work, 2 usage, 3 missing inputs.
 Use || true if findings should not stop a shell. --json emits one object.
 """
 
@@ -15,24 +15,31 @@ import sys
 
 import index_check as check
 import source_registry
+import stopping
 
 # Named formats avoid nested quote conventions and work before Python 3.12.
 # pylint: disable=consider-using-f-string
 
 SKILL = """---
 name: campaign-sweep
-description: Detect stale campaign verdicts using recorded identities only.
+description: Report campaign freshness, stopping conditions and guarded work.
 ---
-# Campaign sweep version 1
+# Campaign sweep version 2
 Run sweep.py CAMPAIGN [--registry SOURCES] [--json]. The default registry is
 CAMPAIGN/sources.yaml. First run index_check.py to check file links/check names,
 and refresh applicable registry files with pinned_file_adapter.py locally.
 Only claims.yaml, status.yaml and the registry are opened. No source is parsed,
 hashed or executed. Existing stale/contested states survive; superseded history
-is excluded. accepted counts are current eligible records, not a stopping-rule
-verdict. Narrow mappings require exact old/new hashes and reviewer confirmation.
+is excluded. Eligible counts are a freshness filter; stopping evaluates S1-S5
+separately. Its queue/batch are proposals only, at most three units, with tier 2
+requiring a user decision on that item. The default reader is Claude Fable 5.1
+until CR5 supplies the manifest role. Unknown classes are R; W never starts work.
+Narrow mappings require exact old/new hashes and reviewer confirmation.
 Missing mappings widen. Missing identities are reported, never invented.
-Exits: 0 clean, 1 findings, 2 usage, 3 missing input/blocked registry.
+JSON version 2 changes ok and the exit status to stopping sufficiency/no ready
+work. The fresh key preserves CR3's verdict: no stale/contested entries, stale
+controls or unavailable identities. Metadata input formats remain version 1.
+Exits: 0 sufficient/no ready work, 1 findings/work, 2 usage, 3 missing input/blocked registry.
 Use || true for nonfatal findings. JSON is one object; the index is never written.
 """
 
@@ -298,7 +305,7 @@ def spec_since(entry, basis, source, context):
     return mapping["since"] if mapping else "spec-r{revision}".format(**source)
 
 
-def sweep(claims, status, registry):
+def sweep(claims, status, registry, reader=None):
     """Compute effective states, retaining old verdicts and never opening files."""
     check.validate(claims, status, None)
     source_registry.validate(registry, claims, status)
@@ -443,10 +450,10 @@ def sweep(claims, status, registry):
         for eid in entries
         if states[eid] == "current" and entries[eid]["kind"] != "item"
     )
-    return dict(
-        version=1,
+    result = dict(
+        version=2,
         campaign=status["campaign"],
-        ok=not rows and not controls and not unavailable,
+        fresh=not rows and not controls and not unavailable,
         entries=rows,
         stale_controls=[controls[k] for k in sorted(controls)],
         conflicts=conflicts,
@@ -456,6 +463,9 @@ def sweep(claims, status, registry):
         eligible_counts=dict(Counter(entries[e]["kind"] for e in accepted)),
         counts=dict(Counter(states.values())),
     )
+    result["stopping"] = stopping.evaluate(claims, status, result, reader=reader)
+    result["ok"] = result["stopping"]["sufficient"] and not result["stopping"]["batch"]
+    return result
 
 
 def main(argv=None):
@@ -503,6 +513,25 @@ def main(argv=None):
         )
         print("Unavailable sources: " + ", ".join(result["unavailable"]))
         print("Unmapped harness changes: " + ", ".join(result["unmapped_harness"]))
+        report = result["stopping"]
+        print("Sufficient for scope: " + str(report["sufficient"]))
+        for condition, value in report["conditions"].items():
+            print(
+                condition
+                + ": "
+                + ("met" if value["met"] else "; ".join(value["blockers"]))
+            )
+        for key in (
+            "blockers",
+            "round_cap",
+            "policy_changes",
+            "open_items",
+            "shortfalls",
+            "queue",
+        ):
+            print(key + ": " + json.dumps(report[key], sort_keys=True))
+        print("First batch: " + ", ".join(report["batch"]))
+        print("Waiting for next batch: " + ", ".join(report["waiting"]))
     else:
         print("\n".join(result["findings"]))
     return code

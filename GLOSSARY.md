@@ -114,6 +114,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Shortfall | A gap in the declared scope recorded with a reason (`unobservable`, `blocked`, `out of scope`, `not worth it`) and a condition that would reopen it, instead of being worked. |
 | Deployment | One installation of the method with its own sources, run store, specs, models and fixtures; a private one keeps all of them inside it. |
 | Source registry | A deployment's list of its sources by local ID, version and hash, so change detection works without reading the content. |
+| Pinned-file adapter | A local command that hashes a named file, compares it with its expected hash, and returns identity metadata without returning content. |
+| Change map | Reviewed metadata connecting an old and new file hash to changed sections, check names, or scenarios. Missing or uncertain mappings require wider invalidation. |
+| Eligible record | A verdict still current after a sweep's identity checks. This is a freshness filter, not a campaign acceptance decision or an additional reading. |
 | Deployment manifest | A YAML file outside the repository, named from the user config, that declares a deployment's plugins by kind. |
 | Plugin (extension point) | A skill, packaged like this repository's own, implementing one extension point for a deployment: source adapter, evidence producer, implementer or reviewer, or fixture/harness backend. |
 | Claim map | Per campaign, the data file linking each claim ID to the harness checks that support it and the planted defects and runs that qualified it; proposed for e1000 as `evals/e1000/claims.yaml`. |

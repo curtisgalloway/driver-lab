@@ -41,6 +41,24 @@ def relative(value):
     )
 
 
+def validate_identity(source, require_hash=True):
+    """Validate shared C8 adapter metadata; callers constrain additional fields."""
+    for field in ("id", "version", "sha256", "status", "checked", "provenance"):
+        check.require(field in source, f"missing source field: {field}")
+    for field in ("id", "version", "status"):
+        check.string(source[field])
+    check.require(
+        source["status"] in {"ok", "blocked", "unknown"}, "invalid adapter status"
+    )
+    check.sha(
+        source["sha256"], nullable=not (require_hash and source["status"] == "ok")
+    )
+    check.date(source["checked"])
+    check.mapping(source["provenance"], {"adapter", "version", "version_method"})
+    for value in source["provenance"].values():
+        check.string(value)
+
+
 def validate(registry, claims=None, status=None):
     """Validate the registry and optional references into an already checked index."""
     check.mapping(
@@ -75,23 +93,10 @@ def validate(registry, claims=None, status=None):
         ids.add(source["id"])
         check.string(source["kind"])
         check.require(source["kind"] in KINDS, "unknown source kind")
-        check.string(source["version"])
-        check.sha(source["sha256"])
         check.sha(source["expected_sha256"])
-        check.string(source["status"])
-        check.require(
-            source["status"] in {"ok", "blocked", "unknown"}, "invalid adapter status"
+        validate_identity(
+            source, require_hash=source["kind"] not in {"toolchain", "model", "fixture"}
         )
-        if source["status"] == "ok" and source["kind"] not in {
-            "toolchain",
-            "model",
-            "fixture",
-        }:
-            check.sha(source["sha256"], nullable=False)
-        check.date(source["checked"])
-        check.mapping(source["provenance"], {"adapter", "version", "version_method"})
-        for value in source["provenance"].values():
-            check.string(value)
         if source["file"] is not None:
             check.mapping(source["file"], {"root", "path"})
             check.string(source["file"]["root"])

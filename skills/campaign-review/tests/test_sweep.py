@@ -19,6 +19,7 @@ import index_check as check  # pylint: disable=wrong-import-position
 import pinned_file_adapter as adapter  # pylint: disable=wrong-import-position
 import source_registry  # pylint: disable=wrong-import-position
 import sweep  # pylint: disable=wrong-import-position
+import deployment  # pylint: disable=wrong-import-position
 
 
 def inputs():
@@ -179,9 +180,10 @@ class SweepTests(unittest.TestCase):
 
     def setUp(self):
         self.claims, self.status, self.registry = inputs()
+        self.roles = deployment.load(deployment.REFERENCE)
 
     def run_sweep(self):
-        return sweep.sweep(self.claims, self.status, self.registry)
+        return sweep.sweep(self.claims, self.status, self.registry, roles=self.roles)
 
     def test_matrix(self):
         for row in matrix():

@@ -1,0 +1,20 @@
+{
+  "sha256": {
+    "kernel": "0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88",
+    "initramfs": "8136870e2c577955dd226da39501f3f0d9302a8b8d8260fef5a1ebb94fbc8e49",
+    "busybox": "df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b",
+    "module:e1000.ko": "43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0",
+    "harness:l02harness.py": "a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d",
+    "harness:guest-init.sh": "eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47",
+    "qemu": "0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc"
+  },
+  "qemu_version": "QEMU emulator version 10.2.1 (Debian 1:10.2.1+ds-1ubuntu3.2)",
+  "host_kernel": "7.0.0-34-generic",
+  "python": "3.14.4",
+  "driver": "e1000",
+  "accel": "kvm",
+  "scenarios": [
+    "itr"
+  ],
+  "dut_mem": "3G"
+}

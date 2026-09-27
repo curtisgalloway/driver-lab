@@ -34,7 +34,8 @@ At the start of each orchestrator session and whenever a known input changes
 with scripts/pinned_file_adapter.py REGISTRY ID --write --json, then run
 scripts/sweep.py CAMPAIGN --json. Both need PyYAML; their --skill output documents
 the CLI. The adapter resolves repository/run-store-relative files and hashes opaque
-bytes; the sweep opens only the three metadata files. An adapter observation does
+bytes; the sweep reads campaign metadata, deployment settings and class definitions.
+An adapter observation does
 not adopt a new edition or replace an expected pin. Preserve the deployment's
 authorization requirements for changing an adopted source.
 
@@ -57,5 +58,15 @@ entry does not authorize them. Resweep after each checkpoint before selecting th
 next unit: a new finding can invalidate the remaining batch. Push and merge remain
 subject to the deployment's authorization rules; this repository opens pull
 requests only on explicit "push". The sweep never runs a unit. CR6 runs the first
-batch; CR5 supplies the role manifest. Until then the reader constant is Claude
-Fable 5.1. Changing it queues a comparison per campaign, including sufficient ones.
+batch. Models come from the deployment manifest's reader, implementer and reviewer
+roles. Changing the reader model queues one comparison per campaign, including
+sufficient ones; only an adjudicated reading can update the adopted scope.reader.
+
+The user config's deployment key selects a manifest; --deployment overrides it,
+and evals/deployment.yaml is the default. Read INDEX-FORMAT.md's deployment and
+contract sections before changing it. Each plugin's via skill owns invocation,
+authentication and safety; the declared command is not permission to execute it.
+Capture source-adapter JSON and a fixture's isolated run directory, then run
+scripts/contract_check.py --source-json JSON --run-dir DIRECTORY --json.
+This checks metadata only, never launches a fixture or executes manifest commands.
+Producer observations and role/session provenance remain reviewer conventions.

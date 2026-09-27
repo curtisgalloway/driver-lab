@@ -1,0 +1,93 @@
+{
+  "overall": "PASS",
+  "results": [
+    {
+      "scenario": "itr",
+      "verdict": "PASS",
+      "checks": [
+        {
+          "check": "insmod",
+          "ok": true
+        },
+        {
+          "check": "bound to a PCI device",
+          "ok": true
+        },
+        {
+          "check": "MAC matches QEMU's",
+          "ok": true
+        },
+        {
+          "check": "interface up",
+          "ok": true
+        },
+        {
+          "check": "carrier within 15 s",
+          "ok": true
+        },
+        {
+          "check": "DUT pings peer to raise interrupts",
+          "ok": true
+        },
+        {
+          "check": "peer pings DUT to raise interrupts",
+          "ok": true
+        },
+        {
+          "check": "memory BAR found in sysfs",
+          "ok": true
+        },
+        {
+          "check": "ITR read through the memory BAR",
+          "ok": true
+        },
+        {
+          "check": "rmmod",
+          "ok": true
+        },
+        {
+          "check": "kernel log has no warnings, call traces or transmit hangs",
+          "ok": true
+        },
+        {
+          "check": "no frames left over from an earlier scenario arrived during bring-up",
+          "ok": true
+        },
+        {
+          "check": "model and decoder agree: ITR reads back the value the trace shows last written, or 0 after a reset (SDM 13.4.18)",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "scenario": "trace",
+      "verdict": "PASS",
+      "checks": [
+        {
+          "check": "each CTRL.RST write is followed by at least 1 us before the next register access (SDM 13.4.1)",
+          "ok": true
+        },
+        {
+          "check": "RDLEN and TDLEN are written as nonzero multiples of 128 (SDM 13.4.27, 13.4.38)",
+          "ok": true
+        },
+        {
+          "check": "RDBAL and TDBAL are written 16-byte aligned (SDM 13.4.25, 13.4.36)",
+          "ok": true
+        },
+        {
+          "check": "every RDT and TDT write stays inside the ring (SDM 3.2.6, 3.4)",
+          "ok": true
+        },
+        {
+          "check": "RDH and TDH are written only while the receiver or transmitter is disabled (SDM 13.4.28, 13.4.39)",
+          "ok": true
+        },
+        {
+          "check": "ITR is written with its reserved bits 31:16 clear (SDM 13.4.18)",
+          "ok": true
+        }
+      ]
+    }
+  ]
+}

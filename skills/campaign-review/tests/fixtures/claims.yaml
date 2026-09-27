@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+version: 1
+campaign: synthetic
+harness: harness.py
+claims:
+- id: Q01
+  title: Packet arrival
+  mandatory: true
+  cites:
+  - '6.1'
+  checks:
+  - packet arrived
+  scenarios:
+  - smoke
+  scope: Arrival only.
+  defects:
+  - id: d01
+    run_ids:
+    - synthetic/defect
+    control_runs:
+    - synthetic/control
+    outcome: detected
+    evidence:
+    - evidence.md
+  evidence:
+  - evidence.md

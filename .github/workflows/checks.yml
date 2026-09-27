@@ -73,3 +73,13 @@ jobs:
       # Only the parts that need no QEMU; the harness itself runs on the test host.
       - name: e1000 QEMU harness tests
         run: python3 -m unittest discover -s evals/e1000/harness/tests -v
+
+      - name: campaign-review tests
+        run: >-
+          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m unittest discover
+          -s skills/campaign-review/tests -v
+
+      - name: e1000 status index
+        run: >-
+          "$RUNNER_TEMP/enc28j60-tests/bin/python"
+          skills/campaign-review/scripts/index_check.py evals/e1000

@@ -529,7 +529,7 @@ the user's.
 
 ## CR — Continuous review
 
-**Status:** `pending`; no CR milestone has started. Derived 2026-09-26 from the design's
+**Status:** CR1 review fixes implemented, awaiting checkpoint; later milestones pending. Derived 2026-09-26 from the design's
 [Continuous review](DESIGN.md#continuous-review-keeping-specs-right-as-evidence-changes)
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
@@ -585,7 +585,7 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 
 | ID | Outcome | Covers | Depends on | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| CR1 | e1000 claim map and status index: claims, qualifications, candidate results, `[emulated]` observations, open items; index check in CI | C1 (most), C6 S1–S3 data, C3 tier-0 index check | — | one session | `pending` |
+| CR1 | e1000 claim map and status index: claims, qualifications, candidate results, `[emulated]` observations, open items; index check in CI | C1 (most), C6 S1–S3 data, C3 tier-0 index check | — | one session | `review fixes implemented; checkpoint pending` |
 | CR2 | Spec verification history in the index by section (revisions 3–8), and the SR-8 → CF-2 path backfilled | C1 (rest), C5 (backfill) | CR1 | one session | `pending` |
 | CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | `pending` |
 | CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | `pending` |
@@ -682,7 +682,7 @@ the revision for the queued items (CR8).
 - **Sizing:** data entry from bounded, public tables plus one small checker; the unknown is how
   much of the basis is recoverable per entry from public files. **Split point:** the claim map,
   qualifications and results first; observations and items second.
-- **Status:** `pending`.
+- **Status:** review fixes implemented, awaiting checkpoint; [evidence](evidence/CR1.md).
 
 ### CR2 — Spec verification history and the SR-8 → CF-2 backfill
 
@@ -1025,37 +1025,12 @@ subagent and one PR (implementer routing: D9). Read [notebook/index.md](notebook
 first. Review, checks and records follow the
 [2026-09-25 defaults](#revision-2026-09-25--lighter-process-for-the-remaining-units).
 
-- **Continuous review:** the [CR milestones](#cr--continuous-review) are planned, none
-  started; the next eligible one is CR1 (the e1000 claim map and status index).
-- **No L02 unit is queued.** The follow-ons L02f3 named run in the order of the
-  [follow-on list](#follow-ons-named-in-l02f3) (the user asked for all of them on
-  2026-09-25; the order is the orchestrator's):
-  SF-1, AF-1, QF-1, CF-1 and SR-7 are complete: the candidate (`a8afc8c4…`, module
-  `ce7e3e2c…`) implements revision 6 and passes the acceptance set on the QF-1 harness
-  `7024864e…`; spec revision 7 (SR-7, run in parallel with CF-1) takes AF-1's six items,
-  SF-1's `[emulated]` pointer form and QF-1's F2 as EM8 and changes no driver
-  requirement, so CF-1's result stands on it. FC-1 (QF-1's F3, small-frame content) is
-  complete: the harness is `884e771c…`, claim Q27 is qualified, and the candidate passes it
-  5 of 5 (and 2 of 2 on the final harness). SR-8 is complete: spec revision 8 states
-  CF-1's TNCRS attribution rule (the user's choice, "drain at link change"; a requirement
-  change) and SR-7's three wording items. CF-2 is complete (approved by the user
-  2026-09-26): the candidate (`2ac15713…`, module `df37c7ad…`) implements revision 8's rule
-  and names revision 8 in its header, and passes the acceptance set on the FC-1 harness
-  `884e771c…`, 20 of 20, with every trace difference from CF-1 attributed, and again on
-  CS-1's harness `a1735b9f…`, which landed meanwhile (round `a2`, 20 of 20, Q28 included: 27
-  of 28 claims qualified for the updated candidate `df37c7ad…`). **No unit is queued.** HF-1 (the hardware verifications emulation cannot do: Q18's 1 µs rule,
-  `unobservable` in emulation; CF-1's FWE and half-duplex TNCRS behaviors, which no scenario
-  exercises; revision 8's attribution rule, which needs a link that changes duplex) is
-  blocked on hardware.
-  CS-1 (FC-1's open limitation, the checksum-preserving case) is complete: the harness is
-  `a1735b9f…`, claim Q28 is qualified, and the candidate passes it 5 of 5; 27 of 28 claims
-  are qualified, Q18 `unobservable`.
-- **L01 hardware acceptance complete; L01c ready for review:** read
-  [evidence/L01-hw.md](evidence/L01-hw.md), the private ledger, r3 harness/tests, captures,
-  and summary. Review the C6 fixture attribution and the R1/R9/R10/R11 qualifications.
-  Import the local checkpoint bundle into the topic branch; its original worktree contains
-  the matching record edits. Investigate the two environment-dependent validation failures
-  before landing. No candidate repair is pending; additional hardware runs require a named
-  unanswered question or a review finding, with a fresh declaration.
+- **Continuous review:** [CR1](evidence/CR1.md) is complete (the e1000 claim map and status
+  index, checked in CI); the next eligible milestone is CR2 (the verification history).
+- **e1000 follow-on verdicts and item dispositions:** see the [status index](evals/e1000/status.yaml) and [claim map](evals/e1000/claims.yaml).
+- **L01 complete for its declared hardware scope** (L01c, 2026-09-26): see
+  [evidence/L01-hw.md](evidence/L01-hw.md). The candidate passes the ten revised checks on the
+  Pi 4 fixture with no repair; the reference's C6 failure is attributed to the switch's
+  forwarding delay. Further hardware runs need a named question and a fresh declaration.
 - Transcripts: record each subagent's transcript path in the run's ledger; do not copy them
   (user rule, 2026-09-23).

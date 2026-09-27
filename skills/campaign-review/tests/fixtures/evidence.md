@@ -1,0 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 contributors
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# Synthetic evidence
+
+A fixture link target; no real run is asserted.

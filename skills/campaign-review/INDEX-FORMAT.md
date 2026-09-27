@@ -11,8 +11,9 @@ made that check fail for the intended reason. A **basis** records the identities
 behind a verdict. An **item** is a finding with a recorded disposition.
 A **status index** keeps those verdicts and items together for a campaign.
 
-This is the CR1 format. Verification history is reserved for CR2; the sweep,
-stopping-rule evaluation and execution queue are later milestones. A clean index
+CR2 extends the CR1 format with verification history and linked revision and
+candidate records; the sweep, stopping-rule evaluation and execution queue are
+later milestones. A clean index
 check does not establish that a campaign is sufficient for scope.
 
 Two YAML files live in a campaign directory. Both have `version: 1` and the same
@@ -57,8 +58,11 @@ not silently disappear.
 
 ## Status index: status.yaml
 
-Top-level fields are `version`, `campaign`, `bases` (a mapping from basis ID to
-identity record), and `entries` (a list). Basis records are shared to avoid
+Top-level fields are `version`, `campaign`, `revision_range` (inclusive first and
+last landed revision numbers), `revisions` (headers keyed by string revision
+number), `bases` (a mapping from basis ID to identity record), and `entries` (a list).
+Every revision in the declared range must have a header and accuracy reading.
+Basis records are shared to avoid
 repeating long hashes; an entry's `basis` refers to exactly one record. Once cited,
 a basis is immutable: a changed identity gets a new basis ID.
 
@@ -111,6 +115,8 @@ policy change. CR4 will implement the comparison guard.
 | `result` | `claim`, `round`, `qualification` (entry ID), `qualified_evidence` (boolean); verdict PASS, FAIL or ERROR. Basis requires candidate and harness hashes. Q18's PASS has qualified_evidence: false |
 | `observation` | `sections` (nonempty spec section list), `evidence_class: emulated`; verdict is a concise observation within the named runs, never a hardware conclusion |
 | `item` | `class` R/E/W, `source` integer 1/2/3, `target`, `disposition`; optional `aliases` for the same finding under another evidence key |
+| `verification` | `reading_id`, `text`, `sections`, `evidence_classes`, `verifier`, `round`, `independence`, `purpose`, `covers_revisions`, `scope`; verdict is the historical reading's summary, including unresolved or subsequently corrected findings |
+| `candidate_round` | `round`, `applied_items`, `verification`, `results`, `scope`; verdict is the historical acceptance summary, not another qualification |
 
 Each map claim has exactly one nonsuperseded qualification, even if stale or
 contested. At most one current candidate result per claim is permitted. A verdict
@@ -118,6 +124,76 @@ is never edited into a different verdict: append a replacement and supersede the
 old entry, preserving its basis, rule and attempts. Status changes record why the
 existing verdict can no longer be cited as current. Applied findings remain current
 records of an applied disposition; `applied` is not the same as `superseded`.
+
+## Revision headers and verification history
+
+Each revision header has `spec_sha256` (the landed text), `drafts` (draft ID to
+full hash), `requirement_change` (boolean), `changed_sections`, `items` (applied
+spec-item IDs), `evidence` and `run_ids`. Only the first indexed revision may use
+`requirement_change: null`, meaning baseline, with no change sections. Older
+requirement-change declarations may be reconstructed from public evidence rather
+than quoted from a historical header; the evidence must say which. A true header
+requires an R item applied to that revision; a false header cannot link an R item.
+Conversely, every applied spec item must name an existing revision and appear in
+that revision's item list; an unlisted item cannot bypass header validation.
+The e1000 backfill covers revisions 3–8, with revision 7 explicitly wording/evidence
+only. Header changes are the union across that revision's attempts; the header
+itself is not a numbered spec section.
+
+For a verification entry:
+
+- Only the common optional fields `decision` and `cost` are allowed. `aliases`
+  and `shortfall` are not verification fields.
+- `text` is `landed` or a draft ID in its basis revision's header. The basis hash
+  must match exactly. A failed draft never inherits the landed hash. Draft entries
+  stay superseded; a corrected sequential reading links them through `supersedes`.
+- `sections` are the entry's scope; `basis.sections_read` holds the full reading
+  unit's section list. Changed-claim readings do not certify every sentence of an
+  enclosing section. Parent section IDs conservatively cover their descendants.
+- `reading_id` identifies one historical reading, even when later changes require
+  section slices. Slices must partition the basis section list without duplicates
+  and share verdict, round, model basis, policy, scope, and citations. Repeated
+  verdict totals are the reading's totals, **not per-section counts**; deduplicate
+  by reading_id. No split is needed for a draft replaced as a whole or for the
+  latest reading when no later revision has touched it.
+- `evidence_classes` lists the relevant classes: databook, standard,
+  source-observed, inference, kernel, emulated. For broad historical scopes this
+  is a conservative union, not a claim that a source-observed fact was re-read
+  against driver source. Such readers checked the tag and caveat only.
+- `verifier` names the agent role/harness; `basis.model` names the reader model and
+  version. `round` is a string. `independence` is independent, sequential,
+  adjudication or gate. `purpose` is accuracy, transfer or acceptance; gate is
+  required for the latter two, which cannot satisfy accuracy coverage.
+- `covers_revisions` names the changes the reading considered. SR-7's combined
+  reading covers 5 and 6, but its actual text and hash remain revision 6. It counts
+  as one reading, not two. Adjudication is likewise not another full reading.
+- `scope` records limits, exceptions and unresolved results. A current status
+  means the recorded verdict still applies within that scope, not that every
+  verdict is PASS or that two independent readings exist.
+
+Independent readings remain separate records; agreement does not supersede the
+first reading. `supersedes` expresses a replacement, not an additional reading.
+Historical records retain `A1-as-written`; applying the later amended stopping
+rule must not rewrite their policy identity. No legacy verification file is
+converted by this backfill.
+
+Complete dependencies recorded as section IDs in historical briefs are retained
+on every slice. A reconstructed union of cross-check locations is not a complete
+declaration and must not be presented as one. When no complete set is recoverable,
+`null` requires whole-revision widening. Thus section slicing does not promise
+fine-grained freshness when the recorded dependency information cannot support it.
+An older reading with null dependencies cannot remain current. The later sweep
+will evaluate changed identities and dependency overlap; this checker does not
+implement that sweep.
+
+Candidate-round entries link the header's applied R items, landed accuracy
+readings and per-claim results on the exact same basis and round. Historical
+aggregates may have an empty `results` list when per-claim history was not
+backfilled; their scope must say so. CF-2 a2 links CR1's existing 28 results.
+CF-2 a1 supersedes CF-1 a1; CF-2 a2 supersedes a1 because the harness changed.
+The TNCRS rule's presence in the candidate comes from the linked implementation
+review and trace attribution. The emulated acceptance PASS does not establish
+correct attribution across a duplex change.
 
 ## Items and shortfalls
 

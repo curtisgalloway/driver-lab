@@ -18,6 +18,25 @@ bases:
     toolchain: gcc-14
     model: null
     missing: []
+  reading:
+    spec_revision: 8
+    spec_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    sections_read:
+    - '1'
+    dependencies: null
+    source_pins: []
+    harness_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    guest_init_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    emulator: null
+    guest: null
+    reference_module_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    candidate_module_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    toolchain: gcc-14
+    model:
+      role: reader
+      name: Synthetic
+      version: '1'
+    missing: []
 entries:
 - id: q-Q01
   kind: qualification
@@ -35,3 +54,45 @@ entries:
   - evidence.md
   claim: Q01
   validated_harness_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+- id: verification
+  kind: verification
+  basis: reading
+  verdict: 1 PASS
+  rule: A1-as-written
+  status:
+    state: current
+    reason: Frozen reading.
+    stale_since: null
+  supersedes: []
+  run_ids:
+  - synthetic
+  evidence:
+  - evidence.md
+  text: landed
+  sections:
+  - '1'
+  evidence_classes:
+  - databook
+  verifier: Synthetic reader
+  round: '1'
+  independence: independent
+  purpose: accuracy
+  covers_revisions:
+  - 8
+  scope: Synthetic section.
+  reading_id: synthetic-reading
+revision_range:
+- 8
+- 8
+revisions:
+  '8':
+    spec_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    drafts: {}
+    requirement_change: false
+    changed_sections:
+    - '1'
+    items: []
+    evidence:
+    - evidence.md
+    run_ids:
+    - synthetic

@@ -2,6 +2,153 @@
 # SPDX-License-Identifier: Apache-2.0
 version: 1
 campaign: e1000
+revision_range:
+- 3
+- 8
+revisions:
+  '3':
+    spec_sha256: b93d7ef0605d0f8ca20bb859fdc67ef5f86e25fbed622638728122ff653dd11f
+    drafts: {}
+    requirement_change: null
+    changed_sections: &cr2_1 []
+    items: *cr2_1
+    evidence: &cr2_38
+    - evidence/L02b.md
+    - evidence/L02c.md
+    run_ids:
+    - e1000-l02b-20260923-01
+    - e1000-l02c-20260924-01
+  '4':
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    drafts:
+      verify-r4-L02c: e3b80f84b36e6514eff39639b575047d9153cca5badcbd6c26065006da6593be
+    requirement_change: true
+    changed_sections: &cr2_6
+    - '3'
+    - '4.0'
+    - '4.1'
+    - '4.3'
+    - '4.7'
+    - '5.1'
+    - '5.2'
+    - '5.4'
+    - '5.6'
+    - '5.9'
+    - '6.1'
+    - '7.4'
+    - '9.1'
+    - '10'
+    - '10.3'
+    - '12.1'
+    - '12.2'
+    items:
+    - L02c-requirements
+    evidence: &cr2_36
+    - evidence/L02c.md
+    - evidence/CR2-provenance.md
+    run_ids: &cr2_19
+    - e1000-l02c-20260924-01
+  '5':
+    spec_sha256: c587f41d71a55b18c25ba0c88ce6f60fb2d64ce4a6a0416566e194e6eae5d01b
+    drafts:
+      verify-r5-round1: a155fa36683bb1db45c34fe9f00866dfd023d4f2691817ff59afc4b6f42565f1
+    requirement_change: true
+    changed_sections:
+    - '5.4'
+    - '9.2'
+    items:
+    - L02e-PSCON
+    evidence: &cr2_52
+    - evidence/L02s.md
+    - evidence/CR2-provenance.md
+    run_ids: &cr2_51
+    - e1000-l02s-20260925-01
+  '6':
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    drafts:
+      verify-r6-round1: b3ec9b22e6166533b4f4c64c8cde0eda1548034df58a76852ecb5b7d4a2c6e59
+      verify-r6-round2: 2648fe9b7836ac189a038324946733fe3f8061ae694c976ce7860ff75acea1ca
+      verify-r6-round3: 598d65827ca4ab357268463a9aec35c1bad084266651ae8f3a28c867b5f13e1d
+    requirement_change: true
+    changed_sections: &cr2_9
+    - '1'
+    - '4.1'
+    - '4.7'
+    - '5.2'
+    - '5.3'
+    - '5.4'
+    - '12.1'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    items: &cr2_90
+    - L02f3-requirements
+    evidence: &cr2_60
+    - evidence/L02f3.md
+    - evidence/CR2-provenance.md
+    run_ids: &cr2_59
+    - e1000-l02f3-20260925-01
+  '7':
+    spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
+    drafts:
+      verify-r7-round1: 2f7e18011a934e1e74d5b556312bc14b787e167b01ae763bfef6c42557fa35b7
+      verify-r7-round2: a93875c8891ec11c6f34e445aa6e84ed5be07ddcacb8f93117e14699f7ee625c
+      verify-r7-round3: 7423094e96a295c910fe3086bdb3f1c9e0d97a568745d05b8cddc0261d8df1f6
+      verify-r7-round4: c4663f0bd9cdc848fe3eed1f69091f82629ae72136dba31c40a2b0c08fdc4923
+      verify-r7-round5: 58472db15a7f34b9d373a2faa1d5df005b1d79f0b2911d7fdeb8cd1a94cedd9c
+    requirement_change: false
+    changed_sections: &cr2_15
+    - '1'
+    - '4.1'
+    - '4.7'
+    - '4.8'
+    - '5.1'
+    - '5.2'
+    - '5.3'
+    - '5.4'
+    - '9.2'
+    - '10.3'
+    - '12.1'
+    - '12.3'
+    - '12.5'
+    items:
+    - AF-1-1
+    - AF-1-2
+    - AF-1-3
+    - AF-1-4
+    - AF-1-5
+    - AF-1-6
+    - SF-1-pointers
+    evidence: &cr2_78
+    - evidence/SR-7.md
+    - evidence/CR2-provenance.md
+    run_ids: &cr2_68
+    - e1000-sr7-20260926-01
+  '8':
+    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+    drafts:
+      verify-r8-round1: a7bfd78fa931d26ee1e5ad99c9688d4ae5beb44818669fbb238df1ecf081212e
+    requirement_change: true
+    changed_sections: &cr2_16
+    - '1'
+    - '4.7'
+    - '5.2'
+    - '5.5'
+    - '5.9'
+    - '10.3'
+    - '12.1'
+    - '12.2'
+    - '12.6'
+    items:
+    - CF-1-TNCRS
+    - SR-7-1
+    - SR-7-2
+    - SR-7-3
+    evidence: &cr2_85
+    - evidence/SR-8.md
+    - evidence/CR2-provenance.md
+    run_ids: &cr2_84
+    - e1000-sr8-20260926-01
 bases:
   l02d3:
     spec_revision: 4
@@ -467,6 +614,442 @@ bases:
     - Observation aggregates historical runs; no single harness or module basis.
     - Exact toolchain and operator model versions not recorded.
     - Guest initramfs varies by module; per-run identities remain private.
+  verify-r3-A: &cr2_2
+    spec_revision: 3
+    spec_sha256: b93d7ef0605d0f8ca20bb859fdc67ef5f86e25fbed622638728122ff653dd11f
+    sections_read:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+    - '6'
+    - '7'
+    - '8'
+    - '9'
+    - '10'
+    - '11'
+    - '12'
+    dependencies: null
+    source_pins: &cr2_3
+    - id: 8254x-sdm
+      version: '4.0'
+      sha256: 0bd758550bf43d08040516f6a5fb48e8aae1a07e2e1ddcba4a7c2173922a829f
+    - id: linux
+      version: v6.12
+      commit: adc218676eef25575469234709c2d87185ca223a
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: &cr2_4
+      role: reader
+      name: Claude Opus
+      version: '5.5'
+    missing: &cr2_5
+    - No complete section dependency list recovered; widen to the whole revision.
+  verify-r3-B: *cr2_2
+  verify-r3-adjudication:
+    spec_revision: 3
+    spec_sha256: b93d7ef0605d0f8ca20bb859fdc67ef5f86e25fbed622638728122ff653dd11f
+    sections_read: &cr2_37
+    - '4.1'
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_4
+    missing: *cr2_5
+  verify-r3-transfer: *cr2_2
+  verify-r3-acceptance: *cr2_2
+  verify-r4-L02c:
+    spec_revision: 4
+    spec_sha256: e3b80f84b36e6514eff39639b575047d9153cca5badcbd6c26065006da6593be
+    sections_read: &cr2_42
+    - '3'
+    - '4.0'
+    - '4.1'
+    - '4.3'
+    - '4.7'
+    - '5.1'
+    - '5.2'
+    - '5.4'
+    - '5.6'
+    - '5.9'
+    - '6.1'
+    - '7.4'
+    - '9.1'
+    - '10'
+    - '10.3'
+    - '12.1'
+    - '12.2'
+    - '5.10'
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_4
+    missing: *cr2_5
+  verify-r4-AF1:
+    spec_revision: 4
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    sections_read: *cr2_6
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: &cr2_10
+      role: reader
+      name: Claude Fable
+      version: '5.1'
+    missing: *cr2_5
+  verify-r5-round1:
+    spec_revision: 5
+    spec_sha256: a155fa36683bb1db45c34fe9f00866dfd023d4f2691817ff59afc4b6f42565f1
+    sections_read: &cr2_7
+    - '4.8'
+    - '5.4'
+    - '9.2'
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_4
+    missing: &cr2_8
+    - &cr2_11 No complete dependency declaration recorded; prior cross-check section union withdrawn.
+      Unknown dependencies require whole-revision widening.
+  verify-r5-round2:
+    spec_revision: 5
+    spec_sha256: c587f41d71a55b18c25ba0c88ce6f60fb2d64ce4a6a0416566e194e6eae5d01b
+    sections_read: *cr2_7
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_4
+    missing: *cr2_8
+  verify-r6-round1:
+    spec_revision: 6
+    spec_sha256: b3ec9b22e6166533b4f4c64c8cde0eda1548034df58a76852ecb5b7d4a2c6e59
+    sections_read: *cr2_9
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: &cr2_12
+      id: qemu-e1000
+      version: 10.2.1+ds-1ubuntu3.2
+      sha256: 0cd4112a8f0cb891eb7c10e8df38c9dfeec8c7389bb22db6aa425f0d6fe733dc
+      accel: kvm
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: &cr2_13
+    - &cr2_14 Emulated evidence spans multiple harnesses and runs; no single harness or guest identity
+      is asserted for the reading.
+    - *cr2_11
+  verify-r6-round2:
+    spec_revision: 6
+    spec_sha256: 2648fe9b7836ac189a038324946733fe3f8061ae694c976ce7860ff75acea1ca
+    sections_read: *cr2_9
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r6-round3:
+    spec_revision: 6
+    spec_sha256: 598d65827ca4ab357268463a9aec35c1bad084266651ae8f3a28c867b5f13e1d
+    sections_read: *cr2_9
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r6-round4:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *cr2_9
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r6-SR7:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read:
+    - '1'
+    - '12.1'
+    - '12.3'
+    - '12.5'
+    - '12.6'
+    - '4.1'
+    - '4.7'
+    - '4.8'
+    - '5.2'
+    - '5.3'
+    - '5.4'
+    - '9.2'
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing:
+    - No complete section dependency list recovered; widen to the whole revision.
+    - *cr2_14
+  verify-r7-round1:
+    spec_revision: 7
+    spec_sha256: 2f7e18011a934e1e74d5b556312bc14b787e167b01ae763bfef6c42557fa35b7
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r7-round2:
+    spec_revision: 7
+    spec_sha256: a93875c8891ec11c6f34e445aa6e84ed5be07ddcacb8f93117e14699f7ee625c
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r7-round3:
+    spec_revision: 7
+    spec_sha256: 7423094e96a295c910fe3086bdb3f1c9e0d97a568745d05b8cddc0261d8df1f6
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r7-round4:
+    spec_revision: 7
+    spec_sha256: c4663f0bd9cdc848fe3eed1f69091f82629ae72136dba31c40a2b0c08fdc4923
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r7-round5:
+    spec_revision: 7
+    spec_sha256: 58472db15a7f34b9d373a2faa1d5df005b1d79f0b2911d7fdeb8cd1a94cedd9c
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r7-round6:
+    spec_revision: 7
+    spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
+    sections_read: *cr2_15
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: *cr2_12
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_13
+  verify-r8-round1:
+    spec_revision: 8
+    spec_sha256: a7bfd78fa931d26ee1e5ad99c9688d4ae5beb44818669fbb238df1ecf081212e
+    sections_read: &cr2_86
+    - '1'
+    - '4.7'
+    - '5.2'
+    - '5.9'
+    - '10.3'
+    - '12.1'
+    - '12.2'
+    - '12.6'
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_8
+  verify-r8-round2:
+    spec_revision: 8
+    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+    sections_read: *cr2_16
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: *cr2_10
+    missing: *cr2_8
+  L02c-requirements:
+    spec_revision: 4
+    spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
+    sections_read: *cr2_1
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing: &cr2_17
+    - No complete section dependency list recovered; widen to the whole revision.
+    - Reader model version not recovered.
+  L02e-PSCON:
+    spec_revision: 5
+    spec_sha256: c587f41d71a55b18c25ba0c88ce6f60fb2d64ce4a6a0416566e194e6eae5d01b
+    sections_read: *cr2_1
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing: *cr2_17
+  L02f3-requirements: &cr2_18
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *cr2_1
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: null
+    guest_init_sha256: null
+    emulator: null
+    guest: null
+    reference_module_sha256: null
+    candidate_module_sha256: null
+    toolchain: null
+    model: null
+    missing: *cr2_17
+  CF-1-TNCRS: *cr2_18
+  cf1-a1:
+    spec_revision: 6
+    spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
+    sections_read: *cr2_1
+    dependencies: null
+    source_pins: *cr2_3
+    harness_sha256: 7024864e0e9ced31e29462a74b421a9919d28d78c09223d8b2a67db561d31623
+    guest_init_sha256: eccecebea117875447af2cdbfb8d3128bbedf88d29c6b92cd026a1abf1f72b47
+    emulator: *cr2_12
+    guest:
+      kernel_sha256: 0d96151ba731e125914465e1debdc05f1d9f30a6a775fdffa32f277a412ead88
+      busybox_sha256: df12634c17fcdca839ae5dc47d7627b7558511f7645de7c99ccf097a0f28ed5b
+      initramfs_sha256: 0e8a6a57574d3c39b2b16e9c84555d5e6590399a72a1d4c7aa9ed30952747cb7
+    reference_module_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
+    candidate_module_sha256: ce7e3e2cf53b15abbb12f0e9cf7095449c0fd3dc0bef4e0c2642f91af7e8146e
+    toolchain: gcc-14
+    model:
+      role: implementer
+      name: gpt-6-astra
+      version: gpt-6-astra
+    missing:
+    - Exact compiler version not recovered.
 entries:
 - id: qualification-Q01
   kind: qualification
@@ -2593,3 +3176,2103 @@ entries:
   disposition:
     state: applied
     revision: 7
+- id: verify-r3-A-s1
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: &cr2_20
+    state: stale
+    reason: &cr2_43 Later revision touched this reading or an unrecorded dependency; conservatively widen
+      to the whole revision.
+    stale_since: revision-4
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: &cr2_21
+  - evidence/L02c.md
+  text: landed
+  sections: &cr2_25
+  - '1'
+  evidence_classes: &cr2_22
+  - databook
+  - inference
+  - kernel
+  - source-observed
+  - standard
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: &cr2_23
+  - 3
+  scope: &cr2_24 Full revision-3 accuracy reading. Six adjudicated errors fixed in revision 4; four standard-only
+    claims remain unverifiable. Individual A/B records unavailable locally; identity comes from the merged
+    record and public evidence.
+  reading_id: verify-r3-A
+- id: verify-r3-A-s3
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_26
+  - '3'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s4
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_28
+  - '4'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s5
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_29
+  - '5'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s6
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_30
+  - '6'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s7
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_31
+  - '7'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s9
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_32
+  - '9'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s10
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_33
+  - '10'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-s12
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_34
+  - '12'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-A-remainder
+  kind: verification
+  basis: verify-r3-A
+  verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: &cr2_35
+  - '2'
+  - '8'
+  - '11'
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: A
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_24
+  reading_id: verify-r3-A
+- id: verify-r3-B-s1
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: &cr2_27 Full revision-3 accuracy reading, independent of A; same retained merged-record identity.
+    Individual B record unavailable locally.
+  reading_id: verify-r3-B
+- id: verify-r3-B-s3
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_26
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s4
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_28
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s5
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_29
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s6
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_30
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s7
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_31
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s9
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_32
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s10
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_33
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-s12
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_34
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-B-remainder
+  kind: verification
+  basis: verify-r3-B
+  verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  text: landed
+  sections: *cr2_35
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: B
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: *cr2_27
+  reading_id: verify-r3-B
+- id: verify-r3-adjudication
+  kind: verification
+  basis: verify-r3-adjudication
+  verdict: 'FAIL: CTRL.FD initial value; third reader confirmed B on the rendered page.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_36
+  text: landed
+  sections: *cr2_37
+  evidence_classes:
+  - databook
+  verifier: Fresh Claude Code subagent
+  round: third-reader
+  independence: adjudication
+  purpose: accuracy
+  covers_revisions: *cr2_23
+  scope: Only the disputed CTRL.FD value; not another full reading. Identity inherited from the revision-3
+    adjudication described in L02c; no separate record hash recovered.
+  reading_id: verify-r3-adjudication
+- id: verify-r3-transfer-s1
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: &cr2_39
+  - e1000-l02b-20260923-01
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: &cr2_40 Transfer gate over revision 3, not an accuracy reading; no separate verification frontmatter
+    recovered. Uses the landed revision-3 identity confirmed by L02c.
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s3
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_26
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s4
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_28
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s5
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_29
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s6
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_30
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s7
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_31
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s9
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_32
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s10
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_33
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-s12
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_34
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-transfer-remainder
+  kind: verification
+  basis: verify-r3-transfer
+  verdict: 'PASS: leak and structure gate; every databook ordering checked.'
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_35
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: transfer-3
+  independence: gate
+  purpose: transfer
+  covers_revisions: *cr2_23
+  scope: *cr2_40
+  reading_id: verify-r3-transfer
+- id: verify-r3-acceptance-s1
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: &cr2_41 Acceptance review of revision-3 changes, not full accuracy coverage; L02b does not enumerate
+    every section read. Sections conservatively enclose the whole revision.
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s3
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_26
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s4
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_28
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s5
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_29
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s6
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_30
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s7
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_31
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s9
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_32
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s10
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_33
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-s12
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_34
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r3-acceptance-remainder
+  kind: verification
+  basis: verify-r3-acceptance
+  verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
+  rule: A1-as-written
+  status: *cr2_20
+  supersedes: *cr2_1
+  run_ids: *cr2_39
+  evidence: *cr2_38
+  text: landed
+  sections: *cr2_35
+  evidence_classes: *cr2_22
+  verifier: Fresh Claude Code subagent
+  round: acceptance-3
+  independence: gate
+  purpose: acceptance
+  covers_revisions: *cr2_23
+  scope: *cr2_41
+  reading_id: verify-r3-acceptance
+- id: verify-r4-L02c
+  kind: verification
+  basis: verify-r4-L02c
+  verdict: 50 PASS, 1 FAIL; one-line citation fix followed, checked by diff only.
+  rule: A1-as-written
+  status: &cr2_50
+    state: superseded
+    reason: Draft replaced after its recorded findings; this verdict is not a reading of the landed hash.
+    stale_since: null
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_36
+  text: verify-r4-L02c
+  sections: *cr2_42
+  evidence_classes: &cr2_44
+  - databook
+  - inference
+  - kernel
+  - source-observed
+  verifier: Fresh Claude Code subagent
+  round: change-check
+  independence: independent
+  purpose: accuracy
+  covers_revisions: &cr2_45
+  - 4
+  scope: &cr2_53 Changed claims and dependencies, not a full-spec reading; section IDs are enclosing public-evidence
+    locations. Verdict totals cover the reading unit, not every sentence in these sections.
+  reading_id: verify-r4-L02c
+- id: verify-r4-AF1-s4.1
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: &cr2_46
+    state: stale
+    reason: *cr2_43
+    stale_since: revision-5
+  supersedes: *cr2_1
+  run_ids: &cr2_47
+  - af1-20260925-01
+  evidence: &cr2_48
+  - evidence/AF-1.md
+  - evidence/L02c.md
+  - evidence/CR2-provenance.md
+  text: landed
+  sections: *cr2_37
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: &cr2_49 Revision-4 changes on the landed text. Independently confirms the citation fix; does
+    not cover the first reading's G1-to-5.10 every-open claim. Micro-sign PDF checks not repeated. See
+    AF-1 key comparison.
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s4.7
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: &cr2_65
+  - '4.7'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s5.1
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections:
+  - '5.1'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s5.2
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: &cr2_66
+  - '5.2'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s5.4
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: &cr2_58
+  - '5.4'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s5.9
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections:
+  - '5.9'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s10
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: *cr2_33
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s10.3
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: &cr2_83
+  - '10.3'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s12.1
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections: &cr2_67
+  - '12.1'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-s12.2
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections:
+  - '12.2'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r4-AF1-remainder
+  kind: verification
+  basis: verify-r4-AF1
+  verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
+  rule: A1-as-written
+  status: *cr2_46
+  supersedes: *cr2_1
+  run_ids: *cr2_47
+  evidence: *cr2_48
+  text: landed
+  sections:
+  - '3'
+  - '4.0'
+  - '4.3'
+  - '5.6'
+  - '6.1'
+  - '7.4'
+  - '9.1'
+  evidence_classes: *cr2_44
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_45
+  scope: *cr2_49
+  reading_id: verify-r4-AF1
+- id: verify-r5-round1
+  kind: verification
+  basis: verify-r5-round1
+  verdict: 11 PASS, 2 FAIL, 2 GAP
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes: *cr2_1
+  run_ids: *cr2_51
+  evidence: *cr2_52
+  text: verify-r5-round1
+  sections: *cr2_7
+  evidence_classes: &cr2_54
+  - databook
+  - inference
+  - source-observed
+  verifier: Fresh Claude Code subagent
+  round: '1'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: &cr2_55
+  - 5
+  scope: *cr2_53
+  reading_id: verify-r5-round1
+- id: verify-r5-round2-s4.8
+  kind: verification
+  basis: verify-r5-round2
+  verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
+  rule: A1-as-written
+  status: &cr2_56
+    state: stale
+    reason: *cr2_43
+    stale_since: revision-6
+  supersedes: &cr2_57
+  - verify-r5-round1
+  run_ids: *cr2_51
+  evidence: *cr2_52
+  text: landed
+  sections: &cr2_75
+  - '4.8'
+  evidence_classes: *cr2_54
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_55
+  scope: *cr2_53
+  reading_id: verify-r5-round2
+- id: verify-r5-round2-s5.4
+  kind: verification
+  basis: verify-r5-round2
+  verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_56
+  supersedes: *cr2_57
+  run_ids: *cr2_51
+  evidence: *cr2_52
+  text: landed
+  sections: *cr2_58
+  evidence_classes: *cr2_54
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_55
+  scope: *cr2_53
+  reading_id: verify-r5-round2
+- id: verify-r5-round2-s9.2
+  kind: verification
+  basis: verify-r5-round2
+  verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_56
+  supersedes: *cr2_57
+  run_ids: *cr2_51
+  evidence: *cr2_52
+  text: landed
+  sections: &cr2_77
+  - '9.2'
+  evidence_classes: *cr2_54
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_55
+  scope: *cr2_53
+  reading_id: verify-r5-round2
+- id: verify-r6-round1
+  kind: verification
+  basis: verify-r6-round1
+  verdict: 42 PASS, 1 FAIL, 3 GAP, 2 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes: *cr2_1
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: verify-r6-round1
+  sections: *cr2_9
+  evidence_classes: &cr2_61
+  - databook
+  - inference
+  - emulated
+  - source-observed
+  verifier: Fresh Claude Code subagent
+  round: '1'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: &cr2_62
+  - 6
+  scope: *cr2_53
+  reading_id: verify-r6-round1
+- id: verify-r6-round2
+  kind: verification
+  basis: verify-r6-round2
+  verdict: 39 PASS, 4 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r6-round1
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: verify-r6-round2
+  sections: *cr2_9
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round2
+- id: verify-r6-round3
+  kind: verification
+  basis: verify-r6-round3
+  verdict: 44 PASS, 2 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r6-round2
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: verify-r6-round3
+  sections: *cr2_9
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '3'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round3
+- id: verify-r6-round4-s1
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: &cr2_63
+    state: stale
+    reason: *cr2_43
+    stale_since: revision-7
+  supersedes: &cr2_64
+  - verify-r6-round3
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s4.1
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_37
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s4.7
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_65
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s5.2
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_66
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s5.3
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: &cr2_76
+  - '5.3'
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s5.4
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_58
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s12.1
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: *cr2_67
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s12.3
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: &cr2_72
+  - '12.3'
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s12.5
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: &cr2_73
+  - '12.5'
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-round4-s12.6
+  kind: verification
+  basis: verify-r6-round4
+  verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_64
+  run_ids: *cr2_59
+  evidence: *cr2_60
+  text: landed
+  sections: &cr2_74
+  - '12.6'
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_62
+  scope: *cr2_53
+  reading_id: verify-r6-round4
+- id: verify-r6-SR7-s1
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: &cr2_69
+  - evidence/SR-7.md
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: &cr2_70
+  - 5
+  - 6
+  scope: &cr2_71 One combined reading of revision-5 and revision-6 changes on landed revision 6, with
+    revisions 4 and 5 and their diffs. 54 of 60 first keys agree; 2 scan keys read once; 4 keys on 3 passages
+    disagree, resolved in revision 7. Not two separate 83-verdict readings.
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s12.1
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_67
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s12.3
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_72
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s12.5
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_73
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s12.6
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_74
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s4.1
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_37
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s4.7
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_65
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s4.8
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_75
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s5.2
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_66
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s5.3
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_76
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s5.4
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_58
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r6-SR7-s9.2
+  kind: verification
+  basis: verify-r6-SR7
+  verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
+  rule: A1-as-written
+  status: *cr2_63
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_69
+  text: landed
+  sections: *cr2_77
+  evidence_classes: *cr2_61
+  verifier: Fresh Claude Code subagent
+  round: second-reading
+  independence: independent
+  purpose: accuracy
+  covers_revisions: *cr2_70
+  scope: *cr2_71
+  reading_id: verify-r6-SR7
+- id: verify-r7-round1
+  kind: verification
+  basis: verify-r7-round1
+  verdict: 52 PASS, 1 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes: *cr2_1
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: verify-r7-round1
+  sections: *cr2_15
+  evidence_classes: &cr2_79
+  - databook
+  - inference
+  - kernel
+  - source-observed
+  - emulated
+  verifier: Fresh Claude Code subagent
+  round: '1'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: &cr2_80
+  - 7
+  scope: *cr2_53
+  reading_id: verify-r7-round1
+- id: verify-r7-round2
+  kind: verification
+  basis: verify-r7-round2
+  verdict: 39 PASS, 3 FAIL
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r7-round1
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: verify-r7-round2
+  sections: *cr2_15
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round2
+- id: verify-r7-round3
+  kind: verification
+  basis: verify-r7-round3
+  verdict: 50 PASS, 1 FAIL, 2 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r7-round2
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: verify-r7-round3
+  sections: *cr2_15
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '3'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round3
+- id: verify-r7-round4
+  kind: verification
+  basis: verify-r7-round4
+  verdict: 53 PASS, 1 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r7-round3
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: verify-r7-round4
+  sections: *cr2_15
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '4'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round4
+- id: verify-r7-round5
+  kind: verification
+  basis: verify-r7-round5
+  verdict: 59 PASS, 1 FAIL
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes:
+  - verify-r7-round4
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: verify-r7-round5
+  sections: *cr2_15
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '5'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round5
+- id: verify-r7-round6-s1
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: &cr2_81
+    state: stale
+    reason: *cr2_43
+    stale_since: revision-8
+  supersedes: &cr2_82
+  - verify-r7-round5
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections: *cr2_25
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r7-round6-s4.7
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_81
+  supersedes: *cr2_82
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections: *cr2_65
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r7-round6-s5.2
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_81
+  supersedes: *cr2_82
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections: *cr2_66
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r7-round6-s10.3
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_81
+  supersedes: *cr2_82
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections: *cr2_83
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r7-round6-s12.1
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_81
+  supersedes: *cr2_82
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections: *cr2_67
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r7-round6-remainder
+  kind: verification
+  basis: verify-r7-round6
+  verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status: *cr2_81
+  supersedes: *cr2_82
+  run_ids: *cr2_68
+  evidence: *cr2_78
+  text: landed
+  sections:
+  - '4.1'
+  - '4.8'
+  - '5.1'
+  - '5.3'
+  - '5.4'
+  - '9.2'
+  - '12.3'
+  - '12.5'
+  evidence_classes: *cr2_79
+  verifier: Fresh Claude Code subagent
+  round: '6'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_80
+  scope: *cr2_53
+  reading_id: verify-r7-round6
+- id: verify-r8-round1
+  kind: verification
+  basis: verify-r8-round1
+  verdict: 50 PASS, 3 FAIL, 1 GAP
+  rule: A1-as-written
+  status: *cr2_50
+  supersedes: *cr2_1
+  run_ids: *cr2_84
+  evidence: *cr2_85
+  text: verify-r8-round1
+  sections: *cr2_86
+  evidence_classes: &cr2_87
+  - databook
+  - inference
+  - kernel
+  verifier: Fresh Claude Code subagent
+  round: '1'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: &cr2_88
+  - 8
+  scope: *cr2_53
+  reading_id: verify-r8-round1
+- id: verify-r8-round2
+  kind: verification
+  basis: verify-r8-round2
+  verdict: 68 PASS, 0 FAIL, 1 UNVERIFIABLE
+  rule: A1-as-written
+  status:
+    state: current
+    reason: Final revision-8 text read once after fixes; sequential rounds do not establish a second independent
+      reading.
+    stale_since: null
+  supersedes:
+  - verify-r8-round1
+  run_ids: *cr2_84
+  evidence: *cr2_85
+  text: landed
+  sections: *cr2_16
+  evidence_classes: *cr2_87
+  verifier: Fresh Claude Code subagent
+  round: '2'
+  independence: sequential
+  purpose: accuracy
+  covers_revisions: *cr2_88
+  scope: *cr2_53
+  reading_id: verify-r8-round2
+- id: L02c-requirements
+  kind: item
+  basis: L02c-requirements
+  verdict: Correct the revision-3 errors and fill two partial recall rows.
+  rule: C6-item-classification-2026-09-26
+  status: &cr2_89
+    state: current
+    reason: Recorded historical evidence.
+    stale_since: null
+  supersedes: *cr2_1
+  run_ids: *cr2_19
+  evidence: *cr2_21
+  target: spec
+  source: 3
+  disposition:
+    state: applied
+    revision: 4
+  class: R
+- id: L02e-PSCON
+  kind: item
+  basis: L02e-PSCON
+  verdict: Set PSCON bit 11 before auto-negotiation.
+  rule: C6-item-classification-2026-09-26
+  status: *cr2_89
+  supersedes: *cr2_1
+  run_ids: *cr2_51
+  evidence:
+  - evidence/L02s.md
+  target: spec
+  source: 1
+  disposition:
+    state: applied
+    revision: 5
+  class: R
+- id: L02f3-requirements
+  kind: item
+  basis: L02f3-requirements
+  verdict: Apply FWE, TNCRS, RLEC, reset-margin and EEPROM policies from field evidence.
+  rule: C6-item-classification-2026-09-26
+  status: *cr2_89
+  supersedes: *cr2_1
+  run_ids: *cr2_59
+  evidence:
+  - evidence/L02f3.md
+  target: spec
+  source: 1
+  disposition:
+    state: applied
+    revision: 6
+  class: R
+- id: CF-1-TNCRS
+  kind: item
+  basis: cf1-a1
+  verdict: TNCRS attributed by drain-time duplex; missing attribution rule across duplex changes.
+  rule: C6-item-classification-2026-09-26
+  status: *cr2_89
+  supersedes: *cr2_1
+  run_ids:
+  - e1000-cf1-20260925-01
+  - e1000-sr8-20260926-01
+  evidence:
+  - evidence/CF-1.md
+  - evidence/SR-8.md
+  target: spec
+  source: 1
+  disposition:
+    state: applied
+    revision: 8
+  class: R
+  aliases:
+  - CF-1-A-F5
+  - CF-1-C-F1
+  decision:
+    who: user
+    date: '2026-09-26'
+    link: evidence/SR-8.md#the-rule-as-revision-8-writes-it
+- id: candidate-CF1-a1
+  kind: candidate_round
+  basis: cf1-a1
+  verdict: Reference 20/20 and candidate 20/20 PASS; 928 checks, 0 failed; 25/26 qualified claims.
+  rule: isolated-acceptance-set-2-repetitions
+  status: &cr2_91
+    state: superseded
+    reason: Replaced by the next recorded candidate acceptance round; identities and verdict retained.
+    stale_since: null
+  supersedes: *cr2_1
+  run_ids:
+  - e1000-cf1-20260925-01
+  evidence:
+  - evidence/CF-1.md
+  round: a1
+  applied_items: *cr2_90
+  verification:
+  - verify-r6-round4-s1
+  - verify-r6-round4-s4.1
+  - verify-r6-round4-s4.7
+  - verify-r6-round4-s5.2
+  - verify-r6-round4-s5.3
+  - verify-r6-round4-s5.4
+  - verify-r6-round4-s12.1
+  - verify-r6-round4-s12.3
+  - verify-r6-round4-s12.5
+  - verify-r6-round4-s12.6
+  results: *cr2_1
+  scope: &cr2_92 Historical aggregate; per-claim results were not backfilled. Historical aggregate; Q18
+    PASS is unqualified. TNCRS duplex attribution remains unobservable on this model; implementation review
+    and trace attribution are recorded in the public evidence.
+- id: candidate-CF2-a1
+  kind: candidate_round
+  basis: cf2-review
+  verdict: Reference 20/20 and candidate 20/20 PASS; 944 checks, 0 failed; 26/27 qualified claims.
+  rule: isolated-acceptance-set-2-repetitions
+  status: *cr2_91
+  supersedes:
+  - candidate-CF1-a1
+  run_ids: &cr2_93
+  - e1000-cf2-20260926-01
+  evidence: &cr2_94
+  - evidence/CF-2.md
+  round: a1
+  applied_items: &cr2_95
+  - CF-1-TNCRS
+  verification: &cr2_96
+  - verify-r8-round2
+  results: *cr2_1
+  scope: *cr2_92
+- id: candidate-CF2-a2
+  kind: candidate_round
+  basis: cf2-a2
+  verdict: Reference 20/20 and candidate 20/20 PASS; 972 checks, 0 failed; 27/28 qualified claims.
+  rule: isolated-acceptance-set-2-repetitions
+  status: *cr2_89
+  supersedes:
+  - candidate-CF2-a1
+  run_ids: *cr2_93
+  evidence: *cr2_94
+  round: a2
+  applied_items: *cr2_95
+  verification: *cr2_96
+  results:
+  - result-Q01
+  - result-Q02
+  - result-Q03
+  - result-Q04
+  - result-Q05
+  - result-Q06
+  - result-Q07
+  - result-Q08
+  - result-Q09
+  - result-Q10
+  - result-Q11
+  - result-Q12
+  - result-Q13
+  - result-Q14
+  - result-Q15
+  - result-Q16
+  - result-Q17
+  - result-Q18
+  - result-Q19
+  - result-Q20
+  - result-Q21
+  - result-Q22
+  - result-Q23
+  - result-Q24
+  - result-Q25
+  - result-Q26
+  - result-Q27
+  - result-Q28
+  scope: Historical aggregate; Q18 PASS is unqualified. TNCRS duplex attribution remains unobservable
+    on this model; implementation review and trace attribution are recorded in the public evidence.

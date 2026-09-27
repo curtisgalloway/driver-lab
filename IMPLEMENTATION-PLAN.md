@@ -586,7 +586,7 @@ as pull request #26, `80eb11b`); the decisions taken before approval are in
 | ID | Outcome | Covers | Depends on | Size | Status |
 | --- | --- | --- | --- | --- | --- |
 | CR1 | e1000 claim map and status index: claims, qualifications, candidate results, `[emulated]` observations, open items; index check in CI | C1 (most), C6 S1–S3 data, C3 tier-0 index check | — | one session | `review fixes implemented; checkpoint pending` |
-| CR2 | Spec verification history in the index by section (revisions 3–8), and the SR-8 → CF-2 path backfilled | C1 (rest), C5 (backfill) | CR1 | one session | `pending` |
+| CR2 | Spec verification history in the index by section (revisions 3–8), and the SR-8 → CF-2 path backfilled | C1 (rest), C5 (backfill) | CR1 | one session | review fixes implemented; checkpoint pending ([evidence](evidence/CR2.md)) |
 | CR3 | The sweep, tier 0: source registry, the pinned-file adapter, C2 invalidation with widening | C2, C3 (detection), C7 (registry detection), C8 (reference adapter) | CR2 | one session | `pending` |
 | CR4 | Stopping rule and tier-1 queue: S1–S5, item rules, the batch cap, the tier-2 guard, the rule (policy) comparison guard | C6, C3 (queue), C4 (trigger) | CR3 | one session | `pending` |
 | CR5 | Deployment manifest and contract check: the manifest schema and models by role, the `deployment` config key, contract checks for the source adapter and fixture backend, stubs, the producer-class rule | C8, C4 (role change), C7 (roles) | CR4 | one session | `pending` |
@@ -717,7 +717,8 @@ the revision for the queued items (CR8).
 - **Sizing:** six revisions' readings from public evidence; the unknown is how the older
   readings (L02b, L02c) recorded sections. **Split point:** revisions 6–8 first (they decide
   today's status), 3–5 second.
-- **Status:** `pending`.
+- **Status:** review fixes implemented and locally verified; checkpoint pending;
+  [evidence](evidence/CR2.md).
 
 ### CR3 — The sweep, tier 0
 

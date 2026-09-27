@@ -58,7 +58,8 @@ class IndexTests(unittest.TestCase):
         proc = self.run_cli(self.root, "--root", self.root, "--json")
         self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
         self.assertEqual(
-            json.loads(proc.stdout)["counts"], {"claims": 1, "qualification": 1}
+            json.loads(proc.stdout)["counts"],
+            {"claims": 1, "qualification": 1, "verification": 1},
         )
 
     def test_bad_fixtures(self):
@@ -80,7 +81,7 @@ class IndexTests(unittest.TestCase):
             (
                 "unknown kind",
                 ("entries", 0, "kind"),
-                "verification",
+                "unknown",
                 "invalid entry kind",
                 False,
             ),
@@ -447,7 +448,9 @@ class IndexTests(unittest.TestCase):
                 "qualification": 28,
                 "result": 28,
                 "observation": 8,
-                "item": 27,
+                "item": 31,
+                "verification": 95,
+                "candidate_round": 3,
             },
         )
         self.assertEqual(
@@ -490,6 +493,192 @@ class IndexTests(unittest.TestCase):
             {e["id"] for e in status["entries"] if e["kind"] == "observation"},
             {f"EM{i}" for i in range(1, 9)},
         )
+        self.assertEqual(status["revision_range"], [3, 8])
+        self.assertEqual(set(status["revisions"]), {str(r) for r in range(3, 9)})
+        readings = [e for e in entries.values() if e["kind"] == "verification"]
+        self.assertEqual(len({e["reading_id"] for e in readings}), 22)
+        self.assertEqual(
+            {e["reading_id"] for e in readings if e["status"]["state"] == "current"},
+            {"verify-r8-round2"},
+        )
+        self.assertEqual(entries["verify-r8-round2"]["independence"], "sequential")
+        self.assertEqual(
+            entries["CF-1-TNCRS"]["disposition"], {"state": "applied", "revision": 8}
+        )
+        self.assertIn("CF-1-TNCRS", status["revisions"]["8"]["items"])
+        self.assertEqual(
+            entries["candidate-CF2-a1"]["supersedes"], ["candidate-CF1-a1"]
+        )
+        self.assertEqual(
+            entries["candidate-CF2-a2"]["supersedes"], ["candidate-CF2-a1"]
+        )
+        self.assertEqual(
+            set(entries["candidate-CF2-a2"]["results"]),
+            {f"result-Q{i:02}" for i in range(1, 29)},
+        )
+
+    def test_history_mutations(self):
+        original = copy.deepcopy(self.status)
+        cases = [
+            (("revisions",), {}, "missing or unexpected revision"),
+            (("revision_range",), [True, 8], "invalid revision range"),
+            (("revision_range",), [7, 8], "missing or unexpected revision"),
+            (("revisions", "8", "spec_sha256"), "b" * 64, "spec_sha256 does not match"),
+            (("entries", 1, "text"), "unknown", "spec_sha256 does not match"),
+            (("entries", 1, "covers_revisions"), [7, 8], "covered revision"),
+            (("entries", 1, "evidence_classes"), ["unknown"], "evidence class"),
+            (("entries", 1, "evidence_classes"), [], "nonempty list"),
+            (("entries", 1, "sections"), ["2"], "outside reading basis"),
+            (("entries", 1, "independence"), "gate", "gate cannot count as accuracy"),
+            (("bases", "reading", "model"), None, "requires reader model"),
+            (("revisions", "8", "requirement_change"), True, "matching R item chain"),
+            (("revisions", "8", "items"), ["missing"], "applied to this spec revision"),
+        ]
+        for path, value, expected in cases:
+            with self.subTest(path=path, value=value):
+                self.status = copy.deepcopy(original)
+                node = self.status
+                for key in path[:-1]:
+                    node = node[key]
+                node[path[-1]] = value
+                self.reject(expected)
+        self.status = copy.deepcopy(original)
+        self.status["entries"].pop()
+        self.reject("missing verification")
+
+    def test_draft_hash_and_state(self):
+        reading = self.status["entries"][1]
+        self.status["revisions"]["8"]["drafts"] = {"round1": "b" * 64}
+        reading["text"] = "round1"
+        self.reject("spec_sha256 does not match")
+        self.status["bases"]["reading"]["spec_sha256"] = "b" * 64
+        self.reject("draft reading must remain superseded")
+        reading["status"]["state"] = "superseded"
+        checker.validate(self.claims, self.status, self.root)
+
+    def test_verification_rejects_undefined_optional_fields(self):
+        reading = self.status["entries"][1]
+        for key, value in [
+            ("aliases", ["unexpected-alias"]),
+            ("shortfall", {"reason": "blocked", "reopen": "New evidence."}),
+        ]:
+            with self.subTest(field=key):
+                reading[key] = value
+                self.reject("unknown fields")
+                del reading[key]
+
+    def test_real_applied_spec_item_requires_destination(self):
+        claims = checker.read_yaml(ROOT / "evals/e1000/claims.yaml")
+        original = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        for new_item in (False, True):
+            with self.subTest(new_item=new_item):
+                status = copy.deepcopy(original)
+                if new_item:
+                    item = copy.deepcopy(
+                        next(e for e in status["entries"] if e["id"] == "CF-1-TNCRS")
+                    )
+                    item.update(id="new-applied-R")
+                    del item["aliases"]
+                    status["entries"].append(item)
+                else:
+                    item = next(e for e in status["entries"] if e["id"] == "SR-8-1")
+                item["disposition"] = {"state": "applied", "revision": 999}
+                with self.assertRaisesRegex(checker.Invalid, "destination is missing"):
+                    checker.validate(claims, status, ROOT)
+                item["disposition"]["revision"] = 8
+                with self.assertRaisesRegex(
+                    checker.Invalid, "missing from destination header"
+                ):
+                    checker.validate(claims, status, ROOT)
+
+    def test_real_public_provenance(self):
+        status = checker.read_yaml(ROOT / "evals/e1000/status.yaml")
+        entries = {e["id"]: e for e in status["entries"]}
+        link = "evidence/CR2-provenance.md"
+        rows = {}
+        for line in (ROOT / link).read_text().splitlines():
+            if line.startswith("| `verify-"):
+                rows[line.split("|")[1].strip().strip("`")] = line
+        cited = {
+            e["id"]
+            for e in entries.values()
+            if e["kind"] == "verification" and link in e["evidence"]
+        }
+        self.assertEqual(len(rows), 43)
+        self.assertEqual(set(rows), cited)
+        for entry_id, row in rows.items():
+            entry = entries[entry_id]
+            basis = status["bases"][entry["basis"]]
+            self.assertIn(basis["spec_sha256"], row)
+            self.assertIn(basis["model"]["name"], row)
+            self.assertIn(basis["model"]["version"], row)
+            self.assertIn(", ".join(entry["sections"]), row)
+            self.assertIn(", ".join(entry["evidence_classes"]), row)
+            self.assertIn(entry["run_ids"][0], row)
+            self.assertIsNone(basis["dependencies"])
+            self.assertIn("dependencies: null", row)
+        self.assertEqual(
+            entries["verify-r3-adjudication"]["evidence_classes"], ["databook"]
+        )
+        self.assertEqual(
+            status["bases"]["cf1-a1"]["model"], status["bases"]["cf2-a2"]["model"]
+        )
+
+    def test_reading_slice_coverage(self):
+        self.status["bases"]["reading"]["sections_read"] = ["1", "2"]
+        self.reject("missing reading section slice")
+        reading = copy.deepcopy(self.status["entries"][1])
+        reading.update(id="slice2", sections=["2"])
+        self.status["entries"].append(reading)
+        checker.validate(self.claims, self.status, self.root)
+        reading["sections"] = ["1"]
+        self.reject("overlapping reading slices")
+        reading["sections"] = ["2"]
+        reading["verdict"] = "FAIL"
+        self.reject("inconsistent reading slices")
+
+    def test_requirement_and_candidate_chain(self):
+        item = self.add_item({"state": "applied", "revision": 8})
+        item.update(target="spec")
+        item["class"] = "R"
+        revision = self.status["revisions"]["8"]
+        revision.update(requirement_change=True, items=["item"])
+        candidate = copy.deepcopy(self.status["entries"][0])
+        del candidate["claim"]
+        del candidate["validated_harness_sha256"]
+        candidate.update(
+            id="candidate",
+            kind="candidate_round",
+            round="a1",
+            applied_items=["item"],
+            verification=["verification"],
+            results=[],
+            scope="Synthetic acceptance round.",
+        )
+        self.status["entries"].append(candidate)
+        checker.validate(self.claims, self.status, self.root)
+        original = copy.deepcopy(candidate)
+        for field, value, expected in [
+            ("applied_items", ["missing"], "matching applied R item"),
+            ("verification", ["q-Q01"], "landed verification link"),
+            ("results", ["q-Q01"], "result basis or round mismatch"),
+        ]:
+            with self.subTest(field=field):
+                candidate[field] = value
+                self.reject(expected)
+                candidate[field] = original[field]
+        item["disposition"]["revision"] = 7
+        self.reject("applied to this spec revision")
+
+    def test_old_unscoped_reading_cannot_remain_current(self):
+        self.status["revision_range"] = [8, 9]
+        self.status["revisions"]["9"] = copy.deepcopy(self.status["revisions"]["8"])
+        reading = copy.deepcopy(self.status["entries"][1])
+        reading.update(id="new", reading_id="new", basis="new", covers_revisions=[9])
+        self.status["bases"]["new"] = copy.deepcopy(self.status["bases"]["reading"])
+        self.status["bases"]["new"]["spec_revision"] = 9
+        self.status["entries"].append(reading)
+        self.reject("must widen, not stay current")
 
 
 if __name__ == "__main__":

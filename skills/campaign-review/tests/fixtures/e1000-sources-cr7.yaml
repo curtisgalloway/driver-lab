@@ -244,19 +244,19 @@ sources:
   expected_sha256: 43242751f287e6aa6a19eac720c907bb995fdf5c27bf8ca75fa2ad7f4bd049b0
 - id: spec
   kind: spec
-  version: revision 9
-  sha256: 0fd7bc0a6bd4ad181af26a7e5f20d50c1fbaa312a3248470aca31623f03f261a
+  version: revision 8
+  sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
   status: ok
-  checked: '2026-09-27'
+  checked: '2026-09-26'
   provenance:
     adapter: pinned-file
     version: '1'
     version_method: operator-declared registry version
   file:
     root: run_store
-    path: cr8-20260927-01/docs/e1000-spec.md
-  expected_sha256: 0fd7bc0a6bd4ad181af26a7e5f20d50c1fbaa312a3248470aca31623f03f261a
-  revision: 9
+    path: e1000-sr8-20260926-01/docs/e1000-spec.md
+  expected_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
+  revision: 8
 - id: toolchain
   kind: toolchain
   version: gcc-14

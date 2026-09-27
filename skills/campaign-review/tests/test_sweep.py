@@ -20,6 +20,9 @@ BASELINE = ROOT / "skills/campaign-review/tests/fixtures/e1000-status-cr5.yaml"
 # The reference manifest as CR5 left it, whose reader matches BASELINE's
 # adopted scope.reader; CR6b changed the live reference reader.
 BASELINE_DEPLOYMENT = ROOT / "skills/campaign-review/tests/fixtures/deployment-cr5.yaml"
+# The source registry before CR8 moved the spec pin to revision 9, which BASELINE
+# does not index; the live registry would stale every BASELINE reading.
+BASELINE_SOURCES = ROOT / "skills/campaign-review/tests/fixtures/e1000-sources-cr7.yaml"
 sys.path.insert(0, str(SCRIPTS))
 import index_check as check  # pylint: disable=wrong-import-position
 import pinned_file_adapter as adapter  # pylint: disable=wrong-import-position
@@ -32,7 +35,7 @@ def inputs():
     """Copy e1000 and align active qualification context to isolate each mutation."""
     claims = check.read_yaml(ROOT / "evals/e1000/claims.yaml")
     status = check.read_yaml(BASELINE)
-    registry = check.read_yaml(ROOT / "evals/e1000/sources.yaml")
+    registry = check.read_yaml(BASELINE_SOURCES)
     for entry in status["entries"]:
         if entry["kind"] == "qualification":
             basis = copy.deepcopy(status["bases"][entry["basis"]])
@@ -494,7 +497,8 @@ class SweepTests(unittest.TestCase):
 
         proc = run(ROOT / "evals/e1000", "--json")
         self.assertEqual(proc.returncode, 1)
-        self.assertEqual(json.loads(proc.stdout)["counts"]["stale"], 96)
+        # The live e1000 report after CR8 (revision 9 stales every revision-8 basis).
+        self.assertEqual(json.loads(proc.stdout)["counts"]["stale"], 144)
         self.assertEqual(run().returncode, 2)
         self.assertTrue(run("--skill").stdout.startswith("---\n"))
         with tempfile.TemporaryDirectory() as temp:

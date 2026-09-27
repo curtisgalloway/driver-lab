@@ -17,6 +17,9 @@ SCRIPTS = ROOT / "skills/campaign-review/scripts"
 # The e1000 index as CR5 left it: tests pin its report, so later index
 # entries (CR6 onward) do not change what the mechanism tests expect.
 BASELINE = ROOT / "skills/campaign-review/tests/fixtures/e1000-status-cr5.yaml"
+# The reference manifest as CR5 left it, whose reader matches BASELINE's
+# adopted scope.reader; CR6b changed the live reference reader.
+BASELINE_DEPLOYMENT = ROOT / "skills/campaign-review/tests/fixtures/deployment-cr5.yaml"
 sys.path.insert(0, str(SCRIPTS))
 import index_check as check  # pylint: disable=wrong-import-position
 import pinned_file_adapter as adapter  # pylint: disable=wrong-import-position
@@ -130,7 +133,9 @@ def matrix():
                 id=name, kind=name, version="new identity", sha256="a" * 64, file=None
             )
             registry["sources"].append(row)
-        result = sweep.sweep(claims, status, registry)
+        result = sweep.sweep(
+            claims, status, registry, roles=deployment.load(BASELINE_DEPLOYMENT)
+        )
         actual_stale = sorted(
             e["id"]
             for e in result["entries"]
@@ -183,7 +188,7 @@ class SweepTests(unittest.TestCase):
 
     def setUp(self):
         self.claims, self.status, self.registry = inputs()
-        self.roles = deployment.load(deployment.REFERENCE)
+        self.roles = deployment.load(BASELINE_DEPLOYMENT)
 
     def run_sweep(self):
         return sweep.sweep(self.claims, self.status, self.registry, roles=self.roles)

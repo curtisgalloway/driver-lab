@@ -41,3 +41,18 @@ Private run `cr6-20260926-01` holds the brief, inputs and ledger.
   before a post-cap revision needs one.
 - After the entries, S4 holds for revision 8 (2/2) and S5 no longer does: the newest
   independent reading produced an R item.
+
+## 2026-09-26T21:37:16-07:00 — CR6b prepared: reader role changed, comparison reading queued
+
+- Changing the manifest's reader queued exactly one comparison reading, as C4 asks, and moved
+  it into the current batch at priority 1 (second reading, comparison, re-verification of
+  AF-1's item).
+- The same change broke five tests: they asserted the reference manifest's reader or combined
+  the live manifest with the frozen index. Like the index, the manifest is data the tests should
+  not pin; they now read CR5's manifest as a fixture, and the default-loading tests compare with
+  whatever the reference file declares.
+- Codex's read-only sandbox cannot write a record, so the brief makes the record its final
+  message, which `-o` saves. The workspace holds only the brief and its inputs; nothing
+  earlier is in it, and the brief forbids the rest of the store. That is an instruction, not a
+  wall, the same as for the Claude readers.
+- The launch is the orchestrator's; the unit resumes at the join.

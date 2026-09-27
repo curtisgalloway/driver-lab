@@ -5,8 +5,10 @@
 import copy
 import unittest
 
-from test_sweep import BASELINE, check, inputs, source, sweep
+from test_sweep import BASELINE, BASELINE_DEPLOYMENT, check, deployment, inputs, source, sweep
 import stopping
+
+ROLES = deployment.load(BASELINE_DEPLOYMENT)
 
 
 def entry(status, eid):
@@ -50,7 +52,9 @@ class StoppingTests(unittest.TestCase):
             self.item(eid)["impact"] = dict(claims=[], changes_status=False)
 
     def report(self):
-        return sweep.sweep(self.claims, self.status, self.registry)["stopping"]
+        return sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)[
+            "stopping"
+        ]
 
     def item(self, eid="SR-8-1"):
         return entry(self.status, eid)
@@ -97,6 +101,7 @@ class StoppingTests(unittest.TestCase):
                 self.status,
                 self.registry,
                 reader=dict(name="new reader", version="2"),
+                roles=ROLES,
             )["stopping"]
             self.assertTrue(result["sufficient"])
             units = [u for u in result["queue"] if u["kind"] == "comparison-reading"]
@@ -196,7 +201,7 @@ class StoppingTests(unittest.TestCase):
 
     def test_version_two_preserves_freshness_independently_of_ok(self):
         complete_readings(self.status)
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertEqual(result["version"], 2)
         self.assertTrue(result["ok"])
         self.assertTrue(result["entries"])
@@ -212,11 +217,11 @@ class StoppingTests(unittest.TestCase):
         for value in self.status["entries"]:
             if value["status"]["state"] == "stale":
                 value["status"].update(state="superseded", stale_since=None)
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertFalse(result["entries"])
         self.assertTrue(result["fresh"])
         source(self.registry, "candidate")["status"] = "unknown"
-        result = sweep.sweep(self.claims, self.status, self.registry)
+        result = sweep.sweep(self.claims, self.status, self.registry, roles=ROLES)
         self.assertFalse(result["fresh"])
         self.assertFalse(result["ok"])
 

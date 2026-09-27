@@ -434,6 +434,10 @@ def check_entry(entry, bases, root):
     kind = entry.get("kind")
     require(isinstance(kind, str) and kind in fields, "invalid entry kind")
     optional = ("decision", "cost")
+    if kind == "verification":
+        optional += ("sequence", "assessment")
+    if kind == "item":
+        optional += ("impact", "execution", "action")
     if kind != "verification":
         optional += ("shortfall", "aliases")
     mapping(entry, common + fields[kind], optional)
@@ -442,7 +446,7 @@ def check_entry(entry, bases, root):
     string(entry["basis"])
     require(entry["basis"] in bases, "unknown basis")
     string(entry["verdict"])
-    require(isinstance(entry["rule"], str) and entry["rule"] in RULES, "unknown rule")
+    string(entry["rule"])
     status = entry["status"]
     mapping(status, ("state", "reason", "stale_since"))
     require(
@@ -508,10 +512,21 @@ def check_entry(entry, bases, root):
             set(entry["evidence_classes"]) <= EVIDENCE_CLASSES,
             "invalid verification evidence class",
         )
-        require(
-            entry["rule"] in {"A1-as-written", "A1-amended-2026-09-26"},
-            "invalid verification rule",
-        )
+        if "sequence" in entry:
+            require(
+                type(entry["sequence"]) is int and entry["sequence"] > 0,
+                "invalid reading sequence",
+            )
+        if "assessment" in entry:
+            assessment = entry["assessment"]
+            mapping(assessment, ("accuracy_failures", "r_items", "evidence"))
+            require(
+                type(assessment["accuracy_failures"]) is int
+                and assessment["accuracy_failures"] >= 0,
+                "invalid accuracy failure count",
+            )
+            strings(assessment["r_items"], pattern=ID)
+            links(root, assessment["evidence"])
         require(
             isinstance(entry["independence"], str)
             and entry["independence"]
@@ -552,10 +567,35 @@ def check_entry(entry, bases, root):
         sha(bases[entry["basis"]]["candidate_module_sha256"], nullable=False)
         sha(bases[entry["basis"]]["harness_sha256"], nullable=False)
     else:
-        require(
-            isinstance(entry["class"], str) and entry["class"] in {"R", "E", "W"},
-            "invalid item class",
-        )
+        string(entry["class"])
+        if "impact" in entry:
+            mapping(entry["impact"], ("claims", "changes_status"))
+            strings(entry["impact"]["claims"], pattern=ID)
+            require(
+                type(entry["impact"]["changes_status"]) is bool,
+                "invalid item status impact",
+            )
+        if "execution" in entry:
+            require(
+                isinstance(entry["execution"], str)
+                and entry["execution"] in {"carry", "standalone"},
+                "invalid item execution",
+            )
+        if "action" in entry:
+            require(
+                isinstance(entry["action"], str)
+                and entry["action"]
+                in {
+                    "requirement-change",
+                    "implementation",
+                    "hardware-run",
+                    "recall",
+                    "adopt-source",
+                    "accept-shortfall",
+                    "outward-report",
+                },
+                "invalid tier-2 action",
+            )
         require(
             type(entry["source"]) is int and entry["source"] in {1, 2, 3},
             "invalid item source",
@@ -620,6 +660,8 @@ def check_history(status_doc, by_id, root):
         first = group[0]
         sections = []
         for entry in group:
+            for key in ("sequence", "assessment"):
+                require(entry.get(key) == first.get(key), "inconsistent reading slices")
             for key in (
                 "basis",
                 "text",
@@ -642,6 +684,10 @@ def check_history(status_doc, by_id, root):
             set(sections) == set(bases[first["basis"]]["sections_read"]),
             "missing reading section slice",
         )
+    sequences = [
+        g[0]["sequence"] for g in reading_groups.values() if "sequence" in g[0]
+    ]
+    require(len(sequences) == len(set(sequences)), "duplicate reading sequence")
     for number, revision in revisions.items():
         mapping(
             revision,
@@ -654,7 +700,10 @@ def check_history(status_doc, by_id, root):
                 "evidence",
                 "run_ids",
             ),
+            ("started",),
         )
+        if "started" in revision:
+            date(revision["started"])
         sha(revision["spec_sha256"], nullable=False)
         require(isinstance(revision["drafts"], dict), "drafts must be a mapping")
         for key, value in revision["drafts"].items():
@@ -683,7 +732,7 @@ def check_history(status_doc, by_id, root):
                 == {"state": "applied", "revision": int(number)},
                 "revision item must be applied to this spec revision",
             )
-            if item["class"] == "R":
+            if item["class"] not in {"E", "W"}:
                 applied_r.append(item_id)
         require(
             bool(applied_r) == (changed is True),
@@ -752,7 +801,8 @@ def check_history(status_doc, by_id, root):
             )
             for item_id in entry["applied_items"]:
                 require(
-                    item_id in revision["items"] and by_id[item_id]["class"] == "R",
+                    item_id in revision["items"]
+                    and by_id[item_id]["class"] not in {"E", "W"},
                     "candidate round lacks matching applied R item",
                 )
             for reading_id in entry["verification"]:
@@ -776,12 +826,36 @@ def check_history(status_doc, by_id, root):
                 )
 
 
+def check_scope(scope, claims, root):
+    """Validate optional C6 metadata; absent declarations fail S1 in the sweep."""
+    if scope is None:
+        return
+    mapping(
+        scope, ("claims", "accepted_classes", "target", "rules", "reader", "evidence")
+    )
+    strings(scope["claims"], nonempty=True, pattern=ID)
+    require(set(scope["claims"]) <= claims.keys(), "unknown scope claim")
+    mapping(scope["accepted_classes"], scope["claims"])
+    for classes in scope["accepted_classes"].values():
+        strings(classes, nonempty=True)
+        require(set(classes) <= EVIDENCE_CLASSES, "invalid scope evidence class")
+    string(scope["target"])
+    mapping(scope["rules"], ("qualification", "result", "verification", "observation"))
+    for rule in scope["rules"].values():
+        string(rule)
+    mapping(scope["reader"], ("name", "version"))
+    for value in scope["reader"].values():
+        string(value)
+    links(root, scope["evidence"])
+
+
 def validate(claims_doc, status_doc, root):
     """Validate documents; root=None checks metadata without opening source files."""
     mapping(claims_doc, ("version", "campaign", "harness", "claims"))
     mapping(
         status_doc,
         ("version", "campaign", "revision_range", "revisions", "bases", "entries"),
+        ("scope",),
     )
     require(
         type(claims_doc["version"]) is int
@@ -871,6 +945,31 @@ def validate(claims_doc, status_doc, root):
     qualifications = Counter()
     results = Counter()
     for entry in entries:
+        if entry["kind"] == "item" and "impact" in entry:
+            require(
+                set(entry["impact"]["claims"]) <= by_claim.keys(),
+                "unknown impact claim",
+            )
+        if entry["kind"] == "item" and entry["disposition"]["state"] == "shortfall":
+            if entry["target"] == "spec" and entry["class"] != "W":
+                require(
+                    "impact" in entry, "spec shortfall requires explicit claim impact"
+                )
+            if any(
+                by_claim[c]["mandatory"]
+                for c in entry.get("impact", {}).get("claims", [])
+            ):
+                require(
+                    entry.get("decision", {}).get("who") == "user",
+                    "mandatory shortfall requires user decision",
+                )
+        if entry["kind"] == "verification" and "assessment" in entry:
+            for item_id in entry["assessment"]["r_items"]:
+                item = by_id.get(item_id, {})
+                require(
+                    item.get("kind") == "item" and item.get("class") not in {"W", "E"},
+                    "reading R item must reference an R finding",
+                )
         for target in entry["supersedes"]:
             require(target in by_id, "supersedes target missing")
             old = by_id[target]
@@ -929,6 +1028,7 @@ def validate(claims_doc, status_doc, root):
                 seen.add(target)
                 pending.extend(by_id[target]["supersedes"])
     check_history(status_doc, by_id, root)
+    check_scope(status_doc.get("scope"), by_claim, root)
     return dict(claims=len(claims), **Counter(e["kind"] for e in entries))
 
 

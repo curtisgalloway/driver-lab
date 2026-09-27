@@ -111,6 +111,11 @@ evaluation; add other terms as the documents that use them are updated.
 | Cost tier | How re-review work starts: tier 0 on every change with no model; tier 1 queued and run by agents in batches a person authorizes; tier 2 only on a person's decision. |
 | Item (R / E / W) | A finding for a later spec revision: R changes what a driver must do, E changes the evidence for a claim, W changes wording or form only. |
 | Sufficient for scope | The stopping rule's state: the declared scope is met or its gaps are recorded shortfalls, and further work starts only from a trigger. |
+| Reading lineage | One reader's sequential fix passes, counted once when checking independence; an independent reader adds another lineage. |
+| Review batch | Up to three proposed units from a campaign's queue; each needs its own reviewed checkpoint, and the sweep runs again between units. |
+| Stopping report | The sweep's evaluation of S1–S5, stating whether the campaign is sufficient for its declared scope and listing what blocks it. |
+| Guarded queue | Proposed review units whose selection obeys the batch cap and the requirement for a recorded user decision on tier-2 work; listing a unit does not run it. |
+| Comparison reading | An independent reading by a new reader model, compared with the previous record claim by claim; disagreements are resolved against the cited authority before changing verdicts. |
 | Shortfall | A gap in the declared scope recorded with a reason (`unobservable`, `blocked`, `out of scope`, `not worth it`) and a condition that would reopen it, instead of being worked. |
 | Deployment | One installation of the method with its own sources, run store, specs, models and fixtures; a private one keeps all of them inside it. |
 | Source registry | A deployment's list of its sources by local ID, version and hash, so change detection works without reading the content. |

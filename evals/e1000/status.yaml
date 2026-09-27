@@ -2,11 +2,91 @@
 # SPDX-License-Identifier: Apache-2.0
 version: 1
 campaign: e1000
+scope:
+  claims:
+  - Q01
+  - Q02
+  - Q03
+  - Q04
+  - Q05
+  - Q06
+  - Q07
+  - Q08
+  - Q09
+  - Q10
+  - Q11
+  - Q12
+  - Q13
+  - Q14
+  - Q15
+  - Q16
+  - Q17
+  - Q18
+  - Q19
+  - Q20
+  - Q21
+  - Q22
+  - Q23
+  - Q24
+  - Q25
+  - Q26
+  - Q27
+  - Q28
+  accepted_classes:
+    Q01: &cr4_classes
+    - databook
+    - standard
+    - source-observed
+    - inference
+    - kernel
+    - emulated
+    Q02: *cr4_classes
+    Q03: *cr4_classes
+    Q04: *cr4_classes
+    Q05: *cr4_classes
+    Q06: *cr4_classes
+    Q07: *cr4_classes
+    Q08: *cr4_classes
+    Q09: *cr4_classes
+    Q10: *cr4_classes
+    Q11: *cr4_classes
+    Q12: *cr4_classes
+    Q13: *cr4_classes
+    Q14: *cr4_classes
+    Q15: *cr4_classes
+    Q16: *cr4_classes
+    Q17: *cr4_classes
+    Q18: *cr4_classes
+    Q19: *cr4_classes
+    Q20: *cr4_classes
+    Q21: *cr4_classes
+    Q22: *cr4_classes
+    Q23: *cr4_classes
+    Q24: *cr4_classes
+    Q25: *cr4_classes
+    Q26: *cr4_classes
+    Q27: *cr4_classes
+    Q28: *cr4_classes
+  target: Emulated 82540EM at the identities recorded in sources.yaml; no hardware
+    assurance.
+  rules:
+    qualification: isolated-defect-specific-A6-2026-09-25
+    result: isolated-acceptance-set-2-repetitions
+    verification: A1-as-written
+    observation: emulated-observation-not-hardware
+  reader:
+    name: Claude Fable
+    version: '5.1'
+  evidence:
+  - DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+  - evidence/CR2.md
+  - evidence/CR4.md
 revision_range:
 - 3
 - 8
 revisions:
   '3':
+    started: '2026-09-23'
     spec_sha256: b93d7ef0605d0f8ca20bb859fdc67ef5f86e25fbed622638728122ff653dd11f
     drafts: {}
     requirement_change: null
@@ -19,6 +99,7 @@ revisions:
     - e1000-l02b-20260923-01
     - e1000-l02c-20260924-01
   '4':
+    started: '2026-09-24'
     spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
     drafts:
       verify-r4-L02c: e3b80f84b36e6514eff39639b575047d9153cca5badcbd6c26065006da6593be
@@ -49,6 +130,7 @@ revisions:
     run_ids: &cr2_19
     - e1000-l02c-20260924-01
   '5':
+    started: '2026-09-25'
     spec_sha256: c587f41d71a55b18c25ba0c88ce6f60fb2d64ce4a6a0416566e194e6eae5d01b
     drafts:
       verify-r5-round1: a155fa36683bb1db45c34fe9f00866dfd023d4f2691817ff59afc4b6f42565f1
@@ -64,6 +146,7 @@ revisions:
     run_ids: &cr2_51
     - e1000-l02s-20260925-01
   '6':
+    started: '2026-09-25'
     spec_sha256: f78ea07a021b567a9399e0ea8a2979f3919dedd5adc844f04de34122e9a745b2
     drafts:
       verify-r6-round1: b3ec9b22e6166533b4f4c64c8cde0eda1548034df58a76852ecb5b7d4a2c6e59
@@ -89,6 +172,7 @@ revisions:
     run_ids: &cr2_59
     - e1000-l02f3-20260925-01
   '7':
+    started: '2026-09-26'
     spec_sha256: ae18af9995e996d386dd1b8149e9bacc0bbe0ab25a121a8c17033ccf585f0f14
     drafts:
       verify-r7-round1: 2f7e18011a934e1e74d5b556312bc14b787e167b01ae763bfef6c42557fa35b7
@@ -125,6 +209,7 @@ revisions:
     run_ids: &cr2_68
     - e1000-sr7-20260926-01
   '8':
+    started: '2026-09-26'
     spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
     drafts:
       verify-r8-round1: a7bfd78fa931d26ee1e5ad99c9688d4ae5beb44818669fbb238df1ecf081212e
@@ -2982,6 +3067,7 @@ entries:
     state: rejected
     reason: No driver change required by the finding.
 - id: A-RR-7
+  execution: carry
   kind: item
   basis: cf2-review
   verdict: Serialize the carrier decision shared by link work and watchdog.
@@ -3002,6 +3088,7 @@ entries:
     state: queued
     destination: Next implementer brief; no standalone round.
 - id: CF-2-RLEC-comment
+  execution: carry
   kind: item
   basis: cf2-review
   verdict: Remove the stale RLEC overlaps these (spec gap) comment.
@@ -3023,6 +3110,9 @@ entries:
     state: queued
     destination: Next implementer brief; no standalone round.
 - id: CF-2-AR-10
+  impact:
+    claims: []
+    changes_status: false
   kind: item
   basis: cf2-review
   verdict: Add the observation that STATUS.FD reads 1 with LU clear.
@@ -3177,6 +3267,7 @@ entries:
     state: applied
     revision: 7
 - id: verify-r3-A-s1
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3210,6 +3301,7 @@ entries:
     record and public evidence.
   reading_id: verify-r3-A
 - id: verify-r3-A-s3
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3230,6 +3322,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s4
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3250,6 +3343,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s5
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3270,6 +3364,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s6
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3290,6 +3385,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s7
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3310,6 +3406,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s9
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3330,6 +3427,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s10
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3350,6 +3448,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-s12
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3370,6 +3469,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-A-remainder
+  sequence: 1
   kind: verification
   basis: verify-r3-A
   verdict: 551 PASS, 3 FAIL, 1 UNVERIFIABLE
@@ -3392,6 +3492,7 @@ entries:
   scope: *cr2_24
   reading_id: verify-r3-A
 - id: verify-r3-B-s1
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3412,6 +3513,7 @@ entries:
     Individual B record unavailable locally.
   reading_id: verify-r3-B
 - id: verify-r3-B-s3
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3431,6 +3533,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s4
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3450,6 +3553,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s5
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3469,6 +3573,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s6
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3488,6 +3593,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s7
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3507,6 +3613,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s9
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3526,6 +3633,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s10
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3545,6 +3653,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-s12
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3564,6 +3673,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-B-remainder
+  sequence: 2
   kind: verification
   basis: verify-r3-B
   verdict: 544 PASS, 5 FAIL, 5 UNVERIFIABLE
@@ -3583,6 +3693,7 @@ entries:
   scope: *cr2_27
   reading_id: verify-r3-B
 - id: verify-r3-adjudication
+  sequence: 3
   kind: verification
   basis: verify-r3-adjudication
   verdict: 'FAIL: CTRL.FD initial value; third reader confirmed B on the rendered page.'
@@ -3604,6 +3715,7 @@ entries:
     adjudication described in L02c; no separate record hash recovered.
   reading_id: verify-r3-adjudication
 - id: verify-r3-transfer-s1
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3625,6 +3737,7 @@ entries:
     recovered. Uses the landed revision-3 identity confirmed by L02c.
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s3
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3644,6 +3757,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s4
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3663,6 +3777,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s5
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3682,6 +3797,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s6
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3701,6 +3817,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s7
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3720,6 +3837,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s9
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3739,6 +3857,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s10
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3758,6 +3877,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-s12
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3777,6 +3897,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-transfer-remainder
+  sequence: 4
   kind: verification
   basis: verify-r3-transfer
   verdict: 'PASS: leak and structure gate; every databook ordering checked.'
@@ -3796,6 +3917,7 @@ entries:
   scope: *cr2_40
   reading_id: verify-r3-transfer
 - id: verify-r3-acceptance-s1
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3816,6 +3938,7 @@ entries:
     every section read. Sections conservatively enclose the whole revision.
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s3
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3835,6 +3958,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s4
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3854,6 +3978,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s5
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3873,6 +3998,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s6
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3892,6 +4018,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s7
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3911,6 +4038,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s9
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3930,6 +4058,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s10
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3949,6 +4078,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-s12
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3968,6 +4098,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r3-acceptance-remainder
+  sequence: 5
   kind: verification
   basis: verify-r3-acceptance
   verdict: 0 BLOCKING, 3 NON-BLOCKING, 5 NOTE; 5 of 5 earlier findings resolved.
@@ -3987,6 +4118,7 @@ entries:
   scope: *cr2_41
   reading_id: verify-r3-acceptance
 - id: verify-r4-L02c
+  sequence: 6
   kind: verification
   basis: verify-r4-L02c
   verdict: 50 PASS, 1 FAIL; one-line citation fix followed, checked by diff only.
@@ -4015,6 +4147,7 @@ entries:
     locations. Verdict totals cover the reading unit, not every sentence in these sections.
   reading_id: verify-r4-L02c
 - id: verify-r4-AF1-s4.1
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4043,6 +4176,7 @@ entries:
     AF-1 key comparison.
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s4.7
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4063,6 +4197,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s5.1
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4083,6 +4218,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s5.2
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4103,6 +4239,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s5.4
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4123,6 +4260,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s5.9
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4143,6 +4281,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s10
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4162,6 +4301,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s10.3
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4182,6 +4322,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s12.1
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4202,6 +4343,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-s12.2
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4222,6 +4364,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r4-AF1-remainder
+  sequence: 7
   kind: verification
   basis: verify-r4-AF1
   verdict: 68 PASS, 1 FAIL; form disagreement applied in revision 7.
@@ -4248,6 +4391,7 @@ entries:
   scope: *cr2_49
   reading_id: verify-r4-AF1
 - id: verify-r5-round1
+  sequence: 8
   kind: verification
   basis: verify-r5-round1
   verdict: 11 PASS, 2 FAIL, 2 GAP
@@ -4271,6 +4415,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r5-round1
 - id: verify-r5-round2-s4.8
+  sequence: 9
   kind: verification
   basis: verify-r5-round2
   verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
@@ -4295,6 +4440,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r5-round2
 - id: verify-r5-round2-s5.4
+  sequence: 9
   kind: verification
   basis: verify-r5-round2
   verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
@@ -4314,6 +4460,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r5-round2
 - id: verify-r5-round2-s9.2
+  sequence: 9
   kind: verification
   basis: verify-r5-round2
   verdict: 15 PASS, 0 FAIL, 0 GAP, 0 UNVERIFIABLE
@@ -4334,6 +4481,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r5-round2
 - id: verify-r6-round1
+  sequence: 10
   kind: verification
   basis: verify-r6-round1
   verdict: 42 PASS, 1 FAIL, 3 GAP, 2 UNVERIFIABLE
@@ -4358,6 +4506,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round1
 - id: verify-r6-round2
+  sequence: 11
   kind: verification
   basis: verify-r6-round2
   verdict: 39 PASS, 4 FAIL, 1 UNVERIFIABLE
@@ -4378,6 +4527,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round2
 - id: verify-r6-round3
+  sequence: 12
   kind: verification
   basis: verify-r6-round3
   verdict: 44 PASS, 2 FAIL, 1 UNVERIFIABLE
@@ -4398,6 +4548,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round3
 - id: verify-r6-round4-s1
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4421,6 +4572,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s4.1
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4440,6 +4592,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s4.7
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4459,6 +4612,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s5.2
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4478,6 +4632,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s5.3
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4498,6 +4653,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s5.4
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4517,6 +4673,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s12.1
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4536,6 +4693,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s12.3
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4556,6 +4714,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s12.5
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4576,6 +4735,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-round4-s12.6
+  sequence: 13
   kind: verification
   basis: verify-r6-round4
   verdict: 44 PASS, 0 FAIL, 0 GAP, 1 UNVERIFIABLE
@@ -4596,6 +4756,12 @@ entries:
   scope: *cr2_53
   reading_id: verify-r6-round4
 - id: verify-r6-SR7-s1
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4620,6 +4786,12 @@ entries:
     disagree, resolved in revision 7. Not two separate 83-verdict readings.
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s12.1
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4639,6 +4811,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s12.3
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4658,6 +4836,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s12.5
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4677,6 +4861,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s12.6
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4696,6 +4886,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s4.1
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4715,6 +4911,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s4.7
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4734,6 +4936,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s4.8
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4753,6 +4961,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s5.2
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4772,6 +4986,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s5.3
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4791,6 +5011,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s5.4
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4810,6 +5036,12 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r6-SR7-s9.2
+  sequence: 14
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -4829,6 +5061,7 @@ entries:
   scope: *cr2_71
   reading_id: verify-r6-SR7
 - id: verify-r7-round1
+  sequence: 15
   kind: verification
   basis: verify-r7-round1
   verdict: 52 PASS, 1 FAIL, 1 UNVERIFIABLE
@@ -4854,6 +5087,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round1
 - id: verify-r7-round2
+  sequence: 16
   kind: verification
   basis: verify-r7-round2
   verdict: 39 PASS, 3 FAIL
@@ -4874,6 +5108,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round2
 - id: verify-r7-round3
+  sequence: 17
   kind: verification
   basis: verify-r7-round3
   verdict: 50 PASS, 1 FAIL, 2 UNVERIFIABLE
@@ -4894,6 +5129,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round3
 - id: verify-r7-round4
+  sequence: 18
   kind: verification
   basis: verify-r7-round4
   verdict: 53 PASS, 1 FAIL, 1 UNVERIFIABLE
@@ -4914,6 +5150,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round4
 - id: verify-r7-round5
+  sequence: 19
   kind: verification
   basis: verify-r7-round5
   verdict: 59 PASS, 1 FAIL
@@ -4934,6 +5171,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round5
 - id: verify-r7-round6-s1
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -4957,6 +5195,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r7-round6-s4.7
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -4976,6 +5215,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r7-round6-s5.2
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -4995,6 +5235,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r7-round6-s10.3
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -5014,6 +5255,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r7-round6-s12.1
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -5033,6 +5275,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r7-round6-remainder
+  sequence: 20
   kind: verification
   basis: verify-r7-round6
   verdict: 59 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -5060,6 +5303,7 @@ entries:
   scope: *cr2_53
   reading_id: verify-r7-round6
 - id: verify-r8-round1
+  sequence: 21
   kind: verification
   basis: verify-r8-round1
   verdict: 50 PASS, 3 FAIL, 1 GAP
@@ -5083,6 +5327,12 @@ entries:
   scope: *cr2_53
   reading_id: verify-r8-round1
 - id: verify-r8-round2
+  sequence: 22
+  assessment:
+    accuracy_failures: 0
+    r_items: []
+    evidence:
+    - evidence/SR-8.md
   kind: verification
   basis: verify-r8-round2
   verdict: 68 PASS, 0 FAIL, 1 UNVERIFIABLE

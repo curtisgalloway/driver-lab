@@ -12,8 +12,8 @@ behind a verdict. An **item** is a finding with a recorded disposition.
 A **status index** keeps those verdicts and items together for a campaign.
 
 CR2 extends the CR1 format with verification history and linked revision and
-candidate records. CR3 adds the registry and read-only freshness sweep described
-below; stopping-rule evaluation and the execution queue remain later milestones. A clean index
+candidate records. CR3 adds the registry and read-only freshness sweep; CR4 adds
+the scope declaration, stopping-rule evaluation and guarded queue below. A clean index
 check does not establish that a campaign is sufficient for scope.
 
 The claim map and status index live in a campaign directory. Both have `version: 1` and the same
@@ -61,6 +61,7 @@ not silently disappear.
 Top-level fields are `version`, `campaign`, `revision_range` (inclusive first and
 last landed revision numbers), `revisions` (headers keyed by string revision
 number), `bases` (a mapping from basis ID to identity record), and `entries` (a list).
+The optional `scope` block is required for a sufficient-for-scope report (below).
 Every revision in the declared range must have a header and accuracy reading.
 Basis records are shared to avoid
 repeating long hashes; an entry's `basis` refers to exactly one record. Once cited,
@@ -107,14 +108,15 @@ The initial rules are `isolated-defect-specific-A6-2026-09-25`,
 `C6-item-classification-2026-09-26`. `A1-as-written` and
 `A1-amended-2026-09-26` name the reading policies for CR2. Rules are identities:
 verdicts under different rules must not be compared without explicitly noting the
-policy change. CR4 will implement the comparison guard.
+policy change. Nonempty new rule identities are valid metadata; the sweep flags
+entries differing from the scope's selected rules and excludes them from acceptance.
 
 | Kind | Additional required fields and verdicts |
 | --- | --- |
 | `qualification` | `claim`, `validated_harness_sha256`; verdict qualified, shortfall, unqualified or insensitive. A shortfall also has `shortfall: {reason, reopen}`. The validated hash is the latest harness to which the cited diff/requalification chain carries the original qualification; the basis retains the original run harness |
 | `result` | `claim`, `round`, `qualification` (entry ID), `qualified_evidence` (boolean); verdict PASS, FAIL or ERROR. Basis requires candidate and harness hashes. Q18's PASS has qualified_evidence: false |
 | `observation` | `sections` (nonempty spec section list), `evidence_class: emulated`; verdict is a concise observation within the named runs, never a hardware conclusion |
-| `item` | `class` R/E/W, `source` integer 1/2/3, `target`, `disposition`; optional `aliases` for the same finding under another evidence key |
+| `item` | `class` is a nonempty string (R/E/W known; unknown treated as R), `source` integer 1/2/3, `target`, `disposition`; optional `aliases` for the same finding under another evidence key, `impact`, `execution`, `action` |
 | `verification` | `reading_id`, `text`, `sections`, `evidence_classes`, `verifier`, `round`, `independence`, `purpose`, `covers_revisions`, `scope`; verdict is the historical reading's summary, including unresolved or subsequently corrected findings |
 | `candidate_round` | `round`, `applied_items`, `verification`, `results`, `scope`; verdict is the historical acceptance summary, not another qualification |
 
@@ -142,8 +144,8 @@ itself is not a numbered spec section.
 
 For a verification entry:
 
-- Only the common optional fields `decision` and `cost` are allowed. `aliases`
-  and `shortfall` are not verification fields.
+- Optional fields are `decision`, `cost`, `sequence` and `assessment` (CR4, below).
+  `aliases` and `shortfall` are not verification fields.
 - `text` is `landed` or a draft ID in its basis revision's header. The basis hash
   must match exactly. A failed draft never inherits the landed hash. Draft entries
   stay superseded; a corrected sequential reading links them through `supersedes`.
@@ -364,6 +366,121 @@ and declared dependencies; null dependencies widen to the reading unit. Candidat
 results remain true of the emulator. Conflict locators are reported for the
 operator to record; the sweep never edits the spec or invents hardware evidence.
 
+## Stopping report and queue (CR4)
+
+**Terms:** a reading lineage is one reader's sequential fix passes, counted once
+for independence; a batch is up to three proposed units of work, not an execution.
+See the [glossary](../../GLOSSARY.md).
+
+`scope` contains these required fields:
+
+| Field | Meaning |
+| --- | --- |
+| `claims` | Nonempty list of claim IDs in this campaign's scope |
+| `accepted_classes` | Mapping with exactly those claim IDs, each to a nonempty list of accepted evidence classes |
+| `target` | Nonempty description of the device/environment and pin boundary |
+| `rules` | Selected rule identity for each of qualification, result, verification and observation |
+| `reader` | `{name, version}` of the last adopted reading role; CR5 will supply the desired role through its manifest |
+| `evidence` | Public links supporting the scope declaration |
+
+Run results currently carry emulated evidence only. A scope omitting `emulated`
+cannot use their PASS to satisfy S2. A mandatory claim needs a current qualified
+result linked to its current qualification, or a current shortfall approved by
+the user. Stale shortfalls retain their reason/approval but do not count as current.
+
+Revision headers may record `started` (ISO date). Revisions started through
+2026-09-26 are historical for the cap; later revisions, or unknown dates, are
+subject to it. Counts deduplicate section slices and count accuracy reading units,
+including independent follow-up readings; numeric rounds provide a lower bound
+when earlier attempts are missing. At round three, further reading/revision units
+are held for the user; more than three is also a stopping-rule violation. The
+orchestrator must also enforce C6's deletion/narrowing-only fixes after round two;
+this metadata checker does not inspect text edits.
+
+Verification entries may add `sequence` (positive integer, unique per reading,
+identical across its slices) to order readings without guessing from entry order
+or parsing dates out of IDs. `assessment` is a mapping containing
+`accuracy_failures` (nonnegative integer), `r_items` (unique R-item IDs produced
+by that reading), and `evidence` (public links for that classification).
+These are explicit metadata assessments, never inferred from verdict prose.
+Unknown current accuracy classifications block S3. S5 uses the latest independent
+accuracy reading in sequence; any R it produced blocks S5 even after that R is
+resolved. A missing sequence or assessment cannot establish S5.
+
+S4 checks baseline requirements and every requirement-changing revision against
+current landed accuracy coverage. The baseline uses the scope claims' citations;
+later changes use header sections. A parent section covers a child, not conversely.
+Readings must explicitly include each covered revision. Gates, adjudications,
+drafts and stale slices do not count; all sequential passes count as at most one
+lineage alongside independently recorded readers. Two lineages are required for
+each requirement text. Enclosing section metadata is conservative: a reviewer
+must confirm the reading actually covers those requirements before recording it.
+
+The report does not compare verdicts across rules. `policy_changes` lists each
+entry differing from the selected scope rule with `compared: false`; current
+entries under a different rule prevent sufficiency. Historical policy identities
+remain unchanged. `evaluation_policy` separately names C5's amended A1 standard,
+which evaluates reading counts without rewriting or equating historical verdicts.
+
+Items accept unknown nonempty classes; `effective_class` is R until resolved.
+Optional `impact: {claims, changes_status}` declares whether an E item changes
+a claim in scope. Missing impact on a spec or review E item is conservatively unresolved;
+review items block S3 and report `impact unrecorded` until their impact is recorded.
+explicitly no affected claims or no status change does not reopen the campaign.
+Records findings are separate from spec items. Candidate R items do not assert
+a spec error; `execution: carry` preserves the next-brief disposition without
+starting an implementation round. W items never start a revision, regardless of
+other metadata. A spec R/E shortfall requires explicit claim impact; any item
+shortfall on a mandatory claim requires its own user decision.
+
+Optional item `action` is one of requirement-change, implementation, hardware-run,
+recall, adopt-source, accept-shortfall or outward-report. All are tier 2 and can
+never be downgraded through caller-supplied tier data. Their own `decision` must
+name `who: user`, a date and a resolvable public evidence link. No decision on
+another item or a shortfall authorizes them. Unknown/malformed metadata fails
+validation before batching. This is a record guard, not proof of the human's identity.
+
+The queue contains stable campaign/kind/subject IDs, entry IDs, reasons, tiers,
+states, and the reader model for tier-1 work. There is one requalification per
+claim, one acceptance-set rerun per campaign, and one re-verification of affected
+accuracy history against the current text. Contested hardware/emulator facts join
+re-verification; rerunning an unchanged emulator cannot resolve that conflict.
+Historical gate slices remain in
+the freshness report but do not create work. Current readings that explicitly
+cover an old reading's revisions and sections/dependencies discharge that stale
+history from the queue without erasing it. Missing dependencies widen to that
+reading's whole recorded section set. S4 still demands two independent lineages.
+
+Unmet S4/S5 queues a second reading first, with its coverage gaps. A changed reader
+role queues exactly one comparison reading for each campaign invocation, including
+sufficient campaigns. The default desired role is the constant Claude Fable 5.1,
+matching the latest recorded role; CR5 replaces this input with the manifest.
+Changing an unrelated registry model identity does not change that role.
+After a reviewed comparison, record its verdicts and update the adopted `scope.reader`;
+merely changing the constant does neither. Repeated sweeps have no side effects.
+
+Priority is second reading, comparison reading, re-verification, requalification
+by claim ID, acceptance rerun, then other tier-1 work; authorized tier-2 entries
+follow. `batch` is at most three IDs; `waiting` contains remaining ready IDs.
+Unapproved tier-2 entries say `awaiting decision` and never enter either list.
+The item's original disposition is preserved in `open_items`, not in queue units.
+Missing scope holds the entire batch. Resweep
+after every checkpoint; a batch is a proposal against this snapshot, not a lease
+to ignore new findings or to adopt new source pins. No unit is executed here.
+
+`stopping` adds `sufficient`, S1–S5 conditions, all blockers, coverage, latest
+independent reading, cap findings, policy differences, open items, shortfalls,
+historical stale IDs, reopening IDs, queue, batch and waiting IDs to sweep JSON.
+The sweep's output is **JSON version 2**: `ok` and the exit code now describe
+stopping sufficiency and ready work, changing CR3's version-1 contract. `fresh`
+preserves CR3's former `ok`: true only when there are no stale/contested entries,
+stale reference controls or unavailable identities. `fresh: false` can coexist
+with `ok: true` when sufficient current coverage discharges stale history.
+The three metadata input files remain version 1.
+Exit 0 means sufficient with no ready work; exit 1 means blockers or ready work;
+exit 3 still means unavailable required inputs. Historical stale records alone
+do not prevent a sufficient campaign once current coverage replaces their use.
+
 ### Adapter and report
 
 ```bash
@@ -393,8 +510,8 @@ control runs separately because CR1 did not make them independent index entries.
 The sweep supports `--registry` to select deployment-owned metadata. Blocked or
 unknown source observations are explicit incomplete-precondition findings, not
 identity changes; they cannot prove freshness. Exit 3 takes precedence over
-stale findings when any source is unavailable. Otherwise exit 1 means stale or
-contested verdicts/controls (or invalid metadata), and exit 0 means no findings.
+stale findings when any source is unavailable. Otherwise exit 1 means stopping
+blockers, ready work or invalid metadata; exit 0 means sufficient with no ready work.
 Both commands use exit 2 for usage errors and support `--skill`. No real sweep
 or private adapter invocation is added to public CI; their synthetic tests run
 with the existing campaign-review discovery command.

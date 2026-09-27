@@ -52,6 +52,11 @@ The last one needs a public-skills checkout; CI pins the scanner to one of its c
 
 ## Rules the work runs under
 
+- **Continuous review**: at the start of each orchestrator session, refresh applicable
+  source identities and run `skills/campaign-review/scripts/sweep.py` on the campaign.
+  Follow its stopping report and guarded queue. A batch contains at most three tier-1
+  units, each ending in a reviewed checkpoint commit; tier-2 work requires its own
+  recorded user decision. Pull requests still open only on the user's explicit "push".
 - **One unit per session**: implement, verify, review, then a checkpoint commit named
   `driver-porting: <unit> — <title>`; stop for inspection. Review happens **before** the
   checkpoint and must leave an artifact (a run directory or reviewer report). In orchestrated

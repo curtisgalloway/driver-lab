@@ -137,6 +137,22 @@ def matrix():
             for e in result["entries"]
             if e["previous_state"] == "current" and e["state"] == "contested"
         )
+        affected = set(expected + contested)
+        units = [u for u in result["stopping"]["queue"] if affected & set(u["entries"])]
+        expected_kinds = {
+            "spec": ["acceptance-set-rerun", "re-verification", "requalification"],
+            "document": ["re-verification"],
+            "kernel": ["re-verification"],
+            "harness": ["requalification"],
+            "emulator": ["acceptance-set-rerun", "requalification"],
+            "candidate": ["acceptance-set-rerun"],
+            "hardware": ["re-verification", "requalification"],
+            "fixture": [],
+            "model": [],
+        }[name]
+        kinds = sorted({u["kind"] for u in units})
+        covered = set(e for u in units for e in u["entries"])
+        queue_ok = kinds == expected_kinds and affected <= covered
         rows.append(
             dict(
                 row=name,
@@ -144,7 +160,15 @@ def matrix():
                 stale=actual_stale,
                 expected_contested=contested,
                 contested=actual_contested,
-                ok=(actual_stale == sorted(expected) and actual_contested == contested),
+                expected_unit_kinds=expected_kinds,
+                unit_kinds=kinds,
+                units=units,
+                queue_ok=queue_ok,
+                ok=(
+                    actual_stale == sorted(expected)
+                    and actual_contested == contested
+                    and queue_ok
+                ),
             )
         )
     return rows
@@ -164,6 +188,7 @@ class SweepTests(unittest.TestCase):
             with self.subTest(row=row["row"]):
                 self.assertEqual(row["stale"], row["expected_stale"])
                 self.assertEqual(row["contested"], row["expected_contested"])
+                self.assertTrue(row["queue_ok"], row)
 
     def test_baseline_and_no_source_access_or_mutation(self):
         before = copy.deepcopy((self.claims, self.status, self.registry))

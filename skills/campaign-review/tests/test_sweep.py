@@ -14,6 +14,9 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "skills/campaign-review/scripts"
+# The e1000 index as CR5 left it: tests pin its report, so later index
+# entries (CR6 onward) do not change what the mechanism tests expect.
+BASELINE = ROOT / "skills/campaign-review/tests/fixtures/e1000-status-cr5.yaml"
 sys.path.insert(0, str(SCRIPTS))
 import index_check as check  # pylint: disable=wrong-import-position
 import pinned_file_adapter as adapter  # pylint: disable=wrong-import-position
@@ -25,7 +28,7 @@ import deployment  # pylint: disable=wrong-import-position
 def inputs():
     """Copy e1000 and align active qualification context to isolate each mutation."""
     claims = check.read_yaml(ROOT / "evals/e1000/claims.yaml")
-    status = check.read_yaml(ROOT / "evals/e1000/status.yaml")
+    status = check.read_yaml(BASELINE)
     registry = check.read_yaml(ROOT / "evals/e1000/sources.yaml")
     for entry in status["entries"]:
         if entry["kind"] == "qualification":
@@ -210,7 +213,7 @@ class SweepTests(unittest.TestCase):
         self.assertEqual(len(result["entries"]), 83)
 
     def test_real_index(self):
-        self.status = check.read_yaml(ROOT / "evals/e1000/status.yaml")
+        self.status = check.read_yaml(BASELINE)
         result = self.run_sweep()
         self.assertEqual(
             newly_affected(result),

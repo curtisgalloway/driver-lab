@@ -1065,53 +1065,6 @@ bases:
     toolchain: null
     model: *cr2_10
     missing: *cr2_8
-  verify-r8-cr6a:
-    spec_revision: 8
-    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
-    sections_read: *cr2_16
-    dependencies: &cr6_1
-    - '4.1'
-    - '4.3'
-    - '4.4'
-    - '4.5'
-    - '5.3'
-    - '5.4'
-    - '5.7'
-    - '5.10'
-    - '11'
-    source_pins: *cr2_3
-    harness_sha256: null
-    guest_init_sha256: null
-    emulator: null
-    guest: null
-    reference_module_sha256: null
-    candidate_module_sha256: null
-    toolchain: null
-    model: *cr2_10
-    missing: &cr6_2
-    - The manual was read as its text rendering only (no PDF); micro-sign rendering is UNVERIFIABLE.
-  verify-r8-cr6a-adjudication:
-    spec_revision: 8
-    spec_sha256: e0f17ffa443d50e6ca97c918cd23adedd71cbe1b92857d4aae4e4d693e6326d7
-    sections_read: &cr6_3
-    - '4.7'
-    - '5.5'
-    - '5.9'
-    dependencies:
-    - '1'
-    - '5.10'
-    - '10.3'
-    - '12.1'
-    source_pins: *cr2_3
-    harness_sha256: null
-    guest_init_sha256: null
-    emulator: null
-    guest: null
-    reference_module_sha256: null
-    candidate_module_sha256: null
-    toolchain: null
-    model: *cr2_4
-    missing: *cr6_2
   L02c-requirements:
     spec_revision: 4
     spec_sha256: 0490a888d35e7de279ca6e5b8aa43372325face25edd8ddc4ad2915f593f3472
@@ -3275,8 +3228,8 @@ entries:
   verdict: Requirement-changing revision 8 has sequential readings only.
   rule: C6-item-classification-2026-09-26
   status:
-    state: superseded
-    reason: Replaced by SR-8-independent-reading-CR6a after the CR6a reading.
+    state: current
+    reason: Disposition recorded from linked evidence; applied items retained for traceability.
     stale_since: null
   supersedes: []
   run_ids:
@@ -5403,117 +5356,6 @@ entries:
   covers_revisions: *cr2_88
   scope: *cr2_53
   reading_id: verify-r8-round2
-- id: verify-r8-cr6a
-  sequence: 23
-  assessment:
-    accuracy_failures: 1
-    r_items:
-    - CR6a-link-down-reading
-    evidence:
-    - evidence/CR6a.md
-  kind: verification
-  basis: verify-r8-cr6a
-  verdict: 60 PASS, 1 FAIL, 1 UNVERIFIABLE
-  rule: A1-as-written
-  status:
-    state: current
-    reason: Second independent reading of revision 8's changes and their declared dependencies; its FAIL
-      was adjudicated as an accuracy finding (R item).
-    stale_since: null
-  supersedes: []
-  run_ids: &cr6_4
-  - cr6-20260926-01
-  evidence: &cr6_5
-  - evidence/CR6a.md
-  text: landed
-  sections: *cr2_16
-  evidence_classes: *cr2_87
-  verifier: Fresh Claude Code subagent
-  round: '1'
-  independence: independent
-  purpose: accuracy
-  covers_revisions: *cr2_88
-  scope: Changed claims of revision 8 (ten hunks) and the declared dependencies, not a full-spec reading.
-  reading_id: verify-r8-cr6a
-  cost:
-    seconds: 527
-    tokens: 228623
-- id: verify-r8-cr6a-adjudication
-  sequence: 24
-  assessment:
-    accuracy_failures: 1
-    r_items:
-    - CR6a-link-down-reading
-    evidence:
-    - evidence/CR6a.md
-  kind: verification
-  basis: verify-r8-cr6a-adjudication
-  verdict: 'FAIL stands: section 4.7 gated-reading clause false under the rule; link-down reading unsupported.'
-  rule: A1-as-written
-  status:
-    state: current
-    reason: Adjudication of the one disagreement between verify-r8-round2 and verify-r8-cr6a.
-    stale_since: null
-  supersedes: []
-  run_ids: *cr6_4
-  evidence: *cr6_5
-  text: landed
-  sections: *cr6_3
-  evidence_classes:
-  - databook
-  - inference
-  verifier: Fresh Claude Code subagent
-  round: adjudication
-  independence: adjudication
-  purpose: accuracy
-  covers_revisions: *cr2_88
-  scope: Only the disputed derivation clause and the two related notes; not another full reading.
-  reading_id: verify-r8-cr6a-adjudication
-  cost:
-    seconds: 164
-    tokens: 120534
-- id: CR6a-link-down-reading
-  kind: item
-  basis: verify-r8-cr6a
-  verdict: Section 4.7's gated-reading clause is false under the rule; the link-down reading is unsupported
-    by premises 1-4.
-  rule: C6-item-classification-2026-09-26
-  status:
-    state: current
-    reason: Adjudicated finding of the CR6a reading; class R because R or E is in doubt.
-    stale_since: null
-  supersedes: []
-  run_ids: *cr6_4
-  evidence: *cr6_5
-  class: R
-  source: 3
-  target: spec
-  disposition:
-    state: queued
-    destination: User revision decision (evidence/CR6a.md options a, b, c), deciding SR-8-2 (widened to every
-      link-down interval) with it; the trigger for CR8.
-- id: SR-8-independent-reading-CR6a
-  kind: item
-  basis: verify-r8-cr6a
-  verdict: Revision 8's changes have a second independent reading lineage (CR6a); it produced one R item.
-  rule: C6-item-classification-2026-09-26
-  status:
-    state: current
-    reason: Resolved by the CR6a reading named in the original disposition.
-    stale_since: null
-  supersedes:
-  - SR-8-independent-reading
-  run_ids: *cr6_4
-  evidence: *cr6_5
-  class: E
-  source: 3
-  target: review
-  impact:
-    claims: []
-    changes_status: false
-  disposition:
-    state: applied
-    revision: 8
 - id: L02c-requirements
   kind: item
   basis: L02c-requirements

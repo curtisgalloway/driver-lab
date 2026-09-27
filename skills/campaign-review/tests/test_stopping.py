@@ -3,10 +3,9 @@
 """Stopping-rule, queue, policy and authorization regressions over real metadata."""
 
 import copy
-from pathlib import Path
 import unittest
 
-from test_sweep import check, inputs, source, sweep
+from test_sweep import BASELINE, check, inputs, source, sweep
 import stopping
 
 
@@ -57,9 +56,7 @@ class StoppingTests(unittest.TestCase):
         return entry(self.status, eid)
 
     def test_real_blockers_and_first_batch(self):
-        self.status = check.read_yaml(
-            Path(__file__).resolve().parents[3] / "evals/e1000/status.yaml"
-        )
+        self.status = check.read_yaml(BASELINE)
         report = self.report()
         self.assertFalse(report["sufficient"])
         self.assertEqual(

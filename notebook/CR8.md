@@ -50,3 +50,14 @@ the plain-work cancel) and two races the draft still left: the link task could t
 carrier back on after `ndo_stop` turned it off, and a shared-line interrupt before the reset
 could read ICR inside R6's 1 µs. Both came from placing new text next to revision 8's old
 order without re-deriving the whole sequence; `ndo_open` now requests the IRQ after §5.7.
+
+## 2026-09-27T08:01-07:00 — round 1: the reader judged all four reason clauses over the wall
+Round 1 (Codex `gpt-6-astra`, 8.4 minutes): 365 verdicts, 17 FAIL, 1 GAP. It judged all four
+`[source-observed]` reason clauses to carry the source driver's reasoning, so under the user's
+decision each lost its reason and kept only what was observed. The substantive finds were in
+the new `ndo_stop`: a poll stalled past `napi_complete_done()` could come back during the next
+open's reset after the flag was cleared, and the transmit-timeout work, which needs RTNL, cannot
+be canceled synchronously from `ndo_stop`, which holds it. Both fixed by where things happen,
+not by new machinery: the flag is cleared just before I2, and remove() cancels the timeout work
+after `unregister_netdev()`. One FAIL was half wrong: §14.4 states the RDTR sentence twice,
+once for every part and once for two other families; X9 now says so.

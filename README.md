@@ -8,8 +8,9 @@ to copy from:
 - board experts that supply the per-SoC facts both need.
 
 **Scope:** this project's goal is generating hardware specs and measuring and maintaining their
-quality. Writing a driver for a particular target OS is not; turning specs into Fuchsia drivers
-belongs to a separate bring-up project that consumes them. A driver written from a spec, such as
+quality. Writing a driver for a particular target OS is not, and neither is bringing up a
+particular board: a separate bring-up project installs these skills and uses them there to
+write specs for its boards and Fuchsia drivers from them. A driver written from a spec, such as
 the clean-room Linux candidates in the e1000 and ENC28J60 campaigns, is used here as one quality
 signal for the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality).
 

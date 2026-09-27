@@ -27,11 +27,15 @@ candidates in L01 and L02, run against the upstream reference driver on the same
 whether the spec was sufficient to implement from. A driver for another OS, such as a Fuchsia
 driver from bringup-kit, may later be added as a further signal; it is not a milestone here.
 
-In practice: plan work here around a spec and its quality signals (verification readings, blind
-requirement lists, qualified checks, same-OS differential candidates, continuous review). Hand a
-finished spec to the consuming project rather than planning its target-OS implementation here.
+In practice: this repository holds the skills, the method, and the reference campaigns
+(ENC28J60, e1000) that measure how good the specs they produce are. Work here improves those
+skills and their quality signals (verification readings, blind requirement lists, qualified
+checks, same-OS differential candidates, continuous review). Real bring-up work, including
+writing and checking the specs for a particular board such as a Raspberry Pi 5, happens in the
+consuming project, which installs these skills and runs them there; it is not planned here.
+What that work teaches about the skills comes back here as changes to them.
 `cleanroom-implementer` stays in this repository as the tool that produces candidate drivers
-for those signals and as the handoff contract for consumers.
+for the quality signals and as the handoff contract for consumers.
 
 ## Terms
 

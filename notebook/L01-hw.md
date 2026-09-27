@@ -104,9 +104,10 @@ written after a C3 exception; its first copy mismatched, so that copy was retain
 writer stopped before another verified transfer. The debug value in the original declaration
 was a mask passed to a bit-count parameter; its intended interrupt logging never enabled.
 
-The decisive C6 clue was in the capture: only switch control frames reached the DUT during
-reopen cycles, and they advertised a non-forwarding port. Peer ARP requests were visible
-on the other side. This supersedes the earlier interrupt-stall and poll-latency explanations
+The decisive C6 clue was in the capture: no test-peer ARP requests reached the DUT during
+reopen cycles, while switch control frames advertised a non-forwarding port. One unrelated
+VLAN-tagged ARP request arrived at 16:58:00.860793 PDT. The test peer's requests were visible
+only on the other side. This supersedes the earlier interrupt-stall and poll-latency explanations
 in this chapter and index. A separately declared verbosity-10 run logged active interrupts.
 The r3 deadline control preserved counters and logs after its timeout; the no-flood control
 failed even though removal succeeded. Results and acceptance live in the evidence file.

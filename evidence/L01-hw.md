@@ -194,7 +194,8 @@ number below is from the two p1 runs per driver and d1, whose artifacts are in t
 
 ### The candidate
 
-The same verdicts in three p1/r2 runs; the numbers are p1's two. Carrier 0.1 s after `up` (it never parks the chip in
+The same verdicts in three p1/r2 runs except p1-cand-2's C7 failure under the old rule;
+the numbers are p1's two. Carrier 0.1 s after `up` (it never parks the chip in
 power-save, so the PHY link survives a `down`); 5 interrupts during the open. Pings 1.0–1.25
 ms average in both directions from the first request. TCP 4.08–4.09 Mb/s peer to DUT and
 2.94 Mb/s DUT to peer over the 10 Mb/s half-duplex link, 1 MiB and 4 MiB intact each way by
@@ -278,8 +279,9 @@ remain separate evidence and are not proved by these two reference failures.
 
 ### Requirement-to-evidence table
 
-Areas follow the first unit's requirement ledger facets (124 critical and important rows,
-all `implemented` by source review B). Hardware evidence here is for the candidate unless
+Areas follow the first unit's 124 requirement-ledger rows. Source review B records
+118 implemented, one partial, and five out of scope; all 64 critical requirements are
+implemented. Hardware evidence here is for the candidate unless
 stated; "source-reviewed" means the first unit's reviews A and B and nothing on hardware.
 
 | Area | Status | Evidence |
@@ -373,6 +375,23 @@ swarm (no shared machinery or access control changed):
 The reviewer's verdict: p1's conclusions are supported by the artifacts as described; the
 r2 statements and two of the three caught controls rest on verdict lines until the
 artifacts are retrieved; R2, R3 and R7 needed correction before the checkpoint (done).
+
+#### L01c independent review
+
+An independent read-only Codex reviewer checked the L01c changes and run artifacts;
+the report is `review/codex-review-l01c.md` in the run store. The review supports every
+result and the C6 attribution. The orchestrator decided the four dispositions below.
+
+| Finding | Severity | Orchestrator disposition |
+| --- | --- | --- |
+| Repository validation incomplete in the implementer's sandbox | medium | Resolved: all eight checks passed outside the sandbox; output retained as `review/full-checks-orchestrator.txt`. Keep the two original cleanroom failures and their sandbox context as the reason for the rerun. |
+| Source review B incorrectly described all 124 requirements as implemented | low | Corrected to 118 implemented, one partial, and five out of scope, with all 64 critical requirements implemented. |
+| Notebook said only switch control frames reached the DUT | low | Narrowed: one unrelated VLAN-tagged ARP request arrived; none of the test peer's ARP requests did during the reopen cycles. |
+| Three-run candidate verdict sentence omitted the C7 exception | low | Added p1-cand-2's C7 failure under the old rule. |
+
+As the reviewer requested, the C6 inference caveat remains: the captures and reference
+close behavior support the attribution, but no controlled switch-configuration experiment
+established an exclusive cause.
 
 ### Limits
 
@@ -486,16 +505,20 @@ The attribution is an inference from the captures plus the reference's close beh
 not a controlled switch-configuration experiment. No switch setting was changed. It
 explains this failure immediately after reopening; it does not certify other reference behavior.
 
-### L01c validation limits
+### L01c validation
 
 The five new private harness regression tests pass. Repository checks pass for
 os-investigator (7), board-expert (42), ENC28J60 (105), and e1000 (70); the author manifest
 matches, the spec check passes with nine existing unverified-spec warnings, and the
-portability scan reports zero findings. The cleanroom suite has 59 passes and two failures
+portability scan reports zero findings. In the implementer's sandbox, the cleanroom suite
+had 59 passes and two failures
 in unchanged code: a temporary project resolves to an ancestor harness directory, moving
 the event log outside the test's expected directory; and a sandbox smoke test where this
-session cannot create a nested namespace. These remain visible validation limits for the
-orchestrator; no unrelated tooling was changed.
+session could not create a nested namespace. These observations prompted the orchestrator
+to rerun the full eight-check repository validation outside the sandbox on 2026-09-26.
+All eight checks passed, including all 61 cleanroom tests; the spec check retained its
+nine existing warnings. Output is saved as `review/full-checks-orchestrator.txt` in the
+run store. Repository validation is complete; no unrelated tooling was changed.
 
 ### R3 primary results
 

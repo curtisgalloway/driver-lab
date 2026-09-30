@@ -61,6 +61,31 @@ Options, not yet decided:
 
 Either way, the 7 clean specs are candidates to move into `hwspecs-docs` later.
 
+### Audit of the 12 facts (2026-09-30)
+
+Result: **none of the 12 needs GPL driver code as its only support.** Option A is mostly
+retagging. The line numbers are the `[source-observed]` tags in each spec on `main` at the time of
+the audit.
+
+| # | Spec, line | Fact | What it actually rests on | Proposed fix |
+|---|---|---|---|---|
+| 1 | rk3588s, 161 | SCMI shared memory at about `0x10F000` | Mainline `rk3588-base.dtsi`: `scmi_shmem: shmem@10f000`, `reg = <0x0 0x0010f000 0x0 0x100>`, `no-map` | Retag `[DT]`; state exactly `0x10F000`, 256 bytes, reserved; drop the TODO |
+| 2 | bcm2711, 131 | Stock stub sets `CNTFRQ_EL0` = 54 MHz and `SCR_EL3` = {NS, RW, HCE, SMD} | `armstub8.S` in raspberrypi/tools, **BSD-3-Clause**; confirmed at `439b619` (`OSC_FREQ`, `SCR_VAL`) | Permissive source: anchor as `[src: rpi-tools armstubs/armstub8.S:…]` (permissive tier) |
+| 3 | bcm2711, 134 | Firmware patches DTB pointer at `0xF8`, entry at `0xFC`; magic `0x5AFE570B` at `0xF0` | Same file (`stub_magic`, `dtb_ptr32`, `kernel_entry32`) | Same as 2 |
+| 4 | bcm2711, 139 | Spin-table release words at `0xD8`/`0xE0`/`0xE8`/`0xF0` | Already carries `[DT]` (`cpu-release-addr`) and `[standard]`; the stub (`spin_cpu0`–`3`) agrees | Drop the redundant `[source-observed]` |
+| 5 | bcm2711, 174 | Bring-up costs: UART0 none, EMMC2 clock plus voltage switching, GENET nothing | Mainline `bcm2711.dtsi`: EMMC2 has `clocks = <&clocks BCM2711_CLOCK_EMMC2>`, GENET has no `clocks`; the UART's 48 MHz default is a firmware setting | Retag `[DT]` plus `[doc]` (config.txt `init_uart_clock`; citation still to confirm) |
+| 6 | bcm2711, 210 | Stock stub disables SMC (`SCR_EL3.SMD`) | Same file as 2 | Same as 2 |
+| 7 | pixel10, 259 | Prebuilt DTB and DTBO file names | Repository file listing, not code | New tag for repository metadata (for example `[repo]`) |
+| 8 | pixel10, 289 | Prebuilt blobs are build outputs, not copied vendor blobs | Build definitions, entry counts, commit histories | `[repo]` as an `[inference]` premise |
+| 9 | pixel10, 307 | Kernel version string, per-board module lists | Version string in a binary; `init.insmod.*.cfg` config lists | `[repo]` |
+| 10 | pixel10, 345 | Production overlay fixups reference labels the upstream tree lacks | A decompiled DTBO | Retag `[DT]` |
+| 11 | tensor-g5, 211 | "Module file names are source-observed, never facts" | A policy note in frontmatter, not a fact | Reword to use the new `[repo]` tag |
+| 12 | tensor-g5, 485 | Production command line (earlycon, console, pKVM options) | The `chosen` node of the production DTBs | Retag `[DT]` |
+
+Open point: facts 2, 3 and 6 come from BSD code. Under the policy they belong in the permissive
+tier as anchored facts, not in a docs-only spec. Either `bcm2711` moves to `hwspecs-permissive`,
+or those three facts move to a separate permissive overlay.
+
 ## Tooling changes (driver-lab)
 
 | # | Change | Estimate |
@@ -107,10 +132,10 @@ most one README line pointing to the other repo.
 
 | Moves to `cleanroom-lab` | Stays in driver-lab |
 |---|---|
-| `cleanroom-spec`, `cleanroom-implementer` | `hardware-spec` (renamed from `anchored-peripheral-spec`) |
+| `cleanroom-spec`, `cleanroom-implementer` | `peripheral-spec` (renamed from `anchored-peripheral-spec`) |
 | `os-investigator`, renamed `cleanroom-investigator`, with `leak_scan.py` | `hardware-investigator` (new) |
 | The clean-room section of `spec-verifier` | `board-expert`, `board-spec-scaffold` |
-| The ENC28J60 and e1000 reconstruction evals (open decision) | `spec-verifier` (board and hardware specs), `reference-driver-review`, `campaign-review` |
+| The ENC28J60 and e1000 reconstruction evals (open decision) | `spec-verifier` (board and peripheral specs), `reference-driver-review`, `campaign-review` |
 | The clean-room design documents (`RECONSTRUCTION.md`, `QEMU-DIFFERENTIAL.md`, and the clean-room parts of `DESIGN.md` and `VALIDATION-*.md`) | |
 
 **Dependency direction:** `cleanroom-lab` depends on driver-lab, and driver-lab never depends on
@@ -129,15 +154,14 @@ line references, so the block belongs in the repo that needs it.
 | Today | New name | Status |
 |---|---|---|
 | (new) anchored investigator | `hardware-investigator` | Decided |
-| `anchored-peripheral-spec` | `hardware-spec` | Proposed |
+| `anchored-peripheral-spec` | `peripheral-spec` | Decided |
 | `os-investigator` | `cleanroom-investigator` | Proposed |
-| "anchored spec" (the term in docs) | "hardware spec" | Proposed; see collision below |
+| "anchored spec" (the term in docs) | "peripheral spec" | Decided |
 | `anchor_check.py`, `[src:]` anchors, "anchor grammar" | Unchanged | These describe the citation mechanism, not the skill |
 
-**Collision to settle:** "board spec" already means the frontmatter-and-facts specs `board-expert`
-reads. "Hardware spec" and "board spec" read as near-synonyms. Either keep them distinct in the
-glossary (a board spec is the map, a hardware spec is the per-peripheral implementation spec), or
-pick a different noun such as "peripheral spec".
+**Naming rule:** use "peripheral" or "board" where one of them is the precise word; use
+"hardware" only where neither is clearer (for example `hardware-investigator`, which answers
+board and peripheral questions alike).
 
 ### Estimate
 
@@ -149,7 +173,7 @@ pick a different noun such as "peripheral spec".
 | Split `spec-verifier` | 2 h |
 | Move evals and design documents; fix links | 4 h |
 | Marketplace entries in both repos and the public-skills README | 1 h |
-| Write `hardware-investigator`; rename `anchored-peripheral-spec` to `hardware-spec` | 1 day |
+| Write `hardware-investigator`; rename `anchored-peripheral-spec` to `peripheral-spec` | 1 day |
 
 About 3 focused days in total.
 
@@ -158,8 +182,6 @@ About 3 focused days in total.
 - [ ] Name for the clean-room repo: `cleanroom-lab`, or something else.
 - [ ] Publish `cleanroom-lab` publicly from day one (skills only, which fits the policy)?
 - [ ] ENC28J60 and e1000 evals: move them to `cleanroom-lab`, or keep them in driver-lab as history.
-- [ ] Confirm `hardware-spec` as the new name for `anchored-peripheral-spec`, and settle the
-      "hardware spec" and "board spec" collision.
 - [ ] What to do with the 11 existing specs: option A, B or C.
 - [ ] License for `hwspecs-docs`: CC-BY-4.0 (the usual choice for documents) or Apache-2.0
       (to match your other repos).

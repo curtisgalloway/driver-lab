@@ -41,7 +41,7 @@ stated here; the skills point at this file instead of restating it.
   cache is the encumbered side of the clean-room wall; the spec is the clean side.
 - **Provenance tag** — the class of authority behind a fact. `[databook]`, `[standard]`, `[DT]`,
   `[source-observed]` and `[inference]` are `os-investigator`'s; specs add `[rtl]`, `[doc]`,
-  `[hardware]`, and `[press]`; testing against a device model adds `[emulated]`. What each class
+  `[repo]`, `[hardware]`, and `[press]`; testing against a device model adds `[emulated]`. What each class
   is trusted for, what that trust assumes, and how conflicts between classes are recorded is in
   `DESIGN.md`, "Evidence model". The classes, with what falls in each:
   - `[databook]` — the IP databook, TRM, or datasheet; cite the section.
@@ -62,14 +62,19 @@ stated here; the skills point at this file instead of restating it.
     specification page, a platform documentation site, a repository README, a commit message, a
     patch cover letter, or a maintainer's reply on a list. Always followed by a parenthetical naming
     which, so a store page, a platform guide, and a cover letter cannot be confused.
+  - `[repo]` — the shape of a published repository rather than its code: a file listing, a build
+    definition, a commit history, a module list in a configuration file, or a version string read
+    out of a shipped binary. Always followed by a parenthetical naming the repository (a
+    `resources.repos` `name` is enough) and what was read. Checkable by anyone who opens the
+    repository, so it needs no `TODO (verify on hardware)` of its own.
   - `[hardware]` — measured on a live board; say which board and how.
   - `[press]` — third-party press, teardowns, reviews, and marketing claims that appear nowhere in
     the vendor's own documentation (a modem part named only by reviewers, a GPU model, clock speeds
     from a launch article). Allowed in a fact bullet only with `TODO (verify on hardware)`, and
     freely in Orientation prose.
-  - `[source-observed]` — established only by code or by the shape of a tree: a driver's behavior,
-    a module file name, a kernel version string, a third-party prebuilt tree's file listing. Always
-    with `TODO (verify on hardware)`.
+  - `[source-observed]` — established only by reading code: a driver's behavior, an ordering, a
+    constant. The shape of a repository is `[repo]`, not this. Always with
+    `TODO (verify on hardware)`.
   - `[inference]` — concluded rather than read: no authority states it, and the fact follows from
     premises that do. "The driver programs this register before releasing reset" is
     `[source-observed]`; "the hardware requires this ordering" is `[inference]`. Always followed by
@@ -312,6 +317,8 @@ tag token inside it would be read as a tag.
   A bullet whose only authority is a model observation is a lead, not a fact.
 - `[doc]` is always followed by a parenthetical naming the page or document, so a store page, a
   platform guide, and a cover letter cannot be confused.
+- `[repo]` is always followed by a parenthetical naming the repository and what was read (a file
+  listing, a build definition, a commit history, a version string).
 - `[DT]` is always followed by a parenthetical naming the file the value came from (`bcm2712.dtsi`,
   and the node when it helps) and, when the file is a decompiled production DTB or a DTBO entry
   rather than a source `.dts`/`.dtsi`, where the blob came from. The origin may be the `name` of a
@@ -503,8 +510,8 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
   entry or on one of its `files`;
 - `access: internal`, or a `via:` naming a skill outside the public set, under a `public` root;
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
-  `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
-  `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
+  `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[repo]`,
+  `[DT]`, `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
   that it name the source; the checker tests only that it is there); or a tail clause whose only
   tag is `[emulated]` (tag names in the prose are ignored);
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans

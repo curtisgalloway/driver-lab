@@ -256,8 +256,9 @@ the per-board device-tree selection, and the companion parts.
   LGA"` and the same compatible pair. The prebuilt directory for these three boards is `muzel`,
   holding `lga-b0.dtb`, `lga-a0.dtb`, and one `dtbo.img`. `[DT]` (`lga-frankel.dts` and
   `lga-pixel-common.dtsi`, series v4), `[DT]` (`lga-b0.dtb` and `dtbo.img` entry 12,
-  laguna-kernel-prebuilts), `[doc]` (series v4 cover letter), `[source-observed]` (prebuilt
-  file names). `TODO (verify on hardware)`: which blob a shipped device selects.
+  laguna-kernel-prebuilts), `[doc]` (series v4 cover letter), `[repo]` (laguna-kernel-prebuilts,
+  file listing of the `muzel` directory). `TODO (verify on hardware)`: which blob a shipped device
+  selects.
 - **Device-tree selection by the bootloader.** The bootloader reads the SoC id and the board id,
   takes the SoC DTB from the vendor boot image, picks the overlay from the `dtbo` dt table whose
   `id`/`rev` match (the closest revision of the same product when there is no exact match, never
@@ -286,7 +287,7 @@ the per-board device-tree selection, and the companion parts.
   prebuilt repository **with the builds replaced by GrapheneOS kernels built from
   `kernel_pixel_6.6`** — so the kernel image here is a GrapheneOS build, not the stock vendor
   binary. The DTB and DTBO images beside it are outputs of that same build rather than copied-in
-  vendor blobs. `[inference]` (premises, all `[source-observed]` from the two repositories' trees,
+  vendor blobs. `[inference]` (premises, all `[repo]` from the two repositories' trees,
   build definitions and commit histories: the muzel and rango build definitions declare those blobs
   as named outputs and their declared entry counts match the shipped images exactly — 34 muzel
   overlays, 11 rango, 2 DTBs, and the shipped entry order matches the declared order entry for
@@ -304,8 +305,9 @@ the per-board device-tree selection, and the companion parts.
   Broadcom Wi-Fi driver, a Cirrus haptics driver, and a FocalTech touch driver on top of the
   common set; the Pro models load a Synaptics touch driver instead). `[DT]`
   (`lga-frankel.dts`, series v4), `[doc]` (series v4 cover letter; GrapheneOS source page),
-  `[source-observed]` (the prebuilt image's version string, the module lists, the source
-  repository's root listing and build definitions, and both repositories' commit histories).
+  `[repo]` (laguna-kernel-prebuilts and laguna-kernel-source: the prebuilt image's version
+  string, the module lists, the source repository's root listing and build definitions, and both
+  repositories' commit histories).
   `TODO (verify on hardware)`: the version string of a shipped build, which settles the kernel
   image; the inferred origin of the DTB and DTBO is settled instead by unpacking Google's published
   factory or full-OTA image for this device and comparing the DTBO image byte for byte.
@@ -342,8 +344,8 @@ the per-board device-tree selection, and the companion parts.
   when no DTBO is present in flash, four generations before this board, so it bears on this
   bootloader only weakly. `[doc]` (series v4 cover letter and the pixelscripts overlay source
   comment, for the `ufs0` alias; pixelscripts README and Makefile, for the overlay incompatibility
-  and the erase, and the README's Pixel 6 bootloader section for the DTBO-absent crash), `[inference]` (premise, `[source-observed]`: a production
-  overlay's fixups reference labels an upstream tree does not define. Derivation: an overlay whose
+  and the erase, and the README's Pixel 6 bootloader section for the DTBO-absent crash), `[inference]` (premise, `[DT]` (a decompiled production `dtbo.img` entry, laguna-kernel-prebuilts):
+  the overlay's fixups reference labels an upstream tree does not define. Derivation: an overlay whose
   target labels are absent cannot be resolved against that tree. Confidence: low on the outcome --
   it says the overlay cannot apply, not what the bootloader does about it).
   `TODO (verify on hardware)`: what a shipped bootloader does with a production `dtbo` table over

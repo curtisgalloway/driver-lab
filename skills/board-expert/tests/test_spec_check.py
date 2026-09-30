@@ -189,6 +189,13 @@ class TagRules(unittest.TestCase):
         self.assertIsNotNone(dt.search("`[DT]`"))
         self.assertIsNotNone(dt.search("`[DT]`, `[databook]` (DDI 0183)"))
 
+    def test_repo_needs_a_parenthetical(self):
+        repo = spec_check.UNNAMED_RES["repo"]
+        self.assertIsNone(repo.search("`[repo]` (laguna-kernel-prebuilts, file listing)"))
+        self.assertIsNotNone(repo.search("`[repo]`"))
+        self.assertIsNotNone(repo.search("`[repo]`, `[DT]` (node)"))
+        self.assertTrue(TagRules.ok(None, "- Fact. `[repo]` (a tree, its file listing)"))
+
     def test_inference_needs_a_parenthetical(self):
         inf = spec_check.UNNAMED_RES["inference"]
         self.assertIsNone(inf.search("`[inference]` (the driver clears it before reset; ordering follows)"))

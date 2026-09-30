@@ -40,7 +40,7 @@ What fails (exit 1):
     needs no tag
   * a tail clause with ``[source-observed]``, ``[press]``, ``[inference]``
     or ``[emulated]`` but no ``TODO (verify on hardware)``; a ``[doc]``,
-    ``[DT]``, ``[rtl]``, ``[inference]`` or ``[emulated]`` in the tail not
+    ``[repo]``, ``[DT]``, ``[rtl]``, ``[inference]`` or ``[emulated]`` in the tail not
     followed by a parenthetical naming its source (for ``[DT]``: the file,
     and its origin when it is a decompiled blob rather than a source
     ``.dts``; the origin may be the ``name`` of a ``resources.repos`` entry
@@ -121,7 +121,7 @@ FACT_SECTIONS = {
     "Programming model",
     "Known variants and quirks",
 }
-TAG_NAMES = "databook|standard|rtl|DT|source-observed|doc|hardware|press|inference|emulated"
+TAG_NAMES = "databook|standard|rtl|DT|source-observed|doc|repo|hardware|press|inference|emulated"
 TAG_CLASSES = tuple(TAG_NAMES.split("|"))
 TAG_RE = re.compile(rf"\[({TAG_NAMES})\]")
 TODO_RE = re.compile(r"TODO \(verify on hardware\)")
@@ -134,7 +134,7 @@ TAIL_RE = re.compile(
 )
 GAP_RE = re.compile(r"^- (?:\*\*[^*]+\*\*\s*)?`?TODO \(verify on hardware\)")
 # Tags that must be followed by a parenthetical naming their source.
-NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated")
+NAMED_TAGS = ("doc", "repo", "DT", "inference", "rtl", "emulated")
 # Tags whose fact must carry the closing TODO (verify on hardware) sentence.
 TODO_TAGS = ("source-observed", "press", "inference", "emulated")
 UNNAMED_RES = {
@@ -799,6 +799,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
             if unnamed_re.search(tail):
                 what = {
                     "doc": "its source",
+                    "repo": "the repository and what was read",
                     "DT": "the file (and its origin, for a blob)",
                     "inference": "its premises and derivation",
                     "rtl": "the design, its revision, and the module",

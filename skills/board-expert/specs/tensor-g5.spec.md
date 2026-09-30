@@ -208,7 +208,7 @@ resources:
         tagged with this repository's name. lga-b0.dtb sha256
         f238c200f7cf7ae14265047af6a62fdc54ab39f58a4042e844564e39cfbca030, lga-a0.dtb
         5745204e715f376c58650133848c8d472a64161d3a3dd99d942d28bd582e20a7 (identical copies under
-        rango). Module file names are source-observed, never facts.
+        rango). Module file names are `[repo]` observations, never hardware facts.
   series:
     - title: "Add Laguna/Tensor G5 SoC and Frankel, Blazer & Mustang boards (v4)"
       url: https://lore.kernel.org/all/20260918-contrib-pg-pixel10-initial-dts-v4-0-745eaca28b1a@linaro.org/
@@ -482,7 +482,8 @@ DXT-48-1536 GPU and a Samsung Exynos 5400 modem; treat those as unverified.
   laguna-kernel-prebuilts, `reserved-memory` and `chosen`), `[doc]` (series v4 cover letter and
   patch 3/4 message; Android boot image header page; Android DTB/DTBO partitions page;
   pixelscripts Makefile), `[standard]` (arm64 `booting.rst`, the entry contract a Linux Image
-  expects), `[inference]` (premises, `[source-observed]`, established by reading the production
+  expects), `[inference]` (premises, `[DT]` (`chosen` node, lga-b0.dtb, laguna-kernel-prebuilts),
+  established by reading the production
   command line in every reachable public blob and searching every overlay entry besides: it
   carries a protected-KVM module list and SMMU-under-KVM options,
   and carries no parameter that switches protected mode on. Derivation: these options indicate

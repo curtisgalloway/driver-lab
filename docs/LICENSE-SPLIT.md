@@ -82,9 +82,11 @@ the audit.
 | 11 | tensor-g5, 211 | "Module file names are source-observed, never facts" | A policy note in frontmatter, not a fact | Reword to use the new `[repo]` tag |
 | 12 | tensor-g5, 485 | Production command line (earlycon, console, pKVM options) | The `chosen` node of the production DTBs | Retag `[DT]` |
 
-Open point: facts 2, 3 and 6 come from BSD code. Under the policy they belong in the permissive
-tier as anchored facts, not in a docs-only spec. Either `bcm2711` moves to `hwspecs-permissive`,
-or those three facts move to a separate permissive overlay.
+**Decided:** facts 2, 3 and 6 come from BSD code, so they move to a separate permissive overlay
+for `bcm2711` in `hwspecs-permissive`, as anchored `[src:]` facts pinned to
+`raspberrypi/tools@439b619`. The rest of `bcm2711` stays docs-only. The overlay uses the existing
+overlay mechanism in `SPEC-FORMAT.md`; the new `license:`/`accepts:` root-marker fields (tooling
+change 5) are what keep it out of the docs root.
 
 ## Tooling changes (driver-lab)
 

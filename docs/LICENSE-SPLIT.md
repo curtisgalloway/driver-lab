@@ -99,8 +99,67 @@ Either way, the 7 clean specs are candidates to move into `hwspecs-docs` later.
 - **Datasheet publishers:** docs-only specs paraphrase and cite, with rationed quotes, which is
   the usual accepted practice.
 
+## Clean-room skills move to their own repo
+
+Everything clean-room moves out of driver-lab into a separate repo and plugin (working name
+`cleanroom-lab`). driver-lab becomes the open side and never mentions clean-room, apart from at
+most one README line pointing to the other repo.
+
+| Moves to `cleanroom-lab` | Stays in driver-lab |
+|---|---|
+| `cleanroom-spec`, `cleanroom-implementer` | `hardware-spec` (renamed from `anchored-peripheral-spec`) |
+| `os-investigator`, renamed `cleanroom-investigator`, with `leak_scan.py` | `hardware-investigator` (new) |
+| The clean-room section of `spec-verifier` | `board-expert`, `board-spec-scaffold` |
+| The ENC28J60 and e1000 reconstruction evals (open decision) | `spec-verifier` (board and hardware specs), `reference-driver-review`, `campaign-review` |
+| The clean-room design documents (`RECONSTRUCTION.md`, `QEMU-DIFFERENTIAL.md`, and the clean-room parts of `DESIGN.md` and `VALIDATION-*.md`) | |
+
+**Dependency direction:** `cleanroom-lab` depends on driver-lab, and driver-lab never depends on
+`cleanroom-lab`.
+
+**`board-expert` goes neutral.** Today it always loads `os-investigator`, and `SPEC-FORMAT.md`
+carries clean-room rules. After the split, it is a plain fact finder with no wall.
+`cleanroom-investigator` wraps it and adds the wall on top.
+
+**Firewall:** `cleanroom-implementer` never loads `board-expert`, `hardware-investigator` or
+`cleanroom-investigator`, and its hook blocks all three. A neutral `board-expert` returns GPL
+line references, so the block belongs in the repo that needs it.
+
+### Naming
+
+| Today | New name | Status |
+|---|---|---|
+| (new) anchored investigator | `hardware-investigator` | Decided |
+| `anchored-peripheral-spec` | `hardware-spec` | Proposed |
+| `os-investigator` | `cleanroom-investigator` | Proposed |
+| "anchored spec" (the term in docs) | "hardware spec" | Proposed; see collision below |
+| `anchor_check.py`, `[src:]` anchors, "anchor grammar" | Unchanged | These describe the citation mechanism, not the skill |
+
+**Collision to settle:** "board spec" already means the frontmatter-and-facts specs `board-expert`
+reads. "Hardware spec" and "board spec" read as near-synonyms. Either keep them distinct in the
+glossary (a board spec is the map, a hardware spec is the per-peripheral implementation spec), or
+pick a different noun such as "peripheral spec".
+
+### Estimate
+
+| Step | Estimate |
+|---|---|
+| Create `cleanroom-lab` and move skills with history (`git filter-repo` or subtree) | 3 h |
+| Make `board-expert` and `SPEC-FORMAT.md` neutral | 4 h |
+| Rename `os-investigator` to `cleanroom-investigator`; make it wrap `board-expert` | 3 h |
+| Split `spec-verifier` | 2 h |
+| Move evals and design documents; fix links | 4 h |
+| Marketplace entries in both repos and the public-skills README | 1 h |
+| Write `hardware-investigator`; rename `anchored-peripheral-spec` to `hardware-spec` | 1 day |
+
+About 3 focused days in total.
+
 ## Open decisions
 
+- [ ] Name for the clean-room repo: `cleanroom-lab`, or something else.
+- [ ] Publish `cleanroom-lab` publicly from day one (skills only, which fits the policy)?
+- [ ] ENC28J60 and e1000 evals: move them to `cleanroom-lab`, or keep them in driver-lab as history.
+- [ ] Confirm `hardware-spec` as the new name for `anchored-peripheral-spec`, and settle the
+      "hardware spec" and "board spec" collision.
 - [ ] What to do with the 11 existing specs: option A, B or C.
 - [ ] License for `hwspecs-docs`: CC-BY-4.0 (the usual choice for documents) or Apache-2.0
       (to match your other repos).

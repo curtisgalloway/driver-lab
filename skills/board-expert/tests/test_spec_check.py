@@ -349,7 +349,6 @@ class GoodRoot(unittest.TestCase):
                     HERE.parent / "specs", "--stubs-from", HERE.parent.parent, flags=flags
                 )
                 self.assertEqual(code, 0, err + json.dumps(data))
-                self.assertGreaterEqual(data["stubs"], 3)
 
     def test_missing_root_marker_is_a_precondition(self):
         code, _, err = run(FIX, flags=["--no-pyyaml"])

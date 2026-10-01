@@ -73,7 +73,7 @@ orchestrator route it through the dirty side and the verify-and-land loop.
 
 ## Using a board-expert skill
 
-If a board-expert skill is available for the target hardware (e.g. `rpi-expert`, or `board-expert`
+If a board-expert skill is available for the target hardware (a `<board>-expert` stub, or `board-expert`
 with a spec id), **read its SKILL.md first.** It supplies the board-specific map: which
 repos/branches to read, the canonical file paths, addressing model, boot/hand-off facts, and known
 gotchas; with `board-expert` the map is the composed board spec, and an IP block's register model

@@ -44,7 +44,7 @@ findings, not a spec — use `reference-driver-review`, which reuses this skill'
 checkers under `[impl:]`/`[ref:]` tags.
 
 Do **not** load `os-investigator` here — its clean-room rule (never reproduce code, never name the
-file) forbids the thing this skill requires. The board-expert skills (e.g. `rpi-expert`) remain
+file) forbids the thing this skill requires. The board-expert skills (`board-expert` and any `<board>-expert` stub) remain
 useful as the *map* of SoC addresses, IP identity, and quirks. `cleanroom-implementer` does not
 apply: implementers of an anchored spec may and should read the source.
 

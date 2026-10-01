@@ -165,17 +165,14 @@ addresses with interrupts, clocks, and quirks. The IP spec describes the block's
 without assuming any particular SoC address. Several boards can share one SoC description, and
 several SoCs can place the same IP description.
 
-For example, [the Pi 4 board spec](skills/board-expert/specs/rpi4.spec.md) names `bcm2711` in
-`parts`, lists repositories and documents, and records board console routing separately from the SoC
-facts it references. [The Pi 4 stub](skills/rpi4-expert/SKILL.md) explains the next relation: that
-SoC places the `pl011` IP as UART0. Its entire job is to select `spec: rpi4` and hand the question
-to `board-expert` with `os-investigator`.
-
-The other named entry points have the same shape: [`rpi-expert`](skills/rpi-expert/SKILL.md) selects
-`rpi5`, [`indiedroid-nova-expert`](skills/indiedroid-nova-expert/SKILL.md) selects
-`indiedroid-nova`, and [`pixel10-expert`](skills/pixel10-expert/SKILL.md) selects `pixel10`. Their
-descriptions help the harness match a user's hardware name. Keeping facts out of these stubs avoids
-maintaining another copy of the hardware map and another copy of the investigation procedure.
+For example, the test fixture [`widgetboard`](skills/board-expert/tests/fixtures/good_root/widgetboard.spec.md)
+names `widgetsoc` in `parts`, and [`widgetsoc`](skills/board-expert/tests/fixtures/good_root/widgetsoc.spec.md)
+places the `widgetuart` IP in its `instances`. A per-board stub such as the fixture
+[`widget-expert`](skills/board-expert/tests/fixtures/stubs/widget-expert/SKILL.md) has one job: select
+a spec id and hand the question to `board-expert` with `os-investigator`. Its description helps the
+harness match a user's hardware name. Keeping facts out of stubs avoids maintaining another copy of
+the hardware map and another copy of the investigation procedure. The published board specs and
+stubs that used to illustrate this were removed, to be regenerated with the current skills.
 
 ### Discover roots, compose, then overlay
 
@@ -508,8 +505,8 @@ The external record lands at `docs/resources/<spec-basename>.verify.md`, or in t
 existing `docs/provenance/` location as the verifier documents. It includes the spec hash, date,
 verifier identity, sources actually consulted, and verdict totals. The body keys individual facts by
 section and ordinal, table row, or sequence step. A board record instead lives beside the root
-marker in `resources/`. [The Pixel 10 record](skills/board-expert/specs/resources/pixel10.verify.md)
-shows actual source metadata and explanations of what each reading compared.
+marker in `resources/`; the test fixtures under `skills/board-expert/tests/fixtures/verify_root/`
+show the shape.
 
 A wrong value, an unsupported derivation, or a citation that cannot be located is `FAIL`, with a
 proposed correction. A source that cannot be reached, for example a blocked document, is
@@ -1142,8 +1139,7 @@ Some discrepancies are historical text lag; others affect interpretation today:
   A nonzero failure count is an error even when the record is stale.
 - `VALIDATION-REVIEW.md` describes the stale-hash check hiding recorded failures. The proposal
   marks that bug fixed, and the current checker checks failures despite a stale hash.
-- The scaffold says there is no shipped handset example, although `pixel10.spec.md` exists.
-  Its "always verify" wording also differs from `QUESTIONS.md`, which offers verification later.
+- The scaffold's "always verify" wording also differs from `QUESTIONS.md`, which offers verification later.
   Treat deferred verification as explicitly unverified, not as completion of its quality bar.
 - The vendor guide calls same-layer overlay order undefined; the format specifies pointer order.
   Both warn about duplicate overlays for the same target in a layer. Consolidate them rather than

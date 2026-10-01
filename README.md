@@ -22,7 +22,7 @@ signal for the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-t
 | The reference driver is yours, or you may copy from it, and you want a spec whose every fact points back at the code | `anchored-peripheral-spec` |
 | A driver exists and you want it checked against the upstream, vendor, or original implementation | `reference-driver-review` |
 | You are the agent writing code from a clean-room spec | `cleanroom-implementer` |
-| You need memory maps, boot chains, clocks, or interrupt details for a specific board | `rpi-expert`, `rpi4-expert`, `indiedroid-nova-expert`, `pixel10-expert`, or `board-expert` for any board with a spec |
+| You need memory maps, boot chains, clocks, or interrupt details for a specific board | `board-expert`, for any board with a spec (none ship today; see `board-spec-scaffold`) |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
 | You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs, clean-room driver specs, and anchored specs and reviews alike |
 
@@ -152,36 +152,12 @@ every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" s
   - Best-effort when no spec exists, with a suggestion to scaffold one.
   - An IP block (`dwc3`, `pl011`) resolves *anchored* through a board's `instances:` table
     and kernel tree, or *generic* from mainline at head plus the public standards.
-  - Ships `specs/`, the public root: the `rpi5`, `rpi4`, `indiedroid-nova`, and `pixel10`
-    board specs; the `bcm2712`, `bcm2711`, `rk3588s`, and `tensor-g5` SoC specs; the `rp1`
-    chip spec; and the `pl011` and `dw-apb-uart` IP specs their instance tables place.
+  - Ships `specs/`, the public root. It is empty for now: the earlier board, SoC, chip, and IP
+    specs and their per-board stubs were removed, to be regenerated with the current skills.
   - Also ships `QUESTIONS.md`, the structured question catalog and the `Needs decision`
     protocol every skill here follows instead of guessing; and `VENDOR-GUIDE.md`, how a
     vendor adds overlay roots, wraps internal tools as skills, and keeps internal material
     out of public roots.
-- **`rpi-expert`**: Raspberry Pi 5 and Compute Module 5 (BCM2712 plus the RP1 southbridge), a
-  stub over the `rpi5` spec: memory map and MMIO addresses, device tree, boot chain
-  and exception-level hand-off, PSCI/SMP, interrupts, timers, clocks and power, UART/GPIO,
-  PCIe, and the RP1.
-- **`rpi4-expert`**: Raspberry Pi 4 Model B and the BCM2711 (family includes the Pi 400 and
-  Compute Module 4/4S), a stub over the `rpi4` spec: the low- versus high-peripheral
-  memory map; device tree; the boot chain from BootROM through the SPI-EEPROM bootloader and
-  `start4.elf` to the armstub; PSCI/SMP across 4×Cortex-A72; the GIC-400; the PL011 debug UART
-  and the mini-UART trap; GPIO and the BCM2711 pull registers; GENET Ethernet; EMMC2/SDHCI; and
-  the VL805 USB bridge on PCIe. The BCM2711 ARM Peripherals datasheet is public, so it is the
-  citation of record rather than the kernel.
-- **`indiedroid-nova-expert`**: the Indiedroid Nova (same hardware as the 9Tripod Pico PC
-  V2.0) and Rockchip RK3588S/RK3588 bring-up generally (Radxa ROCK 5, Orange Pi 5, …). A stub
-  over the `indiedroid-nova` spec and the `rk3588s` SoC spec it composes: memory
-  map, device tree, boot chain, PSCI/SMP, GIC-600, timers, clocks and power (CRU, SCMI, RK806),
-  debug UART, GPIO and pinmux via the GRF, and PCIe/USB/eMMC.
-- **`pixel10-expert`**: the Google Pixel 10 (Tensor G5, codename laguna / `lga`; board
-  `frankel`, with the Pixel 10 Pro and Pro XL as variants). A stub over the `pixel10` spec and
-  the `tensor-g5` SoC spec it composes: the flat 64-bit memory map; the unmerged
-  mainline device trees and the production DTBs as the public map; the closed Android boot
-  chain and boot-image layout; PSCI/SMP across Cortex-X4/A725/A520; the GICv3; timers; the
-  DesignWare debug UART; and what is and is not publicly established for a handset whose
-  vendor kernel is not published.
 - **`board-spec-scaffold`**: writes a new board spec (board, SoC, chip, or IP block) in the
   format `board-expert` reads.
   - Optionally adds a thin `<board>-expert` stub, a vendor overlay, a `<vendor>-board-tools`

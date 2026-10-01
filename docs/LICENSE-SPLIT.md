@@ -9,9 +9,7 @@ Status: draft for review. Nothing described here has been done yet.
 
 ## Start here (15 minutes)
 
-- [ ] Open `skills/board-expert/specs/rk3588s.spec.md` and find its one `[source-observed]` fact.
-      Decide whether it gets a datasheet or device-tree citation, or moves to the GPL repo.
-      That one decision sets the pattern for the other 11 facts.
+- [x] Decide what to do with the published specs: deleted, to be regenerated (see below).
 
 ## The policy
 
@@ -37,6 +35,11 @@ Notes:
   those files may go in the permissive repo.
 
 ## What happens to the 11 existing specs
+
+**Decided (2026-10-01):** all 11 published specs, their verification records, and the four
+per-board stub skills (`rpi-expert`, `rpi4-expert`, `indiedroid-nova-expert`, `pixel10-expert`)
+are deleted. They will be regenerated from scratch with the new skills, in the repos and tiers
+this note describes. The options, audit, and overlay decision below are kept as history.
 
 `skills/board-expert/specs/` publishes 11 clean-room board and IP specs. Seven are already
 datasheet- and device-tree-only. Four contain `[source-observed]` facts, meaning facts learned
@@ -184,7 +187,7 @@ About 3 focused days in total.
 - [ ] Name for the clean-room repo: `cleanroom-lab`, or something else.
 - [ ] Publish `cleanroom-lab` publicly from day one (skills only, which fits the policy)?
 - [ ] ENC28J60 and e1000 evals: move them to `cleanroom-lab`, or keep them in driver-lab as history.
-- [ ] What to do with the 11 existing specs: option A, B or C.
+- [x] What to do with the 11 existing specs: deleted, to be regenerated.
 - [ ] License for `hwspecs-docs`: CC-BY-4.0 (the usual choice for documents) or Apache-2.0
       (to match your other repos).
 - [ ] Repo names: `hwspecs-gpl`, `hwspecs-docs`, `hwspecs-permissive`, or something else.

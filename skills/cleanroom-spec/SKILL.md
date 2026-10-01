@@ -38,7 +38,7 @@ file:line it came from so a reviewer can verify it against the code.
   layouts — every fact tagged `[databook]`/`[standard]`/`[DT]`/`[source-observed]`, and **NEVER
   reproduce driver/firmware source code**, even when asked. Load and follow it for HALF 1. It also
   ships the mechanical scanner (`scripts/leak_scan.py`).
-- **The board-expert skill** (e.g. `rpi-expert`) owns the *map*: the SoC/board addresses, IP identity,
+- **The board-expert skill** (`board-expert`, or a `<board>-expert` stub) owns the *map*: the SoC/board addresses, IP identity,
   quirks, cached references. Route "what address/IRQ/clock/compatible" questions through it.
   (Anything cached into a board-expert skill must itself be datasheet-cited or verifier-PASSed —
   a cache is a wall-crossing that replays into every context that loads the skill.)

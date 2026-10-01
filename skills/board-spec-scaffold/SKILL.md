@@ -25,14 +25,12 @@ private resources, a `<vendor>-board-tools` skill for a vendor's internal tools,
 a source tree. The format, the layers, and the clean-room rules are in `board-expert/SPEC-FORMAT.md`;
 read it before writing anything, and do not restate it in what you write.
 
-The worked examples are every spec under `board-expert/specs/` and the stubs beside this skill.
-Pick the closest: for a single-board computer with public firmware, `rpi5.spec.md` + `bcm2712.spec.md`
-+ `rp1.spec.md` and the `rpi-expert` stub; for an SoC whose firmware tree is not public, `rk3588s.spec.md`
-(vendor blobs named, TF-A cited where it exists) with `indiedroid-nova.spec.md`; for a board with a
-public datasheet as the citation of record, `rpi4.spec.md` + `bcm2711.spec.md`; for an IP block,
-`ip/pl011.spec.md` and `ip/dw-apb-uart.spec.md`. A handset or other closed device has no shipped
-example: use the board template's second bullet set and the soc template's closed-firmware phrasing
-of the Boot chain bullet.
+No published specs ship as worked examples today; the earlier ones were removed, to be
+regenerated with the current skills. Start from the templates beside this skill, and use the
+`board-expert` test fixtures (`tests/fixtures/good_root/` and `tests/fixtures/stubs/widget-expert/`)
+for the shape of a composed board, SoC, IP spec and stub. For a handset or other closed device, use
+the board template's second bullet set and the soc template's closed-firmware phrasing of the Boot
+chain bullet.
 
 ## What you produce
 

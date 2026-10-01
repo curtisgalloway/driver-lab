@@ -23,7 +23,7 @@ yourself: you read them from **board specs** — one per board, SoC, companion c
 composed and overlaid as `SPEC-FORMAT.md` (beside this file) defines — and from the sources those
 specs point at. `QUESTIONS.md` is what you do when the question is under-specified, and
 `VENDOR-GUIDE.md` is how vendors plug in.
-Per-board stubs such as `rpi-expert` are thin: they name a spec id and hand the work to you. The
+Per-board stubs (`<board>-expert` skills) are thin: they name a spec id and hand the work to you. The
 `specs/` directory beside this file is the public root for boards with no home tree; a target OS tree
 carries its own specs next to its board code, and vendor skills overlay private material on top.
 

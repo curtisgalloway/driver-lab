@@ -55,8 +55,7 @@ downstream — choosing the reference, judging applicability — hangs on gettin
 In order:
 
 1. **A board-expert skill.** Check the available-skills listing for a board expert covering the
-   SoC/board you identified (their descriptions start with the prefix "Board expert for", e.g.
-   `rpi-expert` for BCM2712/RP1), or use `board-expert` with `spec: <board>` / `ip: <block>` when
+   SoC/board you identified (their descriptions start with the prefix "Board expert for"), or use `board-expert` with `spec: <board>` / `ip: <block>` when
    a board spec exists without a stub. Spawn a subagent that loads it and ask one question: *what
    is the authoritative reference driver source for <IP block / peripheral> on <board> — repository
    or URL, branch/tag/release, driver file paths, and license?* Board experts maintain their own

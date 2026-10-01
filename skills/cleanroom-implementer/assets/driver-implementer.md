@@ -69,7 +69,7 @@ discarded):
   encumbered source, in any form — files, mirrors, gists, forum pastes — and never ask any other
   agent or process to do it for you.
 - Never open `docs/provenance/` — verifier and counsel material, not implementation input.
-- Never load `os-investigator` or any board-expert skill (e.g. `rpi-expert`): those are dirty-side
+- Never load `os-investigator` or any board-expert skill (`board-expert` or a `<board>-expert` stub): those are dirty-side
   roles whose bodies are maps into encumbered source, not implementation inputs.
 - `[source-observed]` facts are verified on hardware or escalated — never against the source.
 - When the spec is insufficient: append `- [open] <date> <spec section> <question>` to

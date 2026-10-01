@@ -85,7 +85,10 @@ resources:
       note: >-
         The monolithic kernel source repository for 10th-generation Pixel devices, linked from
         the GrapheneOS source page as what the laguna prebuilts are built from. Its root carries
-        a per-device build script for each prebuilt directory.
+        a per-device build script for each prebuilt directory. Read at branch `17` commit
+        01e0b5407fc3a44069699c615a2273e435c4a5c4 and branch `17-base` commit
+        7d533b28e7fb17bd5d9cf7a6f1afc06d81bf327f; branch `17` was rebased on 2026-09-17, so its
+        history before that date is visible only on `17-base`.
     - name: pixelscripts
       url: https://gitlab.com/LinaroLtd/googlelt/pixelscripts
       ref: clo/main
@@ -256,8 +259,8 @@ the per-board device-tree selection, and the companion parts.
   LGA"` and the same compatible pair. The prebuilt directory for these three boards is `muzel`,
   holding `lga-b0.dtb`, `lga-a0.dtb`, and one `dtbo.img`. `[DT]` (`lga-frankel.dts` and
   `lga-pixel-common.dtsi`, series v4), `[DT]` (`lga-b0.dtb` and `dtbo.img` entry 12,
-  laguna-kernel-prebuilts), `[doc]` (series v4 cover letter), `[repo]` (laguna-kernel-prebuilts,
-  file listing of the `muzel` directory). `TODO (verify on hardware)`: which blob a shipped device
+  laguna-kernel-prebuilts), `[doc]` (series v4 cover letter; series v4 patch 3/4 message, for A0
+  EVT boot), `[repo]` (laguna-kernel-prebuilts, file listing of the `muzel` directory). `TODO (verify on hardware)`: which blob a shipped device
   selects.
 - **Device-tree selection by the bootloader.** The bootloader reads the SoC id and the board id,
   takes the SoC DTB from the vendor boot image, picks the overlay from the `dtbo` dt table whose
@@ -291,11 +294,14 @@ the per-board device-tree selection, and the companion parts.
   build definitions and commit histories: the muzel and rango build definitions declare those blobs
   as named outputs and their declared entry counts match the shipped images exactly — 34 muzel
   overlays, 11 rango, 2 DTBs, and the shipped entry order matches the declared order entry for
-  entry; the one muzel `dtbo.img` change in 17 commits follows a device-tree source change four days
-  earlier while the kernel image changed in all 17; and no vendor build directory remains in the
-  tree. Derivation: a copied blob is neither a declared build output nor tracks the source tree's
-  clock. Confidence: strong, convergent but not a hash comparison — a byte comparison against the
-  DTBO image in Google's published factory image would settle it). The device-tree *content* is vendor-authored either way, and compiling a device
+  entry; the one muzel `dtbo.img` change in 17 commits (2026-08-18) came about four days after a
+  muzel device-tree source change on the source repository's `17-base` branch (`7d533b28`,
+  2026-08-15), while the kernel image changed in all 17; and no vendor build directory remains in
+  the tree. Branch `17` was rebased on 2026-09-17 and its current history no longer shows that
+  source change. Derivation: a copied blob is neither a declared build output nor tracks the
+  source tree's clock. Confidence: moderate to strong, convergent but not a hash comparison, and
+  the timing premise rests on one branch's history — a byte comparison against the DTBO image in
+  Google's published factory image would settle it). The device-tree *content* is vendor-authored either way, and compiling a device
   tree does not change its values, so `[DT]` values read from these blobs are the vendor's.
   Byte-identity with a stock vendor artifact was not checked here: AOSP publishes no laguna
   kernel-prebuilt repository, so the only stock artifact to compare against is the DTBO image inside
@@ -305,9 +311,10 @@ the per-board device-tree selection, and the companion parts.
   Broadcom Wi-Fi driver, a Cirrus haptics driver, and a FocalTech touch driver on top of the
   common set; the Pro models load a Synaptics touch driver instead). `[DT]`
   (`lga-frankel.dts`, series v4), `[doc]` (series v4 cover letter; GrapheneOS source page),
-  `[repo]` (laguna-kernel-prebuilts and laguna-kernel-source: the prebuilt image's version
-  string, the module lists, the source repository's root listing and build definitions, and both
-  repositories' commit histories).
+  `[repo]` (laguna-kernel-prebuilts at `80c104d7`; laguna-kernel-source branch `17` at `01e0b540`
+  and branch `17-base` at `7d533b28`: the prebuilt image's version string, the module lists, the
+  source repository's root listing and build definitions, and both repositories' commit
+  histories).
   `TODO (verify on hardware)`: the version string of a shipped build, which settles the kernel
   image; the inferred origin of the DTB and DTBO is settled instead by unpacking Google's published
   factory or full-OTA image for this device and comparing the DTBO image byte for byte.
@@ -344,8 +351,8 @@ the per-board device-tree selection, and the companion parts.
   when no DTBO is present in flash, four generations before this board, so it bears on this
   bootloader only weakly. `[doc]` (series v4 cover letter and the pixelscripts overlay source
   comment, for the `ufs0` alias; pixelscripts README and Makefile, for the overlay incompatibility
-  and the erase, and the README's Pixel 6 bootloader section for the DTBO-absent crash), `[inference]` (premise, `[DT]` (a decompiled production `dtbo.img` entry, laguna-kernel-prebuilts):
-  the overlay's fixups reference labels an upstream tree does not define. Derivation: an overlay whose
+  and the erase, and the README's Pixel 6 bootloader section for the DTBO-absent crash), `[inference]` (premise, `[DT]` (decompiled production `dtbo.img` entries, for example entry
+  12, laguna-kernel-prebuilts): the overlay's fixups reference labels an upstream tree does not define. Derivation: an overlay whose
   target labels are absent cannot be resolved against that tree. Confidence: low on the outcome --
   it says the overlay cannot apply, not what the bootloader does about it).
   `TODO (verify on hardware)`: what a shipped bootloader does with a production `dtbo` table over

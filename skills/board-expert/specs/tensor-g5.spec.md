@@ -461,9 +461,10 @@ DXT-48-1536 GPU and a Samsung Exynos 5400 modem; treat those as unverified.
   (Devicetree Specification v0.4, sections 2.3.5, 2.3.6, and 2.3.8).
 
 - **Boot chain and entry state.** The exact closed-firmware stage sequence is not established by
-  the cited public material. The production blob reserves a region named "BL31 memory log" at
-  `0x8B60_0000` (2 MiB); that name and allocation do not by themselves establish the runtime
-  implementation or its exception level. The Android image layout distinguishes the
+  the cited public material. The production blob reserves a 2 MiB `no-map` region at
+  `0x8B60_0000` whose node name, `goog_bl31_mem_log_buff`, indicates a BL31 memory-log buffer;
+  that name and allocation do not by themselves establish the runtime implementation or its
+  exception level. The Android image layout distinguishes the
   kernel-bearing v4 boot image, the vendor boot image containing the DTB, vendor ramdisk and
   bootconfig, and the overlay table in `dtbo`, selected by board id and revision.
   The series device tree reserves DRAM for the closed stages: the ABL ramdump/log region at
@@ -480,8 +481,10 @@ DXT-48-1536 GPU and a Samsung Exynos 5400 modem; treat those as unverified.
   upstream flow packs whole DTBs into the vendor boot image (`mkbootimg --header_version 4`) and
   erases `dtbo`. `[DT]` (`lga.dtsi`, series v4, `reserved-memory`), `[DT]` (`lga-b0.dtb`,
   laguna-kernel-prebuilts, `reserved-memory` and `chosen`), `[doc]` (series v4 cover letter and
-  patch 3/4 message; Android boot image header page; Android DTB/DTBO partitions page;
-  pixelscripts Makefile), `[standard]` (arm64 `booting.rst`, the entry contract a Linux Image
+  patch 3/4 message; pixelscripts commit `156bd361` message, for the UFS calibration patching;
+  Android boot image header page; Android DTB/DTBO partitions page; Android "Implementing
+  bootconfig" page and the pixelscripts Makefile's `--vendor_bootconfig`, for bootconfig in the
+  vendor boot image; pixelscripts Makefile), `[standard]` (arm64 `booting.rst`, the entry contract a Linux Image
   expects), `[inference]` (premises, `[DT]` (`chosen` node, lga-b0.dtb, laguna-kernel-prebuilts),
   established by reading the production
   command line in every reachable public blob and searching every overlay entry besides: it

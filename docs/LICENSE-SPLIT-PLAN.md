@@ -54,7 +54,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
 | LS1 | Anchor tools under test; several named pins | — | complete ([evidence](../evidence/LS1.md)) |
-| LS2 | Root license fields and the license gate | LS1 | pending |
+| LS2 | Root license fields and the license gate | LS1 | complete ([evidence](../evidence/LS2.md)) |
 | LS3 | Checkable doc anchors | LS1 | pending |
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | pending |
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | pending |
@@ -121,52 +121,20 @@ pin's revision is captured as its license, for LS2's validation to reject.
 
 ## LS2 — Root license fields and the license gate
 
-**Design coverage:** LS-R1, LS-R2, LS-R4.
+**Outcome:** root markers carry `license:` and `accepts:`, validated by `spec_check.py` (absent:
+a warning; `--require-license`: an error); `resources.repos[].license` must parse as SPDX and is
+required where `accepts:` is declared; `skills/board-expert/scripts/spdx.py` parses SPDX
+expressions; `anchor_check.py --root DIR` fails every anchor (both sides) and uncited pin whose
+license DIR does not accept, and fails when DIR declares no `accepts:`. Repository-shaped
+fixtures with an expected-result matrix in
+`skills/anchored-peripheral-spec/tests/fixtures/license-gate/`, for LS5's CI self-test.
+**Design coverage:** LS-R1 (code; docs in LS4), LS-R2, LS-R4 (proven per repository in LS5).
 **Dependencies:** LS1.
-**In scope:** root marker `license:` and `accepts:`; `--require-license`; resource license
-validation; an SPDX expression parser; `anchor_check.py --root`.
-**Out of scope:** documentation of the fields in `SPEC-FORMAT.md` beyond a stub entry (LS4);
-doc-anchor registry (LS3).
-
-### Implementation steps
-1. An SPDX expression parser (identifiers, `OR`, `AND`, `WITH`, parentheses, `-or-later` and
-   `+`), with a small known-identifier list. Proposed location
-   `skills/board-expert/scripts/spdx.py`, imported by `spec_check.py` and, by relative path, by
-   `anchor_check.py`; the milestone may choose another shared location and records why.
-   Acceptance rule: `A OR B` passes if either passes; `A AND B` only if both; `GPL-2.0-or-later`
-   passes where `GPL-2.0-only` is accepted only if the accepts list says so explicitly (the
-   design's GPL repo lists both).
-2. `spec_check.py`: read `license:` and `accepts:` from the marker; validate both; warn when
-   absent; `--require-license` makes absence exit 1. `check_resources`: validate
-   `repos[].license` as SPDX; required in a root with `accepts:`.
-3. `anchor_check.py --root <dir>`: read the root marker; fail each anchor whose pin's license is
-   not accepted, or has no license when the root declares `accepts:`. Report anchor, pin,
-   license and the accepts list.
-4. Fixtures: three roots shaped like the three repos (GPL, docs, permissive) and specs that fit
-   and misfit each, reused by LS5's CI self-test.
-5. Short `SPEC-FORMAT.md` entry for the two fields (full guidance in LS4).
-
-### Acceptance criteria
-- [ ] The design's acceptance item 2 holds on fixtures: a GPL-2.0-only pin fails in the docs
-      and permissive roots and passes in the GPL root; a `GPL-2.0 OR MIT` pin passes in the
-      permissive and GPL roots; a spec with no pins passes everywhere.
-- [ ] A marker with no license fields loads with a warning; with `--require-license` it exits 1.
-- [ ] An invalid SPDX string in a marker or a resource exits 1 with the field named.
-- [ ] bringup-kit's test-written markers (`layer: public` only) still pass without the flag.
-- [ ] The full check list passes.
-
-### Testing and review
-- Tests: parser table tests; spec_check marker and resource tests; gate tests per fixture root.
-- Review method: **`review-swarm`** (the gate decides what may be published).
-- Review focus: a misfit that passes (false accept) is the severe failure; `OR`/`AND` handling;
-  messages a spec author can act on.
-
-### Session sizing
-Two scripts and one new module; fixtures shared with LS5. Split point: spec_check side (steps
-1, 2) and anchor_check gate (steps 3, 4) as two checkpoints.
-
-### Evidence and findings
-Status: pending. Evidence: [LS2](../evidence/LS2.md). Notebook: [LS2](../notebook/LS2.md).
+**Status:** complete. Evidence: [LS2](../evidence/LS2.md). Notebook: [LS2](../notebook/LS2.md).
+Review: `review-swarm`, five findings fixed.
+**Open limitations:** board specs' resource licenses are validated, not gated; the shipped
+`skills/board-expert/specs` root has no license fields yet (two CI warnings; its accepts list is
+a policy choice); the known-identifier list is short.
 
 ## LS3 — Checkable doc anchors
 
@@ -533,13 +501,13 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS1 complete; LS2 is next (LS3 may run beside it).
-- Completed: LS1 on branch `license-split/ls1` (checkpoint commit `driver-porting: LS1 —
-  anchor tools under test; several named pins`), not pushed.
-- Remaining decisions: none blocking LS2. LS5 and LS6 each need the user's go to create public
-  repositories.
-- Resume action: after the LS1 pull request merges, begin **LS2** on `license-split/ls2` from a
-  fetched `origin/main`.
-- Read first: the design, this plan's conventions and LS2, the notebook index, LS1's evidence,
-  `skills/board-expert/scripts/spec_check.py` (root and resource handling) and
-  `skills/anchored-peripheral-spec/scripts/anchor_check.py`.
+- Current milestone: LS2 complete; LS3 next if it has not run beside LS2, then LS4.
+- Completed: LS2 on branch `license-split/ls2` (checkpoint commit `driver-porting: LS2 — root
+  license fields and the license gate`), not pushed.
+- Remaining decisions: whether the shipped `skills/board-expert/specs` root gets `license:` and
+  `accepts:` (and which list), or stays unlicensed with warnings. LS5 and LS6 each need the
+  user's go to create public repositories.
+- Resume action: after the LS2 pull request merges, begin **LS3** on `license-split/ls3` (or
+  LS4 if LS3 is done) from a fetched `origin/main`.
+- Read first: the design, this plan's conventions and LS3, the notebook index, LS2's evidence,
+  and `skills/anchored-peripheral-spec/scripts/anchor_check.py` (doc-tag handling).

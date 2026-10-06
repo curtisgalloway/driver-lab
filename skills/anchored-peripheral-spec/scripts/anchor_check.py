@@ -25,8 +25,20 @@ by name: ``[src:linux: drivers/net/foo.c:120]`` resolves against the ``linux``
 Source pin.  An anchor without a pin name resolves against the side's only pin,
 and is an error when the side has several.  Give one repository per pin with
 ``--repo NAME=PATH[@REV]`` (repeatable); a bare ``--repo PATH[@REV]`` serves a
-spec with at most one Source pin, as before.  The license is recorded and
-reported here; ``--root`` (a later change) checks it against the spec root.
+spec with at most one Source pin, as before.
+
+A pin's license must be an SPDX expression (``board-expert/scripts/spdx.py``
+reads it); one that does not parse is an error, and so is one that cannot be
+checked because board-expert is not installed beside this skill.  A line that
+starts like a pin (``Source pin:``) but does not have the pin's shape is a
+warning, and an error under ``--root``.  ``--root DIR`` applies the
+license gate: DIR's ``board-specs.yaml`` lists in ``accepts:`` the licenses its
+specs may cite, and every ``[src:]``/``[tgt:]`` anchor (and the aliases) whose
+pin's license is not accepted fails, as does an anchor whose pin states no
+license or that has no pin at all, and a pin no anchor cites whose license is
+not accepted.  ``A OR B`` passes when either side is accepted, ``A AND B`` only
+when both are.  ``[doc:]`` tags are not gated.  A root without ``accepts:``
+fails the gate rather than skipping it.
 
 The ``reference-driver-review`` skill uses the same machinery under different
 names: ``[impl:]`` is an alias of ``[src:]`` (with ``Impl pin:`` and
@@ -72,9 +84,14 @@ ANCHOR_RE = re.compile(
 )
 # The optional license is SPDX-shaped: identifiers joined by OR, AND or WITH, with
 # parentheses. Other trailing text ("@abc (v6.1 tag)") leaves the line unmatched, as before.
-SPDX_TOKEN = r"\(*[A-Za-z0-9][A-Za-z0-9.+-]*\)*"
+# Operators match in any case so that "GPL-2.0 or MIT" is read as a pin and its license
+# rejected with spdx.py's message; ":" admits DocumentRef-x:LicenseRef-y.
+SPDX_TOKEN = r"\(*[A-Za-z0-9][A-Za-z0-9.+:-]*\)*"
 PIN_RE = re.compile(r"^(Source|Target|Impl|Ref) pin:\s*(?P<name>\S+?)@(?P<rev>[0-9A-Za-z._/-]+)"
-                    rf"(?:\s+(?P<license>{SPDX_TOKEN}(?:\s+(?:OR|AND|WITH)\s+{SPDX_TOKEN})*))?\s*$")
+                    rf"(?:\s+(?P<license>{SPDX_TOKEN}(?:\s+(?i:OR|AND|WITH)\s+{SPDX_TOKEN})*))?\s*$")
+# A line that starts like a pin. One PIN_RE rejects is reported, never silently dropped:
+# a warning, and under --root an error, since the gate cannot see a pin it did not read.
+PIN_START_RE = re.compile(r"^(Source|Target|Impl|Ref) pin:")
 # A pin name usable in an anchor ("[src:linux: path:L]") and in --repo NAME=PATH.
 PIN_NAME = r"[A-Za-z0-9][A-Za-z0-9._-]*"
 NAMED_ANCHOR_RE = re.compile(rf"^(?P<pin>{PIN_NAME}):\s+(?P<rest>\S.*)$")
@@ -134,6 +151,8 @@ class Report:
     anchors: int = 0
     doc_tags: int = 0
     findings: list = field(default_factory=list)
+    license_gate: dict = field(default_factory=dict)  # {"root", "accepts"} under --root
+    unread_pins: list = field(default_factory=list)  # (spec_line, text) of pin-like lines not read
     moves: list = field(default_factory=list)  # (spec_line, old_raw, new_raw)
     stale: list = field(default_factory=list)  # (spec_line, raw) changed or gone
 
@@ -261,6 +280,8 @@ def parse_spec(text: str, report: Report, strict: bool) -> list[Anchor]:
                 same.append(entry)
                 report.pins.setdefault(side, entry)
             continue
+        if PIN_START_RE.match(stripped):
+            report.unread_pins.append((i, stripped))
         tags = TAG_RE.findall(line)
         claim = TAG_RE.sub("", line).strip(" |-*")
         if tags and len(claim) < 40 and not stripped.startswith(("|", "-", "*")) \
@@ -493,6 +514,9 @@ def render_report(report: Report, out):
             license_ = f" ({pin['license']})" if pin["license"] else ""
             print(f"{side} pin: {pin['name']}@{pin['rev']}{license_}", file=out)
     print(f"anchors: {report.anchors}  doc tags: {report.doc_tags}", file=out)
+    if report.license_gate:
+        accepts = ", ".join(report.license_gate["accepts"]) or "none"
+        print(f"license gate: root {report.license_gate['root']} accepts: {accepts}", file=out)
     errors = report.errors
     warns = [f for f in report.findings if f.level == "warn"]
     for f in sorted(report.findings, key=lambda f: (f.level != "error", f.spec_line)):
@@ -500,6 +524,112 @@ def render_report(report: Report, out):
         print(f"{tag} L{f.spec_line}: {f.message}", file=out)
     print(f"result: {'FAIL' if errors else 'PASS'} "
           f"({len(errors)} errors, {len(warns)} warnings)", file=out)
+
+
+# --------------------------------------------------------------------------- licenses
+
+
+def board_expert_scripts() -> Path:
+    """board-expert's scripts directory, beside this skill (symlinks resolved)."""
+    return Path(__file__).resolve().parent.parent.parent / "board-expert" / "scripts"
+
+
+def load_license_tools():
+    """Import board-expert's spdx and spec_check modules, or return None."""
+    path = str(board_expert_scripts())
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    try:
+        import spdx  # noqa: PLC0415
+        import spec_check  # noqa: PLC0415
+    except ImportError:
+        return None
+    return spdx, spec_check
+
+
+def check_pin_licenses(report: Report, spdx) -> None:
+    """Every license a pin states must parse as an SPDX expression."""
+    for side, pins in report.pin_list.items():
+        for pin in pins:
+            if pin["license"] is None:
+                continue
+            try:
+                spdx.parse(pin["license"])
+            except spdx.SpdxError as exc:
+                report.add("error", pin["line"], f"{side} pin {pin['name']!r}: license "
+                                                 f"{pin['license']!r} is not an SPDX expression: {exc}")
+
+
+def read_root_accepts(root: str, spec_check, report: Report):
+    """The root's accepts list (canonical ids), or None when the gate cannot run (reported).
+
+    Raises SystemExit (usage error) when the root has no marker or the marker does not parse.
+    """
+    marker_path = Path(root) / "board-specs.yaml"
+    if not marker_path.is_file():
+        raise SystemExit(f"error: --root {root}: no board-specs.yaml (not a spec root)")
+    try:
+        marker = spec_check.load_yaml(marker_path.read_text(), spec_check.pyyaml_available())
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(f"error: --root {root}: cannot parse board-specs.yaml: {exc}")
+    if not isinstance(marker, dict):
+        raise SystemExit(f"error: --root {root}: board-specs.yaml is not a mapping")
+    found: list = []
+    accepts = spec_check.check_root_license(marker, str(marker_path), False, found)
+    for f in found:
+        if f.level == "error":  # a malformed license: or accepts: in the marker
+            report.add("error", 0, f"--root {root}: {f.message}")
+    if accepts is None:
+        report.add("error", 0, f"license gate: root {root} declares no accepts: list, so the "
+                               "gate cannot run (add accepts: to its board-specs.yaml; [] "
+                               "accepts no source)")
+    return accepts
+
+
+def apply_license_gate(anchors: list[Anchor], keys: dict, report: Report, root: str,
+                       accepts: tuple, spdx) -> None:
+    """Fail each anchor whose pin's license the root does not accept (design LS-R4)."""
+    listed = ", ".join(accepts) or "none"
+    verdicts = {}  # (side, pin name) -> None when accepted, else why not
+    for side, pins in report.pin_list.items():
+        for pin in pins:
+            lic = pin["license"]
+            if lic is None:
+                why = ", which states no license"
+            else:
+                try:
+                    ok, _ = spdx.check(lic, accepts)
+                    why = None if ok else f" ({lic}), which root {root} does not accept"
+                except spdx.SpdxError:
+                    why = f" ({lic}), which is not an SPDX expression"
+            verdicts[(side, pin["name"])] = why
+    cited = set()
+    for idx, a in enumerate(anchors):
+        if idx not in keys:
+            continue  # an unknown or missing pin name, already an error
+        side = SIDE[a.kind]
+        name = keys[idx][1]
+        shown = f"[{a.kind}:{'' if a.pin else ' '}{a.raw}]"
+        if name is None:
+            report.add("error", a.spec_line,
+                       f"license gate: {shown} has no {side} pin, so its source license is "
+                       f"unknown; state the pin with its SPDX license (root {root} accepts: "
+                       f"{listed})", a.raw)
+            continue
+        cited.add((side, name))
+        why = verdicts[(side, name)]
+        if why is not None:
+            report.add("error", a.spec_line,
+                       f"license gate: {shown} cites {side} pin {name!r}{why} "
+                       f"(accepts: {listed})", a.raw)
+    for side, pins in report.pin_list.items():
+        for pin in pins:
+            why = verdicts[(side, pin["name"])]
+            if why is not None and (side, pin["name"]) not in cited:
+                report.add("error", pin["line"],
+                           f"license gate: {side} pin {pin['name']!r}{why} (accepts: "
+                           f"{listed}); no anchor cites it: remove the pin, or place the spec "
+                           "in a root that accepts it")
 
 
 # --------------------------------------------------------------------------- main
@@ -586,6 +716,9 @@ def main(argv=None) -> int:
                     help="with --drift: the Source pin to compare, when the spec has several")
     ap.add_argument("--rewrite", action="store_true",
                     help="with --drift: rewrite moved anchors and that Source pin in the spec")
+    ap.add_argument("--root", metavar="DIR",
+                    help="license gate: fail anchors whose pin's license DIR's board-specs.yaml "
+                         "does not list in accepts:")
     ap.add_argument("--strict", action="store_true",
                     help="every table row and list item must carry a tag, not just hex/bit facts")
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
@@ -600,6 +733,31 @@ def main(argv=None) -> int:
 
     report = Report(spec=args.spec)
     anchors = parse_spec(text, report, args.strict)
+
+    tools = load_license_tools()
+    if tools is None:
+        if args.root:
+            print(f"error: --root needs board-expert's scripts beside this skill "
+                  f"({board_expert_scripts()}), which were not found", file=sys.stderr)
+            return 2
+        if any(p["license"] for pins in report.pin_list.values() for p in pins):
+            report.add("error", 0, "pin licenses cannot be validated: board-expert's spdx.py "
+                                   f"was not found at {board_expert_scripts()} (install "
+                                   "board-expert beside this skill)")
+    else:
+        check_pin_licenses(report, tools[0])
+    for line, pin_text in report.unread_pins:
+        report.add("error" if args.root else "warn", line,
+                   f"line starts like a pin but is not read as one: {pin_text[:80]!r} (expected "
+                   "'<Side> pin: <name>@<rev> [<SPDX expression>]')")
+    accepts = None
+    if args.root:
+        try:
+            accepts = read_root_accepts(args.root, tools[1], report)
+        except SystemExit as e:
+            print(e, file=sys.stderr)
+            return 2
+        report.license_gate = {"root": args.root, "accepts": list(accepts or ())}
 
     if args.rewrite and not args.drift:
         print("error: --rewrite needs --drift REV", file=sys.stderr)
@@ -641,6 +799,8 @@ def main(argv=None) -> int:
                                   f"checking at {repo.rev} ({repo.full_rev[:12]})")
 
     keys = anchor_keys(anchors, report)
+    if accepts is not None:
+        apply_license_gate(anchors, keys, report, args.root, accepts, tools[0])
     unresolved: dict[str, int] = {}
     for idx, a in enumerate(anchors):
         if idx in keys and keys[idx] not in repos:

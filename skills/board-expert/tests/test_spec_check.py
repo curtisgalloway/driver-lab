@@ -54,9 +54,24 @@ def messages(data):
     return [f["message"] for f in data["findings"]]
 
 
+# The warnings a root marker without license fields carries (LS-R1). The fixture roots
+# predate the fields on purpose: they are what bringup-kit-style markers look like.
+LICENSE_ABSENT = ("root marker: no license: field", "root marker: no accepts: field")
+
+
+def is_license_absent(f):
+    return f["level"] == "warning" and f["message"].startswith(LICENSE_ABSENT)
+
+
+def without_license_absent(data):
+    """Findings other than the absent-license-field warnings."""
+    return [f for f in data["findings"] if not is_license_absent(f)]
+
+
 def substantive(data):
-    """Findings other than the 'unverified' warning every record-less fixture spec carries."""
-    return [f for f in data["findings"] if not f["message"].startswith("unverified:")]
+    """Findings other than the 'unverified' warning every record-less fixture spec carries,
+    and the absent-license-field warnings of the pre-LS2 fixture markers."""
+    return [f for f in without_license_absent(data) if not f["message"].startswith("unverified:")]
 
 
 class SubsetParser(unittest.TestCase):
@@ -356,6 +371,172 @@ class GoodRoot(unittest.TestCase):
         self.assertIn("no board-specs.yaml", err)
 
 
+def write_root(tmp, marker, specs=None):
+    """A root at tmp/root with the given marker text and {filename: text} specs."""
+    root = pathlib.Path(tmp) / "root"
+    root.mkdir()
+    (root / "board-specs.yaml").write_text(marker)
+    for name, text in (specs or {}).items():
+        (root / name).write_text(text)
+    return root
+
+
+CHIP_WITH_REPO = """\
+---
+kind: chip
+id: lchip
+name: License test chip
+triggers: [lchip]
+resources:
+  repos:
+    - name: fw
+      url: https://example.com/fw
+{license_line}---
+
+## Quick-facts
+
+- A fact. `[doc]` (Widget TRM 1.0)
+"""
+
+
+class LegacyMarkers(unittest.TestCase):
+    """Characterization: markers written before LS2 (bringup-kit's tests write `layer` only)."""
+
+    def test_layer_only_marker_passes(self):
+        import tempfile
+
+        for flags in PARSER_FLAGS:
+            for marker in ("layer: public\n", "layer: local\nname: mine\n"):
+                with self.subTest(flags=flags, marker=marker), tempfile.TemporaryDirectory() as tmp:
+                    root = write_root(tmp, marker, {"c.spec.md": CHIP_WITH_REPO.format(license_line="")})
+                    code, data, err = run(root, flags=flags)
+                    self.assertEqual(code, 0, err + json.dumps(data))
+                    self.assertEqual([f for f in data["findings"] if f["level"] == "error"], [])
+
+    def test_repo_license_is_optional_without_accepts(self):
+        import tempfile
+
+        for line in ("", "      license: GPL-2.0-only\n"):
+            with self.subTest(line=line), tempfile.TemporaryDirectory() as tmp:
+                root = write_root(tmp, "layer: public\n", {"c.spec.md": CHIP_WITH_REPO.format(license_line=line)})
+                code, data, err = run(root, flags=["--no-pyyaml"])
+                self.assertEqual(code, 0, err + json.dumps(data))
+
+
+GATE_ROOTS = HERE.parent.parent / "anchored-peripheral-spec" / "tests" / "fixtures" / "license-gate" / "roots"
+LICENSED = "layer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0, MIT]\n"
+
+
+class RootLicense(unittest.TestCase):
+    """Root marker license: and accepts: (LS-R1); repos license: (LS-R2)."""
+
+    def check(self, marker, specs=None, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def by_level(self, data):
+        return {f["message"]: f["level"] for f in data["findings"]}
+
+    def test_the_three_repo_shaped_roots_pass_with_require_license(self):
+        for flags in PARSER_FLAGS:
+            for name in ("gpl", "docs", "permissive"):
+                with self.subTest(flags=flags, root=name):
+                    code, data, err = run(GATE_ROOTS / name, "--require-license", flags=flags)
+                    self.assertEqual(code, 0, err + json.dumps(data))
+                    self.assertEqual(data["findings"], [])
+
+    def test_absent_fields_warn_and_require_license_makes_them_errors(self):
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags):
+                code, data, err = self.check("layer: public\n", flags=flags)
+                self.assertEqual(code, 0, err)
+                levels = self.by_level(data)
+                self.assertEqual(sorted(levels.values()), ["warning", "warning"])
+                self.assertTrue(any(m.startswith("root marker: no license: field") for m in levels))
+                self.assertTrue(any(m.startswith("root marker: no accepts: field") for m in levels))
+                code, data, err = self.check("layer: public\n", None, "--require-license", flags=flags)
+                self.assertEqual(code, 1, err)
+                levels = self.by_level(data)
+                self.assertEqual(sorted(levels.values()), ["error", "error"])
+                self.assertTrue(any(m.startswith("root marker: no license: field") for m in levels))
+                self.assertIn("FAIL: 2 error(s)", self.human("layer: public\n", "--require-license"))
+
+    def human(self, marker, *args):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker)
+            proc = subprocess.run(
+                [sys.executable, str(CHECKER), "--no-pyyaml", *args, str(root)],
+                capture_output=True, text=True, check=False,
+            )
+            return proc.stderr
+
+    def test_one_field_missing_is_reported_alone(self):
+        code, data, _ = self.check("layer: public\nlicense: CC-BY-4.0\n", None, "--require-license")
+        self.assertEqual(code, 1)
+        self.assertEqual(len(data["findings"]), 1)
+        self.assertTrue(data["findings"][0]["message"].startswith("root marker: no accepts: field"))
+        code, data, _ = self.check("layer: public\naccepts: []\n", None, "--require-license")
+        self.assertEqual(code, 1)
+        self.assertEqual(len(data["findings"]), 1)
+        self.assertTrue(data["findings"][0]["message"].startswith("root marker: no license: field"))
+
+    def test_invalid_marker_fields_are_errors_naming_the_field(self):
+        for marker, expected in (
+            ("license: GPL-2\naccepts: []\n",
+             "root marker: license: unknown SPDX license identifier 'GPL-2'"),
+            ("license: MIT or Apache-2.0\naccepts: []\n",
+             "root marker: license: 'or': write the operator in uppercase (OR)"),
+            ("license: MIT\naccepts: MIT\n",
+             "root marker: accepts: must be a list of SPDX identifiers ([] for none)"),
+            ("license: MIT\naccepts: [MIT, GPL-2]\n",
+             "root marker: accepts entry 'GPL-2': unknown SPDX license identifier 'GPL-2'"),
+            ("license: MIT\naccepts: ['MIT OR ISC']\n",
+             "root marker: accepts entry 'MIT OR ISC': 'MIT OR ISC' is an expression"),
+        ):
+            for flags in PARSER_FLAGS:
+                with self.subTest(marker=marker, flags=flags):
+                    code, data, err = self.check("layer: public\n" + marker, flags=flags)
+                    self.assertEqual(code, 1, err)
+                    self.assertTrue(
+                        any(m.startswith(expected) for m in messages(data)), messages(data)
+                    )
+
+    def test_repo_license_must_be_spdx(self):
+        spec = {"c.spec.md": CHIP_WITH_REPO.format(license_line="      license: GPL-2.0 or later\n")}
+        for marker in ("layer: public\n", LICENSED):
+            with self.subTest(marker=marker):
+                code, data, _ = self.check(marker, spec)
+                self.assertEqual(code, 1)
+                self.assertIn(
+                    "repos entry 'fw': license: 'or': write the operator in uppercase (OR)",
+                    messages(data),
+                )
+
+    def test_repo_license_is_required_where_accepts_is_declared(self):
+        missing = {"c.spec.md": CHIP_WITH_REPO.format(license_line="")}
+        for marker in (LICENSED, "layer: public\nlicense: CC-BY-4.0\naccepts: []\n"):
+            with self.subTest(marker=marker):
+                code, data, _ = self.check(marker, missing)
+                self.assertEqual(code, 1)
+                self.assertIn(
+                    "repos entry 'fw': no license: (required in a root whose marker declares accepts:)",
+                    messages(data),
+                )
+        # LS-R2 asks for a valid license, not an accepted one (the gate is anchor_check's), so
+        # GPL-2.0-only passes in a root that accepts only Apache-2.0 and MIT.
+        for lic in ("GPL-2.0 OR MIT", "GPL-2.0-only"):
+            with self.subTest(license=lic):
+                present = {"c.spec.md": CHIP_WITH_REPO.format(license_line=f"      license: {lic}\n")}
+                code, data, err = self.check(LICENSED, present, "--require-license")
+                self.assertEqual(code, 0, err + json.dumps(data))
+                self.assertEqual(substantive(data), [])
+
+
 class BadRoot(unittest.TestCase):
     def findings(self, flags):
         code, data, _ = run(BAD, "--stub", FIX / "stub_bad.md", flags=flags)
@@ -537,7 +718,7 @@ class Verification(unittest.TestCase):
                         code, data, err = run(root, *args, flags=flags)
                         self.assertEqual(code, 1, err + json.dumps(data))
                         self.assertEqual(data["verification"], {"stale": 1})
-                        by_level = {f["message"]: f["level"] for f in data["findings"]}
+                        by_level = {f["message"]: f["level"] for f in without_license_absent(data)}
                         self.assertEqual(by_level, {
                             "verification stale: resources/vstalefail.verify.md was written for another version of this file":
                                 "error" if require else "warning",
@@ -568,7 +749,7 @@ class Verification(unittest.TestCase):
             shutil.copy(VERIFY / "resources" / "vok.verify.md", root / "resources")
             code, data, err = run(root, "--require-verified", flags=["--no-pyyaml"])
             self.assertEqual(code, 0, err + json.dumps(data))
-            self.assertEqual(messages(data), [])
+            self.assertEqual(without_license_absent(data), [])
             self.assertEqual(data["verification"], {"verified": 1})
 
     def _verified_root(self, tmp, summary_line):
@@ -596,7 +777,7 @@ class Verification(unittest.TestCase):
             )
             code, data, err = run(root, "--require-verified", flags=["--no-pyyaml"])
             self.assertEqual(code, 0, err + json.dumps(data))
-            self.assertEqual(messages(data), [])
+            self.assertEqual(without_license_absent(data), [])
             self.assertEqual(data["verification"], {"verified": 1})
 
     def test_adjudicate_must_be_a_non_negative_integer_when_present(self):

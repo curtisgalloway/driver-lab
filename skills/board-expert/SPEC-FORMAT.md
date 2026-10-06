@@ -124,7 +124,14 @@ A spec is not:
 layer: public                 # public | ip-vendor | soc-vendor | product | local
 name: driver-porting          # optional; shown in reports
 roots: []                     # optional; further roots, relative to this file or absolute
+license: Apache-2.0           # optional; SPDX expression for this root's own license
+accepts: [Apache-2.0, MIT, BSD-3-Clause]  # optional; SPDX identifiers anchored sources may carry
 ```
+
+`license:` and `accepts:` are for the published spec repositories, one per license; `accepts: []`
+accepts no source. A marker without them still loads, with a warning; `spec_check.py
+--require-license` makes their absence an error. `anchor_check.py --root <dir>`
+(anchored-peripheral-spec) fails every anchor whose pin's license the root does not accept.
 
 A root is found only through a pointer (see *Roots and layers*). The reader never searches a tree for
 markers.
@@ -487,7 +494,7 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
 ## What the checker enforces
 
 `board-expert/scripts/spec_check.py <root>... [--stubs-from <skills dir>] [--stub SKILL.md]
-[--public-skill NAME] [--require-verified]` fails on:
+[--public-skill NAME] [--require-verified] [--require-license]` fails on:
 
 - frontmatter missing a key its kind requires, an unknown `kind` or `layer`, or a duplicate `id`;
   an `id`, alias, part, `variant_of`, or `overlays` value that is not a normalized id; a `triggers`
@@ -502,6 +509,9 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
   or a `fetch_via` that is not a string; a `status` other than unmerged | merged | superseded, on an
   entry or on one of its `files`;
 - `access: internal`, or a `via:` naming a skill outside the public set, under a `public` root;
+- a marker `license:` that is not an SPDX expression or an `accepts:` that is not a list of single
+  SPDX identifiers (with `--require-license`, a marker missing either); a `resources.repos` entry
+  whose `license:` is not an SPDX expression, or that has none in a root that declares `accepts:`;
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
   `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
   `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
@@ -515,7 +525,7 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
   `summary.fail` is not zero; with `--require-verified`, also a spec with no record or with a stale
   one.
 
-It warns, without failing, on two overlays for one id in one layer, on a part whose `cache`
+It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one layer, on a part whose `cache`
 differs from its board's, on a spec with no verification record (`unverified`), and on a record
 whose `spec_sha256` no longer matches the spec (`verification stale`). It is stdlib-only: PyYAML when available, otherwise its own parser for the
 format's YAML subset, and its last line says which one ran (`parser: pyyaml` or `parser: subset`).

@@ -27,11 +27,13 @@ when the spec never mentions it.  The unwired interrupt, the clock the spec
 forgot, and the window it never names all surface here.
 
 Usage:
-  inventory_check.py SPEC --repo PATH[@REV] [--headers a.h b.h]
+  inventory_check.py SPEC --repo [NAME=]PATH[@REV] [--headers a.h b.h]
                           [--dt board.dtsi --dt-node usb_phy] [--all] [--strict]
 
-REV defaults to the spec's ``Source pin:`` (or ``Impl pin:``) line.  Exit 0 clean, 1 mismatches or
-conflicts (or omissions under --strict), 2 usage/git error.
+REV defaults to the spec's ``Source pin:`` (or ``Impl pin:``) line.  The pin grammar is
+``anchor_check.py``'s: a spec with several Source pins needs ``--repo NAME=PATH`` naming
+the pin whose tree holds the headers (one tree per run).  Exit 0 clean, 1 mismatches or
+conflicts, a repeated pin name (or omissions under --strict), 2 usage/git error.
 """
 
 from __future__ import annotations
@@ -43,7 +45,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-PIN_RE = re.compile(r"^(?:Source|Impl) pin:\s*(?P<name>\S+?)@(?P<rev>[0-9A-Za-z._/-]+)\s*$")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from anchor_check import NAMED_REPO_RE, PIN_RE  # noqa: E402  (same directory)
 DEFINE_RE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)\s+(.+?)\s*(?:/[*/].*)?$")
 BITFIELD_RE = re.compile(r"^\s*(?:unsigned\s+)?(?:int|long|char|short|u(?:int)?\d+(?:_t)?)\s+([A-Za-z_]\w*)\s*:\s*\d+\s*;")
 ENUM_HEX_RE = re.compile(r"^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(0[xX][0-9A-Fa-f_]+)")
@@ -154,7 +157,7 @@ def dt_inventory(body: str) -> dict[str, str]:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("spec")
-    ap.add_argument("--repo", required=True, metavar="PATH[@REV]")
+    ap.add_argument("--repo", required=True, metavar="[NAME=]PATH[@REV]")
     ap.add_argument("--headers", nargs="+", default=[], metavar="PATH",
                     help="repo-relative header/source files to inventory")
     ap.add_argument("--dt", metavar="PATH", help="repo-relative .dts/.dtsi holding the node")
@@ -170,14 +173,35 @@ def main(argv=None) -> int:
     except OSError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    repo, _, rev = args.repo.partition("@")
+    pins = [m for m in (PIN_RE.match(l.strip()) for l in spec.split("\n"))
+            if m and m.group(1) in ("Source", "Impl")]
+    names = [m["name"] for m in pins]
+    if len(set(names)) != len(names):
+        print(f"spec: {args.spec}")
+        print("FAIL: the spec repeats a Source pin name (each pin needs a distinct name)")
+        print("result: FAIL")
+        return 1
+    value, pin = args.repo, None
+    named = NAMED_REPO_RE.match(value)
+    if named and not Path(value.partition("@")[0]).exists():
+        value = named["value"]
+        pin = next((m for m in pins if m["name"] == named["pin"]), None)
+        if pin is None:
+            print(f"error: --repo names pin {named['pin']!r}, but the spec's Source pins are: "
+                  f"{', '.join(names) or 'none'}", file=sys.stderr)
+            return 2
+    elif len(pins) > 1:
+        print(f"error: the spec has {len(pins)} Source pins ({', '.join(names)}); name one: "
+              "--repo NAME=PATH[@REV]", file=sys.stderr)
+        return 2
+    elif pins:
+        pin = pins[0]
+    repo, _, rev = value.partition("@")
     if not rev:
-        pins = [PIN_RE.match(l.strip()) for l in spec.split("\n")]
-        pins = [m for m in pins if m]
-        if not pins:
+        if pin is None:
             print("error: --repo has no @rev and the spec has no 'Source pin:'/'Impl pin:' line", file=sys.stderr)
             return 2
-        rev = pins[0]["rev"]
+        rev = pin["rev"]
 
     inventory: dict[str, str | None] = {}
     kinds: dict[str, str] = {}

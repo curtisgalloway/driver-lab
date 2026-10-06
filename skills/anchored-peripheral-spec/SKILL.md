@@ -107,9 +107,13 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   rows that come from elsewhere carry their own tag in addition.
 - **Pins** are stated once, near the top, on their own lines — the checker reads them:
   ```
-  Source pin: <repo-name-or-url>@<commit>
-  Target pin: <repo-name-or-url>@<commit>
+  Source pin: <repo-name-or-url>@<commit> [<SPDX license>]
+  Target pin: <repo-name-or-url>@<commit> [<SPDX license>]
   ```
+  A spec that cites several source trees states one `Source pin:` per tree, each with a
+  distinct name, and names the pin in each anchor: `[src:linux: drivers/net/foo.c:120]`. Run the
+  checkers with one `--repo <name>=<checkout>` per pin. An anchor without a name is an error when
+  the spec has several Source pins.
 - **Quoting** is allowed but rationed: quote at most a few lines, and only when the exact
   expression is the point (a magic constant with its comment, a non-obvious mask). The anchor is
   still required next to the quote. A spec that pastes the driver is a second copy of the driver

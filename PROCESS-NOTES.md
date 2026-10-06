@@ -424,3 +424,24 @@ Prevention: when a design lists open decisions, ask them as a quiz before planni
 question about a repo, say what the repo holds ("the repo holding the clean-room skills").
 Fix belongs in: the project-plan skill (open decisions before planning), user instructions
 (quiz wording).
+
+### 2026-10-06T07:48-07:00 — tests that asserted only an exit code could not fail
+Chapter: [LS1](notebook/LS1.md)
+What happened: four new usage-error tests checked only `rc == 2`; the old scripts also exited 2,
+for an unrelated reason (the `NAME=PATH` value read as a missing repository). The independent
+reviewer found it by running the new tests against the old scripts.
+Cost: one review round and a re-run.
+Prevention: assert the message as well as the exit code, and run new tests against the
+pre-change code before the checkpoint, not only the characterization tests.
+Fix belongs in: the project-plan skill's milestone verification (a "new tests fail on the old
+code" step).
+
+### 2026-10-06T07:48-07:00 — a pull request's CI never started until the PR was reopened
+Chapter: [LS-design](notebook/LS-design.md)
+What happened: PR #43 showed no checks for several minutes; `gh run list --branch` returned
+nothing while the API's run list later showed a queued run. Closing and reopening started a
+second run, and branch protection waited on that one too.
+Cost: about ten minutes and a duplicate CI run.
+Prevention: query `repos/<owner>/<repo>/actions/runs` before concluding no run exists, and
+wait a few minutes before reopening.
+Fix belongs in: the orchestrate-milestones skill (CI wait step).

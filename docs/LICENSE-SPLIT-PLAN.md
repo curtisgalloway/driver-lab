@@ -53,7 +53,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| LS1 | Anchor tools under test; several named pins | — | pending |
+| LS1 | Anchor tools under test; several named pins | — | complete ([evidence](../evidence/LS1.md)) |
 | LS2 | Root license fields and the license gate | LS1 | pending |
 | LS3 | Checkable doc anchors | LS1 | pending |
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | pending |
@@ -110,47 +110,14 @@ python3 utilities/check-open-side.py                                     # LS8
 
 ## LS1 — Anchor tools under test; several named pins
 
-**Design coverage:** LS-R6, LS-R3, LS-R9 (`inventory_check.py` part).
-**Dependencies:** none.
-**In scope:** a test suite for `anchor_check.py` and `inventory_check.py` covering today's
-grammar; the named-pin grammar and `--repo <name>=<path>`; CI step.
-**Out of scope:** license fields and the gate (LS2); doc anchors (LS3); renaming the skill (LS9).
-
-### Implementation steps
-1. Read both scripts and record today's behavior as characterization tests first (proposed
-   `skills/anchored-peripheral-spec/tests/test_anchor_check.py`, `test_inventory_check.py`,
-   fixtures under `tests/fixtures/`: a tiny fake source tree and specs). Include a test that
-   demonstrates the overwrite of a second `Source pin:` (expected to fail until step 2).
-2. Extend the pin grammar: `Source pin: <name>@<rev> [<SPDX>]`, several per spec, stored by
-   name; `[src:<name>: path:L]` resolves against that pin; an unnamed `[src: …]` resolves
-   against the only pin and is an error when there are several. A duplicate pin name is an
-   error. `--repo` accepts `<name>=<path>` repeatedly; a bare `--repo <path>` still works for
-   single-pin specs. `--rewrite` rewrites the named pin (`--rewrite-pin <name>`).
-3. `inventory_check.py`: same grammar; checks every pin instead of `pins[0]`.
-4. Add the test step to `checks.yml` and the AGENTS.md check list.
-
-### Acceptance criteria
-- [ ] Characterization tests pass against the unchanged grammar before step 2 (recorded).
-- [ ] A spec with two named pins checks each anchor against its own tree; a wrong line in
-      either fails with the pin's name in the message.
-- [ ] Two pins with the same name, or an unnamed anchor with several pins, fail with exit 1.
-- [ ] Every existing spec in the frozen archive that `anchor_check.py` checked before still
-      gives the same result (list them in the evidence; expected: the ENC28J60 and e1000 specs
-      reachable from `evals/`).
-- [ ] CI runs the new suite; the full check list passes.
-
-### Testing and review
-- Verify with the full AGENTS.md list plus the new suite; expected all green.
-- Review focus: backward compatibility of the single-pin form; the exit-code contract (0/1/2/3
-  as `spec_check.py` documents); error messages naming pin and anchor.
-
-### Session sizing
-Starts from two scripts (~700 lines together) and their callers. Uncertainty: how the frozen
-specs invoke the checker (find with a grep of `evals/` for `anchor_check`). Split point: tests
-and CI (step 1, 4) as one checkpoint if the grammar change grows.
-
-### Evidence and findings
-Status: pending. Evidence: [LS1](../evidence/LS1.md). Notebook: [LS1](../notebook/LS1.md).
+**Outcome:** 47 tests for `anchor_check.py` and `inventory_check.py`, run in CI; several named,
+licensed pins per spec (`Source pin: <name>@<rev> [<SPDX>]`, `[src:<name>: path:L]`,
+`--repo NAME=PATH`, `--drift-pin`); the single-pin form unchanged.
+**Design coverage:** LS-R3, LS-R6, LS-R9 (script part: `inventory_check.py` takes one named pin
+per run, since it compares one header tree). **Dependencies:** none.
+**Status:** complete. Evidence: [LS1](../evidence/LS1.md). Notebook: [LS1](../notebook/LS1.md).
+**Open limitations:** licenses are parsed, not validated (LS2); a single non-SPDX token after a
+pin's revision is captured as its license, for LS2's validation to reject.
 
 ## LS2 — Root license fields and the license gate
 
@@ -566,11 +533,13 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: none started; the plan is ready (design approved 2026-10-05).
-- Completed: design revision and this plan on branch `docs/license-split-plan` (not pushed).
-- Remaining decisions: none blocking LS1. LS5 and LS6 each need the user's go to create public
+- Current milestone: LS1 complete; LS2 is next (LS3 may run beside it).
+- Completed: LS1 on branch `license-split/ls1` (checkpoint commit `driver-porting: LS1 —
+  anchor tools under test; several named pins`), not pushed.
+- Remaining decisions: none blocking LS2. LS5 and LS6 each need the user's go to create public
   repositories.
-- Resume action: begin **LS1** on a branch `license-split/ls1` from a fetched `origin/main`
-  once this plan's branch is merged.
-- Read first: the design, this plan's conventions and LS1, the notebook index,
-  `skills/anchored-peripheral-spec/scripts/anchor_check.py` and `inventory_check.py`.
+- Resume action: after the LS1 pull request merges, begin **LS2** on `license-split/ls2` from a
+  fetched `origin/main`.
+- Read first: the design, this plan's conventions and LS2, the notebook index, LS1's evidence,
+  `skills/board-expert/scripts/spec_check.py` (root and resource handling) and
+  `skills/anchored-peripheral-spec/scripts/anchor_check.py`.

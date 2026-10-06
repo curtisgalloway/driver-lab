@@ -85,6 +85,10 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
 [src: <path>:<L1>[-<L2>] [(<symbol>)]]      resolves in the SOURCE repo at the Source pin
 [tgt: <path>:<L1>[-<L2>] [(<symbol>)]]      resolves in the TARGET repo at the Target pin
 [doc: <document> §<section>]                a document citation; not resolved mechanically
+[doc:<name> p.N | pp.N-M | §x.y]            a document from the spec's front-matter docs:
+                                            registry; name, page range and (with --docs-dir)
+                                            the file's sha256 are checked (no space after
+                                            "doc:"; see anchor_check.py's docstring)
 ```
 
 - **Paths are repo-relative**, lines are 1-based and inclusive. Several anchors may share one tag,

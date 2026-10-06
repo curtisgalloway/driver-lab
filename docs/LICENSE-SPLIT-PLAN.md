@@ -55,7 +55,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 |----|---------|--------------|--------|
 | LS1 | Anchor tools under test; several named pins | — | complete ([evidence](../evidence/LS1.md)) |
 | LS2 | Root license fields and the license gate | LS1 | complete ([evidence](../evidence/LS2.md)) |
-| LS3 | Checkable doc anchors | LS1 | pending |
+| LS3 | Checkable doc anchors | LS1 | complete ([evidence](../evidence/LS3.md)) |
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | pending |
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | pending |
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | pending |
@@ -138,35 +138,21 @@ a policy choice); the known-identifier list is short.
 
 ## LS3 — Checkable doc anchors
 
-**Design coverage:** LS-R5.
-**Dependencies:** LS1 (may run in parallel with LS2).
-**In scope:** a `docs:` registry in spec front matter, named `[doc:<name> p.N]` anchors, page
-range check, `--docs-dir` hash check; `--require-license` requiring named doc anchors.
-**Out of scope:** fetching documents; checking quoted text against a PDF.
-
-### Implementation steps
-1. Grammar: `docs:` list (`name`, `title`, `url`, `sha256`, optional `pages`); `[doc:<name>
-   p.N]`, `pp.N-M`, `§x.y` forms; several per tag separated by `;` as today.
-2. Checks: unknown name, page out of range, malformed sha256 (exit 1); with `--docs-dir`, hash
-   the file named by the entry (proposed: `<docs-dir>/<name>.pdf` or an explicit `file:`) and
-   fail on mismatch, skip with a note when missing.
-3. Unnamed `[doc: …]` stays a warning-only form; under `--require-license` it is an error.
-4. Tests with a small generated file whose hash is pinned.
-
-### Acceptance criteria
-- [ ] Each failure above exits 1 with the anchor and document named; a correct spec passes.
-- [ ] A hash mismatch fails only with `--docs-dir`; without it the check is structural.
-- [ ] Existing specs with unnamed doc anchors still pass without `--require-license`.
-- [ ] The full check list passes.
-
-### Testing and review
-- Reviewer subagent. Focus: backward compatibility; no network access in the checker.
-
-### Session sizing
-One script, one feature. Low uncertainty.
-
-### Evidence and findings
-Status: pending. Evidence: [LS3](../evidence/LS3.md). Notebook: [LS3](../notebook/LS3.md).
+**Outcome:** a `docs:` registry in spec front matter (`name`, `title`, `url`, `sha256`, optional
+`pages` and `file`), checked for missing and malformed fields; named `[doc:<name> p.N]`,
+`pp.N-M` and `§x.y` anchors (no space after `doc:`), failing on an unknown name or a page
+outside `pages`; `--docs-dir DIR` hashes each document's file and fails on a mismatch (a
+missing file warns); `anchor_check.py --require-license` (with `--root`) requires the marker's
+`license:` and, in a root whose `accepts:` is empty, named doc anchors. Unnamed `[doc: …]`
+anchors check as before. No network access.
+**Design coverage:** LS-R5. **Dependencies:** LS1.
+**Status:** complete. Evidence: [LS3](../evidence/LS3.md). Notebook: [LS3](../notebook/LS3.md).
+Review: one independent reviewer subagent; one should-fix (a leading `---` rule taken for
+front matter) and two nits fixed.
+**Open limitations:** hashes compare file bytes only; `pages` is the author's statement; LS2's
+`docs-only-spec.md` fixture fails the docs root under `--require-license` (LS5's self-test
+needs a named-anchor fixture or no flag); the registry, the space rule, `--docs-dir` and
+`--require-license` are documented only in `anchor_check.py`'s docstring until LS4.
 
 ## LS4 — Guidance, provenance template, "why this exists", format docs
 
@@ -501,13 +487,15 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS2 complete; LS3 next if it has not run beside LS2, then LS4.
-- Completed: LS2 on branch `license-split/ls2` (checkpoint commit `driver-porting: LS2 — root
-  license fields and the license gate`), not pushed.
+- Current milestone: LS3 complete; LS4 next.
+- Completed: LS3 on branch `license-split/ls3` (checkpoint commit `driver-porting: LS3 —
+  checkable doc anchors`), stacked on LS2's branch; neither pushed.
 - Remaining decisions: whether the shipped `skills/board-expert/specs` root gets `license:` and
   `accepts:` (and which list), or stays unlicensed with warnings. LS5 and LS6 each need the
   user's go to create public repositories.
-- Resume action: after the LS2 pull request merges, begin **LS3** on `license-split/ls3` (or
-  LS4 if LS3 is done) from a fetched `origin/main`.
-- Read first: the design, this plan's conventions and LS3, the notebook index, LS2's evidence,
-  and `skills/anchored-peripheral-spec/scripts/anchor_check.py` (doc-tag handling).
+- Resume action: after the LS2 and LS3 pull requests merge, begin **LS4** on
+  `license-split/ls4` from a fetched `origin/main`. LS4's `SPEC-FORMAT.md` work includes the
+  `docs:` registry, the no-space named form, `--docs-dir` and `anchor_check.py
+  --require-license` (LS3 review nit 3).
+- Read first: the design, this plan's conventions and LS4, the notebook index, LS2's and LS3's
+  evidence, and `anchor_check.py`'s docstring.

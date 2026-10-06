@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T10:09-07:00
+Updated: 2026-10-06T10:24-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,13 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS3 — checkable doc anchors](LS3.md)
+Entries: 2026-10-06T10:14-07:00 through 2026-10-06T10:24-07:00
+Outcome: complete; `docs:` registry, named `[doc:<name> p.N]` anchors, `--docs-dir` hashes,
+`anchor_check.py --require-license` (named anchors only where `accepts:` is empty). Named vs
+unnamed is the space after `doc:`. Review found a leading `---` rule taken for front matter,
+hiding the first section from the checker.
 
 ### [LS2 — root license fields and the license gate](LS2.md)
 Entries: 2026-10-06T09:54-07:00 through 2026-10-06T10:09-07:00

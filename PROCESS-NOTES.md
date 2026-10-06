@@ -412,3 +412,15 @@ cleanup in an exception-safe path and verify file stability before accepting a t
 Fix belongs in: the private hardware harness and fixture-run guidance.
 Status: diagnostic corrected in a declared additional run; the C3 cleanup gap remains a
 recorded limitation of the frozen harness, with the orphan stopped explicitly.
+
+### 2026-10-05T16:21-07:00 — a plan request run before its open decisions were asked
+Chapter: [LS-design](notebook/LS-design.md)
+What happened: asked to plan the license split, the session began reading the design to plan
+from it while the note still listed five open decisions; the user stopped it ("ask me the
+questions first, then make the plan"). The first quiz then asked for "the clean-room repo"
+name, which read as a repo of clean-room specs, and needed two clarifying turns.
+Cost: one interrupted turn and two clarification round trips.
+Prevention: when a design lists open decisions, ask them as a quiz before planning; in a
+question about a repo, say what the repo holds ("the repo holding the clean-room skills").
+Fix belongs in: the project-plan skill (open decisions before planning), user instructions
+(quiz wording).

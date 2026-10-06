@@ -13,6 +13,9 @@ CR-G added from the design's C1–C8. Earlier revisions: 2026-09-25 (L02 remaini
 consultation; the user approved the changes) and 2026-09-20. No experiment launched by this
 plan.
 
+The license split (2026-10-05) is a separate workstream with its own plan,
+[docs/LICENSE-SPLIT-PLAN.md](docs/LICENSE-SPLIT-PLAN.md).
+
 ## Terms
 
 - **Spec and companion skill** — the hardware contract and agent instructions for using it,

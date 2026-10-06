@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-09-27T11:12:00-07:00
+Updated: 2026-10-06T05:03-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,11 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS-design — license split: design and plan](LS-design.md)
+Entries: 2026-10-05T16:21-07:00 through 2026-10-06T05:03-07:00
+Outcome: complete; design approved, plan LS1–LS12 + LS-G written; anchor tools found untested
+with one pin per side; see the [plan](../docs/LICENSE-SPLIT-PLAN.md).
 
 ### [CR-G — acceptance of the continuous-review layer](CR-G.md)
 Entries: 2026-09-27T10:05-07:00 through 2026-09-27T11:12-07:00

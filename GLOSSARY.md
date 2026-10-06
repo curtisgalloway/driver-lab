@@ -129,3 +129,13 @@ evaluation; add other terms as the documents that use them are updated.
 | Claim map | Per campaign, the data file linking each claim ID to the harness checks that support it and the planted defects and runs that qualified it; proposed for e1000 as `evals/e1000/claims.yaml`. |
 | Acceptance set / isolated run | The ten e1000 harness scenarios run for the reference and the candidate / one scenario on freshly booted guests, so nothing left over from another scenario reaches it. |
 | L01 review trio | The three reviews a candidate change gets: a reference-driver review, a requirements review against the blind list, and `review-swarm` on the diff. |
+| Root / root marker | A directory of specs / its `board-specs.yaml`, naming the root's layer; the board-expert reader merges several roots in layer order. From the license split on, the marker also declares the root's license and accepts list. |
+| Overlay | A spec in one root that adds to or corrects a spec of the same ID in another root, without copying it. |
+| Pin | A spec line naming a source tree and its commit (`Source pin: linux@abc123`); anchors cite lines at that commit. |
+| Accepts list | The SPDX license identifiers a spec root allows its anchored sources to carry (`accepts:` in the root marker). |
+| License gate | The `anchor_check.py` check that fails a spec citing a source whose license the root's accepts list does not include. |
+| Placement rule | A spec lives in the most restrictive repository among the sources it anchors to, and never cites a source more restrictive than that repository. |
+| Spec repositories | `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`: the three public homes for specs, by license. |
+| `cleanroom-skills` | The repository and plugin holding the clean-room skills, split out of driver-lab; it depends on driver-lab, never the reverse. |
+| Frozen archive | The parts of driver-lab kept as history after the split (evals, evidence, notebook and the documents describing them); still checked by CI, no new rounds. |
+| SPDX | The standard short identifiers for licenses (`GPL-2.0-only`, `MIT`, `CC-BY-4.0`) and expressions combining them with `OR`, `AND` and `WITH`. |

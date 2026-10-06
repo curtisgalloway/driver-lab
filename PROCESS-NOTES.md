@@ -454,3 +454,15 @@ and the gate looked like it passed everything. A direct run of one pair showed F
 Cost: one rerun; it would have been a false "the gate works" claim had the matrix been trusted.
 Prevention: capture `rc=$?` on the line after the command, before anything else expands.
 Fix belongs in: user instructions (shell command style), beside the pipeline-status rule.
+
+### 2026-10-06T10:40-07:00 — privacy check run against the main checkout, not the worktree
+Chapter: [LS4](notebook/LS4.md)
+What happened: `python3 <worktree>/utilities/check-no-private-paths.py` from the session's
+default directory (the main checkout) reported "278 tracked files"; from the worktree it reports
+302. The script checks the tracked files of the repository it runs in, not the one it lives in,
+so the first run said nothing about the worktree.
+Cost: none (caught by the file count before relying on it).
+Prevention: run repository checks from the worktree (`cd` once, or a script with the worktree
+as its working directory), and read the file count.
+Fix belongs in: project instructions (AGENTS.md, Checks) or the script (resolve the repository
+from its own path).

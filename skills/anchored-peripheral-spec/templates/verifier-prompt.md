@@ -8,6 +8,8 @@ Independently verify the source-anchored spec at <path-to-spec>. You did not wri
 it. Load `anchored-peripheral-spec` for the anchor grammar, the labels, and the required
 structure. The source checkout is at <source checkout>; read it at the spec's `Source pin:`
 commit (<repo-name>@<commit>) — verifying against any other revision is verifying the wrong text.
+<If the spec has several Source pins: one checkout per pin, <pin>=<checkout> for each.>
+<If the spec is headed for a spec repository: its root is <spec repository>/specs.>
 <If a target tree was read: the target checkout is at <target checkout> at the `Target pin:`.>
 
 This is an ACCURACY check. You may open any file and quote source and spec freely. Your quota is
@@ -16,11 +18,16 @@ suspicious — say what you did to earn it.
 
 1. MECHANICAL: run
      python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> \
-         [--target-repo <target checkout>] -o docs/spec-reports/<device>-check-<date>.txt
+         [--target-repo <target checkout>] [--root <root> --require-license] \
+         [--docs-dir <pdf dir>] -o docs/spec-reports/<device>-check-<date>.txt
      python3 <this-skill>/scripts/inventory_check.py <path-to-spec> --repo <source checkout> \
          --headers <register header(s)> --dt <board .dtsi> --dt-node <node label> --all \
          > docs/spec-reports/<device>-inventory-<date>.txt
-   Any anchor error, inventory MISMATCH, or CONFLICT is a FAIL. Every warning must be justified in
+   With several pins, pass `--repo <pin>=<checkout>` once per pin; `inventory_check.py` compares
+   one header tree per run, so run it once per pin that holds register headers
+   (`--repo <pin>=<checkout>`). A `license gate:` error means the spec cites a source its
+   repository does not accept: a FAIL, fixed by moving the spec or dropping the anchor, never by
+   editing the pin's license. Any anchor error, inventory MISMATCH, or CONFLICT is a FAIL. Every warning must be justified in
    the spec or is a finding. Every inventory omission is a finding unless the spec names it as
    out of scope with a reason.
 2. CLAIM-BY-CLAIM: run
@@ -55,7 +62,9 @@ suspicious — say what you did to earn it.
    the verify-on-hardware list and open questions; the register map follows the databook's
    organization, not driver-touch order, and covers untouched registers from documents where a
    document exists.
-5. DOCUMENTS: `[doc:]` citations name obtainable documents with section numbers; spot-check that
+5. DOCUMENTS: `[doc:]` citations name obtainable documents with section numbers (named
+   `[doc:<name> p.N]` anchors resolve against the front-matter `docs:` registry, which the
+   checker validates; with the files at hand, `--docs-dir` confirms their hashes); spot-check that
    a cited section covers what the claim says when the document is available to you; say which
    you could not open.
 6. NOTICE + RECORD: the spec opens with the provenance notice (derived from the pin; every fact

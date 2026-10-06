@@ -40,6 +40,9 @@ specs, `anchored-peripheral-spec` and `reference-driver-review` for anchored spe
   the spec's root or the spec itself. Not a spec; never loaded by a reader.
 - **Verifier** — the subagent that produces the verdicts. A fresh context: the spec, its declared
   sources, and this file. Nothing else.
+- **Named pin / license gate** — a spec line naming one of several source trees with its commit
+  and SPDX license (`Source pin: linux@<rev> GPL-2.0-only`) / the `anchor_check.py --root` check
+  that fails an anchor whose pin's license the spec root's `accepts:` list does not include.
 - **Orchestrator** — you. You spawn the verifier, write the record, run the mechanical checks, and
   report. You never read sources and never edit the spec.
 
@@ -178,9 +181,20 @@ anchor is verified back to source**, in two layers:
    in its default mode with the spec's repositories (`--repo` / `--target-repo`, or `--impl-repo` /
    `--ref-repo` for a review) at the pins: every path must exist, every line range be in bounds,
    every symbol be present in or near its range, every hex literal in a claim appear in the lines it
-   cites, every `[hw-required]` be backed by a `[doc:]`. Where register headers exist, run
-   `inventory_check.py` too: omissions and value mismatches against the headers are findings. Any
-   `[stale: was <pin>]` marker is a `FAIL` until a person re-verifies the claim and clears it.
+   cites, every `[hw-required]` be backed by a `[doc:]`. **Give every pin its checkout:** a spec
+   with several named pins (`Source pin: <name>@<rev> <license>`) needs one
+   `--repo <name>=<checkout>` per Source pin (and `--target-repo <name>=<checkout>` per Target
+   pin); a pin left without one leaves its anchors unresolved, which the checker reports only
+   as a warning, so check the warnings. When the spec lives in a spec root (a
+   directory whose `board-specs.yaml` declares `license:` and `accepts:`), run the same command
+   with `--root <root> --require-license`, so the record is made under the license gate the
+   repository's CI applies: a `license gate:` error is a `FAIL` for that anchor. When the spec
+   lists documents in its `docs:` front matter and the files are at hand, add
+   `--docs-dir <dir>`: a hash mismatch is a `FAIL` for every claim citing that document. Where
+   register headers exist, run `inventory_check.py` too, once per pin whose tree holds them
+   (`--repo <name>=<checkout>`; it compares one tree per run): omissions and value mismatches
+   against the headers are findings. Any `[stale: was <pin>]` marker is a `FAIL` until a person
+   re-verifies the claim and clears it.
 2. **Judge every anchor, by reading.** Run the creating skill's own independent verifier as it
    defines it (`anchored-peripheral-spec/templates/verifier-prompt.md`, or
    `reference-driver-review/templates/verifier-prompt.md` for a review): a fresh subagent that
@@ -194,8 +208,10 @@ anchor is verified back to source**, in two layers:
    skill adds is the record: that verifier's `{section, line, anchor, reason}` list becomes
    per-anchor verdict lines, and every anchor it passed gets a `PASS` line too.
 
-- **Claims** are keyed by the anchor text as written (`[src: path:L1-L2 (symbol)]`), plus the
-  `[doc:]` tags; a claim with several anchors gets one line per anchor.
+- **Claims** are keyed by the anchor text as written (`[src: path:L1-L2 (symbol)]`, or
+  `[src:<pin>: path:L1-L2 (symbol)]` with a named pin), plus the `[doc:]` tags; a claim with
+  several anchors gets one line per anchor. The record's `sources` lists every pin and every
+  registry document.
 - **Two verifiers** for the register-map tables (offsets, widths, bit positions), the densest values
   and the place `anchored-peripheral-spec` already runs two investigators.
 - **Record location**: `resources/<spec-basename>.verify.md` in a `resources/` directory beside the

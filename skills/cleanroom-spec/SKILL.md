@@ -202,6 +202,23 @@ or a subagent's `tasks/*.output` file, which is a symlink into `~/.claude/`. Tho
 protected paths: touching them stops an unattended run at a permission prompt that allow rules
 cannot pre-approve. If a copy or hash is required, name the path and have the person run it.
 
+### The provenance attestation (private; fill it at every landing)
+
+When a spec lands (and again when a re-verified revision lands), fill
+`templates/PROVENANCE.md` into `docs/provenance/<device>-PROVENANCE.md` beside the scan reports:
+who ran the method, every source behind the wall with its pin and license, which session (and
+which agent and model) saw what, the pins, every verifier and scan report, and the spec's full sha256,
+whose prefix must match the hash on the ledger's PASS line. The person who ran the method signs the
+attestation line. Take every value from the ledger, the reports and the session records; never
+reconstruct one from memory.
+
+**It is the user's private record and is never published**, and neither is the spec it
+describes: clean-room output is not published (license-split design, policy 1). Someone who
+wants a clean-room spec runs this method and keeps the spec and its attestation themselves. Keep
+both out of any public repository, issue or pull request; a project whose `docs/` is public keeps the
+spec and `docs/provenance/` out of version control or in a private store. Name machines by role in it, as
+everywhere.
+
 ### The spec-gap protocol (the sanctioned path when a spec is insufficient)
 
 Implementer contamination is usually gap-driven, not defiance-driven: the spec is missing
@@ -307,3 +324,5 @@ walks the five checks above and pins the required verdict format.
 - Every saved spec opens with the clean-room usage notice, has PASSed independent verification, and
   has a ledger line whose hash matches the file; every merged driver has an output-scan line and
   clean session-audit lines. An unverified spec never lands in `docs/`.
+- Every landed revision has a filled `PROVENANCE.md` whose spec hash matches the ledger, kept
+  private with the spec.

@@ -28,6 +28,14 @@ stated here; the skills point at this file instead of restating it.
   blocks the work. Subagents never ask the user; the orchestrator turns this block into structured
   questions. See `QUESTIONS.md`.
 - **Root** — a directory holding a `board-specs.yaml` marker. Every `*.spec.md` below it is a spec.
+- **Accepts list / license gate / placement rule** — a root marker's `accepts:` names the SPDX
+  licenses its anchored specs' sources may carry; the license gate (`anchor_check.py --root`)
+  fails a spec citing a source the list does not include; the placement rule says which
+  repository a spec belongs in. **SPDX** is the standard license-identifier language
+  (`GPL-2.0-only`, `GPL-2.0 OR MIT`). See *The root marker*, and driver-lab's `GLOSSARY.md`.
+- **Peripheral spec** — a spec of one device's programming model whose facts are anchored to
+  source lines at a **pin** (a named source tree at a commit) or to documents; written by
+  `anchored-peripheral-spec`. See *Peripheral specs in a licensed root*.
 - **Layer** — a root's position in the merge order: `public`, `ip-vendor`, `soc-vendor`, `product`,
   `local`. Declared in the root marker.
 - **Overlay** — a spec file that adds to another spec instead of standing alone (`overlays: <id>`).
@@ -128,10 +136,29 @@ license: Apache-2.0           # optional; SPDX expression for this root's own li
 accepts: [Apache-2.0, MIT, BSD-3-Clause]  # optional; SPDX identifiers anchored sources may carry
 ```
 
-`license:` and `accepts:` are for the published spec repositories, one per license; `accepts: []`
-accepts no source. A marker without them still loads, with a warning; `spec_check.py
---require-license` makes their absence an error. `anchor_check.py --root <dir>`
-(anchored-peripheral-spec) fails every anchor whose pin's license the root does not accept.
+**License fields.** `license:` and `accepts:` are for the published spec repositories, one per
+license (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`; created in
+milestone LS5 of the license-split plan, not yet public). Which repository a spec goes in is the
+**placement rule**: the most restrictive repository among the sources the spec anchors to. The
+rule and the "which repo does my spec go in?" table are in `anchored-peripheral-spec`, "Where the
+spec goes".
+
+- `license:` is an SPDX expression for the root's own license (`GPL-2.0-only`, `CC-BY-4.0`,
+  `Apache-2.0`).
+- `accepts:` is a list of single SPDX identifiers that the pins of the root's anchored specs may
+  carry; no expressions in the list. `accepts: []` is declared and empty: the root accepts no
+  source tree, so its specs cite documents only.
+- Identifiers are checked against a short known list (`board-expert/scripts/spdx.py`) and matched
+  without regard to case; one not on it is an error (write `LicenseRef-<name>`). `GPL-2.0` is read
+  as `GPL-2.0-only` and `GPL-2.0+` as `GPL-2.0-or-later`, and a list naming one does not accept the
+  other.
+- A marker without these fields still loads, with a warning for each, so older roots (a marker with
+  only `layer`) keep working. `spec_check.py --require-license` makes their absence an error; the
+  spec repositories run with it.
+- `anchor_check.py --root <dir>` (`anchored-peripheral-spec`) is the **license gate**: it fails
+  every anchor whose pin's license `<dir>`'s `accepts:` does not list, and fails outright when the
+  marker has no `accepts:`. Its own `--require-license` also requires the marker's `license:` and,
+  where `accepts:` is empty, named document anchors. See *Peripheral specs in a licensed root*.
 
 A root is found only through a pointer (see *Roots and layers*). The reader never searches a tree for
 markers.
@@ -329,6 +356,31 @@ tag token inside it would be read as a tag.
 - A **gap bullet** is one whose text, after the optional bold lead-in, starts with
   `TODO (verify on hardware)`; it records what is missing and carries no tag:
   `- **Power.** `TODO (verify on hardware)`: the PMIC part is not recorded here yet.`
+
+### Peripheral specs in a licensed root
+
+A spec repository also holds **peripheral specs**: one device's programming model, written by
+`anchored-peripheral-spec`, with every fact anchored to source lines or a document. They are not
+board specs: name them `<device>-spec.md` (as `anchored-peripheral-spec` does), not
+`<id>.spec.md`, because `spec_check.py` loads every `*.spec.md` as a board spec.
+`anchor_check.py` checks each one. The full grammar is that skill's "The anchor grammar"; what a licensed root relies on is:
+
+- **Named, licensed pins.** `Source pin: <name>@<commit> <SPDX expression>`, one line per source
+  tree (`Target pin:` likewise), each with a distinct name; an anchor names its pin
+  (`[src:<name>: path:L]`) whenever the side has more than one. The license is what the gate
+  reads, so it describes the files cited through that pin. The single unnamed pin with no license
+  stays valid outside a licensed root; under `--root`, an unlicensed pin fails.
+- **The `docs:` registry.** A list in the spec's YAML front matter, one entry per document:
+  `name` (used in anchors), `title`, `url` (recorded, never fetched), `sha256` (64 hex digits of
+  the file), optional `pages` (a positive count) and `file` (its name under `--docs-dir`). Anchors
+  cite it as `[doc:<name> p.N]`, `pp.N-M` or `§x.y`, with no space after `doc:`; the free-text form
+  keeps its space (`[doc: Widget TRM §4.3]`). This is not a board spec's `resources.docs`, which
+  lists authorities by title and URL with `cite:` and `access:` and has no hash.
+- **The checks a spec repository runs.** `spec_check.py <root> --require-license` on the root and
+  its board specs; `anchor_check.py <spec> --repo <name>=<checkout>... --root <root>
+  --require-license` on each peripheral spec, with `--docs-dir <dir>` where the documents are at
+  hand. A named anchor whose document is not listed, a page outside `pages`, a malformed registry
+  entry, or (with `--docs-dir`) a file whose hash differs are errors.
 
 ### Overlays
 

@@ -48,6 +48,7 @@ bringing up a particular board, which happen in projects that use these skills.
 | You may cite the reference driver (GPL-2.0, BSD, MIT, Apache, or your own code), and you want a spec whose every fact points back at the code, published where its license fits | `peripheral-spec` |
 | A driver exists and you want it checked against the upstream, vendor, or original implementation | `reference-driver-review` |
 | You need memory maps, boot chains, clocks, or interrupt details for a specific board | `board-expert`, for any board with a spec (none ship today; see `board-spec-scaffold`) |
+| You have a hardware question and the answer will be published in a spec repository, so each source you cite must be one that repository's license accepts | `hardware-investigator` |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
 | You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
 
@@ -113,6 +114,16 @@ paths for each harness.
   - The reference is evidence, not truth: the databook breaks ties.
   - Reuses `peripheral-spec`'s checkers, so implementation-side anchors get drift
     tracking as fixes land. Output is a review, never driver code.
+- **`hardware-investigator`**: answers one board or peripheral question as anchored facts, ready
+  for `peripheral-spec`.
+  - Reads the target root's accepts list first, gets the map from `board-expert`, and checks each
+    source's license against the list **before** reading it for evidence. A source the root does
+    not accept is refused with the reason, and the investigator stops rather than cite it.
+  - Ships `scripts/license_gate.py` (stdlib-only), which prints a root's accepts list and
+    accepts or refuses SPDX expressions with the rule `anchor_check.py --root` applies later, and
+    a worked example (`WORKED-EXAMPLE.md`) on `board-expert`'s fixture: one run on an accepting
+    root, one that refuses and stops, one that refuses a source and goes on with another.
+  - Facts only: generating a whole spec is `peripheral-spec`'s job.
 
 ## Board experts
 

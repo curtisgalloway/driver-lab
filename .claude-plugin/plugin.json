@@ -1,7 +1,7 @@
 {
   "name": "driver-porting",
   "version": "1.0.0",
-  "description": "Driver porting and review: peripheral specs whose every fact cites the line it came from, reference reviews of a driver against another implementation, board specs and the board-expert reader, a scaffold for writing new board specs, a spec verifier that re-derives any spec's claims from the sources it cites, and campaign review, which checks a driver campaign's claims and status index against its evidence.",
+  "description": "Driver porting and review: peripheral specs whose every fact cites the line it came from, reference reviews of a driver against another implementation, board specs and the board-expert reader, a scaffold for writing new board specs, a hardware investigator that answers a question as anchored facts from sources the target spec root's license accepts, a spec verifier that re-derives any spec's claims from the sources it cites, and campaign review, which checks a driver campaign's claims and status index against its evidence.",
   "author": {
     "name": "curtisgalloway",
     "url": "https://github.com/curtisgalloway"

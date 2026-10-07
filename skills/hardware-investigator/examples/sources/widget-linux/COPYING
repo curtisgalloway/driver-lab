@@ -1,0 +1,3 @@
+Synthetic fixture. Stands in for a tree licensed GPL-2.0-only; see
+LICENSES/GPL-2.0-only in a real kernel tree. Files carry their own
+SPDX-License-Identifier line.

@@ -313,7 +313,8 @@ finally:
         self.assertEqual(handoff["unit"]["tier"], 1)
         self.assertFalse(Path(handoff["record"]).exists())
         hashes = json.loads(Path(handoff["input_hashes"]).read_text(encoding="utf-8"))
-        self.assertEqual(len(hashes), 7)
+        # Seven before LS7, when the brief stopped copying the investigator skill's file.
+        self.assertEqual(len(hashes), 6)
         for relative, checksum in hashes.items():
             self.assertEqual(digest(dep.workspace / relative), checksum)
         self.assertFalse(list(dep.workspace.rglob("status.yaml")))

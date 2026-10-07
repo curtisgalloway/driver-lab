@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T17:42-07:00
+Updated: 2026-10-06T18:05-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,13 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS7 — driver-lab's skills neutral; clean-room rules moved](LS7.md)
+Entries: 2026-10-06T17:48-07:00 through 2026-10-06T18:05-07:00
+Outcome: complete; `board-expert` given its own method, 57-row move list into
+`cleanroom-investigator` (wrapping `board-expert`, plus `BOARD-SPECS.md`) and a new
+`cleanroom-verifier`; three skills deleted. Open format's rule for code-only facts added after
+review; the CR5 deployment fixture is the acceptance grep's one exception.
 
 ### [LS6 — `cleanroom-skills` created with history](LS6.md)
 Entries: 2026-10-06T17:40-07:00 through 2026-10-06T17:42-07:00

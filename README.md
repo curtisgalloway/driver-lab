@@ -251,8 +251,6 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 ## Tests
 
 ```bash
-python3 -m unittest discover -s skills/os-investigator/tests -v
-python3 -m unittest discover -s skills/cleanroom-implementer/tests -v
 python3 -m unittest discover -s skills/board-expert/tests -v
 python3 skills/board-expert/scripts/spec_check.py \
   skills/board-expert/specs \

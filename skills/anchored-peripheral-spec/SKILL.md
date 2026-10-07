@@ -7,9 +7,9 @@ description: >-
   check the spec against the code and drift is detectable when the code moves. Use when asked to
   document, spec, or port a driver from source you may cite: GPL-2.0 trees (the spec goes to
   hardware-specs-gpl), BSD/MIT/Apache trees (hardware-specs-permissive), datasheets only
-  (hardware-specs-docs), or your own code. For NDA source, or a driver whose license the source's
-  terms do not permit, use cleanroom-spec instead, whose wall this skill deliberately does not
-  have. Ships scripts/anchor_check.py (resolve anchors, gate pin licenses against a root, check
+  (hardware-specs-docs), or your own code. Not for NDA source, and not a way to write a driver
+  under a license the source's terms do not permit: every fact here points at the lines it came
+  from. Ships scripts/anchor_check.py (resolve anchors, gate pin licenses against a root, check
   document hashes, render a review sheet, detect and rewrite drift) and scripts/inventory_check.py
   (omissions and value mismatches against the register headers).
 ---
@@ -23,16 +23,15 @@ SPDX-License-Identifier: Apache-2.0
 
 You produce one **implementation spec per peripheral** — the document an engineer reads to write
 or rewrite a driver — from driver source you are **allowed to read, cite, and quote from**, in a
-repository whose license fits that source (see *Where the spec goes* below). The spec has the same shape as a
-clean-room spec (HALF 1 hardware, HALF 2 target-OS integration), but its discipline is the
-opposite: instead of hiding where facts came from, **every source-derived fact carries an anchor to
-the exact lines it was derived from**, at a pinned commit. A reader can open the spec and the
-tree side by side and confirm that the spec is telling the truth; a checker can tell you which
+repository whose license fits that source (see *Where the spec goes* below). The spec has two
+halves (HALF 1 hardware, HALF 2 target-OS integration), and **every source-derived fact carries an
+anchor to the exact lines it was derived from**, at a pinned commit. A reader can open the spec and
+the tree side by side and confirm that the spec is telling the truth; a checker can tell you which
 claims need re-reading when the tree moves.
 
 This skill's value is **traceability**: a spec you can't trace back to code is a spec you have to
-take on faith, and a spec whose anchors have gone stale is one you *shouldn't*. The clean-room
-skill answers "can we prove we didn't copy?"; this one answers "can we prove the spec is right?".
+take on faith, and a spec whose anchors have gone stale is one you *shouldn't*. This skill answers
+"can we prove the spec is right?".
 
 ## Where the spec goes: which repository's license fits?
 
@@ -82,24 +81,23 @@ To choose:
 The consequence for readers: a GPL spec's anchors lead straight into GPL code, which is exactly
 right for Linux work and exactly wrong for someone writing a driver under a license the source's
 terms do not permit (a Fuchsia driver from a Linux driver, for example). That reader uses specs
-from the docs and permissive repositories, or runs `cleanroom-spec` privately: its output is never
-published. If you are not sure which license a source carries, do not anchor to it until you are.
+from the docs and permissive repositories. If you are not sure which license a source carries, do
+not anchor to it until you are.
 
 To **review an existing implementation against a reference implementation** of the same hardware —
 findings, not a spec — use `reference-driver-review`, which reuses this skill's anchor grammar and
 checkers under `[impl:]`/`[ref:]` tags.
 
-Do **not** load `os-investigator` here — its clean-room rule (never reproduce code, never name the
-file) forbids the thing this skill requires. The board-expert skills (`board-expert` and any `<board>-expert` stub) remain
-useful as the *map* of SoC addresses, IP identity, and quirks. `cleanroom-implementer` does not
-apply: implementers of an anchored spec may and should read the source (which is why the spec is
-for readers whose own work the source's license permits; see *Where the spec goes*).
+The board-expert skills (`board-expert` and any `<board>-expert` stub) are useful as the *map* of
+SoC addresses, IP identity, and quirks. Implementers of an anchored spec may and should read the
+source (which is why the spec is for readers whose own work the source's license permits; see
+*Where the spec goes*).
 
 ## Datasheet first, anchor always
 
-The advice from `cleanroom-spec` still holds: **name the silicon IP block + vendor and find its
-authoritative datasheet** (or a public sibling — Zynq's chapters for Cadence GEM, the ARM TRM for a
-PrimeCell, the Synopsys databook for DesignWare). The datasheet says *why the code is right*; the
+First **name the silicon IP block + vendor and find its authoritative datasheet** (or a public
+sibling — Zynq's chapters for Cadence GEM, the ARM TRM for a PrimeCell, the Synopsys databook for
+DesignWare). The datasheet says *why the code is right*; the
 anchor says *where the code does it*. The best fact carries both:
 
 ```
@@ -238,14 +236,14 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
     works around each one; **per-area confidence** (datasheet + code / code alone / inferred);
     the **verify-on-hardware list** — every `[as-implemented]` claim and every register whose
     width, reset value, or bit position rests on code alone, so bring-up knows what to probe
-    first; **open questions** — what neither code nor documents settle (the anchored analog of
-    the clean-room spec-gap list; "the code answers everything" is a claim, not a default); and
+    first; **open questions** — what neither code nor documents settle ("the code answers
+    everything" is a claim, not a default); and
     the **verification record**: pins, date, verdict, checker report path, spec sha256 at PASS —
     filled by the verifier/orchestrator, not the spec author.
 
 ## How to run it
 
-There is no wall here, so delegation is about **reading capacity**, not hygiene — and it
+Delegation here is about **reading capacity**, not hygiene — and it
 matters more than it looks. A drafter that also holds the raw driver in its context writes a
 thinner spec: the source crowds out the output, and every fact competes with the code it came
 from. Measured on a 2,400-line PHY driver, a single-context writer produced half the spec of a
@@ -336,8 +334,8 @@ driver fits comfortably beside the spec.
    ```
    — which prints each claim followed by the cited source lines, and judges **whether the cited
    lines actually support the claim**: the offset matches the `#define`, the step is what the
-   statement does, the bit is the bit. Unlike the clean-room verifier, this one *is* an accuracy
-   check and may quote both sides freely. Its method is **dump first**: read the main source
+   statement does, the bit is the bit. This verifier is an accuracy check and may quote both sides
+   freely. Its method is **dump first**: read the main source
    files in full once, then check every anchor against them — cheaper than hundreds of lookups
    and more reliable, because a wrong claim about one function is visible when the whole
    function is in view. It finishes with a **blind re-derivation sample**: for ~10% of anchors,

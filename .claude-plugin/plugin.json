@@ -1,7 +1,7 @@
 {
   "name": "driver-porting",
   "version": "1.0.0",
-  "description": "Driver porting and review: the clean-room pipeline (os-investigator, cleanroom-spec, cleanroom-implementer), source-anchored specs and reference reviews for code you own, board specs and the board-expert reader, a scaffold for writing new board specs, and a spec verifier that re-derives any spec's claims from the sources it cites.",
+  "description": "Driver porting and review: source-anchored peripheral specs whose every fact cites the line it came from, reference reviews of a driver against another implementation, board specs and the board-expert reader, a scaffold for writing new board specs, a spec verifier that re-derives any spec's claims from the sources it cites, and campaign review, which checks a driver campaign's claims and status index against its evidence.",
   "author": {
     "name": "curtisgalloway",
     "url": "https://github.com/curtisgalloway"
@@ -9,11 +9,9 @@
   "repository": "https://github.com/curtisgalloway/driver-lab",
   "license": "Apache-2.0",
   "keywords": [
-    "clean-room",
     "drivers",
     "bring-up",
-    "raspberry-pi",
-    "rockchip",
+    "specs",
     "hardware"
   ]
 }

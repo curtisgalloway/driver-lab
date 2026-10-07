@@ -10,7 +10,7 @@ description: >-
   public kernel source release"). Use when asked to review, compare, diff, cross-check, or
   sanity-check a driver against an upstream, vendor, or original implementation. Reuses
   anchored-peripheral-spec's checkers via [impl:]/[ref:] anchors. Output is a review, never
-  driver code — to write a driver from encumbered source use cleanroom-spec instead.
+  driver code.
 ---
 
 <!--
@@ -34,9 +34,7 @@ driver waits after reset" is an opinion; a review that says it with
 to the evidence. Maximize them.
 
 This skill **reviews**; it does not spec and it does not port. To produce an implementation spec
-from source you own, use `anchored-peripheral-spec`. To write a new driver from encumbered source,
-use `cleanroom-spec` — a review of an *existing, independently written* implementation is exactly
-the case where that wall is not needed.
+from source whose license fits where the spec will live, use `anchored-peripheral-spec`.
 
 ## Intake: the implementation under review
 

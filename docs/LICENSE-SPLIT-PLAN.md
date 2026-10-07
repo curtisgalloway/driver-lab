@@ -59,7 +59,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](../evidence/LS4.md)) |
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](../evidence/LS5.md)) |
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](../evidence/LS6.md)) |
-| LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | pending |
+| LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | pending |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | pending |
 | LS10 | `hardware-investigator` skill | LS9 | pending |
@@ -233,45 +233,21 @@ paragraph.
 
 ## LS7 — driver-lab's skills neutral; clean-room rules moved
 
-**Design coverage:** LS-R15, LS-R14 (spec-verifier part).
-**Dependencies:** LS6.
-**In scope:** a paired change in both repos. In driver-lab: `board-expert` stops loading
-`os-investigator`; `SPEC-FORMAT.md`'s clean-room rules and the `[source-observed]` description
-leave (the tag stays accepted, described as defined by an extension); `board-spec-scaffold`'s
-subagent and templates drop clean-room text; `spec-verifier`'s clean-room section and the
-clean-room text in its shared parts leave; delete `skills/cleanroom-spec`,
-`skills/cleanroom-implementer`, `skills/os-investigator`; CI drops their steps; plugin
-description updated. In `cleanroom-skills`: `cleanroom-investigator` wraps `board-expert` and
-carries the moved rules; the clean-room verification lands as a `cleanroom-verifier` skill or a
-section of `cleanroom-spec` (decide and record).
-**Out of scope:** `DESIGN.md` and other documents (LS8); renames on the open side (LS9).
-
-### Implementation steps
-1. Move the text, not rewrite it: each removed passage lands in `cleanroom-skills` in the same
-   change; list each move (source lines → destination) in the evidence.
-2. Update `board-expert/tests` that expected clean-room text (`test_spec_check.py` lines the
-   design's current-state section points to).
-3. Remove the three skill directories and their CI steps; keep `portability_scan.py` only in
-   `cleanroom-skills`.
-4. Fix references in the remaining open skills (`reference-driver-review`, `campaign-review`
-   fixtures) by pointing at `cleanroom-skills` or removing them.
-
-### Acceptance criteria
-- [ ] `rg -i 'os-investigator|clean-?room|the wall|research subagent' skills/` in driver-lab
-      matches nothing except `[source-observed]` in `spec_check.py` and its test (quote output).
-- [ ] Every removed passage has a destination in `cleanroom-skills` (the move list).
-- [ ] driver-lab's remaining check list and `cleanroom-skills`' CI both pass.
-
-### Testing and review
-- Reviewer subagent with both diffs. Focus: no rule lost in the move; `board-expert` still
-  works as a plain fact finder (its tests); `cleanroom-investigator` actually wraps it.
-
-### Session sizing
-Many files but mostly moves. Split point: board-expert and scaffold (with their counterparts)
-as one checkpoint, spec-verifier and the deletions as a second.
-
-### Evidence and findings
-Status: pending. Evidence: [LS7](../evidence/LS7.md). Notebook: [LS7](../notebook/LS7.md).
+**Outcome:** driver-lab's open skills carry no clean-room text: `board-expert` has a method and
+report of its own and no longer loads `os-investigator`; `SPEC-FORMAT.md` says `[source-observed]`
+is defined by an extension (the checker still accepts it) and states how a fact read only from
+code appears on the open side; `board-spec-scaffold`, `spec-verifier`, `anchored-peripheral-spec`
+and `reference-driver-review` no longer name the clean-room skills; the three clean-room skill
+directories, their CI steps and the public-skills checkout are gone. In `cleanroom-skills`
+(`670cecd`), `cleanroom-investigator` wraps `board-expert` (plus `BOARD-SPECS.md`) and a new
+`cleanroom-verifier` skill wraps `spec-verifier`; every removed passage is in the evidence's move
+list.
+**Design coverage:** LS-R15, LS-R14 (spec-verifier part). **Dependencies:** LS6.
+**Status:** complete. Evidence: [LS7](../evidence/LS7.md). Notebook: [LS7](../notebook/LS7.md).
+Review: one reviewer subagent; six should-fix items and five nits, all resolved.
+**Open limitations:** the acceptance grep's one recorded exception is
+`skills/campaign-review/tests/fixtures/deployment-cr5.yaml` (a copy of the frozen CR5
+deployment); root documents still describe the clean-room skills until LS8.
 
 ## LS8 — Documents split; frozen archive; open-side check
 
@@ -280,8 +256,10 @@ Status: pending. Evidence: [LS7](../evidence/LS7.md). Notebook: [LS7](../noteboo
 **In scope:** `DESIGN.md`'s clean-room sections move to `cleanroom-skills` (proposed
 `DESIGN.md` there); driver-lab's `README.md`, `AGENTS.md`, `GLOSSARY.md` lose clean-room text
 except one README pointer line; archive headers on the frozen files the design lists; a new
-`utilities/check-open-side.py` with that allowlist, in CI and AGENTS.md; marketplace and plugin
-descriptions corrected (they still name deleted board experts).
+`utilities/check-open-side.py` with that allowlist, in CI and AGENTS.md. (The marketplace and
+plugin descriptions were corrected in LS7.) The allowlist must include
+`skills/campaign-review/tests/fixtures/deployment-cr5.yaml` (LS7's recorded exception), and
+`AGENTS.md`'s Isolation rule still names `cleanroom-implementer`'s scripts by driver-lab path.
 **Out of scope:** consumer repos (LS12).
 
 ### Implementation steps
@@ -406,7 +384,8 @@ including its stale `rpi-expert` reference); `bringup-kit` (templates/AGENTS.md,
 hardware-inventory template, Bringup.md; spec roots naming the docs and permissive repos only);
 `public-skills` (README, marketplace description, `agent-agnostic-skills` links to
 `cleanroom-implementer/scripts` → `cleanroom-skills`); driver-lab's CI pin of public-skills
-bumped to the commit with the new links; driver-lab's marketplace entry.
+bumped to the commit with the new links (moot since LS7 removed that pin and its only use);
+driver-lab's marketplace entry.
 **Out of scope:** bringup-kit's archived laps (`laps/`), which keep their historical names.
 
 ### Acceptance criteria
@@ -445,11 +424,11 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS6 complete; LS7 (driver-lab's skills neutral, clean-room rules moved to
-  `cleanroom-skills`, driver-lab's copies removed) is next. LS7 is a paired change in both
-  repositories and deletes the duplicate-skills paragraph from `cleanroom-skills`' README.
+- Current milestone: LS7 complete (checkpoint commits in driver-lab and `cleanroom-skills`, each
+  on `license-split/ls7`; the orchestrator opens a pull request in each). LS8 (documents split,
+  frozen archive headers, `check-open-side.py`) is next.
 - Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
   Zlib (they accept only the design's named licenses).
-- Resume action: begin **LS7** on `license-split/ls7` from a fetched `origin/main`, with a
-  matching branch in `cleanroom-skills`.
-- Read first: the design, this plan's conventions and LS7, the notebook index, LS6's evidence.
+- Resume action: begin **LS8** on `license-split/ls8` from a fetched `origin/main` after both LS7
+  pull requests merge; its allowlist needs LS7's fixture exception.
+- Read first: the design, this plan's conventions and LS8, the notebook index, LS7's evidence.

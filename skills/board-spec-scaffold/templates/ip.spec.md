@@ -49,8 +49,9 @@ the PHY interface), and which databook or proxy documents the registers. Each bu
 ## Programming model
 
 <Register-map organization, the init / reset / teardown sequences at the databook's level of
-detail, the DMA and interrupt model. Each bullet ends with a tag. Orderings taken only from a driver
-are `[source-observed]` and say "order not known to be required".>
+detail, the DMA and interrupt model. Each bullet ends with a tag. An ordering known only from a
+driver goes in only as a cited premise of an `[inference]` (SPEC-FORMAT § Terms, *Provenance
+tag*).>
 
 - **Register organization.** <...> `[databook]`
 - **Init sequence.** <...> `[databook]`

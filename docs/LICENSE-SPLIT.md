@@ -202,6 +202,14 @@ Settled by the user on 2026-10-05 ([notebook](../notebook/LS-design.md)):
 | When the permissive repo is created | With the other two |
 | Order | License tooling and spec repos first, then the clean-room split |
 
+Settled by the user on 2026-10-06, during LS5 ([notebook](../notebook/LS5.md)):
+
+| Question | Decision |
+|---|---|
+| Are board specs' `resources.repos` licenses gated, not only validated (LS-R2)? | Yes: `spec_check.py --require-license` fails one the root's `accepts:` does not accept, with the anchor gate's SPDX rules |
+| License fields of the shipped `skills/board-expert/specs` root | `license: Apache-2.0`, `accepts: [Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]` |
+| Create the three spec repositories (public) and push them | Go given |
+
 Earlier: the 11 specs deleted, to be regenerated (2026-10-01); facts 2, 3 and 6 to a bcm2711
 permissive overlay (2026-09-30); `hardware-investigator` and `peripheral-spec` names (draft).
 

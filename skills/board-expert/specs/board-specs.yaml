@@ -4,5 +4,11 @@
 # Root marker for public board specs that ship with board-expert: boards with no
 # home source tree. Empty for now: the earlier specs were removed to be
 # regenerated with the current skills. See ../SPEC-FORMAT.md.
+#
+# license: and accepts: decided by the user on 2026-10-06 (license-split LS5):
+# this root ships inside the Apache-2.0 driver-lab repository, so it accepts
+# sources under Apache-2.0 and the common permissive licenses only.
 layer: public
 name: driver-porting
+license: Apache-2.0
+accepts: [Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]

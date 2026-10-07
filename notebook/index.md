@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T10:39-07:00
+Updated: 2026-10-06T17:24-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,13 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS5 — the three spec repositories](LS5.md)
+Entries: 2026-10-06T17:17-07:00 through 2026-10-06T17:24-07:00
+Outcome: in progress, awaiting publication; board-spec license gate in `spec_check.py
+--require-license`, shipped marker's license fields, three local spec repositories with a CI
+self-test. The first self-test pattern matched an informational line, then any gate error
+(review); accepts lists trimmed to the design's names, extras a question for the user.
 
 ### [LS4 — placement guidance, provenance template and format docs](LS4.md)
 Entries: 2026-10-06T10:26-07:00 through 2026-10-06T10:39-07:00

@@ -365,6 +365,20 @@ class GoodRoot(unittest.TestCase):
                 )
                 self.assertEqual(code, 0, err + json.dumps(data))
 
+    def test_shipped_public_root_declares_its_license(self):
+        """The shipped marker carries license: and accepts: (user's decision, 2026-10-06)."""
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags):
+                code, data, err = run(
+                    HERE.parent / "specs", "--require-license", "--stubs-from",
+                    HERE.parent.parent, flags=flags,
+                )
+                self.assertEqual(code, 0, err + json.dumps(data))
+                self.assertEqual(data["findings"], [])
+        marker = spec_check.load_yaml((HERE.parent / "specs" / "board-specs.yaml").read_text(), False)
+        self.assertEqual(marker["license"], "Apache-2.0")
+        self.assertEqual(marker["accepts"], ["Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause"])
+
     def test_missing_root_marker_is_a_precondition(self):
         code, _, err = run(FIX, flags=["--no-pyyaml"])
         self.assertEqual(code, 3)
@@ -425,6 +439,7 @@ class LegacyMarkers(unittest.TestCase):
 
 GATE_ROOTS = HERE.parent.parent / "anchored-peripheral-spec" / "tests" / "fixtures" / "license-gate" / "roots"
 LICENSED = "layer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0, MIT]\n"
+GATE_BOARD = GATE_ROOTS.parent / "board"
 
 
 class RootLicense(unittest.TestCase):
@@ -527,14 +542,225 @@ class RootLicense(unittest.TestCase):
                     "repos entry 'fw': no license: (required in a root whose marker declares accepts:)",
                     messages(data),
                 )
-        # LS-R2 asks for a valid license, not an accepted one (the gate is anchor_check's), so
-        # GPL-2.0-only passes in a root that accepts only Apache-2.0 and MIT.
+        # LS-R2 asks for a valid license, not an accepted one, so without --require-license
+        # GPL-2.0-only passes in a root that accepts only Apache-2.0 and MIT. Under
+        # --require-license the board-spec gate applies (BoardSpecGate, LS5).
         for lic in ("GPL-2.0 OR MIT", "GPL-2.0-only"):
             with self.subTest(license=lic):
                 present = {"c.spec.md": CHIP_WITH_REPO.format(license_line=f"      license: {lic}\n")}
-                code, data, err = self.check(LICENSED, present, "--require-license")
+                code, data, err = self.check(LICENSED, present)
                 self.assertEqual(code, 0, err + json.dumps(data))
                 self.assertEqual(substantive(data), [])
+
+
+TWO_REPOS = """\
+---
+kind: chip
+id: gchip
+name: Gate test chip
+triggers: [gchip]
+resources:
+  repos:
+    - name: fw
+      url: https://example.com/fw
+      license: {fw}
+    - name: tools
+      url: https://example.com/tools
+      license: {tools}
+---
+
+## Quick-facts
+
+- A fact. `[doc]` (Widget TRM 1.0)
+"""
+
+OVERLAY_WITH_REPO = """\
+---
+overlays: gchip
+resources:
+  repos:
+    - name: stub
+      url: https://example.com/stub
+      license: {lic}
+---
+
+## Quick-facts
+
+- An added fact. `[doc]` (Widget TRM 1.0)
+"""
+
+
+class BoardSpecGate(unittest.TestCase):
+    """--require-license gates resources.repos[].license against accepts: (LS5, user 2026-10-06).
+
+    Four tests characterize behavior that must not change and pass on the pre-LS5 script:
+    the three under "characterization" and test_cross_root_overlay_resolves_only_with_the_docs_root.
+    The rest describe the gate and fail there.
+    """
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            code, data, err = run(root, *args, flags=list(flags))
+            return code, data, err, root
+
+    def gate_errors(self, data):
+        return [f for f in data["findings"] if f["message"].startswith("license gate:")]
+
+    # -- characterization: unchanged behavior
+
+    def test_without_require_license_an_unaccepted_repo_license_passes(self):
+        spec = {"c.spec.md": TWO_REPOS.format(fw="GPL-2.0-only", tools="MIT")}
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags):
+                code, data, err, _ = self.check(LICENSED, spec, flags=flags)
+                self.assertEqual(code, 0, err + json.dumps(data))
+                self.assertEqual(substantive(data), [])
+
+    def test_accepted_repo_licenses_pass_under_require_license(self):
+        for fw, tools in (("MIT", "Apache-2.0"), ("GPL-2.0 OR MIT", "MIT"),
+                          ("(MIT AND Apache-2.0)", "mit")):
+            spec = {"c.spec.md": TWO_REPOS.format(fw=fw, tools=tools)}
+            for flags in PARSER_FLAGS:
+                with self.subTest(fw=fw, flags=flags):
+                    code, data, err, _ = self.check(LICENSED, spec, "--require-license", flags=flags)
+                    self.assertEqual(code, 0, err + json.dumps(data))
+                    self.assertEqual(substantive(data), [])
+
+    def test_invalid_repo_license_is_reported_once_not_also_gated(self):
+        spec = {"c.spec.md": TWO_REPOS.format(fw="GPL-2", tools="MIT")}
+        code, data, _, _ = self.check(LICENSED, spec, "--require-license")
+        self.assertEqual(code, 1)
+        errors = [f["message"] for f in data["findings"] if f["level"] == "error"]
+        self.assertEqual(len(errors), 1, errors)
+        self.assertTrue(
+            errors[0].startswith("repos entry 'fw': license: unknown SPDX license identifier 'GPL-2'"),
+            errors,
+        )
+
+    # -- the gate
+
+    def test_unaccepted_repo_license_fails_naming_spec_repo_license_and_accepts(self):
+        spec = {"c.spec.md": TWO_REPOS.format(fw="GPL-2.0-only", tools="MIT")}
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags):
+                code, data, err, root = self.check(LICENSED, spec, "--require-license", flags=flags)
+                self.assertEqual(code, 1, err)
+                self.assertEqual(
+                    [(f["level"], f["path"], f["message"]) for f in data["findings"]
+                     if not f["message"].startswith("unverified:")],
+                    [("error", str(root / "c.spec.md"),
+                      f"license gate: repos entry 'fw' (GPL-2.0-only), which root {root} does not "
+                      "accept (accepts: Apache-2.0, MIT); cite it from a root that accepts it, or "
+                      "drop it")],
+                )
+
+    def test_docs_root_accepts_no_repo(self):
+        spec = {"c.spec.md": TWO_REPOS.format(fw="MIT", tools="BSD-3-Clause")}
+        code, data, err, root = self.check(
+            "layer: public\nlicense: CC-BY-4.0\naccepts: []\n", spec, "--require-license"
+        )
+        self.assertEqual(code, 1, err)
+        self.assertEqual(
+            [f["message"] for f in self.gate_errors(data)],
+            [f"license gate: repos entry 'fw' (MIT), which root {root} does not accept "
+             "(accepts: none); cite it from a root that accepts it, or drop it",
+             f"license gate: repos entry 'tools' (BSD-3-Clause), which root {root} does not "
+             "accept (accepts: none); cite it from a root that accepts it, or drop it"],
+        )
+
+    def test_and_needs_every_part_and_or_any(self):
+        for lic, fails in (("GPL-2.0-only AND MIT", True), ("GPL-2.0-only OR MIT", False),
+                           ("GPL-2.0+", True), ("Apache-2.0 WITH LLVM-exception", False)):
+            spec = {"c.spec.md": TWO_REPOS.format(fw=lic, tools="MIT")}
+            with self.subTest(license=lic):
+                code, data, err, _ = self.check(LICENSED, spec, "--require-license")
+                self.assertEqual(code, int(fails), err + json.dumps(data))
+                self.assertEqual(len(self.gate_errors(data)), int(fails))
+
+    def test_the_repo_shaped_roots_gate_board_specs_like_anchors(self):
+        """GPL-only repo: GPL root passes, docs and permissive fail; GPL OR MIT: permissive too."""
+        import shutil
+        import tempfile
+
+        cases = {("GPL-2.0-only", "gpl"): 0, ("GPL-2.0-only", "docs"): 1,
+                 ("GPL-2.0-only", "permissive"): 1, ("GPL-2.0 OR MIT", "permissive"): 0,
+                 ("BSD-3-Clause", "permissive"): 0, ("BSD-3-Clause", "docs"): 1}
+        for (lic, name), want in cases.items():
+            with self.subTest(license=lic, root=name), tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp) / name
+                root.mkdir()
+                shutil.copy(GATE_ROOTS / name / "board-specs.yaml", root)
+                (root / "c.spec.md").write_text(TWO_REPOS.format(fw=lic, tools=lic))
+                code, data, err = run(root, "--require-license", flags=["--no-pyyaml"])
+                self.assertEqual(code, want, err + json.dumps(data))
+                self.assertEqual(len(self.gate_errors(data)), 2 * want)
+
+    def test_overlays_are_gated_by_their_own_root(self):
+        specs = {"c.spec.md": TWO_REPOS.format(fw="MIT", tools="MIT"),
+                 "o.spec.md": OVERLAY_WITH_REPO.format(lic="GPL-2.0-only")}
+        code, data, err, root = self.check(LICENSED, specs, "--require-license")
+        self.assertEqual(code, 1, err)
+        self.assertEqual([f["path"] for f in self.gate_errors(data)], [str(root / "o.spec.md")])
+        self.assertIn("repos entry 'stub' (GPL-2.0-only)", self.gate_errors(data)[0]["message"])
+
+    def test_board_fixtures_against_the_repo_shaped_roots(self):
+        """The board fixtures the spec repositories' self-tests copy (license-gate/board/)."""
+        import shutil
+        import tempfile
+
+        overlays = {None: {"gpl": 0, "docs": 0, "permissive": 0},
+                    "widgetchip-bsd-overlay.spec.md": {"gpl": 0, "docs": 1, "permissive": 0},
+                    "widgetchip-gpl3-overlay.spec.md": {"gpl": 1, "docs": 1, "permissive": 1}}
+        for overlay, by_root in overlays.items():
+            for name, want in by_root.items():
+                with self.subTest(overlay=overlay, root=name), tempfile.TemporaryDirectory() as tmp:
+                    root = pathlib.Path(tmp) / name
+                    root.mkdir()
+                    shutil.copy(GATE_ROOTS / name / "board-specs.yaml", root)
+                    shutil.copy(GATE_BOARD / "widgetchip.spec.md", root)
+                    if overlay:
+                        shutil.copy(GATE_BOARD / overlay, root)
+                    code, data, err = run(root, "--require-license", flags=["--no-pyyaml"])
+                    self.assertEqual(code, want, err + json.dumps(data))
+                    errors = [f["message"] for f in data["findings"] if f["level"] == "error"]
+                    self.assertEqual(len(errors), want, errors)
+                    self.assertTrue(all(m.startswith("license gate: repos entry") for m in errors))
+
+    def test_cross_root_overlay_resolves_only_with_the_docs_root(self):
+        """The permissive repository's overlay targets a spec in the docs repository (design risk)."""
+        import shutil
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, perm = pathlib.Path(tmp) / "docs", pathlib.Path(tmp) / "permissive"
+            docs.mkdir()
+            perm.mkdir()
+            shutil.copy(GATE_ROOTS / "docs" / "board-specs.yaml", docs)
+            shutil.copy(GATE_BOARD / "widgetchip.spec.md", docs)
+            shutil.copy(GATE_ROOTS / "permissive" / "board-specs.yaml", perm)
+            shutil.copy(GATE_BOARD / "widgetchip-bsd-overlay.spec.md", perm)
+            code, data, err = run(perm, "--require-license", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1, err)
+            self.assertIn("overlays 'widgetchip' resolves to nothing", messages(data))
+            code, data, err = run(perm, docs, "--require-license", flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            self.assertEqual(substantive(data), [])
+
+    def test_human_output_names_the_spec(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, LICENSED, {"c.spec.md": TWO_REPOS.format(fw="GPL-2.0-only", tools="MIT")})
+            proc = subprocess.run(
+                [sys.executable, str(CHECKER), "--no-pyyaml", "--require-license", str(root)],
+                capture_output=True, text=True, check=False,
+            )
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertIn(f"error: {root / 'c.spec.md'}: license gate: repos entry 'fw' (GPL-2.0-only)",
+                      proc.stderr)
 
 
 class BadRoot(unittest.TestCase):

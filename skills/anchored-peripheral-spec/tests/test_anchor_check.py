@@ -1019,6 +1019,40 @@ class TestRequireNamedDocs(CheckerCase):
                 self.assertEqual(rc, 0, self.messages(report))
                 self.assertEqual(report["findings"], [])
 
+    def test_spec_repository_self_test_pairs(self):
+        """The fit and misfit fixtures each spec repository's CI self-test copies (LS5).
+
+        Run as the repositories run them, with --require-license: the fit passes clean and the
+        misfit fails with a license-gate error (beside others, such as the docs root's demand
+        for named document anchors).
+        """
+        pairs = {"gpl": ("gpl-only-spec.md", "gpl3-only-spec.md"),
+                 "docs": ("docs-named-spec.md", "gpl-only-spec.md"),
+                 "permissive": ("bsd-spec.md", "gpl-only-spec.md")}
+        for root, (fit, misfit) in pairs.items():
+            with self.subTest(root=root):
+                rc, report = self.run_json(GATE / "specs" / fit, "--root", GATE / "roots" / root,
+                                           "--require-license")
+                self.assertEqual(rc, 0, self.messages(report))
+                self.assertEqual(self.messages(report, "error"), [])
+                rc, report = self.run_json(GATE / "specs" / misfit, "--root",
+                                           GATE / "roots" / root, "--require-license")
+                self.assertEqual(rc, 1, self.messages(report))
+                self.assertTrue(any(m.startswith("license gate:")
+                                    for m in self.messages(report, "error")),
+                                self.messages(report))
+
+    def test_named_docs_fixture_passes_every_root_under_require_license(self):
+        for root in ("gpl", "docs", "permissive"):
+            with self.subTest(root=root):
+                rc, report = self.run_json(GATE / "specs" / "docs-named-spec.md", "--root",
+                                           GATE / "roots" / root, "--require-license")
+                self.assertEqual(rc, 0, self.messages(report))
+                self.assertEqual(report["findings"], [])
+        rc, report = self.run_json(GATE / "specs" / "docs-only-spec.md", "--root",
+                                   GATE / "roots" / "docs", "--require-license")
+        self.assertEqual(rc, 1, self.messages(report))
+
     def test_require_license_needs_root(self):
         rc, out = self.run_check(self.spec(self.UNNAMED), "--require-license")
         self.assertEqual(rc, 2, out)

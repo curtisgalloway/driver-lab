@@ -11,7 +11,7 @@ where one exists. Default everything else and say so.**
 
 ## Terms
 
-- **Orchestrator** — the skill running in the main agent's context: `anchored-peripheral-spec`,
+- **Orchestrator** — the skill running in the main agent's context: `peripheral-spec`,
   `reference-driver-review`, `board-spec-scaffold`. It may ask the user.
 - **Subagent role** — a skill whose body runs in a spawned subagent: `board-expert`. It cannot
   reach the user. It returns a `Needs decision` block instead.
@@ -25,7 +25,7 @@ where one exists. Default everything else and say so.**
 
 | Skill | Role | Behavior |
 | --- | --- | --- |
-| `anchored-peripheral-spec` | orchestrator | asks at intake: repository and commit, peripheral, instance |
+| `peripheral-spec` | orchestrator | asks at intake: repository and commit, peripheral, instance |
 | `reference-driver-review` | orchestrator | asks when the reference cannot be resolved from a board spec |
 | `board-spec-scaffold` | orchestrator | asks in its interview; this catalog is the interview's checklist |
 | `board-expert` | subagent | never asks; returns `Needs decision` |

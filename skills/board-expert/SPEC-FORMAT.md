@@ -13,7 +13,7 @@ stated here; the skills point at this file instead of restating it.
 
 - **Board spec** — a Markdown file with YAML frontmatter describing one piece of hardware: a board, an
   SoC, a companion chip, or an IP block. Cited facts plus pointers to sources, documents, and tools;
-  never source code. Distinct from a *driver spec* (`anchored-peripheral-spec`),
+  never source code. Distinct from a *driver spec* (`peripheral-spec`),
   which describes one peripheral's programming model for an implementer.
 - **IP spec** — a spec of kind `ip`: one silicon IP block (a PL011 UART, a DesignWare `dwc3` USB
   controller, a GIC-400) independent of any SoC. Its authorities are the IP databook and the public
@@ -36,7 +36,7 @@ stated here; the skills point at this file instead of restating it.
   (`GPL-2.0-only`, `GPL-2.0 OR MIT`). See *The root marker*, and driver-lab's `GLOSSARY.md`.
 - **Peripheral spec** — a spec of one device's programming model whose facts are anchored to
   source lines at a **pin** (a named source tree at a commit) or to documents; written by
-  `anchored-peripheral-spec`. See *Peripheral specs in a licensed root*.
+  `peripheral-spec`. See *Peripheral specs in a licensed root*.
 - **Layer** — a root's position in the merge order: `public`, `ip-vendor`, `soc-vendor`, `product`,
   `local`. Declared in the root marker.
 - **Overlay** — a spec file that adds to another spec instead of standing alone (`overlays: <id>`).
@@ -138,12 +138,12 @@ accepts: [Apache-2.0, MIT, BSD-3-Clause]  # optional; SPDX identifiers anchored 
 license (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`; created in
 milestone LS5 of the license-split plan, not yet public). Which repository a spec goes in is the
 **placement rule**: the most restrictive repository among the sources the spec anchors to. The
-rule and the "which repo does my spec go in?" table are in `anchored-peripheral-spec`, "Where the
+rule and the "which repo does my spec go in?" table are in `peripheral-spec`, "Where the
 spec goes".
 
 - `license:` is an SPDX expression for the root's own license (`GPL-2.0-only`, `CC-BY-4.0`,
   `Apache-2.0`).
-- `accepts:` is a list of single SPDX identifiers that the pins of the root's anchored specs may
+- `accepts:` is a list of single SPDX identifiers that the pins of the root's peripheral specs may
   carry; no expressions in the list. `accepts: []` is declared and empty: the root accepts no
   source tree, so its specs cite documents only.
 - Identifiers are checked against a short known list (`board-expert/scripts/spdx.py`) and matched
@@ -159,7 +159,7 @@ spec goes".
   with the same rules as the anchor gate (`OR` passes when either side is accepted, `AND` only
   when every part is). Overlays are gated by the root they live in. Without the flag, a repos
   license is validated as SPDX but not compared with `accepts:`.
-- `anchor_check.py --root <dir>` (`anchored-peripheral-spec`) is the **license gate**: it fails
+- `anchor_check.py --root <dir>` (`peripheral-spec`) is the **license gate**: it fails
   every anchor whose pin's license `<dir>`'s `accepts:` does not list, and fails outright when the
   marker has no `accepts:`. Its own `--require-license` also requires the marker's `license:` and,
   where `accepts:` is empty, named document anchors. See *Peripheral specs in a licensed root*.
@@ -365,8 +365,8 @@ tag token inside it would be read as a tag.
 ### Peripheral specs in a licensed root
 
 A spec repository also holds **peripheral specs**: one device's programming model, written by
-`anchored-peripheral-spec`, with every fact anchored to source lines or a document. They are not
-board specs: name them `<device>-spec.md` (as `anchored-peripheral-spec` does), not
+`peripheral-spec`, with every fact anchored to source lines or a document. They are not
+board specs: name them `<device>-spec.md` (as `peripheral-spec` does), not
 `<id>.spec.md`, because `spec_check.py` loads every `*.spec.md` as a board spec.
 `anchor_check.py` checks each one. The full grammar is that skill's "The anchor grammar"; what a licensed root relies on is:
 

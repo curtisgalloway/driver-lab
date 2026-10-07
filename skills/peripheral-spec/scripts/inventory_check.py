@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Curtis Galloway
 # SPDX-License-Identifier: Apache-2.0
-"""Compare a source-anchored spec against the driver's register headers.
+"""Compare a peripheral spec against the driver's register headers.
 
 Anchors prove that what the spec says is *somewhere* in the code; they cannot
 show what the spec left out, or catch a value that was copied wrong next to a

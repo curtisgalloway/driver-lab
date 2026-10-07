@@ -437,7 +437,7 @@ class LegacyMarkers(unittest.TestCase):
                 self.assertEqual(code, 0, err + json.dumps(data))
 
 
-GATE_ROOTS = HERE.parent.parent / "anchored-peripheral-spec" / "tests" / "fixtures" / "license-gate" / "roots"
+GATE_ROOTS = HERE.parent.parent / "peripheral-spec" / "tests" / "fixtures" / "license-gate" / "roots"
 LICENSED = "layer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0, MIT]\n"
 GATE_BOARD = GATE_ROOTS.parent / "board"
 

@@ -21,6 +21,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`](LS9.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; directory, name field, CI and check-list paths renamed in five repositories;
+a first global replace rewrote history files and was reverted; the review found the
+`spec-verifier` heading and its references still using the old term.
+
 ### [LS8 — Documents split; frozen archive; open-side check](LS8.md)
 Entries: 2026-10-06T18:21-07:00 through 2026-10-06T18:31-07:00
 Outcome: complete; `DESIGN.md`'s clean-room passages moved by line range to `cleanroom-skills`, the

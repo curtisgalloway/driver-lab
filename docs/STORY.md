@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # driver-lab: a timeline and story outline
 
+> **Frozen archive.** This outline is kept as history of the work before driver-lab's license
+> split (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 *Working material for a later write-up, not the write-up itself. Commit SHAs are this
 repository's; commits
 before 2026-09-25 were rewritten by `git filter-repo` when the work moved out of

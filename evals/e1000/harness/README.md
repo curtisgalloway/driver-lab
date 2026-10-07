@@ -5,6 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 
 # e1000 QEMU harness
 
+> **Frozen archive.** This campaign (every file under `evals/e1000/`) is kept as history of the
+> work before driver-lab's license split (2026-10-06) and is no longer updated. The clean-room
+> skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split
+> design](../../../docs/LICENSE-SPLIT.md), requirement LS-R20.
+
 Runs a Linux e1000 driver against QEMU's emulated Intel 82540EM and records what happened, so
 the reference driver and a candidate written from the spec can be compared
 ([design](../../../QEMU-DIFFERENTIAL.md), plan units L02d1 and L02d2).

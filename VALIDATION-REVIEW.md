@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Review of VALIDATION-PROPOSAL.md
 
+> **Frozen archive.** This review is kept as history of the work before driver-lab's license split
+> (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 Status: review for discussion, 2026-09-19. Reviewer: Claude Fable 5.1 in Claude Code, working
 from the repository at [`315b12b`](https://github.com/curtisgalloway/public-skills/commit/315b12b) plus the untracked proposal. Every claim about existing behavior
 below was checked against the file it names; nothing was taken from the proposal's own description

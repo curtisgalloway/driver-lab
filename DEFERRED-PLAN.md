@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Driver specification and validation: deferred plan
 
+> **Frozen archive.** This plan is kept as history of the work before driver-lab's license split
+> (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 Moved out of the [implementation plan](IMPLEMENTATION-PLAN.md) on 2026-09-25 (plan revision
 of that date; the user approved it after a Claude–Codex consultation). The text below is moved
 verbatim: the historical L01 conventions and input snapshot, the deferred experimental plan

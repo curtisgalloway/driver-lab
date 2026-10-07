@@ -10,9 +10,12 @@ Instructions for coding agents working in this repository. The user guide is the
 
 ## What this is
 
-The `driver-porting` skills (under `skills/`) and the work that tests them: the design and
-[implementation plan](IMPLEMENTATION-PLAN.md), the evaluations under `evals/`, and a record of
-each milestone under `evidence/` and `notebook/`. It was split out of
+The `driver-porting` skills (under `skills/`) and the work that tests them: the
+[design](DESIGN.md), the [license-split plan](docs/LICENSE-SPLIT-PLAN.md), and a record of each
+milestone under `evidence/` and `notebook/`. The evaluations under `evals/`, their plans
+([IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md), [DEFERRED-PLAN.md](DEFERRED-PLAN.md)) and the
+documents that describe them are a frozen archive since the license split: kept as history and
+still checked by CI ([evals/README.md](evals/README.md)). The repository was split out of
 [public-skills](https://github.com/curtisgalloway/public-skills) on 2026-09-25 with its history.
 [TRANSITION.md](TRANSITION.md) records the move.
 
@@ -35,6 +38,8 @@ list:
 
 ```bash
 python3 utilities/check-no-private-paths.py
+python3 utilities/check-open-side.py
+python3 -m unittest discover -s utilities/tests
 python3 -m unittest discover -s skills/board-expert/tests
 python3 -m unittest discover -s skills/anchored-peripheral-spec/tests
 python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
@@ -68,14 +73,11 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
   short chronological discoveries and dead ends; the plan and the notebook index hold status
   and links. Do not repeat findings tables or conclusions across them.
 - **Implementers** are fresh subagents whose model the user selects.
-- **Isolation**: the operator reads the reference driver and QEMU; implementers never do. The
-  blind requirement list stays private until its recall is measured. An implementer launched as
-  a separate CLI (Codex) on the test host, which also holds the reference source, runs under
-  `skills/cleanroom-implementer/scripts/cleanroom_sandbox.sh` with a fresh agent home, and its
-  strace log is checked with `sandbox_audit.py`, after a canary pilot, before its output is used
-  (cleanroom-implementer, "Tier 1 on Linux"). Copying the operator's agent credential into that
-  home and bypassing the agent's own sandbox inside bubblewrap are expected; the user approved
-  both on 2026-09-25.
+- **Open side only** (license split, requirement LS-R20): outside the frozen archive, this
+  repository describes only the open method. `utilities/check-open-side.py` names the terms it
+  refuses and the archive it allows; a rule or text that needs those terms belongs in the
+  separate repository the README's one pointer line names, and so do new evaluation rounds and
+  their isolation rules.
 - **Privacy**: this repository is public. Files name the test host and other machines by role
   only: no addresses, host names, user names or home paths. Source under other licenses stays in
   the private run store, which files cite by run ID only. The rule covers this project's own

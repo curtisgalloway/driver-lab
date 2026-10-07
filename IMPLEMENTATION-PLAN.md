@@ -5,6 +5,16 @@ SPDX-License-Identifier: Apache-2.0
 
 # Driver specification and validation: remaining implementation plan
 
+> **Frozen archive.** This plan is kept as history of the work before driver-lab's license split
+> (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20. The work still listed under "Next session" (revision 10 for CR8's two R
+> items, then a candidate round) moves with new rounds to `cleanroom-skills`; the possible
+> upstream report stays the user's decision.
+
 Revision: 2026-09-25, second amendment (L02g folded into L02f3, L02f2b's H1 fix, review and
 record defaults, deferred material moved to [DEFERRED-PLAN.md](DEFERRED-PLAN.md); see
 [Revision 2026-09-25](#revision-2026-09-25--lighter-process-for-the-remaining-units) under

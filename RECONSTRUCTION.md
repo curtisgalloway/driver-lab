@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Driver reconstruction evaluation
 
+> **Frozen archive.** This document is kept as history of the work before driver-lab's license
+> split (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 ## Terms
 
 - **Reconstruction** — implement a driver from a frozen spec on the reference driver's OS.
@@ -98,11 +106,11 @@ do not prove context isolation, reviewer independence, or absence of training fa
 A detected forbidden-source exposure invalidates the primary spec-only interpretation; preserve
 and label the result rather than quietly rerunning it as though nothing happened.
 
-Use the existing [hook](skills/cleanroom-implementer/scripts/cleanroom_hook.py),
-[policy](skills/cleanroom-implementer/assets/cleanroom-policy.json), and
-[session audit](skills/cleanroom-implementer/scripts/session_audit.py) where the chosen harness
+Use the existing [hook](https://github.com/curtisgalloway/cleanroom-skills/blob/main/skills/cleanroom-implementer/scripts/cleanroom_hook.py),
+[policy](https://github.com/curtisgalloway/cleanroom-skills/blob/main/skills/cleanroom-implementer/assets/cleanroom-policy.json), and
+[session audit](https://github.com/curtisgalloway/cleanroom-skills/blob/main/skills/cleanroom-implementer/scripts/session_audit.py) where the chosen harness
 supports them, with validated OS-neutral and spec-only settings. The evaluator can also use
-[leak_scan.py](skills/os-investigator/scripts/leak_scan.py) against reference source. These
+[leak_scan.py](https://github.com/curtisgalloway/cleanroom-skills/blob/main/skills/cleanroom-investigator/scripts/leak_scan.py) against reference source. These
 checks detect some prohibited access or text overlap; they do not prove absence of exposure.
 The filesystem/network restrictions remain necessary and must be tested in the chosen harness.
 Freeze scanner settings, thresholds, allowed identifier overlap, and whitelist/disposition rules

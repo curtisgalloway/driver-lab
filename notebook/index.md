@@ -5,14 +5,28 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T18:05-07:00
+Updated: 2026-10-06T18:31-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
 process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: a chapter is
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
+> **Frozen archive.** Chapters for work before driver-lab's license split (2026-10-06), every
+> chapter here except `LS-design` and `LS1`–`LS12`, are kept as history; the clean-room skills
+> they name now live in [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills),
+> where new evaluation rounds run. Names and paths in them are as they were then
+> (`os-investigator` is now `cleanroom-investigator`). See the
+> [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
+
 ## Chapters
+
+### [LS8 — Documents split; frozen archive; open-side check](LS8.md)
+Entries: 2026-10-06T18:21-07:00 through 2026-10-06T18:31-07:00
+Outcome: complete; `DESIGN.md`'s clean-room passages moved by line range to `cleanroom-skills`, the
+check's term list and allowlist decided (three history records and the whole L01/L02/CR plan
+added, justified), no redirect stubs needed, `RECONSTRUCTION.md`'s links broken by LS7 repointed;
+review found the continuous-review design still requiring moved tools.
 
 ### [LS7 — driver-lab's skills neutral; clean-room rules moved](LS7.md)
 Entries: 2026-10-06T17:48-07:00 through 2026-10-06T18:05-07:00

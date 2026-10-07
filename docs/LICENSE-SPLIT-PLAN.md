@@ -60,7 +60,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](../evidence/LS5.md)) |
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](../evidence/LS6.md)) |
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
-| LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | pending |
+| LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | pending |
 | LS10 | `hardware-investigator` skill | LS9 | pending |
 | LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | pending |
@@ -104,6 +104,7 @@ the same commit. Proposed, final names decided in the milestone:
 ```bash
 python3 -m unittest discover -s skills/anchored-peripheral-spec/tests   # LS1; path changes in LS9
 python3 utilities/check-open-side.py                                     # LS8
+python3 -m unittest discover -s utilities/tests                            # LS8
 ```
 
 ---
@@ -251,42 +252,21 @@ deployment); root documents still describe the clean-room skills until LS8.
 
 ## LS8 — Documents split; frozen archive; open-side check
 
-**Design coverage:** LS-R20, LS-R14 (design text).
-**Dependencies:** LS7.
-**In scope:** `DESIGN.md`'s clean-room sections move to `cleanroom-skills` (proposed
-`DESIGN.md` there); driver-lab's `README.md`, `AGENTS.md`, `GLOSSARY.md` lose clean-room text
-except one README pointer line; archive headers on the frozen files the design lists; a new
-`utilities/check-open-side.py` with that allowlist, in CI and AGENTS.md. (The marketplace and
-plugin descriptions were corrected in LS7.) The allowlist must include
-`skills/campaign-review/tests/fixtures/deployment-cr5.yaml` (LS7's recorded exception), and
-`AGENTS.md`'s Isolation rule still names `cleanroom-implementer`'s scripts by driver-lab path.
-**Out of scope:** consumer repos (LS12).
-
-### Implementation steps
-1. Move DESIGN.md's clean-room sections (the "two walls", "Check what crosses the licensing
-   wall", reconstruction parts); keep the evidence model and continuous review in driver-lab.
-   Fix links from both sides; the frozen archive keeps its links working.
-2. Archive header on each frozen document: frozen as of the split, new rounds run from
-   `cleanroom-skills`.
-3. `check-open-side.py`: fail on clean-room terms outside the allowlist; tests for the script.
-4. AGENTS.md: rules that are clean-room-only (isolation, sandbox) move or point to
-   `cleanroom-skills`; the check list updated.
-
-### Acceptance criteria
-- [ ] `check-open-side.py` passes on driver-lab and fails on a planted mention (test).
-- [ ] No broken relative links (a link check over changed files; record the command).
-- [ ] The frozen archive's CI checks (`campaign-review` index check, ENC28J60 tests) still pass.
-
-### Testing and review
-- Docs reviewer subagent. Focus: nothing the open side relies on moved away; the archive stays
-  readable.
-
-### Session sizing
-DESIGN.md is 1216 lines; moving sections plus link fixes is the bulk. Split point: archive
-headers and the check script as one checkpoint, the DESIGN.md move as another.
-
-### Evidence and findings
-Status: pending. Evidence: [LS8](../evidence/LS8.md). Notebook: [LS8](../notebook/LS8.md).
+**Outcome:** driver-lab's `DESIGN.md` keeps the open method and its clean-room passages (28, by
+line range) are in a new `cleanroom-skills/DESIGN.md`, moved verbatim apart from names and
+links; `README.md`'s clean-room section, `AGENTS.md`'s Isolation rule and five glossary rows
+moved to their `cleanroom-skills` counterparts, and the README names the method in one pointer
+line; frozen-archive headers on the archive documents, `evals/` (a new `evals/README.md` plus
+the two campaigns' READMEs), `evidence/` (a new README) and the notebook index;
+`utilities/check-open-side.py` with 13 tests, in CI and the AGENTS.md list.
+**Design coverage:** LS-R20, LS-R14 (design text). **Dependencies:** LS7.
+**Status:** complete. Evidence: [LS8](../evidence/LS8.md). Notebook: [LS8](../notebook/LS8.md).
+Review: one docs reviewer subagent; seven should-fix items and 13 nits, all resolved but one
+nit (pinning links to `cleanroom-skills`, after its merge).
+**Open limitations:** the allowlist adds, beyond the design's list, three history records
+(`PROCESS-NOTES.md`, `TRANSITION.md`, `docs/STORY.md`), the whole of `IMPLEMENTATION-PLAN.md`
+and the checker itself, each justified in the evidence; links into `cleanroom-skills` at `main`
+resolve only once its LS8 pull request merges, and pinning them to that merge is left for later.
 
 ## LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`
 
@@ -424,11 +404,12 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS7 complete (checkpoint commits in driver-lab and `cleanroom-skills`, each
-  on `license-split/ls7`; the orchestrator opens a pull request in each). LS8 (documents split,
-  frozen archive headers, `check-open-side.py`) is next.
+- Current milestone: LS8 complete (checkpoint commits in driver-lab and `cleanroom-skills`, each
+  on `license-split/ls8`; the orchestrator opens a pull request in each). LS9 (rename
+  `anchored-peripheral-spec` to `peripheral-spec`, repin the spec repositories) is next.
 - Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
   Zlib (they accept only the design's named licenses).
-- Resume action: begin **LS8** on `license-split/ls8` from a fetched `origin/main` after both LS7
-  pull requests merge; its allowlist needs LS7's fixture exception.
-- Read first: the design, this plan's conventions and LS8, the notebook index, LS7's evidence.
+- Resume action: begin **LS9** on `license-split/ls9` from a fetched `origin/main` after both LS8
+  pull requests merge. `check-open-side.py` now runs in CI: the rename's prose must not
+  reintroduce a term outside the archive.
+- Read first: the design, this plan's conventions and LS9, the notebook index, LS8's evidence.

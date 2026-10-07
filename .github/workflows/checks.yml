@@ -22,6 +22,14 @@ jobs:
       - name: No private paths
         run: python3 utilities/check-no-private-paths.py
 
+      # License split (LS-R20): outside the frozen archive, none of the moved method's terms
+      # but the one README pointer line. The terms and the allowlist are in the script.
+      - name: Open side only
+        run: python3 utilities/check-open-side.py
+
+      - name: utilities tests
+        run: python3 -m unittest discover -s utilities/tests -v
+
       - name: board-expert tests
         run: python3 -m unittest discover -s skills/board-expert/tests -v
 

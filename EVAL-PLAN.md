@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Evaluating the driver-spec skills
 
+> **Frozen archive.** This document is kept as history of the work before driver-lab's license
+> split (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 How the driver-specification evaluation lands in this repository: what gets built, in what order,
 and which of its measurements this plugin's existing machinery can and cannot make. The evaluation
 design is the [2026-09-18 consensus](evals/EVAL-CONSENSUS-2026-09-18.md) of two reviewers, kept

@@ -7,14 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 
 **Revisions:** 2026-09-26, the [continuous
 review](#continuous-review-keeping-specs-right-as-evidence-changes) section (C1–C8) added and
-the evidence-loop, lifecycle §6, shipped/proposed and Limits sections amended; approved by the
+the evidence-loop, lifecycle §6 (now step 3), shipped/proposed and Limits sections amended; approved by the
 user the same day ([evidence](evidence/DESIGN-2026-09-26.md)). 2026-09-27, the
-[scope](#scope-specs-and-their-quality) section added at the user's direction.
+[scope](#scope-specs-and-their-quality) section added at the user's direction. 2026-10-06,
+the license split moved the sections on writing specs and drivers from source the target may
+not copy to a separate repository, and this document keeps the open method (requirement
+LS-R20 of the [license-split design](docs/LICENSE-SPLIT.md); [evidence/LS8.md](evidence/LS8.md)
+lists every moved or reworded passage).
 
 ## Scope: specs and their quality
 
 This project's goal is **generating hardware specs and measuring and maintaining their
-quality**: board specs, clean-room driver specs, anchored specs and reviews, their verification,
+quality**: board specs, anchored specs and reviews, their verification,
 and the [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) that
 keeps them right as evidence and models change. The deliverable is a spec someone can trust,
 with a record of why.
@@ -22,9 +26,10 @@ with a record of why.
 Writing a driver for a particular target OS is **not** this project's goal. Using these specs to
 bring up Fuchsia on a board belongs to a separate project, bringup-kit, which consumes finished
 specs. A
-driver written from a spec is one **quality signal** for the spec: the clean-room Linux
-candidates in L01 and L02, run against the upstream reference driver on the same OS, test
-whether the spec was sufficient to implement from. A driver for another OS, such as a Fuchsia
+driver written from a spec is one **quality signal** for the spec: the Linux
+candidates in L01 and L02, written without reading the reference driver and run against the
+upstream reference driver on the same OS, test whether the spec was sufficient to implement
+from. A driver for another OS, such as a Fuchsia
 driver from bringup-kit, may later be added as a further signal; it is not a milestone here.
 
 In practice: this repository holds the skills, the method, and the reference campaigns
@@ -34,8 +39,6 @@ checks, same-OS differential candidates, continuous review). Real bring-up work,
 writing and checking the specs for a particular board such as a Raspberry Pi 5, happens in the
 consuming project, which installs these skills and runs them there; it is not planned here.
 What that work teaches about the skills comes back here as changes to them.
-`cleanroom-implementer` stays in this repository as the tool that produces candidate drivers
-for the quality signals and as the handoff contract for consumers.
 
 ## Terms
 
@@ -65,10 +68,6 @@ for the quality signals and as the handoff contract for consumers.
 - **Pin:** an exact source revision or document edition and hash used to make a reading repeatable.
 - **RTL:** the hardware design in a description language such as Verilog; the `[rtl]` class.
 - **Conflict entry:** a recorded disagreement between sources, kept beside the claim with its resolution.
-- **Clean room:** a workflow separating source readers from implementers through checked reports.
-- **Encumbered source:** source the workflow treats as unavailable for copying into the target.
-- **Dirty side:** the contexts authorized to read encumbered driver or firmware source.
-- **Clean side:** the contexts consuming cleared facts without reading that encumbered source.
 - **Cache:** an out-of-tree store of reference sources and documents managed by the investigator.
 - **Investigator:** the source-reading worker that extracts facts, evidence, and mechanism prose.
 - **Verifier:** a fresh reader that independently checks the artifact under a named procedure.
@@ -77,12 +76,11 @@ for the quality signals and as the handoff contract for consumers.
 - **Authority:** the evidence cited as establishing a claim, rather than just suggesting where to
   look.
 - **Sidecar:** a separate supporting file stored alongside an artifact or in its evidence directory.
-- **Provenance map:** the exact reference-file list used by clean-room verifiers and output scans.
 - **Attestation:** a recorded declaration about procedure or review that a script cannot establish.
 - **Claim:** a statement being checked; its unit varies between verification and evaluation.
 - **Verdict:** a recorded decision such as `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, or `ADJUDICATE`.
 - **Candidate:** the generated driver spec being evaluated.
-- **Ledger:** a structured list; here either an evaluation answer key or a clean-room event log.
+- **Ledger:** a structured list; here an evaluation answer key.
 - **Gold ledger:** the evaluation answer key, authored from sources without seeing any candidate.
 - **Corpus:** the fixed collection of source code and documents from which the answer key is made.
 - **Requirement:** an independently judgeable obligation or proposition represented in the ledger.
@@ -104,7 +102,7 @@ for the quality signals and as the handoff contract for consumers.
 - **Acceptance:** a decision that stated conditions for using a spec or implementation are met.
 - **Mutation:** a deliberate fault or change used to see whether a test detects it.
 
-## The problem and the two walls
+## The problem
 
 A vendor kernel can make a board work without explaining why. The address in a device-tree node may
 require several bus translations before it is a CPU physical address. A reset sequence may mix
@@ -117,31 +115,15 @@ may read a quirk table without following the control flow, mistake a driver's pr
 hardware requirement, or attach a plausible citation to a statement the cited lines do not support.
 It can also omit an entire recovery path. Checking only the claims it wrote cannot discover that
 missing path. These are the concrete failure modes behind [the investigation
-method](skills/os-investigator/SKILL.md) and [the evaluation plan](EVAL-PLAN.md).
-
-There is a separate risk when the reference is GPL or otherwise encumbered relative to the target. A
-document that reproduces source structure, invented identifiers, or implementation text may be
-unusable as a clean-room input even when its register values are correct. The repository therefore
-preserves evidence of who read what and what crossed into the implementation context. Its rules are
-a workflow for handling that boundary, not a legal determination about a particular project.
-
-**The licensing wall controls transfer.** `os-investigator` reads encumbered source in a separate
-context and returns original descriptions of facts. `cleanroom-spec` adds a file-based handoff,
-independent boundary review, scanning, and provenance records. Its verifier checks five things:
-mechanical overlap, possible reproduction, hardware-derived organization, source-reading
-attractants, and the usage notice. It deliberately does not determine technical accuracy.
+method](skills/board-expert/SKILL.md#3-investigate) and [the evaluation plan](EVAL-PLAN.md).
 
 **The accuracy problem controls belief.** `spec-verifier` asks whether each statement follows from
 its cited authority. The evaluation adds the opposite question: which independently identified
-requirements did the document leave out? A boundary `PASS` is not an accuracy `PASS`, and an
-accuracy `PASS` is not evidence that the source-access boundary was enforced. Keep the results
-separate.
+requirements did the document leave out?
 
-Source that the target may derive from takes a different route:
-[`anchored-peripheral-spec`](skills/anchored-peripheral-spec/SKILL.md) keeps direct code citations
-and permits source reading. That route is deliberately unsuitable as a substitute for the clean-room
-route on encumbered material. The skill tells an uncertain caller to use the clean-room route. This
-document describes those repository rules, rather than deciding license compatibility.
+Specs that cite their sources are published in the repository whose license fits those
+sources ([license-split design](docs/LICENSE-SPLIT.md)). This document describes the
+repository's rules, rather than deciding license compatibility.
 
 ## How the hardware map is organized
 
@@ -169,7 +151,7 @@ For example, the test fixture [`widgetboard`](skills/board-expert/tests/fixtures
 names `widgetsoc` in `parts`, and [`widgetsoc`](skills/board-expert/tests/fixtures/good_root/widgetsoc.spec.md)
 places the `widgetuart` IP in its `instances`. A per-board stub such as the fixture
 [`widget-expert`](skills/board-expert/tests/fixtures/stubs/widget-expert/SKILL.md) has one job: select
-a spec id and hand the question to `board-expert` with `os-investigator`. Its description helps the
+a spec id and hand the question to `board-expert`. Its description helps the
 harness match a user's hardware name. Keeping facts out of stubs avoids maintaining another copy of
 the hardware map and another copy of the investigation procedure. The published board specs and
 stubs that used to illustrate this were removed, to be regenerated with the current skills.
@@ -258,8 +240,7 @@ Three rules follow from the table:
 - **A model observation is a citation, not a mechanism.** An `[emulated]` fact cites the model,
   its version and the runs the way `[hardware]` cites the board, and states what was observed
   from outside the model (a value read back, a gap in a trace, frames in a capture), never how
-  the model produces it: the model's source is encumbered like any other, and the tag must not
-  carry it across the clean-room wall.
+  the model produces it.
 
 ### Conflicts are recorded, never overwritten
 
@@ -326,27 +307,21 @@ tested yet; it is recorded here so the evidence model does not assume a referenc
 ### Investigation
 
 A person asks a hardware question or requests a driver spec. The orchestrator delegates source
-reading; an implementation context must not invoke these investigator roles to fill its own gaps.
+reading.
 [`QUESTIONS.md`](skills/board-expert/QUESTIONS.md) defines the shared intake protocol. Choices that
 change the answer are asked together. A subagent returns a `Needs decision` block for the
 orchestrator to ask, while continuing work independent of that choice. Missing facts become gaps.
 
-[`os-investigator`](skills/os-investigator/SKILL.md) takes a hardware question, target identity, and
-source revision, usually with a board expert's map. It produces tagged facts, original mechanism
-prose, confidence limits, and pinned provenance. It refuses source excerpts, close structural
-paraphrase, source-invented naming, and unmarked assumptions about ordering. Board research-fill and
-`cleanroom-spec` consume its output; the verifier also loads its boundary rules.
-
 [`board-expert`](skills/board-expert/SKILL.md) takes a question plus optional board and IP
-identifiers. It composes specs, manages its reference cache, invokes resource skills, and uses
-`os-investigator`'s method to answer. The report adds contributing roots, layers, overlays, source
+identifiers. It composes specs, manages its reference cache, invokes resource skills, and answers
+with its own investigation method. The report adds contributing roots, layers, overlays, source
 commits, and verification status. It refuses to guess material identity choices or edit a spec
 without being asked. With no spec, it reports best-effort findings and suggests scaffolding.
 
-The four board stub skills are user-discoverable names for that same delegated role. They produce no
-independent hardware database. `cleanroom-spec`, research-fill, and reference selection can invoke
-the shared expert through a stub or directly. Source acquisition remains the expert's job, not a set
-of source-reading commands performed by the clean-side orchestrator.
+Board stub skills are user-discoverable names for that same delegated role (none ship today).
+They produce no independent hardware database. Research-fill and reference selection can
+invoke the shared expert through a stub or directly; source acquisition remains the expert's
+job.
 
 ### Authoring
 
@@ -356,13 +331,6 @@ chip, or IP files, and optionally a root marker, overlay, vendor-tool skill, or 
 [templates](skills/board-spec-scaffold/templates/) cover those artifacts. Public-source research
 normally delegates to an investigator. The scaffold does not itself read driver bodies or answer
 hardware questions; its final verification phase hands the files to `spec-verifier`.
-
-[`cleanroom-spec`](skills/cleanroom-spec/SKILL.md) takes one peripheral, its board or generic IP
-scope, reference provenance, and the target OS tree. It produces `docs/<device>-spec.md`, a source
-map, boundary-scan evidence, and clean-room ledger entries. Its two
-[templates](skills/cleanroom-spec/templates/) brief the spec author and boundary verifier. It
-refuses to bring unverified draft text into the orchestrator context. `cleanroom-implementer`
-consumes the landed document; `spec-verifier` supplies a separate accuracy pass.
 
 The driver spec names the IP and canonical references, groups registers by hardware function, and
 describes initialization, data or descriptor formats, interrupts, DMA/addressing, and sub-protocols.
@@ -374,8 +342,8 @@ implementer which statements are established and which still need investigation 
 derive from, source and target pins, and a peripheral scope. It produces a driver spec of the same
 broad shape, but every source-derived claim points to performing statements or definitions. `[src:]`
 addresses the reference tree, `[tgt:]` the target tree, and `[doc:]` a document section.
-Implementers can read the code. The skill refuses the encumbered-source use case and fabricated
-anchors; it does not load the clean-room investigation role for its source-reading workflow.
+Implementers can read the code. The skill refuses fabricated anchors, and it is not a way to
+write a driver under a license the source's terms do not permit.
 
 Its hardware statements distinguish documented requirements, comment explanations, driver choices,
 and behavior that is merely implemented. It normally delegates slices of larger drivers before
@@ -388,8 +356,8 @@ workflow for an existing implementation. It takes two pinned trees, locating the
 board expert or the user, and produces `docs/<driver>-review.md`. Findings have `[impl:]` and
 `[ref:]` anchors, a consequence, and a verdict: bug, suspect, benign, or reference issue. The
 databook can settle a divergence in either implementation's favor. This skill produces neither a new
-implementation spec nor driver code. Its checkers and later verification reuse the anchored route;
-it is not an alternative input channel for a clean-room implementer.
+implementation spec nor driver code. Its checkers and later verification reuse the anchored
+route.
 
 ### Verification
 
@@ -400,47 +368,33 @@ do not receive the author's reasoning or a previous verdict record. They propose
 edit the spec. The output is the external verification record and associated reports.
 
 The independent second reading depends on the artifact: bring-up-critical addressing, boot, and
-console facts for board specs; register tables for anchored specs; register maps and initialization
-sequences for clean-room driver specs. Agreement is evidence of repeatability, not proof of truth.
+console facts for board specs; register tables for anchored specs. Agreement is evidence of
+repeatability, not proof of truth.
 The lifecycle below explains how failures and disagreements remain visible.
-
-### Implementation
-
-[`cleanroom-implementer`](skills/cleanroom-implementer/SKILL.md) supplies standing rules, install
-material, access blocking, and auditing for a consuming project. Its inputs are a landed spec,
-prefetched public references, and the target OS tree. Implementation work produces target code; gaps
-produce `docs/spec-gaps/<device>.md`. The supplied hook and audit scripts produce logs and audit
-reports. The role refuses encumbered-source access, provenance-sidecar reading, and delegated source
-investigation. Gaps go back through the orchestrator and authoring workflow.
-
-A separate context is insufficient access isolation: subagents can inherit environment and
-permissions. The install guidance therefore separates investigator/verifier processes and
-implementation launch settings. Environment restrictions are the strongest boundary; hooks,
-permissions, restricted agents, and instructions add defense and evidence. The installation material
-targets Antigravity, while the scripts describe harness-neutral event handling. Verify actual
-enforcement in the consuming harness; installing the plugin alone does not establish it.
 
 ### Evaluation
 
 Evaluation is a collection of files and procedures, not another shipped spec-authoring skill.
 [`EVAL-PLAN.md`](EVAL-PLAN.md) defines the comparison, and
 [`evals/enc28j60/`](evals/enc28j60/README.md) holds the pilot inputs, answer key, rules, and
-checkers. People authorize and review evaluation work. Candidate production uses `cleanroom-spec`;
-claim checking uses `spec-verifier`; coverage scoring runs in the opposite direction against the
-ledger. A scored comparison is still to be run. No skill-quality percentage is supplied by this
+checkers. People authorize and review evaluation work. Candidate production uses a spec-authoring
+skill; claim checking uses `spec-verifier`; coverage scoring runs in the opposite direction against
+the ledger. A scored comparison is still to be run. No skill-quality percentage is supplied by this
 document.
 
 ## A peripheral's lifecycle
 
-Follow an ENC28J60 Ethernet peripheral attached to a board supported by a vendor kernel, through a
-differently licensed target OS port. The board attachment is illustrative; the evaluation corpus is
-the existing pilot. Paths below are consuming-project artifacts unless explicitly under this plugin.
-This walkthrough describes how to reach a measurement, not a completed ENC28J60 comparison.
+Follow an ENC28J60 Ethernet peripheral attached to a board supported by a vendor kernel. The
+board attachment is illustrative; the evaluation corpus is the existing pilot. Paths below are
+consuming-project artifacts unless explicitly under this plugin. The spec itself is written by
+an authoring skill (on the open side, `anchored-peripheral-spec`); the steps for writing and
+implementing one from source the target may not copy moved out in the license split. This
+walkthrough describes how to reach a measurement, not a completed ENC28J60 comparison.
 
 ### 1. Set the scope and establish the board map
 
 The person identifies the board revision, SPI attachment, peripheral revision, vendor tree, and
-target OS. `cleanroom-spec` resolves any material forks using the question catalog. If the board
+target OS. The authoring skill resolves any material forks using the question catalog. If the board
 lacks a map, `board-spec-scaffold` writes `<root>/<board>.spec.md`, references an existing SoC or
 writes `<root>/<soc>.spec.md`, and adds any missing host-controller IP spec and instance row. A new
 root receives `board-specs.yaml`. An optional `<board>-expert/SKILL.md` makes the entry point
@@ -458,48 +412,11 @@ paths. For the ENC28J60 comparison, source inputs must match `corpus.yaml`; an a
 kernel revision cannot silently replace its pinned reference. Without that preparation, proceed with
 ordinary spec work but do not call it a blind test.
 
-### 2. Investigate behind the boundary
+### 2. Establish accuracy
 
-The orchestrator chooses a scratch draft path and delegates to an investigator loading
-`os-investigator` plus the appropriate board expert. The expert resolves the board, SoC, bus
-attachment, and IP documents, then materializes reference sources in `~/src/<cache>/`. It records
-actual commits rather than relying on a moving branch name.
-
-The investigator uses the device tree for bus attachment and host-controller placement, translating
-any mapped host addresses explicitly. It seeks hardware documentation for peripheral behavior, then
-uses source to investigate remaining mechanisms. Source-only facts retain their caveats. Similar IP
-is a lead to investigate, not evidence that every fact transfers unchanged to this instance.
-
-The author writes the full draft at the scratch path and the exact reference-file list at
-`docs/provenance/<device>-map.txt`. The reply contains only the draft path, a short summary, and
-repository/commit provenance. The orchestrator has enough to route the next step without reading the
-unverified document. The target-OS integration half can cite the target's own files directly.
-
-### 3. Check what crosses the licensing wall
-
-A fresh verifier receives the scratch path and provenance map and runs the five-check procedure from
-`cleanroom-spec`. Its mandatory `leak_scan.py` comparison detects shared token sequences and
-identifier reuse, allowing explicitly listed hardware nomenclature. The scanner reports locations,
-lengths, and hashes rather than reproducing matched source passages.
-
-A failure returns section and line references plus reasons, never offending text. A fresh author
-repairs the scratch file, and another verification follows. After two failures on the same section,
-the workflow stops and escalates the verdict to a person. If source is the only authority for a
-mechanism, that person must decide whether and how it can be expressed within the workflow. The
-absence of another authority does not permit relabeling a boundary failure as a pass.
-
-On a boundary pass, the orchestrator lands `docs/<device>-spec.md`, hashes its contents, and appends
-the revision and scan report to `docs/provenance-ledger.md`. Scan reports live under
-`docs/provenance/`; transcripts are retained as evidence, by path rather than by copy,
-because they live in the harness's protected state directory. The prescribed project index receives a
-summary entry. This ledger records clean-room events, not the evaluation's list of requirements.
-
-### 4. Establish accuracy separately
-
-Invoke `spec-verifier` for the landed clean-room spec. It runs the boundary procedure unchanged and
-then checks tagged facts against their documents, device trees, or pinned source. Its source reader
-may compare source-observed behavior with the reference; the eventual implementer may not. An
-inference is checked as an argument: true premises do not excuse an unsupported conclusion.
+Invoke `spec-verifier` for the landed spec. It checks tagged facts against their documents,
+device trees, or pinned source. An inference is checked as an argument: true premises do not
+excuse an unsupported conclusion.
 
 The external record lands at `docs/resources/<spec-basename>.verify.md`, or in the project's
 existing `docs/provenance/` location as the verifier documents. It includes the spec hash, date,
@@ -518,25 +435,9 @@ If the independent readers disagree, record both readings as `ADJUDICATE` and ex
 pass/fail counts until a person decides. Disagreement alone does not establish an error.
 Adjudication may find a false fact or excessive certainty, either of which earns a failure on its
 merits. Zero failures can still leave important gaps, inaccessible evidence, or unsettled readings.
-The current accuracy procedure has no common repair bound; the two-failure bound above is for the
-boundary check, and extending it to accuracy is proposed work.
+The current accuracy procedure has no common repair bound; adding one is proposed work.
 
-### 5. Implement without reopening the reference
-
-A different implementer receives the cleared spec, its public references under `docs/references/`,
-and the target OS tree. It builds the Ethernet driver in the restricted environment. If a reset
-condition is missing, it appends a question to `docs/spec-gaps/<device>.md`, marks the code site
-`TODO(spec-gap)`, and works on another part. It does not open the source map or ask a research agent
-to answer the question directly.
-
-The orchestrator routes that question to a fresh investigation, edits a scratch copy, verifies it,
-lands the new spec revision, adds a new ledger line, and closes the gap. Editing a landed spec
-without this loop invalidates its earlier hash-based evidence. Before driver merge, the workflow
-requires an output scan against the original provenance map and audits of every implementation
-session and its artifacts. A contaminated session's entire diff is discarded and regenerated in a
-fresh restricted session, as `cleanroom-implementer` specifies.
-
-### 6. Measure, preserve, and revisit
+### 3. Measure, preserve, and revisit
 
 With an independently frozen ENC28J60 ledger in place, the evaluator maps ledger requirements into
 the candidate for recall, then checks candidate claims against sources for precision. The result
@@ -615,8 +516,8 @@ L02 follow-ons ran every part of that loop by hand:
   planted defects (Q15 again in L02f2b), [QF-1](evidence/QF-1.md) three more, and FC-1 and CS-1
   one each (Q27, Q28); the one that could not be qualified is recorded with its reason (Q18,
   `unobservable`).
-- **Revision to candidate:** [CF-1](evidence/CF-1.md) and [CF-2](evidence/CF-2.md) gave a
-  clean-room implementer the spec diff only, reran the acceptance set declared before the run,
+- **Revision to candidate:** [CF-1](evidence/CF-1.md) and [CF-2](evidence/CF-2.md) gave the
+  implementer the spec diff only, reran the acceptance set declared before the run,
   and attributed every trace difference.
 - **Scoped invalidation by reasoning:** after L02f2b changed one scenario and requalified Q15,
   [L02f3](evidence/L02f3.md) carried the other 21 qualifications to the final harness because
@@ -716,9 +617,9 @@ diff touching one check stales only that check's claims; an unmappable change wi
 
 | Tier | Runs | Work | Cost |
 | --- | --- | --- | --- |
-| 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec_check.py`, leak scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
+| 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec_check.py`, a deployment's source-overlap scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
 | 1 | From the sweep's queue, as a standing queue (decided by the user, 2026-09-26), at most three units per batch | Re-verification of stale sections and their dependents (one `spec-verifier` reading: 8.7 minutes in AF-1, 7.7 in SR-7); requalification of claims whose checks changed; the acceptance set rerun after an emulator or candidate change (40 isolated runs); a comparison reading by a new reading model (C4) | Bounded agent time, recorded per unit |
-| 2 | Only on a person's decision | Requirement changes; clean-room implementer rounds (launched by the user, as in CF-1 and CF-2); a fresh implementation by a new implementer model; hardware runs (HF-1); a new blind list or recall re-measurement; adopting a new source edition as the pin; accepting a shortfall on a mandatory claim | Model, equipment and review time |
+| 2 | Only on a person's decision | Requirement changes; implementer rounds (launched by the user, as in CF-1 and CF-2); a fresh implementation by a new implementer model; hardware runs (HF-1); a new blind list or recall re-measurement; adopting a new source edition as the pin; accepting a shortfall on a mandatory claim | Model, equipment and review time |
 
 Tier-1 units run the way the follow-ons ran: `orchestrate-milestones` gives each unit a fresh
 subagent and one pull request, and `quota-strategy` routes the work (decision D9 in the
@@ -767,12 +668,13 @@ adjudication.
 3. `spec-verifier` reads the changed sections and their dependencies. Text that changes a driver
    requirement needs two independent readings (A1's standard; the AF-1 and SR-7 procedure)
    before the revision is sufficient for scope; wording-only and evidence-only changes need one
-   reading plus the leak scan. **This amends A1** in the [QEMU differential
+   reading plus, where the campaign uses one, the source-overlap scan. **This amends A1** in the [QEMU differential
    design](QEMU-DIFFERENTIAL.md#acceptance-criteria), which asked for two readings with no such
    split (SR-7 recorded revision 7, which changed no requirement, as not meeting it); the user
    approved the amendment on 2026-09-26.
-4. If a requirement changed, a candidate update unit (the CF-n pattern) gives the clean-room
-   implementer the revision diff only, audits the session, reruns the acceptance set declared
+4. If a requirement changed, a candidate update unit (the CF-n pattern) gives the
+   implementer the revision diff only, audits the session where the deployment has an access
+   audit, reruns the acceptance set declared
    before the run, attributes every trace difference, and ends with the L01 review trio.
 5. The index records the new verdicts; the old ones become superseded.
 
@@ -847,7 +749,7 @@ specs and evidence stay inside it, with nothing flowing back to this repository.
   layer mechanism: `product` or `local` roots found through pointers, never by search), its run
   store (already configured per user, `run_store` in `~/.config/driver-lab/config.toml`), a
   campaign directory for its index and evidence, its models and agent CLIs by role, its
-  fixtures and emulators, its clean-room sandbox settings, and its publication policy.
+  fixtures and emulators, its implementer sandbox settings, and its publication policy.
 - **Sources are identified by a local ID, a version and a hash.** Change detection compares
   those; the sweep never parses a source. The hash may come from the deployment's own adapter
   (C8) when the method's code may not read the bytes.
@@ -878,7 +780,7 @@ entry the sweep or a harness calls without a model also names a `command` that p
 | --- | --- | --- | --- | --- | --- |
 | **Source adapter**: identifies a document or data source (a data-sheet store, a register database) | The sweep (tier 0); readers, through the skill | A local source ID | `id`, `version`, `sha256`, `status` (`ok`, `blocked` or `unknown`), date checked; never content | The adapter's name and version; how the version was determined | A pinned-file adapter over `corpus.yaml`-style entries (as `corpus_check.py` does for ENC28J60, and L02a's manual pin for e1000) |
 | **Evidence producer**: emits tagged observations (a simulator, a trace tool, a register dumper) | Tier-1 units | Target identity, what to observe, run ID, run directory | Observations, each with one evidence class and its citation (tool, version, run ID), phrased as what was observed from outside the tool | Tool name, version and hash; target identity; conditions | The QEMU harness's register trace and captures, class `[emulated]` |
-| **Implementer or reviewer**: a model or agent CLI in a role | Tier-1 and tier-2 units | A brief, the allowed inputs, a workspace | The artifact and a session record; for a clean-room implementer, its access audit | Agent or CLI, model and version, date, sandbox profile, audit verdict, transcript path (in the private ledger) | Codex under `cleanroom_sandbox.sh` with `sandbox_audit.py`; Claude subagents as `spec-verifier` readers and reviewers |
+| **Implementer or reviewer**: a model or agent CLI in a role | Tier-1 and tier-2 units | A brief, the allowed inputs, a workspace | The artifact and a session record; for an isolated implementer, its access audit | Agent or CLI, model and version, date, sandbox profile, audit verdict, transcript path (in the private ledger) | Codex in a bubblewrap sandbox with an strace access audit (L02); Claude subagents as `spec-verifier` readers and reviewers |
 | **Fixture or harness backend**: runs scenarios against a driver (an emulator, a board with SPI, a proprietary bench) | Tier-1 units | Modules (reference, candidate, planted defects), scenarios, repetition count, run ID | One run directory per isolated run: per-check verdicts (PASS, FAIL, ERROR) by check name, raw artifacts, and `identities.json`; the claim map (C1) links check names to claims | Fixture or emulator identity, harness hash, kernel and image hashes, conditions | `evals/e1000/harness/l02harness.py` (QEMU, tested in CI); L01's Pi fixture harness, which today lives only in its private run and would have to be published to serve as a public reference |
 
 **Discovery and configuration.** A deployment manifest (YAML) lists the entries: `id`, `kind`
@@ -1001,9 +903,8 @@ infer a general permission to bundle unrelated requirements from those exception
 Freezing is more than adding a date. Resolve provisional classifications and weights, dispose of
 overlaps so one requirement is not credited twice, establish independent support for critical rows,
 and preserve unresolved matters explicitly. Run corpus drift checks, the ledger schema/freeze
-checks, and the clean-room scan prescribed by the [pilot README](evals/enc28j60/README.md). The gold
-ledger is itself a clean-side artifact; source quotations do not become acceptable merely because
-they are in an evaluation file.
+checks, and the source-overlap scan prescribed by the [pilot README](evals/enc28j60/README.md).
+Source quotations do not become acceptable merely because they are in an evaluation file.
 
 `ledger_check.py` checks schema, identifiers, derivations against corpus pins, and structured freeze
 conditions. It cannot establish blind authorship, semantic uniqueness, or the adequacy of a reader's
@@ -1082,7 +983,7 @@ statements, unresolved readings, and the input identities needed to interpret th
 
 ## What is shipped, what is unfinished, and what is proposed
 
-The investigation, authoring, verification, and implementation skills are shipped, with checkers and
+The investigation, authoring, and verification skills are shipped, with checkers and
 tests. Existing board specs and verification records show their use. The plugin README lists test
 commands. These components provide practical procedures and mechanical checks now; they do not
 constitute the entire proposed validation architecture.
@@ -1091,8 +992,6 @@ The main mechanical tools each have a narrower purpose than "prove this spec":
 
 - [`spec_check.py`](skills/board-expert/scripts/spec_check.py) checks format, references, tag
   placement, selected public-root restrictions, stub resolution, and verification metadata.
-- [`leak_scan.py`](skills/os-investigator/scripts/leak_scan.py) checks source overlap and reused
-  identifiers; human or agent judgment still evaluates structure and close paraphrase.
 - [`anchor_check.py`](skills/anchored-peripheral-spec/scripts/anchor_check.py) resolves citations,
   flags suspect literals and missing support, renders source beside claims, and detects drift.
 - [`inventory_check.py`](skills/anchored-peripheral-spec/scripts/inventory_check.py) uses C-oriented
@@ -1166,12 +1065,12 @@ root, declare it through supported pointers, and use `via:` for access instructi
 public baseline and the origins of additions. Test discovery through a report's provenance block;
 then verify the overlay under its own root. Do not treat a successful merge as factual adjudication.
 
-For a new peripheral driver spec, choose the clean-room or anchored authoring skill based on the
-reference relationship to the target. Resolve the IP and instance first, produce the programming and
-OS-integration document, and follow that route's checks. A new generic IP map may also be needed,
-but that is a separate reusable artifact. If quality measurement is wanted, establish a corpus and
-blind ledger before candidate generation; copying the pilot's categories without reviewing
-device-specific requirements does not create an answer key.
+For a new peripheral driver spec, use the anchored authoring skill and place the spec in the
+repository whose license fits its sources. Resolve the IP and instance first, produce the
+programming and OS-integration document, and follow that route's checks. A new generic IP map may
+also be needed, but that is a separate reusable artifact. If quality measurement is wanted,
+establish a corpus and blind ledger before candidate generation; copying the pilot's categories
+without reviewing device-specific requirements does not create an answer key.
 
 ## Limits and unresolved boundaries
 
@@ -1184,11 +1083,6 @@ Verification establishes what claims were supported at a pin, not that they are 
 every revision. Spec hashes detect edits only when checked. Source hashes cannot retrieve a missing
 document or establish access rights. A maintained branch name is not an immutable source identity,
 and moved line numbers are not the only way a claim becomes obsolete.
-
-A clean-room boundary check is about the wall, not accuracy. Mechanical dissimilarity and session
-audits provide evidence about a particular process and its outputs; they cannot establish that a
-model never encountered reference code during training. The source-access restrictions must also be
-installed and tested in the actual harness. Prompt instructions alone do not provide isolation.
 
 The current board checker reads verification frontmatter rather than independently redoing the
 body's reasoning. `--require-verified` rejects missing or stale records but is not the proposal's

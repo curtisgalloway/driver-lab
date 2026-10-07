@@ -63,7 +63,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
 | LS10 | `hardware-investigator` skill | LS9 | complete ([evidence](../evidence/LS10.md)) |
-| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | pending |
+| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete at the checkpoint ([evidence](../evidence/LS11.md)) |
 | LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | pending |
 | LS-G | Whole-outcome acceptance | LS1–LS12 | pending |
 
@@ -339,10 +339,11 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 **Out of scope:** blocking the docs or permissive spec repos (allowed by design).
 
 ### Acceptance criteria
-- [ ] Hook tests: each blocked target denied for the implementer role, allowed for the
+- [x] Hook tests: each blocked target denied for the implementer role, allowed for the
       investigator role, across path, command and search forms the hook already handles.
-- [ ] A session-audit fixture that reads `board-expert` is flagged (design acceptance item 3).
-- [ ] `cleanroom-skills` CI green, including the portability scan.
+- [x] A session-audit fixture that reads `board-expert` is flagged (design acceptance item 3).
+- [ ] `cleanroom-skills` CI green, including the portability scan (the CI steps, with the portability
+      scan at the CI pin, passed locally; remote CI is the orchestrator's to confirm).
 
 ### Testing and review
 - Review method: **`review-swarm`** (an access control). Focus: bypasses by alternate install
@@ -352,7 +353,7 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 One script and its tests, an existing pattern. Low to medium uncertainty (install paths).
 
 ### Evidence and findings
-Status: pending. Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
+Status: complete at the checkpoint (`cleanroom-skills` commits `199059a` and `35ff17e` on `license-split/ls11`; the orchestrator opens the pull requests). Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
 
 ## LS12 — Consumers updated
 
@@ -404,11 +405,14 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS10 complete (checkpoint commit on `license-split/ls10`; the orchestrator
-  opens the pull request). LS11 (firewall by name, in `cleanroom-skills`) is next; every blocked
-  name now exists: `board-expert`, `hardware-investigator`, `cleanroom-investigator`.
+- Current milestone: LS11 complete (checkpoint commits on `license-split/ls11` in `cleanroom-skills`
+  and driver-lab; the orchestrator opens the pull requests and confirms remote CI). LS12
+  (consumers updated: `fuchsia-skills`, `bringup-kit`, `public-skills`) is next.
 - Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
   Zlib (they accept only the design's named licenses).
-- Resume action: begin **LS11** on `license-split/ls11` in `cleanroom-skills` from a fetched
-  `origin/main` after the LS10 pull request merges; its review method is `review-swarm`.
-- Read first: the design, this plan's conventions and LS11, the notebook index, LS10's evidence.
+- Resume action: LS12 touches three consumer repositories and needs the user's go for each (check
+  every repository's visibility with `gh repo view` first; public-skills is public and the
+  business-hours schedule applies to pushing it). Begin on `license-split/ls12` in each consumer
+  from a fetched `origin/main` after the LS11 pull requests merge.
+- Read first: the design, this plan's conventions and LS12, the notebook index, LS11's evidence
+  (its limitations: the firewall is a denylist; the sandbox tier is what closes the shell).

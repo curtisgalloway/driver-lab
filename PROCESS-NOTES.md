@@ -520,3 +520,13 @@ Cost: a few minutes; no history was committed.
 Prevention: print the file list and read it before running a bulk replace, and anchor exclusion
 patterns to what the command really prints.
 Fix belongs in: AGENTS.md of driver-lab (a rename rule), if it recurs.
+
+### 2026-10-07T12:20-07:00 — glob tests that could not fail
+Chapter: [LS11](notebook/LS11.md)
+What happened: two tests for glob handling used `wide/b*/x`, but a glob matches only paths that
+exist and no `x` file did, so the glob matched nothing on the old code and the new. They looked
+like coverage until the fail-first run on a reverted copy was read test by test.
+Cost: one rewrite; no wrong claim was committed.
+Prevention: for a glob test, assert the glob matches the entry first (or glob the directories
+themselves), then assert the verdict.
+Fix belongs in: the project-plan skill (fail-first: read why each test failed, not only that it did).

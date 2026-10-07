@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T18:31-07:00
+Updated: 2026-10-07T12:40-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [LS11 — Firewall by name](LS11.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; the implementer's hook denies four dirty-side names however installed, with the
+investigator and verifier roles still allowed and logged; a seven-arm review found three real
+bypasses (assignments after `export`, a shell comment character, a glob cap), all fixed.
 
 ### [LS10 — `hardware-investigator`](LS10.md)
 Entries: 2026-10-07 through 2026-10-07

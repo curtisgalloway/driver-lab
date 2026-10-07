@@ -6,7 +6,7 @@ description: >-
   in — every fact cites the file:line it was derived from at a pinned commit, so a reviewer can
   check the spec against the code and drift is detectable when the code moves. Use when asked to
   document, spec, or port a driver from source you may cite: GPL-2.0 trees (the spec goes to
-  hardware-specs-gpl), BSD/MIT/Apache trees (hardware-specs-permissive), datasheets only
+  hardware-specs-gpl), BSD/ISC/0BSD/MIT/Apache trees (hardware-specs-permissive), datasheets only
   (hardware-specs-docs), or your own code. Not for NDA source, and not a way to write a driver
   under a license the source's terms do not permit: every fact here points at the lines it came
   from. Ships scripts/anchor_check.py (resolve anchors, gate pin licenses against a root, check
@@ -51,7 +51,7 @@ driver-lab.)
 |---|---|---|---|
 | `hardware-specs-gpl` | GPL-2.0-only | `[src:]` into any GPL-2.0-only or GPL-2.0-or-later tree, plus `[doc:]`, plus anything the permissive repo accepts | Linux-derived specs: references for Linux work, or for anyone who doesn't care about license. Easiest to verify. |
 | `hardware-specs-docs` | CC-BY-4.0 (specs); per-file Apache-2.0 SPDX headers on CI files | `[doc:]` only | Specs built only from public datasheets, TRMs and standards |
-| `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/MIT sources | `[src:]` into BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
+| `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/ISC/MIT sources | `[src:]` into BSD, ISC, 0BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
 
 (The table is the design's, verbatim; its "facts 2, 3, 6 below" are three boot-stub facts from
 BSD-licensed Raspberry Pi tools, in the design's audit of the deleted specs.) **These repositories do not exist yet**; they are created in
@@ -69,7 +69,7 @@ To choose:
    driver from the same kernel), give that tree two pins with distinct names, each with its
    license, and cite each file through the pin whose license it carries.
 2. **Pick the repository:** only `[doc:]` citations → `hardware-specs-docs`; any source whose license requires
-   GPL-2.0 (`-only` or `-or-later`, with no permissive alternative) → `hardware-specs-gpl`; otherwise BSD, MIT or Apache sources (or `GPL-2.0 OR MIT` files) →
+   GPL-2.0 (`-only` or `-or-later`, with no permissive alternative) → `hardware-specs-gpl`; otherwise BSD, ISC, 0BSD, MIT or Apache sources (or `GPL-2.0 OR MIT` files) →
    `hardware-specs-permissive`. A source under any other license (GPL-3.0, a vendor license, NDA
    material) fits none of the three: do not publish a spec anchored to it.
 3. **Let the tools confirm it.** Each repository's root marker declares its license and the

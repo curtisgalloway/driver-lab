@@ -4,13 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt for the spec-writing subagent; substitute every <angle-bracket> placeholder.
 -->
 
-Produce a SOURCE-ANCHORED hardware/driver spec for <PERIPHERAL> (<IP block>, compatible
+Produce a PERIPHERAL hardware/driver spec for <PERIPHERAL> (<IP block>, compatible
 "<dt-compat>", on <bus>, CPU-phys <addr>, IRQ <irq>) from the driver source at <source checkout>
 pinned at <repo-name>@<commit>, so an engineer can implement a <OS> <framework> driver in
 <language>. <board/prereq facts>. The spec will live in <spec repository: hardware-specs-gpl |
 hardware-specs-docs | hardware-specs-permissive | a private location>, whose license fits the
-sources it cites (`anchored-peripheral-spec`, "Where the spec goes"): read the source, cite it,
-quote it sparingly. Load `anchored-peripheral-spec` and follow it.
+sources it cites (`peripheral-spec`, "Where the spec goes"): read the source, cite it,
+quote it sparingly. Load `peripheral-spec` and follow it.
 
 OUTPUT: write the finished spec to <scratch path>. Return the spec path, a one-paragraph summary
 (for the docs index), and the pins (`Source pin: <repo-name>@<commit> <SPDX license>`, one per

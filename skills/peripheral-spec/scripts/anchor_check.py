@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 Curtis Galloway
 # SPDX-License-Identifier: Apache-2.0
-"""Check the source anchors in a source-anchored peripheral spec.
+"""Check the source anchors in a peripheral spec.
 
-A source-anchored spec cites where each fact came from with inline tags:
+A peripheral spec cites where each fact came from with inline tags:
 
     [src: drivers/net/ethernet/cadence/macb_main.c:2311-2340 (macb_init_hw)]
     [tgt: src/devices/block/drivers/sdhci/sdhci.cc:88 (Sdhci::Init)]

@@ -4,7 +4,7 @@
 """
 Tests for scripts/anchor_check.py, against synthetic git repositories built per run.
 
-Run:  python3 -m unittest discover -s skills/anchored-peripheral-spec/tests -v
+Run:  python3 -m unittest discover -s skills/peripheral-spec/tests -v
 
 The first class pins down the behavior the checker had before several named pins
 (characterization); the second covers the named-pin grammar.

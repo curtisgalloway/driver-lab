@@ -8,7 +8,7 @@ Review the <PERIPHERAL> driver (<IP block>, compatible "<dt-compat>") at <impl c
 at <impl-repo-name>@<commit>, against the REFERENCE implementation at <ref checkout>, pinned at
 <ref-repo-name>@<commit> (<how the reference was chosen: board expert / user; license>).
 <board/revision facts>. Load `reference-driver-review` and follow it; its anchor rules are
-`anchored-peripheral-spec`'s with `[impl:]`/`[ref:]` tags.
+`peripheral-spec`'s with `[impl:]`/`[ref:]` tags.
 
 OUTPUT: write the finished review to <scratch path>. Return the review path, a one-paragraph
 summary (the headline findings), and both pins (`Impl pin: <impl-repo-name>@<commit>`,
@@ -43,11 +43,11 @@ Quote the reference sparingly (a few lines, only when the exact expression IS th
 never paste reference code into the implementation.
 
 SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    python3 <anchored-peripheral-spec>/scripts/anchor_check.py <scratch path> \
+    python3 <peripheral-spec>/scripts/anchor_check.py <scratch path> \
         --impl-repo <impl checkout> --ref-repo <ref checkout>
-    python3 <anchored-peripheral-spec>/scripts/inventory_check.py <scratch path> \
+    python3 <peripheral-spec>/scripts/inventory_check.py <scratch path> \
         --repo <ref checkout>@<ref-commit> --headers <reference register header(s)>
-    python3 <anchored-peripheral-spec>/scripts/inventory_check.py <scratch path> \
+    python3 <peripheral-spec>/scripts/inventory_check.py <scratch path> \
         --repo <impl checkout> --headers <implementation register header(s)>
 The reference-header inventory run is the uncompared-register detector: cover each reported name
 or list it as out of scope with a reason. Then read a sample of `anchor_check.py … --show` and

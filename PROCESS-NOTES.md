@@ -509,3 +509,14 @@ Cost: the decisions' times are lost; the content was recoverable from the scratc
 Prevention: write the opening entry before the first edit, as the first tool call of a unit.
 Fix belongs in: the project-plan skill (session start: open the chapter before reading the
 code to be changed).
+
+### 2026-10-07T09:26-07:00 — a filtered file list that filtered nothing
+Chapter: [LS9](notebook/LS9.md)
+What happened: the rename's file list came from `grep -rIl … .` and was filtered with `^./`
+patterns, but that grep prints paths without the `./`, so the filter excluded nothing and the
+`sed` rewrote history files (`evidence/`, `notebook/`, `docs/`). `git status` showed it before
+staging; the files were restored with `git checkout --`.
+Cost: a few minutes; no history was committed.
+Prevention: print the file list and read it before running a bulk replace, and anchor exclusion
+patterns to what the command really prints.
+Fix belongs in: AGENTS.md of driver-lab (a rename rule), if it recurs.

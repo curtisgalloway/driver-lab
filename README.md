@@ -2,7 +2,7 @@
 
 Skills for writing and reviewing device-driver specs from source you may cite:
 
-- source-anchored specs and reviews for source you may cite (GPL-2.0, BSD, MIT, Apache, or your
+- peripheral specs and reviews for source you may cite (GPL-2.0, BSD, MIT, Apache, or your
   own code), published where their license fits,
 - board experts that supply the per-SoC facts those specs need.
 
@@ -45,11 +45,11 @@ bringing up a particular board, which happen in projects that use these skills.
 
 | Situation | Skill |
 | --- | --- |
-| You may cite the reference driver (GPL-2.0, BSD, MIT, Apache, or your own code), and you want a spec whose every fact points back at the code, published where its license fits | `anchored-peripheral-spec` |
+| You may cite the reference driver (GPL-2.0, BSD, MIT, Apache, or your own code), and you want a spec whose every fact points back at the code, published where its license fits | `peripheral-spec` |
 | A driver exists and you want it checked against the upstream, vendor, or original implementation | `reference-driver-review` |
 | You need memory maps, boot chains, clocks, or interrupt details for a specific board | `board-expert`, for any board with a spec (none ship today; see `board-spec-scaffold`) |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
-| You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and anchored specs and reviews alike |
+| You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
 
 ## Installing
 
@@ -86,9 +86,9 @@ skill you want from `skills/<name>` into your skills root. The
 [public-skills README](https://github.com/curtisgalloway/public-skills#installing) has the
 paths for each harness.
 
-## Source-anchored specs and reviews
+## Peripheral specs and reviews
 
-- **`anchored-peripheral-spec`**: a per-peripheral spec for driver source you may cite. Its
+- **`peripheral-spec`**: a per-peripheral spec for driver source you may cite. Its
   placement rule and "which repo does my spec go in?" table say which spec repository's license
   fits the sources a spec anchors to.
   - Every source-derived fact carries a `[src: path:L1-L2 (symbol)]` anchor at a pinned
@@ -101,7 +101,7 @@ paths for each harness.
     `docs:` registry (with file hashes under `--docs-dir`). Also ships `scripts/inventory_check.py`, which finds omissions
     and value mismatches against the register headers.
   - Not a way to write a driver under a license the source's terms do not permit, and not for
-    NDA source: an anchored spec is a derivative of its source by design.
+    NDA source: a peripheral spec is a derivative of its source by design.
 - **`reference-driver-review`**: reviews a driver implementation against a reference
   implementation of the same hardware (the upstream kernel driver, the vendor BSP, or the
   original a port was made from). Produces an anchored findings report.
@@ -111,7 +111,7 @@ paths for each harness.
   - Defaults to the driver in the current directory, and finds the reference through a
     matching board-expert skill or by asking.
   - The reference is evidence, not truth: the databook breaks ties.
-  - Reuses `anchored-peripheral-spec`'s checkers, so implementation-side anchors get drift
+  - Reuses `peripheral-spec`'s checkers, so implementation-side anchors get drift
     tracking as fixes land. Output is a review, never driver code.
 
 ## Board experts
@@ -164,7 +164,7 @@ every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" s
   project's `docs/provenance/` for the others). One procedure, with a section per kind:
   - *Board specs*: every tagged fact against its device tree, databook, or document; two
     independent verifiers for the addressing model, entry state, and debug UART.
-  - *Anchored specs and reviews*: `anchor_check.py` resolves every anchor at the pin, then the
+  - *Peripheral specs and reviews*: `anchor_check.py` resolves every anchor at the pin, then the
     creating skill's own verifier judges whether the cited lines support each claim; one
     verdict per anchor.
 

@@ -61,7 +61,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](../evidence/LS6.md)) |
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
-| LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | pending |
+| LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
 | LS10 | `hardware-investigator` skill | LS9 | pending |
 | LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | pending |
 | LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | pending |
@@ -102,7 +102,7 @@ Each milestone adds its checks to `.github/workflows/checks.yml` and to the AGEN
 the same commit. Proposed, final names decided in the milestone:
 
 ```bash
-python3 -m unittest discover -s skills/anchored-peripheral-spec/tests   # LS1; path changes in LS9
+python3 -m unittest discover -s skills/peripheral-spec/tests              # LS1; renamed in LS9
 python3 utilities/check-open-side.py                                     # LS8
 python3 -m unittest discover -s utilities/tests                            # LS8
 ```
@@ -278,9 +278,9 @@ path (a PR in each); `cleanroom-skills` references.
 **Out of scope:** consumer repos (LS12).
 
 ### Acceptance criteria
-- [ ] No `anchored-peripheral-spec` outside the frozen archive and history (quote the grep).
-- [ ] The three spec repos' CI green on the new pin; `cleanroom-skills` CI green.
-- [ ] The full check list passes.
+- [x] No `anchored-peripheral-spec` outside the frozen archive and history (quote the grep).
+- [ ] The three spec repos' CI green on the new pin; `cleanroom-skills` CI green (run locally and passing; remote CI is the orchestrator's check after pushing).
+- [x] The full check list passes.
 
 ### Testing and review
 - Reviewer subagent. Focus: references outside driver-lab that this milestone owns.
@@ -289,7 +289,7 @@ path (a PR in each); `cleanroom-skills` references.
 Mechanical rename across four repos. Low uncertainty.
 
 ### Evidence and findings
-Status: pending. Evidence: [LS9](../evidence/LS9.md). Notebook: [LS9](../notebook/LS9.md).
+Status: complete at the checkpoint; spec-repo and `cleanroom-skills` CI are checked by the orchestrator after pushing. Evidence: [LS9](../evidence/LS9.md). Notebook: [LS9](../notebook/LS9.md).
 
 ## LS10 — `hardware-investigator`
 
@@ -404,12 +404,12 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS8 complete (checkpoint commits in driver-lab and `cleanroom-skills`, each
-  on `license-split/ls8`; the orchestrator opens a pull request in each). LS9 (rename
-  `anchored-peripheral-spec` to `peripheral-spec`, repin the spec repositories) is next.
+- Current milestone: LS9 complete (checkpoint commits in driver-lab, `cleanroom-skills` and the
+  three spec repositories, each on `license-split/ls9`; the orchestrator opens a pull request in
+  each, driver-lab first with a merge commit because the spec repositories pin its commit).
+  LS10 (`hardware-investigator`) is next.
 - Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
   Zlib (they accept only the design's named licenses).
-- Resume action: begin **LS9** on `license-split/ls9` from a fetched `origin/main` after both LS8
-  pull requests merge. `check-open-side.py` now runs in CI: the rename's prose must not
-  reintroduce a term outside the archive.
-- Read first: the design, this plan's conventions and LS9, the notebook index, LS8's evidence.
+- Resume action: begin **LS10** on `license-split/ls10` from a fetched `origin/main` after the
+  LS9 pull requests merge and their CI is green.
+- Read first: the design, this plan's conventions and LS10, the notebook index, LS9's evidence.

@@ -41,7 +41,7 @@ python3 utilities/check-no-private-paths.py
 python3 utilities/check-open-side.py
 python3 -m unittest discover -s utilities/tests
 python3 -m unittest discover -s skills/board-expert/tests
-python3 -m unittest discover -s skills/anchored-peripheral-spec/tests
+python3 -m unittest discover -s skills/peripheral-spec/tests
 python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
 uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
 uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml

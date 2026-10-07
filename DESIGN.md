@@ -18,7 +18,7 @@ lists every moved or reworded passage).
 ## Scope: specs and their quality
 
 This project's goal is **generating hardware specs and measuring and maintaining their
-quality**: board specs, anchored specs and reviews, their verification,
+quality**: board specs, peripheral specs and reviews, their verification,
 and the [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) that
 keeps them right as evidence and models change. The deliverable is a spec someone can trust,
 with a record of why.
@@ -338,7 +338,7 @@ Its target-OS half identifies existing drivers to reuse or model, interfaces, bi
 and implementation milestones. Confidence, unresolved details, and the usage notice tell the
 implementer which statements are established and which still need investigation or hardware work.
 
-[`anchored-peripheral-spec`](skills/anchored-peripheral-spec/SKILL.md) takes source the target may
+[`peripheral-spec`](skills/peripheral-spec/SKILL.md) takes source the target may
 derive from, source and target pins, and a peripheral scope. It produces a driver spec of the same
 broad shape, but every source-derived claim points to performing statements or definitions. `[src:]`
 addresses the reference tree, `[tgt:]` the target tree, and `[doc:]` a document section.
@@ -368,7 +368,7 @@ do not receive the author's reasoning or a previous verdict record. They propose
 edit the spec. The output is the external verification record and associated reports.
 
 The independent second reading depends on the artifact: bring-up-critical addressing, boot, and
-console facts for board specs; register tables for anchored specs. Agreement is evidence of
+console facts for board specs; register tables for peripheral specs. Agreement is evidence of
 repeatability, not proof of truth.
 The lifecycle below explains how failures and disagreements remain visible.
 
@@ -387,7 +387,7 @@ document.
 Follow an ENC28J60 Ethernet peripheral attached to a board supported by a vendor kernel. The
 board attachment is illustrative; the evaluation corpus is the existing pilot. Paths below are
 consuming-project artifacts unless explicitly under this plugin. The spec itself is written by
-an authoring skill (on the open side, `anchored-peripheral-spec`); the steps for writing and
+an authoring skill (on the open side, `peripheral-spec`); the steps for writing and
 implementing one from source the target may not copy moved out in the license split. This
 walkthrough describes how to reach a measurement, not a completed ENC28J60 comparison.
 
@@ -447,7 +447,7 @@ must name its frozen inputs and policy and preserve separate counts. The pilot a
 score-output filename. A verified spec alone cannot supply this measurement.
 
 Later spec edits make record hashes stale. Later source revisions require a new reading at the new
-pin. On the anchored route, `anchor_check.py --drift` identifies unchanged, moved, and changed
+pin. On the peripheral-spec route, `anchor_check.py --drift` identifies unchanged, moved, and changed
 citations; `--rewrite` moves safe anchors and marks changed ones stale. Removing a stale marker
 requires re-verifying the claim. None of those operations establishes behavior on the actual board.
 
@@ -992,9 +992,9 @@ The main mechanical tools each have a narrower purpose than "prove this spec":
 
 - [`spec_check.py`](skills/board-expert/scripts/spec_check.py) checks format, references, tag
   placement, selected public-root restrictions, stub resolution, and verification metadata.
-- [`anchor_check.py`](skills/anchored-peripheral-spec/scripts/anchor_check.py) resolves citations,
+- [`anchor_check.py`](skills/peripheral-spec/scripts/anchor_check.py) resolves citations,
   flags suspect literals and missing support, renders source beside claims, and detects drift.
-- [`inventory_check.py`](skills/anchored-peripheral-spec/scripts/inventory_check.py) uses C-oriented
+- [`inventory_check.py`](skills/peripheral-spec/scripts/inventory_check.py) uses C-oriented
   patterns and device-tree inventory to find omissions and value conflicts, not
   semantic completeness.
 - [`ledger_check.py`](evals/enc28j60/ledger_check.py) checks answer-key structure and freeze inputs;
@@ -1065,7 +1065,7 @@ root, declare it through supported pointers, and use `via:` for access instructi
 public baseline and the origins of additions. Test discovery through a report's provenance block;
 then verify the overlay under its own root. Do not treat a successful merge as factual adjudication.
 
-For a new peripheral driver spec, use the anchored authoring skill and place the spec in the
+For a new peripheral driver spec, use the peripheral-spec skill and place the spec in the
 repository whose license fits its sources. Resolve the IP and instance first, produce the
 programming and OS-integration document, and follow that route's checks. A new generic IP map may
 also be needed, but that is a separate reusable artifact. If quality measurement is wanted,

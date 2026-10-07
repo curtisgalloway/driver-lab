@@ -9,7 +9,7 @@ description: >-
   matching board-expert skill, or by asking the user (e.g. "the Pixel 10 USB PHY driver from the
   public kernel source release"). Use when asked to review, compare, diff, cross-check, or
   sanity-check a driver against an upstream, vendor, or original implementation. Reuses
-  anchored-peripheral-spec's checkers via [impl:]/[ref:] anchors. Output is a review, never
+  peripheral-spec's checkers via [impl:]/[ref:] anchors. Output is a review, never
   driver code.
 ---
 
@@ -23,7 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 You produce one **review report per driver**: the implementation under review compared against a
 **reference implementation** of the same hardware — the upstream kernel driver, the vendor's BSP
 driver, the original the port was made from. The report is a list of **findings** (divergences,
-omissions, additions), and its discipline comes from `anchored-peripheral-spec`: every finding
+omissions, additions), and its discipline comes from `peripheral-spec`: every finding
 cites the exact lines it was derived from **on both sides**, at pinned commits. A reader can open
 the report, the implementation, and the reference side by side and confirm each finding is telling
 the truth; the checker can tell you which findings need re-reading when either tree moves.
@@ -34,7 +34,7 @@ driver waits after reset" is an opinion; a review that says it with
 to the evidence. Maximize them.
 
 This skill **reviews**; it does not spec and it does not port. To produce an implementation spec
-from source whose license fits where the spec will live, use `anchored-peripheral-spec`.
+from source whose license fits where the spec will live, use `peripheral-spec`.
 
 ## Intake: the implementation under review
 
@@ -83,7 +83,7 @@ delay) — reference code is never pasted into an incompatibly-licensed implemen
 
 The reference driver can be wrong, stale, or aimed at a different silicon revision. **"The
 reference does it differently" is a question, never by itself a verdict.** The tie-breaker is the
-databook: keep `[doc:]` citations exactly as in `anchored-peripheral-spec`, and let a document
+databook: keep `[doc:]` citations exactly as in `peripheral-spec`, and let a document
 settle every divergence it can. A divergence the document settles in the implementation's favor is
 `[benign]` (record it — it is cheap confidence); one it settles against the implementation is a
 `[bug]`; one nothing settles is `[suspect]` and goes on the verify-on-hardware list.
@@ -95,7 +95,7 @@ review against the wrong-revision reference manufactures false findings at scale
 ## Anchor grammar
 
 The grammar, tightness rules, block anchors, negative-claim rule, and quoting ration are
-`anchored-peripheral-spec`'s — read its "The anchor grammar" section and apply it with two renamed
+`peripheral-spec`'s — read its "The anchor grammar" section and apply it with two renamed
 tags and pins:
 
 ```
@@ -201,7 +201,7 @@ comfortably beside the review.
 
 1. **Mechanical check** (every review, before any human reads it):
    ```
-   python3 <anchored-peripheral-spec>/scripts/anchor_check.py <review> \
+   python3 <peripheral-spec>/scripts/anchor_check.py <review> \
        --impl-repo <impl checkout> --ref-repo <reference checkout> \
        -o docs/review-reports/<driver>-check-<date>.txt
    ```
@@ -211,7 +211,7 @@ comfortably beside the review.
    against the implementation's headers for the mirror-image check. (`inventory_check.py` reads
    the `Impl pin:` for its default revision; pass `PATH@REV` explicitly for the reference run.)
    ```
-   python3 <anchored-peripheral-spec>/scripts/inventory_check.py <review> \
+   python3 <peripheral-spec>/scripts/inventory_check.py <review> \
        --repo <reference checkout>@<ref-rev> --headers <reference register header(s)>
    ```
 2. **Independent verification** (a fresh subagent, `templates/verifier-prompt.md`): it re-runs
@@ -224,7 +224,7 @@ comfortably beside the review.
 3. **PASS** → move the review to `docs/<driver>-review.md` (or the project's review location),
    fill the verification record (pins, date, report paths, `sha256sum` at PASS). To re-run steps 1
    and 2 on demand later and get a per-anchor record outside the review, use `spec-verifier`
-   § Anchored specs and reviews; it runs this same checker and verifier on both sides.
+   § Peripheral specs and reviews; it runs this same checker and verifier on both sides.
 4. **FAIL** → hand the verdict back to a review subagent to fix the flagged findings, then
    re-verify. A finding the verifier could not confirm from the cited lines is fixed by finding
    the right lines — or by deleting the finding — never by widening the anchor until it "fits".
@@ -234,7 +234,7 @@ comfortably beside the review.
 A review drives fixes, and the fixes invalidate its `[impl:]` anchors. When implementation fixes
 land: mark each addressed finding with its resolution and the fixing commit, then re-pin —
 ```
-python3 <anchored-peripheral-spec>/scripts/anchor_check.py docs/<driver>-review.md \
+python3 <peripheral-spec>/scripts/anchor_check.py docs/<driver>-review.md \
     --impl-repo <impl checkout> --drift <new-rev> [--rewrite]
 ```
 — exactly as the parent skill re-pins a spec: moved anchors are rewritten, changed ones gain

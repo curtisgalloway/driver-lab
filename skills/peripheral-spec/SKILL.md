@@ -1,7 +1,7 @@
 ---
-name: anchored-peripheral-spec
+name: peripheral-spec
 description: >-
-  Produce a source-anchored implementation spec for a single peripheral (Ethernet MAC, UART, GPIO,
+  Produce a peripheral implementation spec for a single peripheral (Ethernet MAC, UART, GPIO,
   SD/MMC, USB, I2C/SPI, …) from driver source whose license fits the repository the spec will live
   in — every fact cites the file:line it was derived from at a pinned commit, so a reviewer can
   check the spec against the code and drift is detectable when the code moves. Use when asked to
@@ -19,7 +19,7 @@ SPDX-FileCopyrightText: 2026 Curtis Galloway
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Peripheral driver spec (source-anchored)
+# Peripheral driver spec
 
 You produce one **implementation spec per peripheral** — the document an engineer reads to write
 or rewrite a driver — from driver source you are **allowed to read, cite, and quote from**, in a
@@ -35,7 +35,7 @@ take on faith, and a spec whose anchors have gone stale is one you *shouldn't*. 
 
 ## Where the spec goes: which repository's license fits?
 
-An anchored spec is a **derivative of every source it anchors to**: it restates what the code does
+A peripheral spec is a **derivative of every source it anchors to**: it restates what the code does
 and points the reader at the lines. So the question is not "is the source yours?" but "which
 license may the spec carry?". Published specs live in three public **spec repositories**, one per
 license, and one rule decides between them.
@@ -89,7 +89,7 @@ findings, not a spec — use `reference-driver-review`, which reuses this skill'
 checkers under `[impl:]`/`[ref:]` tags.
 
 The board-expert skills (`board-expert` and any `<board>-expert` stub) are useful as the *map* of
-SoC addresses, IP identity, and quirks. Implementers of an anchored spec may and should read the
+SoC addresses, IP identity, and quirks. Implementers of a peripheral spec may and should read the
 source (which is why the spec is for readers whose own work the source's license permits; see
 *Where the spec goes*).
 
@@ -352,7 +352,7 @@ driver fits comfortably beside the spec.
 3. **PASS** → move the spec to `docs/<device>-spec.md`, fill the verification record (pins, date,
    report path, `sha256sum` of the file at PASS), add a one-line `AGENTS.md` index entry from the
    returned summary. To re-run steps 1 and 2 on demand later (after an edit, or after the source
-   moved) and get a per-anchor record outside the spec, use `spec-verifier` § Anchored specs and
+   moved) and get a per-anchor record outside the spec, use `spec-verifier` § Peripheral specs and
    reviews; it runs this same checker and verifier and records a verdict for every anchor.
 4. **FAIL** → hand the verdict to a spec subagent (the original is fine — there is nothing to
    protect it from) to fix the flagged claims at the scratch path, then re-verify. A claim the

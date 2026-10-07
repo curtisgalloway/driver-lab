@@ -2,8 +2,8 @@
 name: spec-verifier
 description: >-
   Verify a spec against the sources it cites and write a verification record outside the spec.
-  Works for board specs (board-expert's SPEC-FORMAT.md) and source-anchored specs and reviews
-  (anchored-peripheral-spec, reference-driver-review): a fresh
+  Works for board specs (board-expert's SPEC-FORMAT.md) and peripheral specs and reviews
+  (peripheral-spec, reference-driver-review): a fresh
   verifier subagent opens every cited authority at the recorded ref, commit, or date, gives a
   verdict per claim, and never edits the spec. Use when asked to verify, re-verify, double-check, or
   audit a spec, to check a spec against its sources, when a checker reports a spec unverified or
@@ -21,8 +21,8 @@ A spec is written once by an author who read the sources as they went. Verificat
 pass that re-derives every claim from the authority it cites, in a context that never saw the
 author's reasoning, and records the result **outside the spec**, so the record costs no context when
 the spec is used. Every spec-creating skill here runs this phase as its last step and points back
-here for the re-run: `board-spec-scaffold` for board specs, `anchored-peripheral-spec` and
-`reference-driver-review` for anchored specs and reviews. A skill from another repository that
+here for the re-run: `board-spec-scaffold` for board specs, `peripheral-spec` and
+`reference-driver-review` for peripheral specs and reviews. A skill from another repository that
 defines its own spec kind may wrap this procedure: it loads this file, adds its kind's section and
 rules, and its rules win where the two differ.
 
@@ -104,13 +104,13 @@ Rules that hold for every kind:
 ## The procedure
 
 1. **Identify the kind** from the spec: YAML frontmatter with `kind:` or `overlays:` is a board
-   spec; `Source pin:` / `Impl pin:` lines and `[src:]`-family anchors mean an anchored spec or
+   spec; `Source pin:` / `Impl pin:` lines and `[src:]`-family anchors mean a peripheral spec or
    review. Resolve a board spec across roots the way `board-expert` § 1 does; a path names the
    others. "Re-verify everything under `<dir>`" means every spec file below it.
 2. **Run the kind's mechanical checks first** (below). They are cheap, and a spec that fails them
    is not worth a verifier's time until fixed.
 3. **Spawn the verifier**: a subagent with a fresh context, given the spec file, read-only access
-   to whatever the spec composes or pins (a board spec's `parts`; an anchored spec's source and
+   to whatever the spec composes or pins (a board spec's `parts`; a peripheral spec's source and
    target checkouts at their pins), this file, and, for a board spec, `board-expert`'s section 2
    for how sources are cached. Not the author's report, not the previous record, not this
    conversation. Verify several specs in parallel, one verifier
@@ -123,7 +123,7 @@ Rules that hold for every kind:
    size, interrupt number, cell count, clock name, frequency, ordering, register bit, exception
    level, line range, symbol) with what the authority says, and write the verdict line.
 6. **Independent second verifier** where the kind says so (bring-up-critical facts of a board spec;
-   the register-map tables of an anchored spec). Same brief, no shared context. **A disagreement is
+   the register-map tables of a peripheral spec). Same brief, no shared context. **A disagreement is
    an `ADJUDICATE` item, not a `FAIL`**: the two readers could not settle the question between
    them, which says nothing yet about whether the spec is wrong. Record both readings, and leave
    the claim **out of the pass/fail counts** — it is reported separately and waits for a person.
@@ -170,13 +170,13 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
 - **Record location**: `<root>/resources/<id>.verify.md`, beside the root marker; `spec_file` is
   relative to the root.
 
-## Anchored specs and reviews
+## Peripheral specs and reviews
 
-The kinds produced by `anchored-peripheral-spec` (`[src:]`/`[tgt:]` anchors, `Source pin:` /
+The kinds produced by `peripheral-spec` (`[src:]`/`[tgt:]` anchors, `Source pin:` /
 `Target pin:`) and `reference-driver-review` (`[impl:]`/`[ref:]`, `Impl pin:` / `Ref pin:`). **Every
 anchor is verified back to source**, in two layers:
 
-1. **Resolve every anchor, mechanically.** Run `anchored-peripheral-spec/scripts/anchor_check.py`
+1. **Resolve every anchor, mechanically.** Run `peripheral-spec/scripts/anchor_check.py`
    in its default mode with the spec's repositories (`--repo` / `--target-repo`, or `--impl-repo` /
    `--ref-repo` for a review) at the pins: every path must exist, every line range be in bounds,
    every symbol be present in or near its range, every hex literal in a claim appear in the lines it
@@ -195,7 +195,7 @@ anchor is verified back to source**, in two layers:
    against the headers are findings. Any `[stale: was <pin>]` marker is a `FAIL` until a person
    re-verifies the claim and clears it.
 2. **Judge every anchor, by reading.** Run the creating skill's own independent verifier as it
-   defines it (`anchored-peripheral-spec/templates/verifier-prompt.md`, or
+   defines it (`peripheral-spec/templates/verifier-prompt.md`, or
    `reference-driver-review/templates/verifier-prompt.md` for a review): a fresh subagent that
    renders the review sheet with `anchor_check.py --show`, which places each claim beside the
    source lines it cites, reads the main source files in full once, and decides for every anchor
@@ -212,7 +212,7 @@ anchor is verified back to source**, in two layers:
   several anchors gets one line per anchor. The record's `sources` lists every pin and every
   registry document.
 - **Two verifiers** for the register-map tables (offsets, widths, bit positions), the densest values
-  and the place `anchored-peripheral-spec` already runs two investigators.
+  and the place `peripheral-spec` already runs two investigators.
 - **Record location**: `resources/<spec-basename>.verify.md` in a `resources/` directory beside the
   spec, or, when the project already keeps `docs/provenance/` for the spec's sidecars, there as
   `<spec-basename>.verify.md`; say which in the report. `spec_file` is relative to the record's

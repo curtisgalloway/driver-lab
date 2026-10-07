@@ -33,8 +33,8 @@ jobs:
       - name: board-expert tests
         run: python3 -m unittest discover -s skills/board-expert/tests -v
 
-      - name: anchored-peripheral-spec tests
-        run: python3 -m unittest discover -s skills/anchored-peripheral-spec/tests -v
+      - name: peripheral-spec tests
+        run: python3 -m unittest discover -s skills/peripheral-spec/tests -v
 
       - name: board specs
         run: |

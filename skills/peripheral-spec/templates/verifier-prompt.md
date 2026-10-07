@@ -4,8 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt for the independent verifier subagent; substitute every <angle-bracket> placeholder.
 -->
 
-Independently verify the source-anchored spec at <path-to-spec>. You did not write it; do not fix
-it. Load `anchored-peripheral-spec` for the anchor grammar, the labels, and the required
+Independently verify the peripheral spec at <path-to-spec>. You did not write it; do not fix
+it. Load `peripheral-spec` for the anchor grammar, the labels, and the required
 structure. The source checkout is at <source checkout>; read it at the spec's `Source pin:`
 commit (<repo-name>@<commit>) — verifying against any other revision is verifying the wrong text.
 <If the spec has several Source pins: one checkout per pin, <pin>=<checkout> for each.>

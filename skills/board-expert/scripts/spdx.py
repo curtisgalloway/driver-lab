@@ -24,7 +24,7 @@ the list names ``GPL-2.0-only`` (or the reverse). ``X WITH E`` is accepted when
 either side is; ``A AND B`` only when both are.
 
 Stdlib only; imported by ``spec_check.py`` and, by relative path, by
-``anchored-peripheral-spec/scripts/anchor_check.py``.
+``peripheral-spec/scripts/anchor_check.py``.
 """
 
 from __future__ import annotations

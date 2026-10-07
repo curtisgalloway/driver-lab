@@ -69,7 +69,12 @@ do beyond moving and renaming them; new evaluation rounds.
 |---|---|---|---|
 | `hardware-specs-gpl` | GPL-2.0-only | `[src:]` into any GPL-2.0-only or GPL-2.0-or-later tree, plus `[doc:]`, plus anything the permissive repo accepts | Linux-derived specs: references for Linux work, or for anyone who doesn't care about license. Easiest to verify. |
 | `hardware-specs-docs` | CC-BY-4.0 (specs); per-file Apache-2.0 SPDX headers on CI files | `[doc:]` only | Specs built only from public datasheets, TRMs and standards |
-| `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/MIT sources | `[src:]` into BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
+| `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/ISC/MIT sources | `[src:]` into BSD, ISC, 0BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
+
+The accepts lists of the GPL and permissive repos, since 2026-10-07, are `Apache-2.0, MIT,
+BSD-2-Clause, BSD-3-Clause, ISC, 0BSD` (permissive) and the same plus `GPL-2.0-only,
+GPL-2.0-or-later` (GPL). The docs repo and the shipped `skills/board-expert/specs` root are
+unchanged.
 
 All three are created together and are public. `bringup-kit`'s spec roots point at the docs and
 permissive repos, never at the GPL repo.
@@ -185,7 +190,10 @@ permissive repos, never at the GPL repo.
   `QEMU-DIFFERENTIAL.md`, `EVAL-PLAN.md`, `VALIDATION-*.md`, the L01/L02/CR sections of
   `IMPLEMENTATION-PLAN.md` and `DEFERRED-PLAN.md`: kept as history with a header pointing to
   `cleanroom-skills` for new rounds, and still checked by CI (`campaign-review` keeps reading
-  `evals/e1000`). A check script with that allowlist enforces the rule in CI.
+  `evals/e1000`). A check script with that allowlist enforces the rule in CI. Its history
+  records are `PROCESS-NOTES.md` and `TRANSITION.md`; `docs/STORY.md`, the project timeline,
+  moved to `cleanroom-skills` on 2026-10-07 (see Decisions).
+  The pending L02 work (see Decisions) is not driver-lab's: it runs from `cleanroom-skills`.
 
 ## Decisions
 
@@ -209,6 +217,17 @@ Settled by the user on 2026-10-06, during LS5 ([notebook](../notebook/LS5.md)):
 | Are board specs' `resources.repos` licenses gated, not only validated (LS-R2)? | Yes: `spec_check.py --require-license` fails one the root's `accepts:` does not accept, with the anchor gate's SPDX rules |
 | License fields of the shipped `skills/board-expert/specs` root | `license: Apache-2.0`, `accepts: [Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]` |
 | Create the three spec repositories (public) and push them | Go given |
+
+### Decisions, 2026-10-07
+
+All four are user decisions, made after LS11:
+
+| Question | Decision |
+|---|---|
+| Licenses the GPL and permissive spec repos accept | Also `ISC` and `0BSD`. `accepts:` in both root markers, their READMEs and AGENTS.md, and the table above change; each repo's self-test gains a fit case for an ISC and a 0BSD source. The docs repo and the shipped `skills/board-expert/specs` root do not change |
+| `docs/STORY.md` in the open-side allowlist | Moved to `cleanroom-skills` (`docs/STORY.md`, source commit `33cb47c`) and removed from driver-lab and from the allowlist. `PROCESS-NOTES.md`, `TRANSITION.md` and the campaign-review fixture stay allowed |
+| L02 pending work (spec revision 10 and a candidate round) | Moves to `cleanroom-skills`, which tracks it in its README ("Pending work"); driver-lab's evaluations stay a frozen archive. The user confirmed this is intended |
+| Wording in `SPEC-FORMAT.md` for facts known only from driver code (cited by repository, commit, file and line; a spec uses one only as a cited premise of an `[inference]`) | Approved as written; no text change |
 
 Earlier: the 11 specs deleted, to be regenerated (2026-10-01); facts 2, 3 and 6 to a bcm2711
 permissive overlay (2026-09-30); `hardware-investigator` and `peripheral-spec` names (draft).

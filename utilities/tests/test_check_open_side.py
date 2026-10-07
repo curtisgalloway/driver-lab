@@ -122,7 +122,6 @@ class CheckOpenSideTest(unittest.TestCase):
             "skills/campaign-review/tests/fixtures/deployment-cr5.yaml",
             "PROCESS-NOTES.md",
             "TRANSITION.md",
-            "docs/STORY.md",
         ]
         repo = self.make({path: mention for path in allowed})
         code, out, _ = repo.run()
@@ -136,12 +135,13 @@ class CheckOpenSideTest(unittest.TestCase):
                 "docs/evals/x.md": mention,
                 "skills/campaign-review/tests/fixtures/deployment-cr6.yaml": mention,
                 "sub/IMPLEMENTATION-PLAN.md": mention,
+                "docs/STORY.md": mention,
             }
         )
         code, out, _ = repo.run()
         self.assertEqual(code, 1)
         for path in ("evals-notes.md", "docs/evals/x.md", "deployment-cr6.yaml",
-                     "sub/IMPLEMENTATION-PLAN.md"):
+                     "sub/IMPLEMENTATION-PLAN.md", "docs/STORY.md"):
             self.assertIn(path, out)
 
     def test_readme_may_carry_one_pointer_line(self):

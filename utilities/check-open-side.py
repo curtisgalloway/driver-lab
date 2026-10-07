@@ -21,7 +21,7 @@ Terms (case-insensitive; TERMS below):
 
 Allowlist (ARCHIVE_DIRS, ARCHIVE_FILES below): the frozen archive the design lists, the license-split
 design and plan (they describe the split), the campaign-review fixture copied from the frozen CR5
-deployment, three history records, and this checker with its tests. README.md may carry one
+deployment, two history records, and this checker with its tests. README.md may carry one
 matching line, the pointer, which must name cleanroom-skills; any other fails. evidence/LS8.md justifies each entry.
 
 Scope is tracked files only. Exit 0 clean / 1 findings / 2 usage or environment error.
@@ -66,10 +66,10 @@ ARCHIVE_FILES = frozenset(
         "docs/LICENSE-SPLIT-PLAN.md",
         # A copy of the frozen CR5 deployment manifest, pinned by test_sweep.py (LS7).
         "skills/campaign-review/tests/fixtures/deployment-cr5.yaml",
-        # History records: the process log, the 2026-09-25 move, the project timeline.
+        # History records: the process log and the 2026-09-25 move. (docs/STORY.md, the project
+        # timeline, moved to cleanroom-skills on 2026-10-07, user decision.)
         "PROCESS-NOTES.md",
         "TRANSITION.md",
-        "docs/STORY.md",
         # This checker names the terms it looks for; its tests plant them.
         "utilities/check-open-side.py",
         "utilities/tests/test_check_open_side.py",

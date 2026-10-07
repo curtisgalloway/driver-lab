@@ -58,7 +58,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS3 | Checkable doc anchors | LS1 | complete ([evidence](../evidence/LS3.md)) |
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](../evidence/LS4.md)) |
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](../evidence/LS5.md)) |
-| LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | pending |
+| LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](../evidence/LS6.md)) |
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | pending |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | pending |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | pending |
@@ -220,46 +220,16 @@ Evidence: [LS5](../evidence/LS5.md). Notebook: [LS5](../notebook/LS5.md).
 
 ## LS6 — `cleanroom-skills` created with history
 
-**Design coverage:** LS-R14 (repository, history, CI), LS-R8 (template moves with
-`cleanroom-spec`).
-**Dependencies:** LS5; the user's explicit go to create the public repository. LS4's README
-section and the new repo's own README framing must be in place before it is public.
-**In scope:** a new repo holding `cleanroom-spec`, `cleanroom-implementer`, and `os-investigator`
-renamed `cleanroom-investigator` (with `leak_scan.py` and tests), with history; plugin manifest;
-CI running the moved tests and the portability scan; README; a commit map as in TRANSITION.md.
-**Out of scope:** removing the skills from driver-lab and moving clean-room rules out of
-`board-expert` and `spec-verifier` (LS7). For one milestone both repos carry the skills.
-
-### Implementation steps
-1. In a scratch clone, `git filter-repo` keeping the three skill paths (and their history
-   through the public-skills import), renaming `skills/os-investigator` →
-   `skills/cleanroom-investigator`; fix the skill's own name and internal references.
-2. Plugin manifest (`.claude-plugin/plugin.json`, marketplace entry), LICENSE (Apache-2.0),
-   README (what it is, what it is not for, that output is never published, that it depends on
-   driver-lab, a pointer to the frozen evals at a pinned driver-lab commit), AGENTS.md.
-3. CI: the three test suites and `portability_scan.py` on `cleanroom-implementer/scripts`,
-   pinned as driver-lab does today.
-4. Commit map file from the filter-repo run.
-5. On the user's go: create the public repo, push, confirm CI green.
-
-### Acceptance criteria
-- [ ] The repo is public, CI green; `git log --follow` on a moved file shows pre-split history.
-- [ ] `cleanroom-investigator`'s `SKILL.md` name field and every internal reference use the new
-      name; no `os-investigator` outside history and the commit map.
-- [ ] Installed beside driver-lab, the moved tests pass locally.
-- [ ] Privacy check run on the new repo's files and commit messages (history inherited from
-      a public repo; the check covers new commits).
-
-### Testing and review
-- Reviewer subagent. Focus: history preserved; nothing outside the three skills leaked in by
-  the filter; the README's framing.
-
-### Session sizing
-Mechanical with one risky step (filter-repo paths). Split point: local repo complete and
-verified (steps 1–4) before the public push.
-
-### Evidence and findings
-Status: pending. Evidence: [LS6](../evidence/LS6.md). Notebook: [LS6](../notebook/LS6.md).
+**Outcome:** `curtisgalloway/cleanroom-skills`, public, holding `cleanroom-spec`,
+`cleanroom-implementer` and `cleanroom-investigator` (renamed from `os-investigator`) with their
+history (21 commits kept by `git filter-repo` from driver-lab `5d7eac2`, plus the rename and the
+repository's own files), a commit map, plugin manifests, README, CI green.
+**Design coverage:** LS-R14 (repository, history, CI), LS-R8 (the provenance template moved with
+`cleanroom-spec`). **Dependencies:** LS5; the user's go (2026-10-06).
+**Status:** complete. Evidence: [LS6](../evidence/LS6.md). Notebook: [LS6](../notebook/LS6.md).
+**Open limitations:** until LS7 removes driver-lab's copies, both plugins carry the three skills;
+the `cleanroom-skills` README says to use plugin-qualified names meanwhile, and LS7 deletes that
+paragraph.
 
 ## LS7 — driver-lab's skills neutral; clean-room rules moved
 
@@ -475,11 +445,11 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS5 complete; LS6 (`cleanroom-skills`) is next and needs the user's go to
-  create that public repository.
-- Open question for the user: the spec repositories accept only the design's named licenses
-  (`Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, plus GPL-2.0 in the GPL repository);
-  whether to add ISC, 0BSD, X11 or Zlib.
-- Resume action: begin **LS6** on `license-split/ls6` from a fetched `origin/main`.
-- Read first: the design, this plan's conventions and LS6, the notebook index, TRANSITION.md (the
-  commit-map approach), and the three skill directories that move.
+- Current milestone: LS6 complete; LS7 (driver-lab's skills neutral, clean-room rules moved to
+  `cleanroom-skills`, driver-lab's copies removed) is next. LS7 is a paired change in both
+  repositories and deletes the duplicate-skills paragraph from `cleanroom-skills`' README.
+- Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
+  Zlib (they accept only the design's named licenses).
+- Resume action: begin **LS7** on `license-split/ls7` from a fetched `origin/main`, with a
+  matching branch in `cleanroom-skills`.
+- Read first: the design, this plan's conventions and LS7, the notebook index, LS6's evidence.

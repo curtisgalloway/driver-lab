@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T17:31-07:00
+Updated: 2026-10-06T17:42-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,11 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS6 — `cleanroom-skills` created with history](LS6.md)
+Entries: 2026-10-06T17:40-07:00 through 2026-10-06T17:42-07:00
+Outcome: complete; public with 21 commits of history kept by filter-repo, the rename and its own
+files; CI green. Both plugins carry the three skills until LS7.
 
 ### [LS5 — the three spec repositories](LS5.md)
 Entries: 2026-10-06T17:17-07:00 through 2026-10-06T17:31-07:00

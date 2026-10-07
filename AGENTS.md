@@ -35,8 +35,6 @@ list:
 
 ```bash
 python3 utilities/check-no-private-paths.py
-python3 -m unittest discover -s skills/os-investigator/tests
-python3 -m unittest discover -s skills/cleanroom-implementer/tests
 python3 -m unittest discover -s skills/board-expert/tests
 python3 -m unittest discover -s skills/anchored-peripheral-spec/tests
 python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
@@ -45,11 +43,7 @@ uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc
 python3 -m unittest discover -s evals/e1000/harness/tests
 uv run --with pyyaml python3 -m unittest discover -s skills/campaign-review/tests
 uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals/e1000
-python3 <public-skills>/plugins/agent-workflow/skills/agent-agnostic-skills/scripts/portability_scan.py \
-  skills/cleanroom-implementer/scripts
 ```
-
-The last one needs a public-skills checkout; CI pins the scanner to one of its commits.
 
 ## Rules the work runs under
 

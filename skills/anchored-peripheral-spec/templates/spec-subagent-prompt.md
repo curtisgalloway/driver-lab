@@ -59,8 +59,8 @@ requires. Label every sequence step and hardware-behavior claim with exactly one
 code's own comment or commit gives the reason — anchor it), `[driver-choice]` (policy; hardware
 permits alternatives), or `[as-implemented]` (nothing found says why — unverified against the
 hardware). Registers the driver never touches may appear with `[doc:]` only, so the register map
-covers the block, not just the driver's footprint. Do NOT load `os-investigator`. Use
-`<board-expert>` for board specifics and cached references.
+covers the block, not just the driver's footprint. Use `<board-expert>` for board specifics and
+cached references.
 
 SELF-CHECK before returning (fix every error and every warning you cannot justify):
     python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <pin>=<source checkout> \

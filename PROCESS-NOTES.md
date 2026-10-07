@@ -487,3 +487,15 @@ What happened: `scripts/checks.sh` set `trap 'rm -rf "$tmp"' EXIT` inside a func
 Cost: one regeneration and rerun of the three repositories' checks.
 Prevention: a variable an `EXIT` trap reads must be global.
 Fix belongs in: user instructions (shell command style), if it recurs.
+
+### 2026-10-06T18:03-07:00 — a brief whose wording the acceptance grep forbids
+Chapter: [LS7](notebook/LS7.md)
+What happened: the LS7 brief asked SPEC-FORMAT to call `[source-observed]` "defined by an
+extension (cleanroom-skills)" and plan step 4 offered "pointing at `cleanroom-skills`" for
+references in open skills, while the acceptance grep (`clean-?room`) matches the repository's
+name. Followed the design's wording (LS-R15, no repository named) and removed the references
+instead; recorded as a deviation.
+Cost: a few minutes deciding; no rework.
+Prevention: write an acceptance grep and the wording it is meant to allow together, and check
+the allowed wording against the pattern.
+Fix belongs in: the project-plan skill (acceptance criteria phrased as greps).

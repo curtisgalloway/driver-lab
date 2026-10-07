@@ -12,7 +12,7 @@ variants: []                  # optional: sibling models sharing these facts; se
 #    triggers: [<keyword> pro]
 #    shares: [soc, parts, console]
 #    differs: <one line>
-#    tag: doc                 # the class the row rests on: doc (default) | press | source-observed
+#    tag: doc                 # the class the row rests on: doc (default) | press | another class
 #    source: <vendor page, or the prebuilt tree README that names it>
 # variant_of: <base-id>       # instead of variants, when THIS spec is a variant with differing facts
 resources:

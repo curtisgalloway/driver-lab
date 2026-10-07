@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Vendor guide: overlay roots, internal tools, and the wall
+# Vendor guide: overlay roots, internal tools, and what may leave
 
 For an engineer inside an organization that holds material the public specs cannot: NDA databooks,
 internal BSP trees, lab rigs, errata trackers. Nothing here assumes you have read the rest of this
@@ -107,7 +107,7 @@ that report:
   that could become public, tool credentials, and anything the document's own classification
   forbids.
 - **Tagging:** every fact from your roots reaches the report tagged with its layer, so a downstream
-  clean-room verifier can see that a citation is not publicly checkable. Facts from an NDA databook
+  verifier can see that a citation is not publicly checkable. Facts from an NDA databook
   keep the `[databook]` tag; the layer says it is internal.
 - **The one-way rule:** nothing from a vendor or local root is ever copied into a public-layer spec.
   If a fact turns out to be publicly documented, cite the public document and add it to the public

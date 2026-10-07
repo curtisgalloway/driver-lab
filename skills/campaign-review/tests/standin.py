@@ -459,7 +459,6 @@ class Standin:
         instructions.mkdir()
         for name, source in (
             ("spec-verifier.md", "skills/spec-verifier/SKILL.md"),
-            ("os-investigator.md", "skills/os-investigator/SKILL.md"),
             ("SPEC-FORMAT.md", "skills/board-expert/SPEC-FORMAT.md"),
         ):
             shutil.copyfile(ROOT / source, instructions / name)
@@ -479,8 +478,7 @@ class Standin:
             f"Workspace: {self.workspace}\n"
             f"Spec: specs/{self.spec.name}\n\n"
             "You are a fresh spec-verifier reader. Read\n"
-            "instructions/spec-verifier.md,\n"
-            "instructions/os-investigator.md and instructions/SPEC-FORMAT.md.\n"
+            "instructions/spec-verifier.md and instructions/SPEC-FORMAT.md.\n"
             "The input is a local-layer chip spec using the board-spec format.\n"
             "All device facts and sources are invented for this test. Their supplied\n"
             "local documents are the authorities. Use no outside knowledge\n"

@@ -2,8 +2,8 @@
 name: spec-verifier
 description: >-
   Verify a spec against the sources it cites and write a verification record outside the spec.
-  Works for board specs (board-expert's SPEC-FORMAT.md), clean-room driver specs (cleanroom-spec),
-  and source-anchored specs and reviews (anchored-peripheral-spec, reference-driver-review): a fresh
+  Works for board specs (board-expert's SPEC-FORMAT.md) and source-anchored specs and reviews
+  (anchored-peripheral-spec, reference-driver-review): a fresh
   verifier subagent opens every cited authority at the recorded ref, commit, or date, gives a
   verdict per claim, and never edits the spec. Use when asked to verify, re-verify, double-check, or
   audit a spec, to check a spec against its sources, when a checker reports a spec unverified or
@@ -21,15 +21,16 @@ A spec is written once by an author who read the sources as they went. Verificat
 pass that re-derives every claim from the authority it cites, in a context that never saw the
 author's reasoning, and records the result **outside the spec**, so the record costs no context when
 the spec is used. Every spec-creating skill here runs this phase as its last step and points back
-here for the re-run: `board-spec-scaffold` for board specs, `cleanroom-spec` for clean-room driver
-specs, `anchored-peripheral-spec` and `reference-driver-review` for anchored specs and reviews.
+here for the re-run: `board-spec-scaffold` for board specs, `anchored-peripheral-spec` and
+`reference-driver-review` for anchored specs and reviews. A skill from another repository that
+defines its own spec kind may wrap this procedure: it loads this file, adds its kind's section and
+rules, and its rules win where the two differ.
 
 ## Terms
 
 - **Claim** — the unit that gets a verdict. For a board spec, one fact bullet. For an anchored
   spec or review, one anchor (`[src:]`, `[tgt:]`, `[impl:]`, `[ref:]`) and the claim it is attached
-  to. For a clean-room driver spec, one tagged fact (`[databook]`, `[standard]`, `[DT]`,
-  `[inference]`) in the register tables and sequences.
+  to.
 - **Source** — what a claim cites: a repository at a commit, a patch series, a document at a URL, a
   device tree file, a databook section.
 - **Verdict** — `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, or `ADJUDICATE`, per claim.
@@ -92,9 +93,8 @@ Rules that hold for every kind:
   the claim says, a databook section that does not cover the register.
 - **`FAIL` carries the discrepancy and the proposed correction.** The verifier never edits the
   spec. The user, or the creating skill on the user's say-so, applies the fix; then re-run.
-- **No source in the record.** It is a clean-side artifact like the spec: describe what was
-  compared and how it differs; never quote driver or firmware code. `os-investigator`'s rule
-  applies in full, and the record must pass `os-investigator/scripts/leak_scan.py`.
+- **The record cites; it does not quote.** Describe what was compared and how it differs, by
+  anchor, section or file and line; do not paste driver or firmware code into it.
 - **Keys survive edits.** Claims are keyed by something stable (section and ordinal, the anchor
   text), never by line number.
 - `summary` counts equal the verdict lines, `adjudicate` included (omit the key only when it is
@@ -105,16 +105,15 @@ Rules that hold for every kind:
 
 1. **Identify the kind** from the spec: YAML frontmatter with `kind:` or `overlays:` is a board
    spec; `Source pin:` / `Impl pin:` lines and `[src:]`-family anchors mean an anchored spec or
-   review; the `cleanroom-spec` required structure (provenance ledger, usage notice) means a
-   clean-room driver spec. Resolve a board spec across roots the way `board-expert` § 1 does; a
-   path names the others. "Re-verify everything under `<dir>`" means every spec file below it.
+   review. Resolve a board spec across roots the way `board-expert` § 1 does; a path names the
+   others. "Re-verify everything under `<dir>`" means every spec file below it.
 2. **Run the kind's mechanical checks first** (below). They are cheap, and a spec that fails them
    is not worth a verifier's time until fixed.
 3. **Spawn the verifier**: a subagent with a fresh context, given the spec file, read-only access
    to whatever the spec composes or pins (a board spec's `parts`; an anchored spec's source and
-   target checkouts at their pins; a driver spec's cited documents), this file, and
-   `os-investigator` for the clean-room rule and the cache discipline. Not the author's report,
-   not the previous record, not this conversation. Verify several specs in parallel, one verifier
+   target checkouts at their pins), this file, and, for a board spec, `board-expert`'s section 2
+   for how sources are cached. Not the author's report, not the previous record, not this
+   conversation. Verify several specs in parallel, one verifier
    per spec.
 4. **The verifier materializes the sources** it needs: repositories cloned into the cache the spec
    names (or the checkout the pin names) at the recorded ref or commit, series pulled in the form
@@ -150,8 +149,8 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   absent). A gap bullet (`TODO (verify on hardware)` first) is `GAP`.
 - **Sources** are the bullet's tag clause: `[DT] (file)` names a device tree in a `repos` or
   `series` entry at its `ref`; `[databook]`, `[standard]`, `[doc]` name a `docs` entry or a document
-  id; `[hardware]` names a board and a method; `[press]` and `[source-observed]` name a page or a
-  tree and are compared against it like any other claim, TODO or not; `[inference]` names its
+  id; `[hardware]` names a board and a method; `[press]` names a page and is compared against it like
+  any other claim, TODO or not; a class an extension defines is verified as that extension says; `[inference]` names its
   premises and derivation in its parenthetical, and is verified on whether those premises hold and
   whether the conclusion follows from them; `[emulated]` names a device model, its version and
   run IDs, and is compared against an extract of what those runs recorded (traces, captures,
@@ -220,37 +219,6 @@ anchor is verified back to source**, in two layers:
   parent's parent. Save the `anchor_check.py` and `inventory_check.py` reports beside it.
 - The record complements `anchor_check.py --drift`: drift detection says which anchors need
   re-review when the tree moves; this record says whether the claims were right at the pin.
-
-## Clean-room driver specs
-
-The kind produced by `cleanroom-spec`. Two passes, and the first is not this skill's to redefine:
-
-1. **`cleanroom-spec`'s own verifier**, exactly as that skill defines it: a fresh subagent with its
-   verifier template, the five checks (mechanical scan, leak judgment, hardware-derived structure,
-   attractants, usage notice), and `os-investigator/scripts/leak_scan.py`. Run it; record its
-   verdict in the record's body as the first line (`Clean-room verifier: PASS` or `FAIL — <what>`).
-   That verifier checks the wall, not accuracy, by design.
-2. **Accuracy**, which that verifier deliberately leaves out: every `[databook]`, `[standard]`, and
-   `[DT]` fact in the register tables, bit fields, sequences, and constants is compared against the
-   cited document section or device tree the way a board spec's facts are. `[source-observed]`
-   facts are checked for their required markers ("order not known to be required", "re-derive on
-   hardware") and against the source commit named in the provenance ledger; the verifier reads
-   that source under `os-investigator`'s rule and quotes none of it. An `[inference]` fact is
-   verified on its **argument**, not on a citation: do the stated premises hold at the pinned
-   source, and does the conclusion actually follow from them? A premise that does not hold is a
-   `FAIL`; premises that hold under a conclusion they do not support is also a `FAIL`, with the
-   gap in the reasoning named. The commonest form is a workaround a driver applies to a whole
-   family being written as a hardware requirement, when the erratum scopes it to one part. An
-   `[emulated]` fact is checked against an extract of what its cited runs recorded, never against
-   the model's source: it is a `FAIL` when it claims more than the runs show, names the model's
-   mechanism instead of an observation, or is the only authority behind a step.
-
-- **Claims** are keyed by section and ordinal (tables: `<Section>/<table>/<row name>`; sequences:
-  `<Section>/<step number>`).
-- **Two verifiers** for the register map and the init sequence.
-- **Record location**: `resources/<spec-basename>.verify.md` beside the spec, or the project's
-  `docs/provenance/` directory when the spec's ledger already lives there; `spec_file` relative to
-  the record's parent's parent. The record itself must pass `leak_scan.py`.
 
 ## Rules
 

@@ -13,7 +13,7 @@ stated here; the skills point at this file instead of restating it.
 
 - **Board spec** — a Markdown file with YAML frontmatter describing one piece of hardware: a board, an
   SoC, a companion chip, or an IP block. Cited facts plus pointers to sources, documents, and tools;
-  never source code. Distinct from a *driver spec* (`cleanroom-spec`, `anchored-peripheral-spec`),
+  never source code. Distinct from a *driver spec* (`anchored-peripheral-spec`),
   which describes one peripheral's programming model for an implementer.
 - **IP spec** — a spec of kind `ip`: one silicon IP block (a PL011 UART, a DesignWare `dwc3` USB
   controller, a GIC-400) independent of any SoC. Its authorities are the IP databook and the public
@@ -46,12 +46,14 @@ stated here; the skills point at this file instead of restating it.
   by a stable name. Its description starts with the prefix "Board expert for" and contains the
   sentence "A stub over the `<id>` board spec": consumers match the prefix, and the checker's
   `--stubs-from` finds stubs by the sentence.
-- **Cache** — the out-of-tree directory `~/src/<cache>/` where the expert clones reference source. The
-  cache is the encumbered side of the clean-room wall; the spec is the clean side.
-- **Provenance tag** — the class of authority behind a fact. `[databook]`, `[standard]`, `[DT]`,
-  `[source-observed]` and `[inference]` are `os-investigator`'s; specs add `[rtl]`, `[doc]`,
-  `[hardware]`, and `[press]`; testing against a device model adds `[emulated]`. What each class
-  is trusted for, what that trust assumes, and how conflicts between classes are recorded is in
+- **Cache** — the out-of-tree directory `~/src/<cache>/` where the expert clones reference source.
+- **Provenance tag** — the class of authority behind a fact. This format defines `[databook]`,
+  `[standard]`, `[rtl]`, `[DT]`, `[doc]`, `[hardware]`, `[press]` and `[inference]`; testing against
+  a device model adds `[emulated]`; `[source-observed]` is defined by an extension. This format has
+  no class for a fact read only from code (what a driver does, a module file name, a prebuilt
+  tree's file listing): a report cites such a fact by `<repo>@<commit>` file and line, and a spec
+  uses it only as a cited premise of an `[inference]`, or under a class an extension defines. What
+  each class is trusted for, what that trust assumes, and how conflicts between classes are recorded is in
   `DESIGN.md`, "Evidence model". The classes, with what falls in each:
   - `[databook]` — the IP databook, TRM, or datasheet; cite the section.
   - `[standard]` — a public standard or architecture specification (ARM ARM, GICv3, PSCI, USB, IEEE
@@ -60,8 +62,7 @@ stated here; the skills point at this file instead of restating it.
     generated from it (IP-XACT, SystemRDL). Always followed by a parenthetical naming the design,
     its revision, and the module, so `[rtl]` (usb2_wrap r2p1, `ctrl_regs`) is complete. It is the
     strongest authority for digital register behavior on the revision it names, and says nothing
-    about analog or electrical behavior, firmware, or board wiring. When the design is not public,
-    it is encumbered source like any other: the facts cross the wall, the text does not.
+    about analog or electrical behavior, firmware, or board wiring.
   - `[DT]` — a value read out of a device tree. Always followed by a parenthetical naming the file it
     came from and, when that file is not a source `.dts`/`.dtsi` (a decompiled production DTB or an
     entry in a DTBO image), where the blob came from; the origin may be the `name` of a
@@ -76,12 +77,11 @@ stated here; the skills point at this file instead of restating it.
     the vendor's own documentation (a modem part named only by reviewers, a GPU model, clock speeds
     from a launch article). Allowed in a fact bullet only with `TODO (verify on hardware)`, and
     freely in Orientation prose.
-  - `[source-observed]` — established only by code or by the shape of a tree: a driver's behavior,
-    a module file name, a kernel version string, a third-party prebuilt tree's file listing. Always
-    with `TODO (verify on hardware)`.
+  - `[source-observed]` — defined by an extension, not by this format. The checker accepts it and,
+    as for `[press]`, requires `TODO (verify on hardware)`.
   - `[inference]` — concluded rather than read: no authority states it, and the fact follows from
-    premises that do. "The driver programs this register before releasing reset" is
-    `[source-observed]`; "the hardware requires this ordering" is `[inference]`. Always followed by
+    premises that do. "The driver programs this register before releasing reset" is a fact about
+    the driver; "the hardware requires this ordering" is `[inference]`. Always followed by
     a parenthetical giving the **premises and the derivation** — what was observed, each premise
     carrying its own class, and why the conclusion follows — and always with `TODO (verify on
     hardware)`, which names the verification method. State the confidence in the bullet where it is
@@ -94,14 +94,13 @@ stated here; the skills point at this file instead of restating it.
     `e1000-l02f1-20260925-01` r001–r010) is complete; a spec that keeps its observations in a
     numbered table carrying the version and run IDs may point at the entry instead, so
     `[emulated]` (§12.5 EM2) is also complete. Phrased as what was observed from outside
-    the model, never as the model's mechanism: the model's source is encumbered like any other,
-    and the tag must not become a channel for it. A model result is never a hardware requirement
+    the model, never as the model's mechanism. A model result is never a hardware requirement
     and never the sole authority for a fact: it stands beside another class (the databook the
     model departs from or confirms), or it is one premise of an `[inference]`. Always with
     `TODO (verify on hardware)`, because a model can accept programming the silicon would not.
     Adopted 2026-09-25 from its use in L02 (SF-1; see `DESIGN.md`, "Evidence model").
 - **Series** — a patch series on a mailing list that adds or changes device trees or drivers before
-  it is merged. A `resources.series` entry; a map (`[DT]`, `[source-observed]`), never an authority.
+  it is merged. A `resources.series` entry; a map, never an authority.
 - **Variant** — a model of a board that shares the SoC and most facts with a base model (a "Pro"
   phone, a board revision). Listed under `variants:` on the base spec, or a spec of its own with
   `variant_of:` when its board facts differ materially.
@@ -112,17 +111,15 @@ stated here; the skills point at this file instead of restating it.
 
 ## What a spec is, and is not
 
-A spec is the artifact allowed to cross the clean-room wall. It may live in the target OS tree next to
-the code it describes, so everything in it must already be safe there: facts cited to a datasheet,
-standard, project documentation, or device tree; facts the `cleanroom-spec` verifier has PASSed; facts
-measured on hardware; and pointers to where the encumbered source lives. It carries the *where* and
-the *what*. The *how* (investigation method, report format, no-source-code rule) belongs to
-`os-investigator` and is not repeated in a spec.
+A spec carries cited facts and pointers to where the sources live: the *where* and the *what*. It
+may live in a target OS tree next to the code it describes, or in a spec repository whose license
+fits the sources it cites (*The root marker*). The *how* (investigation method, report format)
+belongs to `board-expert` and is not repeated in a spec.
 
 A spec is not:
 
 - a driver spec (a per-peripheral programming model for an implementer);
-- a place for source excerpts, source-invented identifiers, or unverified extracts;
+- a place for source excerpts or unverified extracts;
 - a home for private hostnames, internal tools, or NDA documents when its root's layer is `public`.
 
 ## Files
@@ -224,14 +221,14 @@ resources:
     - title: RP1 peripherals datasheet
       url: https://datasheets.raspberrypi.com/rp1/rp1-peripherals.pdf
       access: public          # public | internal
-      cite: true              # a clean-room authority: cite it, not the kernel
+      cite: true              # an authority: cite it; the kernel is the map
       verified: 2026-09-18
       fetch: ok
   tools: []                   # usually filled by overlays; see Tools
 ---
 ```
 
-`cite: true` marks a clean-room authority: cite it, not the kernel. `cite: false` or absent means
+`cite: true` marks an authority: cite it; the kernel is the map. `cite: false` or absent means
 context or map only; the reader never cites such an entry as authority. A `series` entry can never
 be `cite: true`. `status` on a repo or series entry says whether the listed `files` exist at the
 `ref` yet (`unmerged` when they do not) and is the default for every file it lists; a `files:`
@@ -296,10 +293,11 @@ Keys by kind:
 **Variants.** A model that shares the SoC and most board facts with a base model is a row under
 the base spec's `variants:` (`name`, `triggers`, `shares`: which fact groups apply, `differs`: one
 line, and optionally `tag` and `source`). A row rests on some authority like any fact: the default
-is documentation-grade (`tag: doc`, the vendor's own page); a row known only from press or from
-the shape of a prebuilt tree says so with `tag: press` or `tag: source-observed` and names the
-source in `source`. A model whose board facts differ materially (another SoC stepping, another
-console path, another PMIC) is a board spec of its own with `variant_of: <base id>`, carrying only
+is documentation-grade (`tag: doc`, the vendor's own page); a row known only from press says so
+with `tag: press`; a row known only from code or the shape of a prebuilt tree is `tag: inference`,
+its premise cited as *Provenance tag* says; either names the source in `source`. A model whose board
+facts differ materially (another SoC stepping, another console path, another PMIC) is a board spec
+of its own with `variant_of: <base id>`, carrying only
 what differs and pointing at the base for the rest.
 
 **Trigger matching.** A trigger matches when it appears in the question as a whole-word substring,
@@ -342,8 +340,8 @@ tag token inside it would be read as a tag.
   (`bcm2712.dtsi`), `[databook]` (DDI 0183). `TODO (verify on hardware)`: the IRQ number.
 ```
 
-- `[source-observed]`, `[press]`, `[inference]`, and `[emulated]` facts must carry
-  `TODO (verify on hardware)`.
+- `[press]`, `[inference]` and `[emulated]` facts, and `[source-observed]` facts (an extension's
+  class), must carry `TODO (verify on hardware)`.
 - `[inference]` is always followed by a parenthetical giving its premises and derivation, so a
   reader can check the reasoning without re-reading the source it was reasoned from.
 - `[emulated]` is always followed by a parenthetical naming the device model, its version and the
@@ -456,8 +454,8 @@ An IP spec resolves in one of two modes, and the report names which:
   reader composes the board, finds the `instances:` rows whose `ip` matches, and uses the board's
   Linux repository at its `ref` as the map. If several instances match and the question does not
   say which, that is a `Needs decision`. Mainline is still read for provenance; both commits go in
-  the report. A fact present only in the board's tree is tagged `[source-observed]` with the tree
-  named, because it may be a vendor addition rather than the IP's behavior.
+  the report. A fact present only in the board's tree is cited to that tree as *Provenance tag* says
+  for code-only facts, because it may be a vendor addition rather than the IP's behavior.
 - **Generic** (`ip: <id>` alone): the IP spec's own repository entry is the map, by default
   `torvalds/linux` at head with the commit actually read recorded in the report. A caller may pin
   `ref:`. The public standards and databook in the IP spec's `docs` are the authority. The report
@@ -524,29 +522,18 @@ free-form; the shipped conventions are `bench` (a target on a lab rig: serial co
 screen), `mcp` (an MCP server or one of its tools), and `script` (a path in the tree). When the `via:`
 skill is not loaded, the reader reports the tool as unavailable and continues.
 
-## Clean-room rules for spec content
+## Rules for spec content
 
-These are `os-investigator`'s caching rule applied to a file that may sit in the target tree:
-
-- Only facts that are datasheet-, standard-, documentation-, or DT-cited, verifier-PASSed, or
-  measured on hardware belong in a spec. `[source-observed]` and `[press]` are allowed only with
+- Only facts tagged and cited as this format defines belong in a spec. `[press]` is allowed only with
   `TODO (verify on hardware)`; so is `[emulated]`, and only beside another class or as an
-  `[inference]` premise, phrased as an observation from outside the model (the model's source is
-  encumbered, and its function and variable names stay on the other side of the wall).
-- **Device-tree content is hardware description, not source.** Node names, labels, `compatible`
-  strings, property names, and values (addresses, interrupt tuples, clock names, pin groups) are
-  hardware facts, tagged `[DT]`, and may be read from a device tree and written into a spec by the
-  spec's author directly. Driver and firmware *code* is different: only the research subagent reads
-  it, and it returns facts and mechanism prose, never excerpts.
-- **What an author may do to a driver file** before the research subagent exists, to decide which
-  files matter: list a directory, check that a path exists at a ref, and grep a file for a
-  `compatible` string, a symbol name, or a register name. The author may not read a driver's body,
-  and a grep hit is a pointer, not a fact.
-- No source excerpts, no source-invented identifiers (function, struct, and variable names from
-  driver code), no reconstructed file organization.
+  `[inference]` premise, phrased as an observation from outside the model.
+- **Device-tree content is hardware description.** Node names, labels, `compatible` strings,
+  property names, and values (addresses, interrupt tuples, clock names, pin groups) are hardware
+  facts, tagged `[DT]`.
+- No source excerpts: a spec states facts and says where each comes from.
 - An overlay in a vendor layer may cite NDA documents. Facts from it reach the report tagged with
-  their layer, so the clean-room verifier can see that a citation is not publicly checkable. They are
-  never copied into a public-layer spec.
+  their layer, so a verifier can see that a citation is not publicly checkable. They are never
+  copied into a public-layer spec.
 - A public-layer root contains no `access: internal` entry, no `via:` naming a private skill, and no
   private hostname. The public-skills repository's privacy rules apply to every public root.
 

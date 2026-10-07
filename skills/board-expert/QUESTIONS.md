@@ -11,10 +11,12 @@ where one exists. Default everything else and say so.**
 
 ## Terms
 
-- **Orchestrator** — the skill running in the main agent's context: `cleanroom-spec`,
-  `anchored-peripheral-spec`, `reference-driver-review`, `board-spec-scaffold`. It may ask the user.
-- **Subagent role** — a skill whose body runs in a spawned subagent: `board-expert`,
-  `os-investigator`. It cannot reach the user. It returns a `Needs decision` block instead.
+- **Orchestrator** — the skill running in the main agent's context: `anchored-peripheral-spec`,
+  `reference-driver-review`, `board-spec-scaffold`. It may ask the user.
+- **Subagent role** — a skill whose body runs in a spawned subagent: `board-expert`. It cannot
+  reach the user. It returns a `Needs decision` block instead.
+- A skill from another repository that produces or consumes board specs follows this protocol in
+  the same two roles.
 - **Fork** — a missing input for which different answers lead to materially different work.
 - **Gap** — a missing fact that only makes the result less complete. Gaps are defaulted and marked,
   never asked about.
@@ -23,12 +25,10 @@ where one exists. Default everything else and say so.**
 
 | Skill | Role | Behavior |
 | --- | --- | --- |
-| `cleanroom-spec` | orchestrator | asks at intake, and again for any `Needs decision` the expert returns |
 | `anchored-peripheral-spec` | orchestrator | asks at intake: repository and commit, peripheral, instance |
 | `reference-driver-review` | orchestrator | asks when the reference cannot be resolved from a board spec |
 | `board-spec-scaffold` | orchestrator | asks in its interview; this catalog is the interview's checklist |
 | `board-expert` | subagent | never asks; returns `Needs decision` |
-| `os-investigator` | subagent | never asks; returns `Needs decision` |
 
 ## How to ask
 

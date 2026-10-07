@@ -14,7 +14,7 @@ description: >-
 
 You give `board-expert` access to what <vendor> holds privately. This skill is the *how* for every
 <vendor> resource; the per-hardware *what* is in the overlay specs under the roots below. Load this
-skill alongside `board-expert` and `os-investigator` in the expert subagent, never in the main agent.
+skill alongside `board-expert` in the expert subagent, never in the main agent.
 
 ## Overlay roots
 

@@ -22,7 +22,7 @@ questions. One spec per piece of hardware — a board composes an SoC and compan
 `instances:` table names the IP blocks it places — plus, when
 wanted, a thin `<board>-expert` stub so the harness finds the board by name, a vendor overlay for
 private resources, a `<vendor>-board-tools` skill for a vendor's internal tools, or a new spec root in
-a source tree. The format, the layers, and the clean-room rules are in `board-expert/SPEC-FORMAT.md`;
+a source tree. The format, the layers, and the rules for spec content are in `board-expert/SPEC-FORMAT.md`;
 read it before writing anything, and do not restate it in what you write.
 
 No published specs ship as worked examples today; the earlier ones were removed, to be
@@ -60,14 +60,10 @@ chain bullet.
 - **Cache convention.** A board spec names `cache: <board-id>-resources` (`rpi5-resources`); the
   expert clones under `~/src/<board-id>-resources/`. SoC, chip, and IP parts inherit the board's
   cache unless they name their own; a generic IP spec names `<ip-id>-resources`.
-- **Clean-room first.** Every fact carries a provenance tag, at the end of its bullet; anything
-  unverified is `TODO (verify on hardware)`; no source excerpts, ever. A spec may end up in the
-  target OS tree, so it must already be safe there. Device trees are hardware description, not
-  source: you may read them and copy node names, compatibles, and values into a spec as `[DT]`
-  facts. Driver and firmware code is source: only the research-fill subagent reads it. To decide
-  which files matter before that subagent exists, you may list a directory, check that a path
-  exists at a ref, and grep a driver file for a `compatible` string, a symbol, or a register name;
-  you may not read a driver's body, and a grep hit is a pointer, not a fact.
+- **Tagged and cited.** Every fact carries a provenance tag, at the end of its bullet; anything
+  unverified is `TODO (verify on hardware)`; no source excerpts. Device trees are hardware
+  description: you may read them and copy node names, compatibles, and values into a spec as `[DT]`
+  facts.
 - **Public root, public content.** A spec under a `public` root names nothing private: no internal
   hosts, tools, codenames, or NDA documents. Those go in an overlay under a vendor or local root.
 
@@ -105,24 +101,22 @@ chain bullet.
    - **Stub, overlay, vendor skill:** wanted or not, and where the stub lives (the skills repo that
      serves this project).
 2. **Research-fill the facts (the default when the sources are public).** Spawn a subagent with
-   the harness's delegation tool, have it load `os-investigator` plus `board-expert` (so a sibling
-   SoC or IP spec is available to it), and ask it to return the addressing model / boot hand-off /
-   GIC / UART / timer / clock facts as a clean-room report, each fact tagged, plus ready-to-paste
-   `instances:` rows in the format's shape. It may clone into `~/src/<cache>/` as `os-investigator`
-   directs; when a clone is impractical (no `git` transport, a huge tree, a prebuilt-only mirror),
-   fetching the needed files raw at a pinned commit into the same cache is an acceptable
-   substitute, with that commit recorded in the report and the spec. Drop the returned facts into
-   the templates. Driver and firmware code is read only by
-   that subagent; you may read device trees yourself (see Conventions). Write TODO stubs instead
-   only when the user asks for a skeleton or no public source exists.
+   the harness's delegation tool, have it load `board-expert` (so a sibling SoC or IP spec is
+   available to it), and ask it to return the addressing model / boot hand-off / GIC / UART / timer
+   / clock facts as a report, each fact tagged and cited, plus ready-to-paste `instances:` rows in
+   the format's shape. It may clone into `~/src/<cache>/` as `board-expert` directs; when a clone
+   is impractical (no `git` transport, a huge tree, a prebuilt-only mirror), fetching the needed
+   files raw at a pinned commit into the same cache is an acceptable substitute, with that commit
+   recorded in the report and the spec. Drop the returned facts into the templates. Write TODO
+   stubs instead only when the user asks for a skeleton or no public source exists.
 3. **Write the spec(s)** from the templates, substituting every `<...>` placeholder. Split facts by
    kind: entry state, the GIC, and the on-SoC UART placement are SoC facts; boot media, the debug
    connector, and the PMIC are board facts; a companion chip's window and contents are chip facts;
    a block's register model and sequences are IP facts, written once and referenced from every
    `instances:` row that places it. Tag every fact; mark anything unverified
    `TODO (verify on hardware)` rather than guessing. Put the tag clause at the end of every bullet
-   (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]`, `[source-observed]`,
-   `[inference]` and `[emulated]` carry the TODO, and an `[emulated]` observation names its
+   (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]`, `[inference]` and
+   `[emulated]` carry the TODO, and an `[emulated]` observation names its
    model version and runs and never stands alone. Sibling models go in `variants:` or their
    own `variant_of` spec (`QUESTIONS.md` item 6).
 4. **Write the root marker, stub, overlay, and vendor skill** if wanted, from their templates.

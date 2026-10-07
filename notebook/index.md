@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T07:48-07:00
+Updated: 2026-10-06T10:09-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,12 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS2 — root license fields and the license gate](LS2.md)
+Entries: 2026-10-06T09:54-07:00 through 2026-10-06T10:09-07:00
+Outcome: complete; SPDX parser, root `license:`/`accepts:`, `anchor_check.py --root`. Review
+found pin lines the pattern did not read were silently dropped, a false-accept path; a
+guard test that could not fail on the old code was folded into one that can.
 
 ### [LS1 — anchor tools under test; several named pins](LS1.md)
 Entries: 2026-10-06T07:38-07:00 through 2026-10-06T07:48-07:00

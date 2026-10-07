@@ -445,3 +445,12 @@ Cost: about ten minutes and a duplicate CI run.
 Prevention: query `repos/<owner>/<repo>/actions/runs` before concluding no run exists, and
 wait a few minutes before reopening.
 Fix belongs in: the orchestrate-milestones skill (CI wait step).
+
+### 2026-10-06T10:02-07:00 — an exit code read after a command substitution
+Chapter: [LS2](notebook/LS2.md)
+What happened: a shell loop printed `printf '%s %s %s\n' "$(basename "$s")" "$r" "$?"` after
+each gate run; the substitution ran first, so every row showed 0 (the substitution's status),
+and the gate looked like it passed everything. A direct run of one pair showed FAIL.
+Cost: one rerun; it would have been a false "the gate works" claim had the matrix been trusted.
+Prevention: capture `rc=$?` on the line after the command, before anything else expands.
+Fix belongs in: user instructions (shell command style), beside the pipeline-status rule.

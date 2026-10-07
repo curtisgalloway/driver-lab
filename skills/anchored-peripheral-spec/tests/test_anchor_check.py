@@ -461,5 +461,207 @@ class TestDrift(CheckerCase):
         self.assertEqual(rc, 2, out)
 
 
+GATE = HERE / "fixtures" / "license-gate"
+PERMISSIVE_LIST = "Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, X11, Zlib"
+
+
+class TestLicenseGate(CheckerCase):
+    """--root: the license gate (LS-R4), and SPDX validation of pin licenses."""
+
+    def gate(self, spec_name, root_name, *extra):
+        return self.run_json(GATE / "specs" / spec_name, "--root", GATE / "roots" / root_name, *extra)
+
+    def gate_errors(self, report):
+        return [m for m in self.messages(report, "error") if m.startswith("license gate:")]
+
+    def test_fixture_matrix(self):
+        """Every fixture spec against every repo-shaped root, as expected.json records."""
+        expected = json.loads((GATE / "expected.json").read_text())
+        expected.pop("comment")
+        self.assertEqual(sorted(expected), sorted(p.name for p in (GATE / "specs").glob("*.md")))
+        for spec_name, by_root in expected.items():
+            for root_name, want in by_root.items():
+                with self.subTest(spec=spec_name, root=root_name):
+                    rc, report = self.gate(spec_name, root_name)
+                    self.assertEqual(rc, want, self.messages(report))
+                    errors = self.messages(report, "error")
+                    if want:
+                        self.assertTrue(any(m.startswith("license gate:") or
+                                            "is not an SPDX expression" in m for m in errors), errors)
+                    else:
+                        self.assertEqual(errors, [])
+                    self.assertEqual(report["license_gate"]["root"],
+                                     str(GATE / "roots" / root_name))
+
+    def test_message_names_anchor_pin_license_and_accepts(self):
+        rc, report = self.gate("gpl-only-spec.md", "permissive")
+        self.assertEqual(rc, 1)
+        root = GATE / "roots" / "permissive"
+        self.assertEqual(self.gate_errors(report), [
+            "license gate: [src: drivers/widget.c:2 (WIDGET_CTRL)] cites source pin 'linux' "
+            f"(GPL-2.0-only), which root {root} does not accept (accepts: {PERMISSIVE_LIST})"])
+        rc, report = self.gate("gpl-only-spec.md", "docs")
+        self.assertTrue(self.gate_errors(report)[0].endswith("(accepts: none)"), report)
+
+    def test_or_passes_when_either_side_is_accepted(self):
+        rc, report = self.gate("dual-gpl-mit-spec.md", "permissive")
+        self.assertEqual(rc, 0, self.messages(report))
+        rc, report = self.gate("dual-gpl-mit-spec.md", "docs")
+        self.assertEqual(rc, 1)
+        self.assertIn("(GPL-2.0 OR MIT), which root", self.gate_errors(report)[0])
+
+    def test_and_needs_every_side_accepted(self):
+        rc, report = self.gate("gpl-and-mit-spec.md", "permissive")
+        self.assertEqual(rc, 1)
+        self.assertIn("cites source pin 'mixed' (GPL-2.0-only AND MIT)", self.gate_errors(report)[0])
+        rc, report = self.gate("gpl-and-mit-spec.md", "gpl")
+        self.assertEqual(rc, 0, self.messages(report))
+
+    def test_pin_without_license_fails(self):
+        rc, report = self.gate("unlicensed-pin-spec.md", "gpl")
+        self.assertEqual(rc, 1)
+        self.assertIn("cites source pin 'tools', which states no license", self.gate_errors(report)[0])
+
+    def test_anchor_without_pin_fails(self):
+        rc, report = self.gate("no-pin-spec.md", "gpl")
+        self.assertEqual(rc, 1)
+        self.assertIn("[src: drivers/widget.c:2] has no source pin, so its source license is "
+                      "unknown", self.gate_errors(report)[0])
+
+    def test_only_the_unaccepted_pin_of_two_fails(self):
+        rc, report = self.gate("two-pins-spec.md", "permissive")
+        self.assertEqual(rc, 1)
+        errors = self.gate_errors(report)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("[src:linux: drivers/widget.c:2] cites source pin 'linux' (GPL-2.0-only)",
+                      errors[0])
+
+    def test_uncited_pin_is_gated_too(self):
+        rc, report = self.gate("uncited-gpl-pin-spec.md", "docs")
+        self.assertEqual(rc, 1)
+        self.assertIn("license gate: source pin 'linux' (GPL-2.0-only), which root", self.gate_errors(report)[0])
+        self.assertIn("no anchor cites it", self.gate_errors(report)[0])
+
+    def test_target_side_is_gated(self):
+        rc, report = self.gate("bsd-target-spec.md", "docs")
+        self.assertEqual(rc, 1)
+        self.assertIn("[tgt: drivers/widget/widget.cc:12] cites target pin 'os' (BSD-3-Clause)",
+                      self.gate_errors(report)[0])
+
+    def test_impl_alias_is_gated(self):
+        s = self.spec("Impl pin: linux@1111111 GPL-2.0-only\n\nFact. [impl: drivers/widget.c:2]\n")
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "permissive")
+        self.assertEqual(rc, 1)
+        self.assertIn("cites source pin 'linux' (GPL-2.0-only)", self.gate_errors(report)[0])
+
+    def make_root(self, marker):
+        root = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        (root / "board-specs.yaml").write_text(marker)
+        return root
+
+    def test_root_without_accepts_fails_closed(self):
+        root = self.make_root("layer: public\nlicense: Apache-2.0\n")
+        rc, report = self.run_json(GATE / "specs" / "docs-only-spec.md", "--root", root)
+        self.assertEqual(rc, 1)
+        self.assertIn(f"license gate: root {root} declares no accepts: list, so the gate cannot run",
+                      self.messages(report, "error")[0])
+
+    def test_malformed_accepts_fails(self):
+        root = self.make_root("layer: public\nlicense: Apache-2.0\naccepts: [MIT, GPL-2]\n")
+        rc, report = self.run_json(GATE / "specs" / "docs-only-spec.md", "--root", root)
+        self.assertEqual(rc, 1)
+        self.assertIn(f"--root {root}: root marker: accepts entry 'GPL-2': unknown SPDX license "
+                      "identifier 'GPL-2'", self.messages(report, "error")[0])
+        root = self.make_root("layer: public\nlicense: Apache-2.0\naccepts: MIT\n")
+        rc, report = self.run_json(GATE / "specs" / "bsd-spec.md", "--root", root)
+        self.assertEqual(rc, 1)
+        self.assertIn("accepts: must be a list", "\n".join(self.messages(report, "error")))
+        self.assertTrue(self.gate_errors(report), report)
+
+    def test_root_without_marker_is_usage_error(self):
+        rc, out = self.run_check(GATE / "specs" / "docs-only-spec.md", "--root", self.tmp)
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"--root {self.tmp}: no board-specs.yaml", out)
+
+    def test_invalid_pin_license_fails_without_root(self):
+        rc, report = self.run_json(GATE / "specs" / "invalid-license-spec.md")
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report, "error"), [
+            "source pin 'linux': license 'mainline' is not an SPDX expression: unknown SPDX "
+            "license identifier 'mainline' (the known identifiers are listed in "
+            "board-expert/scripts/spdx.py; write LicenseRef-<name> for a license SPDX does not list)"])
+
+    def test_no_gate_without_root(self):
+        rc, report = self.run_json(GATE / "specs" / "gpl-only-spec.md")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(report["license_gate"], {})
+
+    def test_gate_with_anchors_resolved(self):
+        s = self.spec(f"""\
+            Source pin: linux@{self.linux_rev} GPL-2.0-only
+
+            Control at 0x10. [src: drivers/drv.c:2 (WIDGET_CTRL)]
+            """)
+        rc, report = self.run_json(s, "--repo", self.linux, "--root", GATE / "roots" / "gpl")
+        self.assertEqual(rc, 0, self.messages(report))
+        rc, report = self.run_json(s, "--repo", self.linux, "--root", GATE / "roots" / "permissive")
+        self.assertEqual(rc, 1)
+        self.assertEqual(len(self.messages(report, "error")), 1, report)
+        self.assertEqual(len(self.gate_errors(report)), 1, report)
+
+    def test_human_report_states_the_gate(self):
+        rc, out = self.run_check(GATE / "specs" / "bsd-spec.md", "--root", GATE / "roots" / "docs")
+        self.assertEqual(rc, 1, out)
+        self.assertIn(f"license gate: root {GATE / 'roots' / 'docs'} accepts: none", out)
+        self.assertIn("result: FAIL", out)
+
+
+    def test_lowercase_operator_is_read_and_rejected(self):
+        s = self.spec("Source pin: linux@1111111 GPL-2.0 or MIT\n\nFact. [src: drivers/widget.c:2]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertIn("license 'GPL-2.0 or MIT' is not an SPDX expression: 'or': write the "
+                      "operator in uppercase (OR)", self.messages(report, "error")[0])
+
+    def test_document_ref_license_is_read(self):
+        s = self.spec("Source pin: fw@1111111 DocumentRef-spdx-tools:LicenseRef-blob\n\n"
+                      "Fact. [src: stub.c:2]\n")
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "permissive")
+        self.assertEqual(report["pin_list"]["source"][0]["license"],
+                         "DocumentRef-spdx-tools:LicenseRef-blob")
+        self.assertEqual(rc, 1)
+        self.assertIn("cites source pin 'fw' (DocumentRef-spdx-tools:LicenseRef-blob), which root",
+                      self.gate_errors(report)[0])
+
+    def test_unread_pin_line_warns_and_fails_the_gate(self):
+        """A dropped pin line must not let unnamed anchors bind to the other pin (a false accept)."""
+        s = self.spec("Source pin: fw@439b619 BSD-3-Clause\n"
+                      "Source pin: linux@1111111 ( GPL-2.0-only )\n\n"
+                      "Fact. [src: drivers/widget.c:2]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertIn("line starts like a pin but is not read as one: 'Source pin: linux@1111111 "
+                      "( GPL-2.0-only )'", self.messages(report, "warn")[0])
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "permissive")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any(m.startswith("line starts like a pin but is not read as one")
+                            for m in self.messages(report, "error")), report)
+
+    def test_license_unverifiable_without_board_expert_is_an_error(self):
+        alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
+        alone.mkdir(parents=True)
+        shutil.copy(CHECKER, alone / "anchor_check.py")
+        proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
+                               str(GATE / "specs" / "invalid-license-spec.md")],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("pin licenses cannot be validated: board-expert's spdx.py was not found",
+                      proc.stdout)
+        proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
+                               str(GATE / "specs" / "docs-only-spec.md")],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

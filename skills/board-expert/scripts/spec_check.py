@@ -30,6 +30,12 @@ What fails (exit 1):
     superseded, on an entry or on one of its ``files``
   * under a ``public`` root: any ``access: internal`` entry, or a ``via:``
     naming a skill not passed with ``--public-skill``
+  * a root marker ``license:`` that is not an SPDX expression, or an
+    ``accepts:`` that is not a list of single SPDX identifiers; with
+    ``--require-license``, a marker without either field
+  * a ``resources.repos`` entry whose ``license:`` is not an SPDX expression;
+    in a root whose marker declares ``accepts:``, a repos entry with no
+    ``license:`` at all
   * an ``ip`` spec with no ``docs`` entry marked ``cite: true``
   * a fact bullet that does not END with its tag clause (one or more
     ``[tag]``, each optionally followed by a parenthetical citation, then at
@@ -65,6 +71,9 @@ What fails (exit 1):
 
 What warns (reported, exit stays 0):
 
+  * a root marker without ``license:`` or without ``accepts:`` (markers
+    written before these fields still load), unless ``--require-license``
+    makes it an error
   * two overlays for the same id in the same layer
   * a part whose ``cache`` differs from its board's
   * a spec with no verification record ("unverified"), or one whose record
@@ -97,6 +106,8 @@ import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+import spdx  # same directory
 
 KINDS = ("board", "soc", "chip", "ip")
 LAYERS = ("public", "ip-vendor", "soc-vendor", "product", "local")
@@ -395,6 +406,8 @@ class Spec:
     layer: str
     meta: dict
     body: str
+    # The root marker's accepts list (canonical SPDX ids), or None when the root declares none.
+    accepts: tuple | None = None
 
     @property
     def is_overlay(self) -> bool:
@@ -416,8 +429,57 @@ def read_root(root: Path, use_pyyaml: bool) -> tuple[dict | None, str | None]:
     return data, None
 
 
+def check_root_license(
+    marker: dict, where: str, require: bool, findings: list[Finding]
+) -> tuple | None:
+    """Validate a root marker's ``license:`` and ``accepts:`` (design LS-R1).
+
+    Returns the accepts list as canonical SPDX identifiers, or None when the marker
+    declares none. A declared list that is malformed still counts as declared (the
+    valid entries only, possibly none), so a broken list never loosens a check.
+    """
+    missing = "error" if require else "warning"
+    if "license" not in marker:
+        findings.append(
+            Finding(
+                missing,
+                where,
+                "root marker: no license: field (the SPDX expression for this root's own "
+                "license); --require-license makes this an error",
+            )
+        )
+    else:
+        try:
+            spdx.parse(marker["license"])
+        except spdx.SpdxError as exc:
+            findings.append(Finding("error", where, f"root marker: license: {exc}"))
+    if "accepts" not in marker:
+        findings.append(
+            Finding(
+                missing,
+                where,
+                "root marker: no accepts: field (the SPDX identifiers anchored sources may "
+                "carry; [] for none); --require-license makes this an error",
+            )
+        )
+        return None
+    raw = marker["accepts"]
+    if not isinstance(raw, list):
+        findings.append(
+            Finding("error", where, "root marker: accepts: must be a list of SPDX identifiers ([] for none)")
+        )
+        return ()
+    accepts = []
+    for item in raw:
+        try:
+            accepts.append(spdx.parse_identifier(item))
+        except spdx.SpdxError as exc:
+            findings.append(Finding("error", where, f"root marker: accepts entry {item!r}: {exc}"))
+    return tuple(accepts)
+
+
 def load_specs(
-    roots: list[Path], use_pyyaml: bool, findings: list[Finding]
+    roots: list[Path], use_pyyaml: bool, findings: list[Finding], require_license: bool = False
 ) -> tuple[list[Spec], list[str]]:
     specs: list[Spec] = []
     preconditions: list[str] = []
@@ -432,6 +494,9 @@ def load_specs(
                 Finding("error", str(root / "board-specs.yaml"), f"unknown layer {layer!r}")
             )
             layer = str(layer)
+        accepts = check_root_license(
+            marker, str(root / "board-specs.yaml"), require_license, findings
+        )
         for path in sorted(root.rglob("*.spec.md")):
             text = path.read_text()
             m = FRONTMATTER_RE.match(text)
@@ -446,7 +511,7 @@ def load_specs(
             if not isinstance(meta, dict):
                 findings.append(Finding("error", str(path), "frontmatter is not a mapping"))
                 continue
-            specs.append(Spec(path, root, layer, meta, m.group(2)))
+            specs.append(Spec(path, root, layer, meta, m.group(2), accepts))
     return specs, preconditions
 
 
@@ -619,6 +684,8 @@ def check_resources(spec: Spec, findings: list[Finding]) -> None:
             findings.append(
                 Finding("error", p, f"{group} entry {label!r}: status must be one of {STATUS_VALUES}")
             )
+        if group == "repos":
+            check_repo_license(spec, label, entry, findings)
         for item in entry.get("files") or []:
             if isinstance(item, str):
                 continue
@@ -636,6 +703,24 @@ def check_resources(spec: Spec, findings: list[Finding]) -> None:
                         f"{group} entry {label!r}: file {item['path']!r}: status must be one of {STATUS_VALUES}",
                     )
                 )
+
+
+def check_repo_license(spec: Spec, label: str, entry: dict, findings: list[Finding]) -> None:
+    """A repos entry's license is an SPDX expression; required when the root has accepts: (LS-R2)."""
+    p = str(spec.path)
+    if "license" in entry:
+        try:
+            spdx.parse(entry["license"])
+        except spdx.SpdxError as exc:
+            findings.append(Finding("error", p, f"repos entry {label!r}: license: {exc}"))
+    elif spec.accepts is not None:
+        findings.append(
+            Finding(
+                "error",
+                p,
+                f"repos entry {label!r}: no license: (required in a root whose marker declares accepts:)",
+            )
+        )
 
 
 def iter_resources(meta: dict):
@@ -981,6 +1066,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="a spec with no verification record, or a stale one, is an error instead of a warning",
     )
+    parser.add_argument(
+        "--require-license",
+        action="store_true",
+        help="a root marker without license: or accepts: is an error instead of a warning",
+    )
     parser.add_argument("--no-pyyaml", action="store_true", help="force the subset parser")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)
@@ -988,7 +1078,7 @@ def main(argv: list[str] | None = None) -> int:
     findings: list[Finding] = []
     use_pyyaml = not args.no_pyyaml
     parser_used = parser_name(use_pyyaml)
-    specs, preconditions = load_specs(args.roots, use_pyyaml, findings)
+    specs, preconditions = load_specs(args.roots, use_pyyaml, findings, args.require_license)
     if preconditions:
         for msg in preconditions:
             print(f"missing precondition: {msg}", file=sys.stderr)

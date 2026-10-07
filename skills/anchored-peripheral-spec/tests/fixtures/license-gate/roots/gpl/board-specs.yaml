@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Synthetic root shaped like hardware-specs-gpl (license-split design, The repos).
+# GPL-2.0-only or -or-later trees, plus everything the permissive root accepts.
+layer: public
+name: hardware-specs-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, GPL-2.0-or-later, Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, X11, Zlib]

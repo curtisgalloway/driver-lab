@@ -56,7 +56,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS1 | Anchor tools under test; several named pins | — | complete ([evidence](../evidence/LS1.md)) |
 | LS2 | Root license fields and the license gate | LS1 | complete ([evidence](../evidence/LS2.md)) |
 | LS3 | Checkable doc anchors | LS1 | complete ([evidence](../evidence/LS3.md)) |
-| LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | pending |
+| LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](../evidence/LS4.md)) |
 | LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | pending |
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | pending |
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | pending |
@@ -156,39 +156,21 @@ needs a named-anchor fixture or no flag); the registry, the space rule, `--docs-
 
 ## LS4 — Guidance, provenance template, "why this exists", format docs
 
+**Outcome:** `anchored-peripheral-spec` states the placement rule and the design's repo table
+(replacing the "is it yours?" test) and documents named, licensed pins, the `docs:` registry,
+`--root`, `--require-license`, `--docs-dir` and `--drift-pin`; `SPEC-FORMAT.md` explains the
+marker's license fields and how peripheral specs sit in a licensed root; the scaffold's marker
+template carries `license:`/`accepts:`; `cleanroom-spec` fills a private `PROVENANCE.md`;
+`spec-verifier`'s anchored procedure runs every pin and the gate; the README opens with "Why this
+exists and what it is not for".
 **Design coverage:** LS-R7, LS-R8, LS-R9 (`spec-verifier` text), LS-R10, LS-R1 docs.
 **Dependencies:** LS2, LS3.
-**In scope:** `anchored-peripheral-spec/SKILL.md` placement rule and "which repo" table;
-`SPEC-FORMAT.md` license fields and doc registry; `board-spec-scaffold` templates gain
-`license:`/`accepts:`; `cleanroom-spec` `PROVENANCE.md` template; `spec-verifier`'s anchored-spec
-procedure for named pins and the gate; README "Why this exists and what it is not for".
-**Out of scope:** the clean-room split's text moves (LS7, LS8).
-
-### Implementation steps
-1. Placement rule and table (repo, license, accepts list, what goes there) in the
-   anchored-spec skill; replace the "is it yours?" test.
-2. `SPEC-FORMAT.md`: root license fields, `--require-license`, `docs:` registry, named pins.
-3. Scaffold templates: marker fields with placeholders; spec templates show named pins.
-4. Proposed `skills/cleanroom-spec/templates/PROVENANCE.md` and the step in `cleanroom-spec`
-   that fills it, stating it stays private.
-5. `spec-verifier`: anchored-spec procedure runs `anchor_check.py --root` with every pin.
-6. README: the "Why this exists" section near the top, using the design's community-reaction
-   points; glossary rows for any new term.
-
-### Acceptance criteria
-- [ ] Every command and field the docs show exists in LS1–LS3's code (reviewer checks each).
-- [ ] The "which repo" table matches the design's repo table exactly.
-- [ ] The provenance template has every field LS-R8 lists.
-- [ ] The privacy check and full check list pass.
-
-### Testing and review
-- Docs-only reviewer subagent tracing each claim to code or design.
-
-### Session sizing
-Six files of prose, no code. Low uncertainty.
-
-### Evidence and findings
-Status: pending. Evidence: [LS4](../evidence/LS4.md). Notebook: [LS4](../notebook/LS4.md).
+**Status:** complete. Evidence: [LS4](../evidence/LS4.md). Notebook: [LS4](../notebook/LS4.md).
+Review: one reviewer subagent tracing each changed claim to code or design.
+**Open limitations:** the repositories the docs name do not exist until LS5; peripheral specs
+must be named `<device>-spec.md` because `spec_check.py` loads `*.spec.md` as board specs (LS5's
+layout); `cleanroom-spec`'s other landing text is reconciled with policy 1 when it moves (LS6,
+LS7).
 
 ## LS5 — The three spec repositories
 
@@ -487,15 +469,18 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS3 complete; LS4 next.
-- Completed: LS3 on branch `license-split/ls3` (checkpoint commit `driver-porting: LS3 —
-  checkable doc anchors`), stacked on LS2's branch; neither pushed.
-- Remaining decisions: whether the shipped `skills/board-expert/specs` root gets `license:` and
-  `accepts:` (and which list), or stays unlicensed with warnings. LS5 and LS6 each need the
-  user's go to create public repositories.
-- Resume action: after the LS2 and LS3 pull requests merge, begin **LS4** on
-  `license-split/ls4` from a fetched `origin/main`. LS4's `SPEC-FORMAT.md` work includes the
-  `docs:` registry, the no-space named form, `--docs-dir` and `anchor_check.py
-  --require-license` (LS3 review nit 3).
-- Read first: the design, this plan's conventions and LS4, the notebook index, LS2's and LS3's
-  evidence, and `anchor_check.py`'s docstring.
+- Current milestone: LS4 complete; LS5 next.
+- Completed: LS4 on branch `license-split/ls4` (checkpoint commit `driver-porting: LS4 —
+  placement guidance, provenance template and format docs`), stacked on LS3 and LS2; none of the
+  three pushed.
+- Before LS5: the LS2, LS3 and LS4 pull requests must be merged to `origin/main`, because the
+  spec repositories' CI pins a driver-lab commit on `main`.
+- Remaining decisions: **LS5 needs the user's explicit go to create three public repositories**
+  (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`) and push to them.
+  Also open: whether the shipped `skills/board-expert/specs` root gets `license:` and `accepts:`.
+  LS6 needs its own go for `cleanroom-skills`.
+- Resume action: once the stack is merged and the go is given, begin **LS5** on
+  `license-split/ls5` from a fetched `origin/main`. Its self-test needs a named-anchor fixture for
+  the docs root (LS3's limitation), and peripheral specs there are named `<device>-spec.md`.
+- Read first: the design, this plan's conventions and LS5, the notebook index, LS4's evidence,
+  and the fixtures' README (`skills/anchored-peripheral-spec/tests/fixtures/license-gate/`).

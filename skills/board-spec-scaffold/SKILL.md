@@ -82,7 +82,9 @@ chain bullet.
      contain.
    - **Root:** where the spec lives. Choices: `board-expert/specs/` in this repo (a board with no home
      tree); an existing root in a source tree (next to the board driver, or its central directory);
-     a vendor root; or a new root, in which case you also write `board-specs.yaml` with its layer.
+     a vendor root; or a new root, in which case you also write `board-specs.yaml` with its layer
+     (and, for a published spec repository, its `license:` and `accepts:`; see SPEC-FORMAT.md,
+     the root marker).
    - **Sources:** repos and refs — vendor/downstream Linux *and* mainline if both carry it; the
      Trusted Firmware-A platform directory; U-Boot; any vendor BSP; firmware/boot blobs. Note the
      highest-value files per repo (board `.dts`, SoC `.dtsi`, console UART driver, irqchip).

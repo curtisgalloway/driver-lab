@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-06T10:24-07:00
+Updated: 2026-10-06T10:39-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,6 +13,14 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 ## Chapters
+
+### [LS4 — placement guidance, provenance template and format docs](LS4.md)
+Entries: 2026-10-06T10:26-07:00 through 2026-10-06T10:39-07:00
+Outcome: complete; placement rule and the design's repo table in `anchored-peripheral-spec`,
+format docs for named pins, the gate and the `docs:` registry, private `PROVENANCE.md`, README
+"Why this exists". Verification runs corrected two drafted claims; peripheral specs must not be
+named `*.spec.md` (spec_check loads them as board specs). Review: a template self-check that
+failed on multi-pin specs.
 
 ### [LS3 — checkable doc anchors](LS3.md)
 Entries: 2026-10-06T10:14-07:00 through 2026-10-06T10:24-07:00

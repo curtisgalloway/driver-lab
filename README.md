@@ -4,7 +4,8 @@ Skills for writing and reviewing device drivers against source you may or may no
 to copy from:
 
 - a clean-room pipeline for encumbered source,
-- source-anchored specs and reviews for source you own,
+- source-anchored specs and reviews for source you may cite (GPL-2.0, BSD, MIT, Apache, or your
+  own code),
 - board experts that supply the per-SoC facts both need.
 
 **Scope:** this project's goal is generating hardware specs and measuring and maintaining their
@@ -14,12 +15,47 @@ write specs for its boards and Fuchsia drivers from them. A driver written from 
 the clean-room Linux candidates in the e1000 and ENC28J60 campaigns, is used here as one quality
 signal for the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality).
 
+## Why this exists and what it is not for
+
+Agents write drivers better from a spec than from a pile of source: a spec states the register
+map, the init order and the quirks once, with a citation for each. This project makes those
+specs and checks them. Terms used below: a *spec* is that per-device or per-board description;
+an *anchor* cites the exact source lines (at a pinned commit) or document page a fact came from;
+*clean-room* means the people or agents who write a spec or driver never read the original
+source. Full definitions are in the [glossary](GLOSSARY.md).
+
+- **Published specs say what they derive from.** A spec that cites GPL code is a derivative of
+  that code and is published under the GPL, in its own repository. Specs built only from
+  datasheets, and specs citing BSD, MIT or Apache code, go in two other repositories under
+  licenses that fit. One rule decides: a spec lives in the most restrictive repository among the
+  sources it anchors to, and each repository's CI will run a check (the license gate) that fails
+  a spec citing a source the repository does not accept. (The three repositories, `hardware-specs-gpl`,
+  `hardware-specs-docs` and `hardware-specs-permissive`, are being set up and do not exist yet;
+  see the [license-split design](docs/LICENSE-SPLIT.md).)
+- **Every claim is checkable.** AI-written documentation is only as good as its checks. Every
+  fact in a published spec carries an anchor, a checker resolves every anchor at its pinned
+  commit, and an independent verifier re-derives the claims from the cited lines. A reader can
+  open the spec and the source side by side.
+- **Datasheet-based specs paraphrase and cite.** They quote sparingly and point at the section or
+  page, the usual practice for working from a vendor's documents.
+- **The clean-room method is published; its output is not.** The clean-room skills here (moving
+  to a separate `cleanroom-skills` repository) describe how to write a spec and a driver without
+  the writers reading the original source. They are not a way to launder GPL code: no clean-room
+  spec is published, anyone who wants one runs the method themselves and records how they made it
+  in a private provenance attestation, verification is strict, and the same project offers the
+  plain GPL route for people who can use it.
+
+Not for: publishing specs derived from NDA or vendor-licensed material; publishing clean-room
+output; legal advice about any of the above (none of this has had legal review); or writing a
+driver for a particular OS or bringing up a particular board, which happen in projects that use
+these skills.
+
 ## Which one do I want?
 
 | Situation | Skill |
 | --- | --- |
 | The reference driver is GPL, NDA, or otherwise not yours to copy, and you need a driver in a differently licensed OS | `cleanroom-spec` (which drives `os-investigator` and a board expert) |
-| The reference driver is yours, or you may copy from it, and you want a spec whose every fact points back at the code | `anchored-peripheral-spec` |
+| You may cite the reference driver (GPL-2.0, BSD, MIT, Apache, or your own code), and you want a spec whose every fact points back at the code, published where its license fits | `anchored-peripheral-spec` |
 | A driver exists and you want it checked against the upstream, vendor, or original implementation | `reference-driver-review` |
 | You are the agent writing code from a clean-room spec | `cleanroom-implementer` |
 | You need memory maps, boot chains, clocks, or interrupt details for a specific board | `board-expert`, for any board with a spec (none ship today; see `board-spec-scaffold`) |
@@ -100,17 +136,21 @@ not this repo's own configuration.
 ## Source-anchored specs and reviews
 
 - **`anchored-peripheral-spec`**: the same per-peripheral spec shape as `cleanroom-spec`, for
-  driver source you or your organization authored or may otherwise copy from. There, the wall
-  is not just unnecessary but in the way.
+  driver source you may cite. There, the wall is not just unnecessary but in the way. Its
+  placement rule and "which repo does my spec go in?" table say which spec repository's license
+  fits the sources a spec anchors to.
   - Every source-derived fact carries a `[src: path:L1-L2 (symbol)]` anchor at a pinned
     commit. A reviewer can check the spec against the code, and the checker can tell which
     claims need re-reading when the tree moves.
-  - Ships `scripts/anchor_check.py` (stdlib-only): resolves anchors, renders a
-    claim-vs-source review sheet with `--show`, and detects and rewrites drift with
-    `--drift REV --rewrite`. Also ships `scripts/inventory_check.py`, which finds omissions
+  - Ships `scripts/anchor_check.py` (stdlib-only): resolves anchors against one or several
+    named, licensed pins, renders a claim-vs-source review sheet with `--show`, detects and
+    rewrites drift with `--drift REV --rewrite`, gates pin licenses against a spec root's
+    accepts list with `--root DIR`, and checks named document anchors against the spec's
+    `docs:` registry (with file hashes under `--docs-dir`). Also ships `scripts/inventory_check.py`, which finds omissions
     and value mismatches against the register headers.
-  - Not a substitute for `cleanroom-spec` on encumbered source: an anchored spec is a
-    derivative of its source by design.
+  - Not a substitute for `cleanroom-spec` when the driver's license is one the source's terms
+    do not permit, or for NDA source: an anchored spec is a derivative of its source by
+    design.
 - **`reference-driver-review`**: reviews a driver implementation against a reference
   implementation of the same hardware (the upstream kernel driver, the vendor BSP, or the
   original a port was made from). Produces an anchored findings report.

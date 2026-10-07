@@ -7,12 +7,14 @@ Fill-in prompt for the spec-writing subagent; substitute every <angle-bracket> p
 Produce a SOURCE-ANCHORED hardware/driver spec for <PERIPHERAL> (<IP block>, compatible
 "<dt-compat>", on <bus>, CPU-phys <addr>, IRQ <irq>) from the driver source at <source checkout>
 pinned at <repo-name>@<commit>, so an engineer can implement a <OS> <framework> driver in
-<language>. <board/prereq facts>. The source is ours (or compatibly licensed): read it, cite it,
+<language>. <board/prereq facts>. The spec will live in <spec repository: hardware-specs-gpl |
+hardware-specs-docs | hardware-specs-permissive | a private location>, whose license fits the
+sources it cites (`anchored-peripheral-spec`, "Where the spec goes"): read the source, cite it,
 quote it sparingly. Load `anchored-peripheral-spec` and follow it.
 
 OUTPUT: write the finished spec to <scratch path>. Return the spec path, a one-paragraph summary
-(for the docs index), and the pins (`Source pin: <repo-name>@<commit>`, and `Target pin:` if a
-target tree was read).
+(for the docs index), and the pins (`Source pin: <repo-name>@<commit> <SPDX license>`, one per
+source tree, and `Target pin:` if a target tree was read).
 
 HOW TO READ (fan out, then draft): do not read the whole tree yourself. Spawn investigators, each
 owning one slice and returning ANCHORED facts — tables and steps that already carry
@@ -42,8 +44,13 @@ ANCHORING RULES (the point of this spec):
   presence: cite the file's extent and say it was established by search.
 - A line containing only tags anchors the table or list that follows it (block anchor). Blank
   lines between are fine; a sentence between is not. Rows from elsewhere carry their own tag.
-- State the pins once near the top on their own lines: `Source pin: <repo-name>@<commit>` and
-  `Target pin: <target-name>@<commit>`.
+- State the pins once near the top on their own lines, each with the SPDX license of the files
+  cited through it: `Source pin: <repo-name>@<commit> <SPDX license>` and
+  `Target pin: <target-name>@<commit> <SPDX license>`. Several source trees (or files under
+  different licenses in one tree) get one pin each, with distinct names, and every anchor names
+  its pin: `[src:<pin>: path:L1-L2 (symbol)]`. Investigators return the pin name with each anchor.
+- Documents you cite by page go in the front-matter `docs:` registry (name, title, url, sha256,
+  optional pages and file) and are cited `[doc:<name> p.N]` with no space after `doc:`.
 - Quote at most a few lines, only when the exact expression matters, and still anchor it.
 
 HARDWARE VS DRIVER: a `[src:]`-only fact says what the driver does, not what the silicon
@@ -56,18 +63,21 @@ covers the block, not just the driver's footprint. Do NOT load `os-investigator`
 `<board-expert>` for board specifics and cached references.
 
 SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <source checkout> \
-        [--target-repo <target checkout>]
-    python3 <this-skill>/scripts/inventory_check.py <scratch path> --repo <source checkout> \
+    python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <pin>=<source checkout> \
+        [--repo <pin>=<checkout> ...] [--target-repo <target checkout>] \
+        [--root <the spec repository's specs/ root> --require-license]
+    python3 <this-skill>/scripts/inventory_check.py <scratch path> --repo <pin>=<source checkout> \
         --headers <the register header(s), repo-relative> \
         --dt <the board .dtsi, repo-relative> --dt-node <the node label>
-The inventory check lists header names and device-tree items (names, SPIs, reg bases, phandles,
+With several pins, run the inventory check once per pin whose tree holds the headers (it
+compares one tree per run). It lists header names and device-tree items (names, SPIs, reg bases, phandles,
 constants, boolean properties) the spec never mentions: cover each, or list it explicitly as out
 of scope with a reason. Then read a sample of `anchor_check.py … --show` and confirm the
 cited lines say what the claims say. Recount every count you state ("eight entry points", "a
 3-word hole") against the code before you return it.
 
-OPEN the spec with the PROVENANCE NOTICE (required section 1): derived from <repo-name>@<commit>;
+OPEN the spec with the PROVENANCE NOTICE (required section 1): derived from <repo-name>@<commit>
+(each pin, with its license); lives in <spec repository>, whose license fits them;
 every fact anchored; the source is authoritative — where they disagree fix the spec; run
 `anchor_check.py --drift` before trusting the spec at a newer commit; the verification record at
 the end says when the claims were last checked.

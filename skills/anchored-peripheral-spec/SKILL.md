@@ -2,13 +2,16 @@
 name: anchored-peripheral-spec
 description: >-
   Produce a source-anchored implementation spec for a single peripheral (Ethernet MAC, UART, GPIO,
-  SD/MMC, USB, I2C/SPI, …) from driver source you or your organization authored or may otherwise
-  copy from — every fact cites the file:line it was derived from at a pinned commit, so a reviewer
-  can check the spec against the code and drift is detectable when the code moves. Use when asked
-  to document, spec, or port a driver whose source is yours; for encumbered (GPL, NDA, third-party)
-  source use cleanroom-spec instead, whose wall this skill deliberately does not have. Ships
-  scripts/anchor_check.py (resolve anchors, render a review sheet, detect and rewrite drift) and
-  scripts/inventory_check.py (omissions and value mismatches against the register headers).
+  SD/MMC, USB, I2C/SPI, …) from driver source whose license fits the repository the spec will live
+  in — every fact cites the file:line it was derived from at a pinned commit, so a reviewer can
+  check the spec against the code and drift is detectable when the code moves. Use when asked to
+  document, spec, or port a driver from source you may cite: GPL-2.0 trees (the spec goes to
+  hardware-specs-gpl), BSD/MIT/Apache trees (hardware-specs-permissive), datasheets only
+  (hardware-specs-docs), or your own code. For NDA source, or a driver whose license the source's
+  terms do not permit, use cleanroom-spec instead, whose wall this skill deliberately does not
+  have. Ships scripts/anchor_check.py (resolve anchors, gate pin licenses against a root, check
+  document hashes, render a review sheet, detect and rewrite drift) and scripts/inventory_check.py
+  (omissions and value mismatches against the register headers).
 ---
 
 <!--
@@ -19,8 +22,8 @@ SPDX-License-Identifier: Apache-2.0
 # Peripheral driver spec (source-anchored)
 
 You produce one **implementation spec per peripheral** — the document an engineer reads to write
-or rewrite a driver — from driver source you are **allowed to read, quote, and copy from**: your
-own tree, your organization's, or a compatibly-licensed one. The spec has the same shape as a
+or rewrite a driver — from driver source you are **allowed to read, cite, and quote from**, in a
+repository whose license fits that source (see *Where the spec goes* below). The spec has the same shape as a
 clean-room spec (HALF 1 hardware, HALF 2 target-OS integration), but its discipline is the
 opposite: instead of hiding where facts came from, **every source-derived fact carries an anchor to
 the exact lines it was derived from**, at a pinned commit. A reader can open the spec and the
@@ -31,13 +34,56 @@ This skill's value is **traceability**: a spec you can't trace back to code is a
 take on faith, and a spec whose anchors have gone stale is one you *shouldn't*. The clean-room
 skill answers "can we prove we didn't copy?"; this one answers "can we prove the spec is right?".
 
-## Which skill: the eligibility test
+## Where the spec goes: which repository's license fits?
 
-Use this skill only when the source's license permits the target to derive from it — same author,
-same organization, or a license compatible with the target's. **If you are not sure, use
-`cleanroom-spec`.** The two skills are not interchangeable: an anchored spec is a *derivative* of
-the source, and its anchors are an attractant that leads every reader straight into the tree. That
-is exactly right for owned source and exactly wrong for encumbered source.
+An anchored spec is a **derivative of every source it anchors to**: it restates what the code does
+and points the reader at the lines. So the question is not "is the source yours?" but "which
+license may the spec carry?". Published specs live in three public **spec repositories**, one per
+license, and one rule decides between them.
+
+**Placement rule:** a spec lives in the most restrictive repository among the sources it anchors
+to. A spec may reference repositories with less restrictive licenses, never ones with more
+restrictive licenses. (Policy 3 of the license-split design, `docs/LICENSE-SPLIT.md` in
+driver-lab.)
+
+**Which repo does my spec go in?**
+
+| Repo | License | Anchors allowed | Holds |
+|---|---|---|---|
+| `hardware-specs-gpl` | GPL-2.0-only | `[src:]` into any GPL-2.0-only or GPL-2.0-or-later tree, plus `[doc:]`, plus anything the permissive repo accepts | Linux-derived specs: references for Linux work, or for anyone who doesn't care about license. Easiest to verify. |
+| `hardware-specs-docs` | CC-BY-4.0 (specs); per-file Apache-2.0 SPDX headers on CI files | `[doc:]` only | Specs built only from public datasheets, TRMs and standards |
+| `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/MIT sources | `[src:]` into BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
+
+(The table is the design's, verbatim; its "facts 2, 3, 6 below" are three boot-stub facts from
+BSD-licensed Raspberry Pi tools, in the design's audit of the deleted specs.) **These repositories do not exist yet**; they are created in
+milestone LS5 of the license-split plan. Until then, write the spec at a local path and check its
+placement against the fixture roots shaped like them,
+`tests/fixtures/license-gate/roots/{gpl,docs,permissive}` in this skill.
+
+To choose:
+
+1. **List the licenses of what the spec anchors to.** For each `[src:]`/`[tgt:]` tree, the SPDX
+   license (SPDX is the standard license-identifier language: `GPL-2.0-only`, `GPL-2.0 OR MIT`;
+   see driver-lab's `GLOSSARY.md`) of the files you cite (the file's `SPDX-License-Identifier:` line, else the tree's
+   `LICENSE`/`COPYING`). Write it on the pin line (*The anchor grammar*, below). If you cite files
+   under different licenses from one tree (a `GPL-2.0 OR MIT` device tree and a `GPL-2.0-only`
+   driver from the same kernel), give that tree two pins with distinct names, each with its
+   license, and cite each file through the pin whose license it carries.
+2. **Pick the repository:** only `[doc:]` citations → `hardware-specs-docs`; any source whose license requires
+   GPL-2.0 (`-only` or `-or-later`, with no permissive alternative) → `hardware-specs-gpl`; otherwise BSD, MIT or Apache sources (or `GPL-2.0 OR MIT` files) →
+   `hardware-specs-permissive`. A source under any other license (GPL-3.0, a vendor license, NDA
+   material) fits none of the three: do not publish a spec anchored to it.
+3. **Let the tools confirm it.** Each repository's root marker declares its license and the
+   licenses its specs may cite (`license:` and `accepts:`, `board-expert/SPEC-FORMAT.md`), and
+   `anchor_check.py --root <root> --require-license` fails any anchor whose pin's license the root
+   does not accept (*Check, verify, land*, step 1). The gate is what the repositories' CI runs; a
+   spec that fails it belongs in another repository, or must drop the anchor.
+
+The consequence for readers: a GPL spec's anchors lead straight into GPL code, which is exactly
+right for Linux work and exactly wrong for someone writing a driver under a license the source's
+terms do not permit (a Fuchsia driver from a Linux driver, for example). That reader uses specs
+from the docs and permissive repositories, or runs `cleanroom-spec` privately: its output is never
+published. If you are not sure which license a source carries, do not anchor to it until you are.
 
 To **review an existing implementation against a reference implementation** of the same hardware —
 findings, not a spec — use `reference-driver-review`, which reuses this skill's anchor grammar and
@@ -46,7 +92,8 @@ checkers under `[impl:]`/`[ref:]` tags.
 Do **not** load `os-investigator` here — its clean-room rule (never reproduce code, never name the
 file) forbids the thing this skill requires. The board-expert skills (`board-expert` and any `<board>-expert` stub) remain
 useful as the *map* of SoC addresses, IP identity, and quirks. `cleanroom-implementer` does not
-apply: implementers of an anchored spec may and should read the source.
+apply: implementers of an anchored spec may and should read the source (which is why the spec is
+for readers whose own work the source's license permits; see *Where the spec goes*).
 
 ## Datasheet first, anchor always
 
@@ -83,12 +130,13 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
 
 ```
 [src: <path>:<L1>[-<L2>] [(<symbol>)]]      resolves in the SOURCE repo at the Source pin
+[src:<pin>: <path>:<L1>[-<L2>] [(<symbol>)]] the same, at the Source pin named <pin>
 [tgt: <path>:<L1>[-<L2>] [(<symbol>)]]      resolves in the TARGET repo at the Target pin
-[doc: <document> §<section>]                a document citation; not resolved mechanically
-[doc:<name> p.N | pp.N-M | §x.y]            a document from the spec's front-matter docs:
-                                            registry; name, page range and (with --docs-dir)
-                                            the file's sha256 are checked (no space after
-                                            "doc:"; see anchor_check.py's docstring)
+                                            ([tgt:<pin>: …] names one, as for src)
+[doc: <document> §<section>]                a free-text document citation (space after
+                                            "doc:"); not resolved mechanically
+[doc:<name> p.N | pp.N-M | §x.y]            a document from the spec's docs: registry (no
+                                            space after "doc:"); checked, see Documents below
 ```
 
 - **Paths are repo-relative**, lines are 1-based and inclusive. Several anchors may share one tag,
@@ -116,8 +164,37 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   ```
   A spec that cites several source trees states one `Source pin:` per tree, each with a
   distinct name, and names the pin in each anchor: `[src:linux: drivers/net/foo.c:120]`. Run the
-  checkers with one `--repo <name>=<checkout>` per pin. An anchor without a name is an error when
-  the spec has several Source pins.
+  checkers with one `--repo <name>=<checkout>` per pin (`--target-repo <name>=<checkout>` for
+  Target pins). An anchor without a name is an error when the side has several pins, and so is a
+  repeated pin name. The license, when given, must be an SPDX expression (`GPL-2.0-only`,
+  `GPL-2.0 OR MIT`, `BSD-3-Clause`; `LicenseRef-<name>` for one SPDX does not list), and must
+  describe the files you cite through that pin, since it is what the license gate reads. A
+  published spec states one on every pin: in a root that declares `accepts:`, a pin with no
+  license fails the gate. A line that starts `Source pin:` but does not have this shape is a
+  warning, and an error under `--root`.
+- **Documents** may be listed in YAML front matter (the `---` block at the very top of the spec)
+  and cited by name:
+  ```
+  ---
+  docs:
+    - name: trm                       # the name anchors use: letters, digits, . _ -
+      title: Widget TRM v1.0
+      url: https://example.com/widget-trm.pdf    # recorded, never fetched
+      sha256: <64 hex digits of the file>
+      pages: 120                      # optional: page anchors must fall within it
+      file: widget-trm-v1.0.pdf       # optional: the file's name under --docs-dir
+  ---
+  ```
+  `[doc:trm p.12]`, `[doc:trm pp.12-14]`, `[doc:trm §4.3]`, several locators per document
+  (`[doc:trm §4.3 p.88]`) and several documents per tag (`[doc:trm p.12; ds §3.1]`). Whether a
+  tag is named or free text is decided by the space after `doc:` alone. The checker fails on an
+  entry missing `name`, `title`, `url` or `sha256`, a `sha256` that is not 64 hex digits, a named
+  anchor whose name is not listed, a page outside `pages`, page 0 or an inverted range, and a
+  no-space tag that is not `<name> <locator>…`. `--docs-dir <dir>` hashes each listed document's
+  file (`<dir>/<file>`, default `<dir>/<name>.pdf`) and fails on a mismatch; a missing file is a
+  warning. Free-text `[doc: …]` tags stay valid, except under `--require-license` in a root that
+  accepts no source (the `hardware-specs-docs` shape), where documents are a spec's only
+  provenance and every doc tag must be named.
 - **Quoting** is allowed but rationed: quote at most a few lines, and only when the exact
   expression is the point (a magic constant with its comment, a non-obvious mask). The anchor is
   still required next to the quote. A spec that pastes the driver is a second copy of the driver
@@ -125,7 +202,8 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
 
 ## Required structure of every spec
 
-1. **Provenance notice (top of the document)** — this spec is derived from `<repo>@<commit>`;
+1. **Provenance notice (top of the document)** — this spec is derived from `<repo>@<commit>`
+   (each pin, with its license) and lives in the spec repository whose license fits them;
    every source-derived fact carries a `[src:]` anchor and every datasheet fact a `[doc:]`
    citation; **the source is authoritative** — where spec and source disagree, the spec is wrong
    and must be fixed, never worked around; anchors are pinned — before trusting the spec at a
@@ -211,7 +289,22 @@ driver fits comfortably beside the spec.
    python3 <this-skill>/scripts/anchor_check.py <spec> --repo <source checkout> \
        [--target-repo <target checkout>] -o docs/spec-reports/<device>-check-<date>.txt
    ```
-   The revision defaults to the spec's pin lines; `PATH@REV` overrides. It fails on: dangling
+   With several pins, give one `--repo <name>=<checkout>` per Source pin (and
+   `--target-repo <name>=<checkout>` per Target pin). For a spec headed for a spec repository, add
+   the license gate and the document hashes:
+   ```
+   python3 <this-skill>/scripts/anchor_check.py <spec> --repo linux=<checkout> \
+       --repo fw=<checkout> --root <spec repo>/specs --require-license [--docs-dir <pdf dir>]
+   ```
+   `--root <dir>` reads `<dir>/board-specs.yaml` and fails every `[src:]`/`[tgt:]` anchor whose
+   pin's license the marker's `accepts:` does not list, every anchor whose pin states no license
+   (or that has no pin), every pin no anchor cites whose license is not accepted, and a root with
+   no `accepts:` at all. `A OR B` passes when either side is accepted, `A AND B` only when both are,
+   `X WITH <exception>` when `X` is; `GPL-2.0` is read as `GPL-2.0-only` and `GPL-2.0+` as
+   `GPL-2.0-or-later`, and neither stands for the other. `[doc:]` tags are not gated.
+   `--require-license` (with `--root`) also fails a marker without `license:`, and in a root whose
+   `accepts:` is empty, every free-text `[doc: …]` tag. The revision defaults to the spec's pin
+   lines; `PATH@REV` overrides. It fails on: dangling
    paths, out-of-range lines, a symbol absent from the file, malformed tags, `[stale:]` markers.
    It warns on: fact-bearing lines (hex literals, bit numbers, IRQs, delays, timeouts) that carry
    no tag; a hex literal in a claim that does not appear in the lines it cites (an offset typo,
@@ -225,7 +318,9 @@ driver fits comfortably beside the spec.
    python3 <this-skill>/scripts/inventory_check.py <spec> --repo <source checkout> \
        --headers <register header(s), repo-relative>
    ```
-   It extracts every `#define NAME <hex>` and every bit-field member from the headers at the pin
+   It compares one header tree per run: with several Source pins, pass `--repo <pin>=<checkout>`
+   for the pin whose tree holds the headers, and run it again for another pin if that tree has
+   headers too. It extracts every `#define NAME <hex>` and every bit-field member from the headers at the pin
    and reports (a) names the spec never mentions — candidate omissions, to cover or to list
    explicitly as out of scope; (b) names the spec pairs with a *different* hex value than the
    header — a wrong claim or a stale anchor; (c) names the spec itself pairs with two different
@@ -277,9 +372,12 @@ The spec is a **derived artifact**; the source is the truth. Three consequences:
   ```
   python3 <this-skill>/scripts/anchor_check.py docs/<device>-spec.md --repo <src> --drift <new-rev>
   ```
-  It reports which cited ranges are byte-identical (nothing to do), which merely **moved** (line
+  With several Source pins, `--drift-pin <name>` says which pin is moving (required when several
+  `--repo` checkouts are given). It reports
+  which cited ranges are byte-identical (nothing to do), which merely **moved** (line
   shift), and which **changed** or vanished (the claim needs re-reading). Then
-  `--drift <new-rev> --rewrite` updates the moved anchors and the `Source pin:` line in place and
+  `--drift <new-rev> --rewrite` updates the moved anchors and the `Source pin:` line (keeping its
+  license) in place and
   appends `[stale: was <old-pin>]` to every changed anchor. A stale marker fails every later
   check until a person re-verifies that claim against the new code and removes the marker. Run the
   verifier on the stale claims, then update the verification record.
@@ -291,6 +389,9 @@ The spec is a **derived artifact**; the source is the truth. Three consequences:
 
 - Every constant, sequence step, layout, and gotcha derived from source carries a `[src:]` anchor
   with a symbol; every datasheet fact a `[doc:]` citation; nothing carries neither.
+- Every pin states the SPDX license of the files cited through it, and a published spec passes
+  `anchor_check.py --root <its repository's root> --require-license`: it sits in the repository
+  the placement rule names.
 - Anchors point at definitions and performing statements, not at the nearest comment or the
   function's first line; ranges are as tight as the claim (one `#define`, one statement, one
   `struct`), not "the whole function". No anchor was written for a line the writer did not read.

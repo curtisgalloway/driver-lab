@@ -663,5 +663,379 @@ class TestLicenseGate(CheckerCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
 
+class TestDocTagCharacterization(CheckerCase):
+    """Unnamed [doc: …] tags as they behaved before named doc anchors (LS3); these pass on
+    LS2's checker and must keep passing."""
+
+    def test_unnamed_forms_count_and_warn_as_before(self):
+        s = self.spec("""\
+            <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+
+            # Widget
+
+            - Resets in 10 us. [doc: Widget TRM v1.0 §4.2]
+            - FIFO depth 64. [doc: Widget TRM v1.0 p. 88; Widget DS table 3]
+            - Clock gating. [doc: Widget TRM, the clocks chapter]
+            - One word. [doc: trm p.12]
+            """)
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(report["doc_tags"], 4)
+        self.assertEqual(report["anchors"], 0)
+        self.assertEqual(self.messages(report), [
+            "[doc:] cites no section/chapter/table number: 'Widget TRM, the clocks chapter'"])
+
+    def test_empty_doc_tag_errors_with_or_without_space(self):
+        s = self.spec("Fact one. [doc: ]\nFact two. [doc:]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report, "error"), ["empty [doc:] tag", "empty [doc:] tag"])
+
+    def test_unnamed_doc_tags_pass_every_gate_root(self):
+        for root in ("docs", "permissive", "gpl"):
+            with self.subTest(root=root):
+                rc, report = self.gate_run(root)
+                self.assertEqual(rc, 0, self.messages(report))
+                self.assertEqual(self.messages(report, "error"), [])
+
+    def gate_run(self, root):
+        return self.run_json(GATE / "specs" / "docs-only-spec.md", "--root", GATE / "roots" / root)
+
+    def test_human_report_for_a_doc_only_spec(self):
+        s = self.spec("- Resets in 10 us. [doc: Widget TRM v1.0 §4.2]\n")
+        rc, out = self.run_check(s)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(out, f"spec: {s}\nanchors: 0  doc tags: 1\nresult: PASS (0 errors, "
+                              "0 warnings)\n")
+
+    def test_hw_required_needs_a_doc_tag_on_the_line(self):
+        s = self.spec("- Must wait 10 us [hw-required]. [doc: Widget TRM §4.2]\n"
+                      "- Must wait 20 us [hw-required].\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 0)
+        self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]], [
+            (2, "[hw-required] with no [doc:] on the line — if no document backs it, label it "
+                "[as-implemented]")])
+
+
+# Small generated documents with pinned hashes (LS3). The tests write them per run.
+TRM_BYTES = b"synthetic widget TRM, LS3 fixture\n"
+TRM_SHA = "1218036a6a0562504adedd37088e5136036a3099cf8581832e0c7353d7256cbd"
+DS_BYTES = b"synthetic widget datasheet, LS3 fixture\n"
+DS_SHA = "8e64f02ccae1c95703da9cdb01ddf491a136a9edd784739824a4618a25983768"
+REGISTRY = f"""\
+---
+docs:
+  - name: trm
+    title: Widget TRM v1.0
+    url: https://example.invalid/widget-trm.pdf
+    sha256: {TRM_SHA}
+    pages: 120
+  - name: ds
+    title: Widget datasheet
+    url: https://example.invalid/widget-ds.pdf
+    sha256: "{DS_SHA.upper()}"
+    file: sheets/widget-ds.pdf
+---
+<!-- SPDX-License-Identifier: CC-BY-4.0 -->
+
+"""
+
+
+class TestNamedDocAnchors(CheckerCase):
+    """The docs: registry and named [doc:<name> …] anchors (LS-R5)."""
+
+    def test_pinned_hashes_match_the_generated_bytes(self):
+        import hashlib
+        self.assertEqual(hashlib.sha256(TRM_BYTES).hexdigest(), TRM_SHA)
+        self.assertEqual(hashlib.sha256(DS_BYTES).hexdigest(), DS_SHA)
+        rc, report = self.run_json(self.spec(REGISTRY + "- Fact. [doc:trm p.1]\n"))
+        self.assertEqual([d["sha256"] for d in report["docs"]], [TRM_SHA, DS_SHA])
+
+    def docs_dir(self, trm=TRM_BYTES, ds=DS_BYTES):
+        d = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        if trm is not None:
+            (d / "trm.pdf").write_bytes(trm)
+        if ds is not None:
+            (d / "sheets").mkdir()
+            (d / "sheets" / "widget-ds.pdf").write_bytes(ds)
+        return d
+
+    def test_correct_spec_passes(self):
+        s = self.spec(REGISTRY + """\
+            - Resets in 10 us. [doc:trm p.12]
+            - FIFO depth 64. [doc:trm pp.12-14]
+            - Clock gating. [doc:trm §4.3]
+            - Last page. [doc:trm §A.1 p.120]
+            - Both documents. [doc:trm p.12; ds §3.1]
+            - Unnamed beside them. [doc: Widget app note §2]
+            """)
+        for extra in ((), ("--strict",), ("--docs-dir", self.docs_dir())):
+            with self.subTest(extra=extra):
+                rc, report = self.run_json(s, *extra)
+                self.assertEqual(rc, 0, self.messages(report))
+                self.assertEqual(report["findings"], [])
+        self.assertEqual(report["doc_tags"], 6)
+        self.assertEqual([(a["name"], a["pages"], a["sections"]) for a in report["doc_anchors"]], [
+            ("trm", [[12, 12]], []), ("trm", [[12, 14]], []), ("trm", [], ["4.3"]),
+            ("trm", [[120, 120]], ["A.1"]), ("trm", [[12, 12]], []), ("ds", [], ["3.1"])])
+        self.assertEqual([(d["name"], d["pages"], d["file"]) for d in report["docs"]],
+                         [("trm", 120, None), ("ds", None, "sheets/widget-ds.pdf")])
+        rc, out = self.run_check(s)
+        self.assertIn("doc trm: Widget TRM v1.0, 120 pages\ndoc ds: Widget datasheet\n", out)
+        # No network: the checker imports nothing that could fetch the url.
+        source = CHECKER.read_text()
+        for module in ("urllib", "http", "socket", "requests", "ssl"):
+            self.assertNotRegex(source, rf"(?m)^\s*(import|from)\s+{module}\b")
+
+    def test_unknown_document_fails_naming_anchor_and_registry(self):
+        s = self.spec(REGISTRY + "- Fact. [doc:tmr p.3]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]], [
+            (16, "[doc:tmr p.3] names document 'tmr', but the spec's docs: registry lists: "
+                 "trm, ds (for an unnamed citation put a space after 'doc:')")])
+
+    def test_named_anchor_without_registry_fails(self):
+        rc, report = self.run_json(self.spec("- Fact. [doc:trm §4.2]\n"))
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report), [
+            "[doc:trm §4.2] names document 'trm', but the spec's docs: registry lists: none "
+            "(for an unnamed citation put a space after 'doc:')"])
+
+    def test_page_out_of_range_fails(self):
+        s = self.spec(REGISTRY + "- A. [doc:trm p.121]\n- B. [doc:trm pp.119-122]\n"
+                                 "- C. [doc:ds p.900]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report), [
+            "[doc:trm p.121] cites page 121, but document 'trm' (Widget TRM v1.0) has 120 pages",
+            "[doc:trm pp.119-122] cites pages 119-122, but document 'trm' (Widget TRM v1.0) has "
+            "120 pages"])  # ds lists no pages: any page passes
+
+    def test_page_zero_and_inverted_range_fail(self):
+        s = self.spec(REGISTRY + "- A. [doc:trm p.0]\n- B. [doc:trm pp.14-12]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report), [
+            "[doc:trm p.0] cites page 0; pages count from 1",
+            "[doc:trm pp.14-12] has an inverted page range 14-12"])
+
+    def test_malformed_named_anchor_fails(self):
+        s = self.spec(REGISTRY + "- A. [doc:trm]\n- B. [doc:trm page 12]\n- C. [doc:trm p12]\n"
+                                 "- D. [doc:Widget TRM §4]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        forms = ("(expected [doc:<name> p.N], [doc:<name> pp.N-M] or [doc:<name> §x.y]; for an "
+                 "unnamed citation put a space after 'doc:')")
+        self.assertEqual(self.messages(report), [
+            f"malformed named doc anchor [doc:{item}] {forms}"
+            for item in ("trm", "trm page 12", "trm p12", "Widget TRM §4")])
+
+    def test_malformed_or_missing_sha256_fails(self):
+        s = self.spec("""\
+            ---
+            docs:
+              - name: a
+                title: A
+                url: https://example.invalid/a.pdf
+                sha256: 1234abcd
+              - name: b
+                title: B
+                url: https://example.invalid/b.pdf
+              - name: c
+                title: C
+                url: https://example.invalid/c.pdf
+                sha256: 1234
+            ---
+            - Fact. [doc:a p.1; b p.1; c p.1]
+            """)
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]], [
+            (3, "docs: entry 1 ('a'): sha256: '1234abcd' is not 64 hex digits (quote it if it "
+                "is all digits)"),
+            (7, "docs: entry 2 ('b'): sha256: is required (the document file's SHA-256, 64 hex "
+                "digits)"),
+            (10, "docs: entry 3 ('c'): sha256: 1234 is not 64 hex digits (quote it if it is all "
+                 "digits)")])
+
+    def test_registry_fields_are_validated(self):
+        s = self.spec(f"""\
+            ---
+            docs:
+              - name: trm
+                url: https://example.invalid/t.pdf
+                sha256: {TRM_SHA}
+                pages: -3
+                edition: 2
+              - name: trm
+                title: Again
+                url: https://example.invalid/t2.pdf
+                sha256: {TRM_SHA}
+              - name: "bad name"
+                title: X
+                url: x
+                sha256: {TRM_SHA}
+              - name: up
+                title: Up
+                url: https://example.invalid/u.pdf
+                sha256: {TRM_SHA}
+                file: ../outside.pdf
+            ---
+            - Fact. [doc:trm p.400]
+            """)
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report, "error"), [
+            "docs: entry 1 ('trm'): title: is required (a non-empty string)",
+            "docs: entry 1 ('trm'): pages: -3 is not a positive page count",
+            "docs: entry 2 ('trm'): duplicate document name 'trm': each document needs a "
+            "distinct name",
+            "docs: entry 3 ('bad name'): name: must be a short identifier (letters, digits, '.', "
+            "'_', '-'), as in [doc:<name> p.N]",
+            "docs: entry 4 ('up'): file: '../outside.pdf' must be a relative path inside "
+            "--docs-dir"])
+        self.assertEqual(self.messages(report, "warn"), [
+            "docs: entry 1 ('trm'): unknown key 'edition' (known: name, title, url, sha256, "
+            "pages, file)"])
+        s = self.spec("---\ndocs: trm\n---\n- Fact. [doc: TRM §1]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report), [
+            "docs: must be a list of documents (name, title, url, sha256, optional pages and "
+            "file)"])
+
+    def test_hash_mismatch_fails_only_with_docs_dir(self):
+        s = self.spec(REGISTRY + "- Fact. [doc:trm p.2]\n")
+        tampered = self.docs_dir(trm=b"a different file\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(report["findings"], [])
+        rc, report = self.run_json(s, "--docs-dir", tampered)
+        self.assertEqual(rc, 1)
+        import hashlib
+        actual = hashlib.sha256(b"a different file\n").hexdigest()
+        self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]], [
+            (3, f"document 'trm' (Widget TRM v1.0): {tampered / 'trm.pdf'} has sha256 {actual}, "
+                f"but the registry records {TRM_SHA}")])
+
+    def test_explicit_file_is_hashed(self):
+        s = self.spec(REGISTRY + "- Fact. [doc:ds §1]\n")
+        bad = self.docs_dir(ds=b"not the datasheet\n")
+        rc, report = self.run_json(s, "--docs-dir", bad)
+        self.assertEqual(rc, 1)
+        self.assertIn(f"document 'ds' (Widget datasheet): {bad / 'sheets' / 'widget-ds.pdf'} has "
+                      "sha256 ", self.messages(report, "error")[0])
+        self.assertTrue(self.messages(report, "error")[0].endswith(f"records {DS_SHA}"))
+
+    def test_missing_file_is_skipped_with_a_note(self):
+        s = self.spec(REGISTRY + "- Fact. [doc:trm p.2]\n")
+        d = self.docs_dir(trm=None)
+        rc, report = self.run_json(s, "--docs-dir", d)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(self.messages(report), [
+            f"document 'trm': {d / 'trm.pdf'} not found; hash not checked"])
+
+    def test_docs_dir_must_be_a_directory(self):
+        rc, out = self.run_check(self.spec(REGISTRY), "--docs-dir",
+                                 pathlib.Path(self.tmp) / "absent")
+        self.assertEqual(rc, 2, out)
+        self.assertIn(f"error: --docs-dir {pathlib.Path(self.tmp) / 'absent'} is not a directory",
+                      out)
+
+    def test_front_matter_is_not_read_as_spec_lines(self):
+        s = self.spec(REGISTRY + "| Register | Offset |\n|---|---|\n| CTRL | 0x10 | [doc:trm p.4]\n")
+        rc, report = self.run_json(s, "--strict")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(report["findings"], [])
+
+    def test_leading_horizontal_rule_block_is_body_text(self):
+        """A spec opening with a '---' rule keeps its first section checked (review finding 1)."""
+        cases = {
+            "list": "---\n- Reg STAT at 0x14.\n- Reg CTRL at 0x10 [src:nosuch.c:abc]\n---\n",
+            "mapping": "---\nNote: CTRL at 0x10 [src: nosuch.c:abc]\n---\n",
+        }
+        for name, body in cases.items():
+            with self.subTest(case=name):
+                rc, report = self.run_json(self.spec(body))
+                self.assertEqual(rc, 1)
+                self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]
+                                  if f["level"] == "error"],
+                                 [(3 if name == "list" else 2, "malformed src anchor: "
+                                   "'nosuch.c:abc' (expected [pin: ]path:L1[-L2] [(symbol)])")])
+        s = self.spec("---\n- Resets. [doc: Widget TRM §4.2]\n---\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual((report["findings"], report["doc_tags"]), ([], 1))
+        s = self.spec("---\ndocs: [unclosed\n---\n- Fact. [doc: TRM §1]\n")
+        rc, report = self.run_json(s)
+        self.assertEqual(rc, 1)
+        self.assertTrue(self.messages(report)[0].startswith("front matter does not parse: "),
+                        report)
+
+    def test_front_matter_without_board_expert_is_an_error(self):
+        alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
+        alone.mkdir(parents=True)
+        shutil.copy(CHECKER, alone / "anchor_check.py")
+        proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
+                               self.spec(REGISTRY + "- Fact. [doc:trm p.2]\n")],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+        self.assertIn("ERROR L1: spec front matter cannot be read: board-expert's spec_check.py "
+                      "was not found", proc.stdout)
+
+
+class TestRequireNamedDocs(CheckerCase):
+    """--require-license: named doc anchors required in a root that accepts no source."""
+
+    UNNAMED = "- Resets in 10 us. [doc: Widget TRM v1.0 §4.2]\n"
+
+    def test_unnamed_doc_fails_in_a_docs_root_under_require_license(self):
+        s = self.spec(self.UNNAMED)
+        root = GATE / "roots" / "docs"
+        rc, report = self.run_json(s, "--root", root)
+        self.assertEqual(rc, 0, self.messages(report))
+        rc, report = self.run_json(s, "--root", root, "--require-license")
+        self.assertEqual(rc, 1)
+        self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]], [
+            (1, f"unnamed [doc: Widget TRM v1.0 §4.2]: root {root} accepts no source, so "
+                "documents are its specs' only provenance and --require-license requires named "
+                "ones: list the document under docs: in the front matter and cite "
+                "[doc:<name> p.N]")])
+
+    def test_named_doc_passes_in_a_docs_root_under_require_license(self):
+        s = self.spec(REGISTRY + "- Resets in 10 us. [doc:trm §4.2 p.40]\n")
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "docs", "--require-license")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(report["findings"], [])
+
+    def test_unnamed_doc_passes_in_roots_that_accept_sources(self):
+        s = self.spec(self.UNNAMED)
+        for root in ("permissive", "gpl"):
+            with self.subTest(root=root):
+                rc, report = self.run_json(s, "--root", GATE / "roots" / root,
+                                           "--require-license")
+                self.assertEqual(rc, 0, self.messages(report))
+                self.assertEqual(report["findings"], [])
+
+    def test_require_license_needs_root(self):
+        rc, out = self.run_check(self.spec(self.UNNAMED), "--require-license")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("error: --require-license needs --root DIR", out)
+
+    def test_require_license_requires_the_marker_license(self):
+        root = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        (root / "board-specs.yaml").write_text("layer: public\naccepts: [MIT]\n")
+        s = self.spec(self.UNNAMED)
+        rc, report = self.run_json(s, "--root", root)
+        self.assertEqual(rc, 0, self.messages(report))
+        rc, report = self.run_json(s, "--root", root, "--require-license")
+        self.assertEqual(rc, 1)
+        self.assertEqual(self.messages(report), [
+            f"--root {root}: root marker: no license: field (the SPDX expression for this "
+            "root's own license); --require-license makes this an error"])
+
+
 if __name__ == "__main__":
     unittest.main()

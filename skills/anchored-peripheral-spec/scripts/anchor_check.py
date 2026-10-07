@@ -11,9 +11,34 @@ A source-anchored spec cites where each fact came from with inline tags:
 
 ``src`` anchors resolve against the source repository, ``tgt`` anchors against
 the target-OS repository, both at a pinned commit; ``doc`` tags are citations
-to documents and are not resolved.  Several anchors may share one tag,
-separated by ``;``.  A line consisting only of tags anchors the table or list
-that follows it (a "block anchor").
+to documents.  Several anchors may share one tag, separated by ``;``.  A line
+consisting only of tags anchors the table or list that follows it (a "block
+anchor").
+
+A spec may list the documents it cites in YAML front matter::
+
+    ---
+    docs:
+      - name: trm                      # used in anchors
+        title: Widget TRM v1.0
+        url: https://example.com/widget-trm.pdf
+        sha256: <64 hex digits of the file>
+        pages: 120                     # optional: page anchors must fall within it
+        file: widget-trm-v1.0.pdf      # optional: the file's name under --docs-dir
+    ---
+
+and cite them by name: ``[doc:trm p.12]``, ``[doc:trm pp.12-14]``,
+``[doc:trm §4.3]``, several locators per document (``[doc:trm §4.3 p.88]``) and
+several documents per tag (``[doc:trm p.12; ds §3.1]``).  A named anchor has no
+space after ``doc:``; one naming no listed document, citing a page outside the
+document's ``pages``, or not of that shape is an error, as is a registry entry
+missing a field or with a malformed ``sha256``.  ``--docs-dir DIR`` hashes
+each listed document's file (``DIR/<file>``, default ``DIR/<name>.pdf``) and
+fails on a mismatch; a missing file is skipped with a warning.  Nothing is
+fetched: the ``url`` is recorded, never opened.  An unnamed tag
+(``[doc: Widget TRM §4.3]``, with the space) is checked as before; under
+``--require-license`` in a root whose ``accepts:`` is empty (a datasheet-only
+root, where documents are a spec's only provenance) it is an error.
 
 The spec states its pins on lines of the form::
 
@@ -38,7 +63,10 @@ pin's license is not accepted fails, as does an anchor whose pin states no
 license or that has no pin at all, and a pin no anchor cites whose license is
 not accepted.  ``A OR B`` passes when either side is accepted, ``A AND B`` only
 when both are.  ``[doc:]`` tags are not gated.  A root without ``accepts:``
-fails the gate rather than skipping it.
+fails the gate rather than skipping it.  ``--require-license`` (with ``--root``)
+also makes a missing ``license:`` in DIR's marker an error, as
+``spec_check.py --require-license`` does, and requires named doc anchors in a
+root that accepts no source.
 
 The ``reference-driver-review`` skill uses the same machinery under different
 names: ``[impl:]`` is an alias of ``[src:]`` (with ``Impl pin:`` and
@@ -51,7 +79,8 @@ Modes (all stdlib; needs ``git`` on PATH):
             symbol (if given) present in or near the range; flag fact-bearing
             lines that carry no tag at all, claims whose hex literals do not
             appear in the lines they cite, ``[hw-required]`` labels with no
-            ``[doc:]`` backing, and ``[doc:]`` tags with no section number.
+            ``[doc:]`` backing, unnamed ``[doc:]`` tags with no section number,
+            and named ``[doc:]`` anchors against the spec's ``docs:`` registry.
   --show    render a review sheet: each spec claim followed by the cited source
             lines, so a human can check the spec against the code by reading.
   --drift R compare each anchor's cited lines at the pin with revision R and
@@ -69,6 +98,7 @@ Exit status: 0 clean, 1 findings, 2 usage or git error.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -76,7 +106,9 @@ import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
-TAG_RE = re.compile(r"\[(src|tgt|impl|ref|doc|stale):\s*([^\]]*)\]")
+# The body keeps its leading whitespace: "[doc:trm p.12]" (none) is a named doc anchor,
+# "[doc: Widget TRM §4]" an unnamed citation. Other kinds strip it.
+TAG_RE = re.compile(r"\[(src|tgt|impl|ref|doc|stale):([^\]]*)\]")
 KIND_ALIAS = {"impl": "src", "ref": "tgt"}
 PIN_ALIAS = {"impl": "source", "ref": "target"}
 ANCHOR_RE = re.compile(
@@ -110,6 +142,13 @@ HW_REQUIRED_RE = re.compile(r"\[?\bhw[-_ ]required\b\]?", re.IGNORECASE)
 DOC_SECTION_RE = re.compile(r"§\s*[A-Z]?\d|\bsec(tion|t)?\.?\s*[A-Z]?\d|\bch(apter)?\.?\s*\d|"
                             r"\btable\s*[A-Z]?\d|\bfig(ure)?\.?\s*\d|\bp(age|p)?\.\s*\d|"
                             r"\bappendix\s*[A-Z0-9]", re.IGNORECASE)
+# Named doc anchors: "<name> <locator>..." with p.N, pp.N-M or §x.y locators.
+DOC_ITEM_RE = re.compile(rf"^(?P<name>{PIN_NAME})\s+(?P<locs>\S.*)$")
+DOC_LOCATOR_RE = re.compile(r"^(?:p\.(?P<page>\d+)|pp\.(?P<p1>\d+)-(?P<p2>\d+)|"
+                            r"§(?P<sec>[A-Za-z0-9]+(?:\.[A-Za-z0-9]+)*))$")
+DOC_FORMS = "[doc:<name> p.N], [doc:<name> pp.N-M] or [doc:<name> §x.y]"
+SHA256_RE = re.compile(r"^[0-9A-Fa-f]{64}$")
+DOC_KEYS = ("name", "title", "url", "sha256", "pages", "file")
 
 
 def hex_set(text: str) -> set[str]:
@@ -136,6 +175,15 @@ class Anchor:
 
 
 @dataclass
+class DocAnchor:
+    name: str
+    spec_line: int
+    raw: str  # the item as written: "trm p.12"
+    pages: list = field(default_factory=list)  # [first, last] per page locator
+    sections: list = field(default_factory=list)
+
+
+@dataclass
 class Finding:
     level: str  # error | warn
     spec_line: int
@@ -150,6 +198,9 @@ class Report:
     pin_list: dict = field(default_factory=dict)  # side -> every pin, in spec order
     anchors: int = 0
     doc_tags: int = 0
+    docs: list = field(default_factory=list)  # the front matter's docs: registry, validated
+    doc_anchors: list = field(default_factory=list)  # DocAnchor per named [doc:] item
+    unnamed_docs: list = field(default_factory=list)  # (spec_line, text) of unnamed [doc:] tags
     findings: list = field(default_factory=list)
     license_gate: dict = field(default_factory=dict)  # {"root", "accepts"} under --root
     unread_pins: list = field(default_factory=list)  # (spec_line, text) of pin-like lines not read
@@ -251,7 +302,50 @@ def paragraph_before(lines: list[str], idx: int, tail: str) -> str:
     return joined[-300:]
 
 
-def parse_spec(text: str, report: Report, strict: bool) -> list[Anchor]:
+def split_front_matter(text: str) -> tuple[str | None, int]:
+    """(front matter text, lines it occupies including both ``---``), or (None, 0)."""
+    lines = text.split("\n")
+    if not lines or lines[0].rstrip() != "---":
+        return None, 0
+    for n in range(1, len(lines)):
+        if lines[n].rstrip() == "---":
+            return "\n".join(lines[1:n]), n + 1
+    return None, 0  # no closing line: not front matter, as before
+
+
+def parse_doc_body(body: str, spec_line: int, report: Report) -> None:
+    """Record the named doc anchors in a [doc:<name> ...] tag body."""
+    for item in (s.strip() for s in body.split(";")):
+        if not item:
+            continue
+        m = DOC_ITEM_RE.match(item)
+        locs = re.split(r"[\s,]+", m["locs"].strip(" ,")) if m else []
+        parsed = [DOC_LOCATOR_RE.match(loc) for loc in locs]
+        if not m or not all(parsed):
+            report.add("error", spec_line, f"malformed named doc anchor [doc:{item}] (expected "
+                                           f"{DOC_FORMS}; for an unnamed citation put a space "
+                                           "after 'doc:')", item)
+            continue
+        anchor = DocAnchor(m["name"], spec_line, item)
+        for loc in parsed:
+            if loc["sec"]:
+                anchor.sections.append(loc["sec"])
+                continue
+            first, last = (int(loc["page"]),) * 2 if loc["page"] else (int(loc["p1"]),
+                                                                        int(loc["p2"]))
+            if first < 1:
+                report.add("error", spec_line, f"[doc:{item}] cites page {first}; pages count "
+                                               "from 1", item)
+            elif last < first:
+                report.add("error", spec_line, f"[doc:{item}] has an inverted page range "
+                                               f"{first}-{last}", item)
+            else:
+                anchor.pages.append([first, last])
+        report.doc_anchors.append(anchor)
+
+
+def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[Anchor]:
+    """Parse the spec body; the first ``skip`` lines (its front matter) are not read."""
     anchors: list[Anchor] = []
     lines = text.split("\n")
     # A tags-only line "arms" a block anchor; it covers the next contiguous block
@@ -260,6 +354,8 @@ def parse_spec(text: str, report: Report, strict: bool) -> list[Anchor]:
     block_anchors: list[Anchor] = []  # anchors of the armed/covering block anchor
     in_code = False
     for i, line in enumerate(lines, 1):
+        if i <= skip:
+            continue
         stripped = line.strip()
         if stripped.startswith("```"):
             in_code = not in_code
@@ -299,9 +395,13 @@ def parse_spec(text: str, report: Report, strict: bool) -> list[Anchor]:
                 report.doc_tags += 1
                 if not body.strip():
                     report.add("error", i, "empty [doc:] tag")
-                elif not DOC_SECTION_RE.search(body):
-                    report.add("warn", i, f"[doc:] cites no section/chapter/table number: "
-                                          f"{body.strip()[:60]!r}")
+                elif not body[0].isspace():
+                    parse_doc_body(body, i, report)
+                else:
+                    report.unnamed_docs.append((i, body.strip()))
+                    if not DOC_SECTION_RE.search(body):
+                        report.add("warn", i, f"[doc:] cites no section/chapter/table number: "
+                                              f"{body.strip()[:60]!r}")
                 continue
             new_anchors.extend(parse_tag_body(kind, body, i, claim, report))
         anchors.extend(new_anchors)
@@ -514,6 +614,9 @@ def render_report(report: Report, out):
             license_ = f" ({pin['license']})" if pin["license"] else ""
             print(f"{side} pin: {pin['name']}@{pin['rev']}{license_}", file=out)
     print(f"anchors: {report.anchors}  doc tags: {report.doc_tags}", file=out)
+    for doc in report.docs:
+        pages = f", {doc['pages']} pages" if doc["pages"] else ""
+        print(f"doc {doc['name']}: {doc['title']}{pages}", file=out)
     if report.license_gate:
         accepts = ", ".join(report.license_gate["accepts"]) or "none"
         print(f"license gate: root {report.license_gate['root']} accepts: {accepts}", file=out)
@@ -560,8 +663,10 @@ def check_pin_licenses(report: Report, spdx) -> None:
                                                  f"{pin['license']!r} is not an SPDX expression: {exc}")
 
 
-def read_root_accepts(root: str, spec_check, report: Report):
+def read_root_accepts(root: str, spec_check, report: Report, require: bool = False):
     """The root's accepts list (canonical ids), or None when the gate cannot run (reported).
+
+    ``require`` (--require-license) makes a missing ``license:`` an error too.
 
     Raises SystemExit (usage error) when the root has no marker or the marker does not parse.
     """
@@ -575,7 +680,7 @@ def read_root_accepts(root: str, spec_check, report: Report):
     if not isinstance(marker, dict):
         raise SystemExit(f"error: --root {root}: board-specs.yaml is not a mapping")
     found: list = []
-    accepts = spec_check.check_root_license(marker, str(marker_path), False, found)
+    accepts = spec_check.check_root_license(marker, str(marker_path), require, found)
     for f in found:
         if f.level == "error":  # a malformed license: or accepts: in the marker
             report.add("error", 0, f"--root {root}: {f.message}")
@@ -630,6 +735,180 @@ def apply_license_gate(anchors: list[Anchor], keys: dict, report: Report, root: 
                            f"license gate: {side} pin {pin['name']!r}{why} (accepts: "
                            f"{listed}); no anchor cites it: remove the pin, or place the spec "
                            "in a root that accepts it")
+
+
+# --------------------------------------------------------------------------- documents
+
+
+def entry_line(front: str, name, fallback: int) -> int:
+    """The spec line of a registry entry's ``name:`` (front matter starts at line 2)."""
+    if isinstance(name, str):
+        pat = re.compile(r"^\s*(?:-\s*)?name:\s*['\"]?" + re.escape(name) + r"['\"]?\s*$")
+        for n, line in enumerate(front.split("\n")):
+            if pat.match(line):
+                return n + 2
+    return fallback
+
+
+def read_front_matter(front: str | None, skip: int, report: Report, spec_check):
+    """Decide whether a leading ``---`` block is front matter; return (meta, lines to skip).
+
+    It is front matter when it holds a ``docs:`` line, or else parses as a YAML mapping and
+    carries no anchor tag. Otherwise it is body text (between horizontal rules, as before
+    LS3) and is scanned like the rest. A block with a ``docs:`` line that cannot be read is
+    an error.
+    """
+    if front is None:
+        return None, 0
+    meant = any(line.startswith("docs:") for line in front.split("\n"))
+    if not meant and TAG_RE.search(front):
+        return None, 0
+    if spec_check is None:
+        if meant:
+            report.add("error", 1, "spec front matter cannot be read: board-expert's "
+                                   f"spec_check.py was not found at {board_expert_scripts()} "
+                                   "(install board-expert beside this skill)")
+            return None, skip
+        return None, 0
+    try:
+        meta = spec_check.load_yaml(front, spec_check.pyyaml_available())
+    except Exception as exc:  # noqa: BLE001
+        if meant:
+            report.add("error", 1, f"front matter does not parse: {exc}")
+            return None, skip
+        return None, 0
+    if not isinstance(meta, dict):
+        return None, 0
+    return meta, skip
+
+
+def read_docs_registry(front: str | None, meta: dict | None, report: Report) -> dict:
+    """Validate the front matter's ``docs:`` registry; return {name: entry}.
+
+    An entry keeps its name when other fields are wrong, so anchors citing it are judged on
+    their own; a malformed ``sha256`` is dropped (no hash check), a malformed ``pages``
+    ignored (no page check), each with its error.
+    """
+    if meta is None or "docs" not in meta:
+        return {}
+    docs_line = next((n + 2 for n, line in enumerate(front.split("\n"))
+                      if line.startswith("docs:")), 1)
+    entries = meta["docs"]
+    if entries is None:
+        entries = []
+    if not isinstance(entries, list):
+        report.add("error", docs_line, "docs: must be a list of documents (name, title, url, "
+                                       "sha256, optional pages and file)")
+        return {}
+    registry: dict = {}
+    for idx, entry in enumerate(entries, 1):
+        if not isinstance(entry, dict):
+            report.add("error", docs_line, f"docs: entry {idx} is not a mapping")
+            continue
+        name = entry.get("name")
+        line = entry_line(front, name, docs_line)
+        label = f"docs: entry {idx} ({name!r})" if isinstance(name, str) else f"docs: entry {idx}"
+
+        def bad(msg, label=label, line=line):
+            report.add("error", line, f"{label}: {msg}")
+
+        if not isinstance(name, str) or not re.fullmatch(PIN_NAME, name):
+            bad("name: must be a short identifier (letters, digits, '.', '_', '-'), as in "
+                "[doc:<name> p.N]")
+            continue
+        if name in registry:
+            bad(f"duplicate document name {name!r}: each document needs a distinct name")
+            continue
+        for key in ("title", "url"):
+            if not isinstance(entry.get(key), str) or not entry[key].strip():
+                bad(f"{key}: is required (a non-empty string)")
+        for key in entry:
+            if key not in DOC_KEYS:
+                report.add("warn", line, f"{label}: unknown key {key!r} (known: "
+                                         f"{', '.join(DOC_KEYS)})")
+        doc = {"name": name, "title": entry.get("title"), "url": entry.get("url"),
+               "sha256": None, "pages": None, "file": None, "line": line}
+        sha = entry.get("sha256")
+        if "sha256" not in entry:
+            bad("sha256: is required (the document file's SHA-256, 64 hex digits)")
+        elif not isinstance(sha, str) or not SHA256_RE.match(sha):
+            bad(f"sha256: {sha!r} is not 64 hex digits (quote it if it is all digits)")
+        else:
+            doc["sha256"] = sha.lower()
+        if "pages" in entry:
+            pages = entry["pages"]
+            if isinstance(pages, bool) or not isinstance(pages, int) or pages < 1:
+                bad(f"pages: {pages!r} is not a positive page count")
+            else:
+                doc["pages"] = pages
+        if "file" in entry:
+            rel = entry["file"]
+            parts = Path(rel).parts if isinstance(rel, str) else ()
+            if not isinstance(rel, str) or not rel.strip() or Path(rel).is_absolute() \
+                    or ".." in parts:
+                bad(f"file: {rel!r} must be a relative path inside --docs-dir")
+            else:
+                doc["file"] = rel
+        registry[name] = doc
+    report.docs = list(registry.values())
+    return registry
+
+
+def check_doc_anchors(report: Report, registry: dict) -> None:
+    """Every named doc anchor must name a listed document, at a page within it."""
+    listed = ", ".join(registry) or "none"
+    for a in report.doc_anchors:
+        doc = registry.get(a.name)
+        if doc is None:
+            report.add("error", a.spec_line, f"[doc:{a.raw}] names document {a.name!r}, but "
+                                             f"the spec's docs: registry lists: {listed} (for "
+                                             "an unnamed citation put a space after 'doc:')",
+                       a.raw)
+            continue
+        if doc["pages"] is None:
+            continue
+        for first, last in a.pages:
+            if last > doc["pages"]:
+                shown = f"page {first}" if first == last else f"pages {first}-{last}"
+                report.add("error", a.spec_line,
+                           f"[doc:{a.raw}] cites {shown}, but document {a.name!r} "
+                           f"({doc['title']}) has {doc['pages']} pages", a.raw)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def check_doc_hashes(report: Report, registry: dict, docs_dir: str) -> None:
+    """Hash each listed document's local file under docs_dir against its sha256."""
+    for doc in registry.values():
+        if doc["sha256"] is None:
+            continue  # malformed or missing: already an error
+        rel = doc["file"] or f"{doc['name']}.pdf"
+        path = Path(docs_dir) / rel
+        if not path.is_file():
+            report.add("warn", doc["line"], f"document {doc['name']!r}: {path} not found; "
+                                            "hash not checked")
+            continue
+        actual = sha256_file(path)
+        if actual != doc["sha256"]:
+            report.add("error", doc["line"],
+                       f"document {doc['name']!r} ({doc['title']}): {path} has sha256 {actual}, "
+                       f"but the registry records {doc['sha256']}")
+
+
+def require_named_docs(report: Report, root: str) -> None:
+    """In a root that accepts no source, every [doc:] tag must name a listed document."""
+    for line, body in report.unnamed_docs:
+        report.add("error", line,
+                   f"unnamed [doc: {body[:60]}]: root {root} accepts no source, so documents "
+                   "are its specs' only provenance and --require-license requires named ones: "
+                   "list the document under docs: in the front matter and cite "
+                   "[doc:<name> p.N]")
 
 
 # --------------------------------------------------------------------------- main
@@ -719,6 +998,13 @@ def main(argv=None) -> int:
     ap.add_argument("--root", metavar="DIR",
                     help="license gate: fail anchors whose pin's license DIR's board-specs.yaml "
                          "does not list in accepts:")
+    ap.add_argument("--require-license", action="store_true",
+                    help="with --root: DIR's marker must state license: as well as accepts:, "
+                         "and in a root that accepts no source every [doc:] tag must name a "
+                         "document from the spec's docs: registry")
+    ap.add_argument("--docs-dir", metavar="DIR",
+                    help="hash each document in the spec's docs: registry from DIR/<file> "
+                         "(default DIR/<name>.pdf) and fail on a mismatch; nothing is fetched")
     ap.add_argument("--strict", action="store_true",
                     help="every table row and list item must carry a tag, not just hex/bit facts")
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
@@ -731,10 +1017,22 @@ def main(argv=None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
 
-    report = Report(spec=args.spec)
-    anchors = parse_spec(text, report, args.strict)
+    if args.require_license and not args.root:
+        print("error: --require-license needs --root DIR", file=sys.stderr)
+        return 2
+    if args.docs_dir and not Path(args.docs_dir).is_dir():
+        print(f"error: --docs-dir {args.docs_dir} is not a directory", file=sys.stderr)
+        return 2
 
+    report = Report(spec=args.spec)
     tools = load_license_tools()
+    front, skip = split_front_matter(text)
+    meta, skip = read_front_matter(front, skip, report, tools[1] if tools else None)
+    anchors = parse_spec(text, report, args.strict, skip)
+    registry = read_docs_registry(front, meta, report)
+    check_doc_anchors(report, registry)
+    if args.docs_dir:
+        check_doc_hashes(report, registry, args.docs_dir)
     if tools is None:
         if args.root:
             print(f"error: --root needs board-expert's scripts beside this skill "
@@ -753,11 +1051,13 @@ def main(argv=None) -> int:
     accepts = None
     if args.root:
         try:
-            accepts = read_root_accepts(args.root, tools[1], report)
+            accepts = read_root_accepts(args.root, tools[1], report, args.require_license)
         except SystemExit as e:
             print(e, file=sys.stderr)
             return 2
         report.license_gate = {"root": args.root, "accepts": list(accepts or ())}
+        if args.require_license and accepts is not None and not accepts:
+            require_named_docs(report, args.root)
 
     if args.rewrite and not args.drift:
         print("error: --rewrite needs --drift REV", file=sys.stderr)

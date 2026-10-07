@@ -21,6 +21,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [LS12 — Consumers updated](LS12.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; `fuchsia-skills`, `bringup-kit`, `public-skills` and this marketplace entry follow
+the new names and repositories; `rpi-expert` had no successor and its handoffs were reworded; a
+reviewer found two low items, both fixed.
+
 ### [LS11 — Firewall by name](LS11.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; the implementer's hook denies four dirty-side names however installed, with the

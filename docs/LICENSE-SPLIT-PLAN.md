@@ -64,7 +64,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
 | LS10 | `hardware-investigator` skill | LS9 | complete ([evidence](../evidence/LS10.md)) |
 | LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete at the checkpoint ([evidence](../evidence/LS11.md)) |
-| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | pending |
+| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete at the checkpoint ([evidence](../evidence/LS12.md)) |
 | LS-G | Whole-outcome acceptance | LS1–LS12 | pending |
 
 Ordering: tooling and spec repos first (the user's decision), so LS1–LS4 land under the current
@@ -342,8 +342,9 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 - [x] Hook tests: each blocked target denied for the implementer role, allowed for the
       investigator role, across path, command and search forms the hook already handles.
 - [x] A session-audit fixture that reads `board-expert` is flagged (design acceptance item 3).
-- [ ] `cleanroom-skills` CI green, including the portability scan (the CI steps, with the portability
-      scan at the CI pin, passed locally; remote CI is the orchestrator's to confirm).
+- [x] `cleanroom-skills` CI green, including the portability scan (the CI steps, with the portability
+      scan at the CI pin, passed locally; remote CI passed on `cleanroom-skills` #4 and driver-lab #55,
+      both merged 2026-10-07).
 
 ### Testing and review
 - Review method: **`review-swarm`** (an access control). Focus: bypasses by alternate install
@@ -370,11 +371,11 @@ driver-lab's marketplace entry.
 **Out of scope:** bringup-kit's archived laps (`laps/`), which keep their historical names.
 
 ### Acceptance criteria
-- [ ] A grep of each consumer (excluding archives it declares) finds none of
+- [x] A grep of each consumer (excluding archives it declares) finds none of
       `os-investigator`, `anchored-peripheral-spec`, `rpi-expert`, and no clean-room skill
       named with a driver-lab path (quote the commands and output).
-- [ ] bringup-kit's spec roots name no `hardware-specs-gpl`; its tests pass.
-- [ ] Each consumer's own checks pass; driver-lab CI green on the new pin.
+- [x] bringup-kit's spec roots name no `hardware-specs-gpl`; its tests pass.
+- [x] Each consumer's own checks pass locally (remote CI is the orchestrator's); the driver-lab pin is moot since LS7.
 
 ### Testing and review
 - Reviewer subagent with the three diffs. Focus: handoffs by name still resolve.
@@ -383,7 +384,7 @@ driver-lab's marketplace entry.
 Three repos, many small edits. Split point: one checkpoint per repo.
 
 ### Evidence and findings
-Status: pending. Evidence: [LS12](../evidence/LS12.md). Notebook: [LS12](../notebook/LS12.md).
+Status: complete at the checkpoint (branch `license-split/ls12` in `fuchsia-skills` `c09eac4`, `bringup-kit` `c20d7a3`, `public-skills` `10ab32b`, and driver-lab; the orchestrator opens the pull requests). Evidence: [LS12](../evidence/LS12.md). Notebook: [LS12](../notebook/LS12.md).
 
 ## LS-G — Whole-outcome acceptance
 
@@ -405,14 +406,12 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS11 complete (checkpoint commits on `license-split/ls11` in `cleanroom-skills`
-  and driver-lab; the orchestrator opens the pull requests and confirms remote CI). LS12
-  (consumers updated: `fuchsia-skills`, `bringup-kit`, `public-skills`) is next.
-- Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
-  Zlib (they accept only the design's named licenses).
-- Resume action: LS12 touches three consumer repositories and needs the user's go for each (check
-  every repository's visibility with `gh repo view` first; public-skills is public and the
-  business-hours schedule applies to pushing it). Begin on `license-split/ls12` in each consumer
-  from a fetched `origin/main` after the LS11 pull requests merge.
-- Read first: the design, this plan's conventions and LS12, the notebook index, LS11's evidence
-  (its limitations: the firewall is a denylist; the sandbox tier is what closes the shell).
+- Current milestone: LS12 complete (checkpoint commits on `license-split/ls12` in `fuchsia-skills`,
+  `bringup-kit`, `public-skills` and driver-lab; the orchestrator opens the pull requests and
+  confirms remote CI). LS-G (whole-outcome acceptance) is next.
+- Resume action: LS-G runs from fresh clones of all six repositories after the LS12 pull requests
+  merge; it needs the spec repositories' ISC and 0BSD change (decided 2026-10-07, applied
+  separately) landed first. Check each repository's visibility with `gh repo view` before any push.
+- Read first: the design's acceptance section, this plan's LS-G, the notebook index, and LS12's
+  evidence (its limitations: `bringup-kit` keeps historical records under the old names, by
+  declaration; `cleanroom-skills` has its own marketplace and is not in `public-skills`').

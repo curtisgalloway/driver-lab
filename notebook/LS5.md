@@ -125,3 +125,11 @@ MIT, BSD-2-Clause, BSD-3-Clause]`, GPL the same plus GPL-2.0-only and GPL-2.0-or
 later breaks nothing that is published; narrowing after publication could. Raised with the
 orchestrator as a question for the user. The driver-lab fixture roots keep their wider lists
 (they test the parser on more identifiers).
+
+### 2026-10-06T17:31-07:00 — checkpoint (closing): published
+
+Orchestrator: PR #48 merged as `5d7eac2`; each repository's `DRIVER_LAB_PIN` replaced with it,
+`scripts/checks.sh all` rerun against driver-lab at that commit (all exit 0), the single
+unpublished commits amended; `hardware-specs-docs`, then `-gpl` and `-permissive` created
+public and pushed. First CI runs green (docs 37552264900, gpl 37552281514, permissive
+37552293363), self-test lines quoted in the evidence. LS5 complete.

@@ -19,11 +19,12 @@ Design: [LICENSE-SPLIT.md](../docs/LICENSE-SPLIT.md) (LS-R11, LS-R12; proves LS-
 [LS5](../notebook/LS5.md). Starting revision `85fa05b` (origin/main, LS1–LS4 merged); no
 pre-existing changes.
 
-**Status: in progress: awaiting publication.** Everything up to publication is done and
-reviewed: the three repositories exist as local single-commit checkouts, and their CI steps pass
-locally against this branch, each self-test failing the misfit with the gate's message and
-passing the fit. Creating the public repositories, pinning their CI to this milestone's merge
-commit and pushing are left to the orchestrator (rows marked *pending* below).
+**Status: complete** (published 2026-10-06 by the orchestrator). The three repositories are
+public on GitHub, their CI pins driver-lab at this milestone's merge commit `5d7eac2`, and each
+first CI run is green with its self-test failing the misfit with the gate's message and passing
+the fit. Before publication the orchestrator replaced the pin placeholder, reran each repository's
+`scripts/checks.sh all` against driver-lab at `5d7eac2` (all exit 0), and amended each
+repository's single unpublished commit.
 
 ```text
 hardware-specs-docs, scripts/checks.sh self-test (local):
@@ -91,8 +92,8 @@ can satisfy it.
 
 | Criterion | Evidence and result |
 | --- | --- |
-| All three repos exist, public, CI green on `main` | **Pending (orchestrator).** Locally, every step exits 0 in each repository against this branch: `ls5-local-ci-hardware-specs-{gpl,docs,permissive}.log` (session scratch). |
-| Each self-test shows the misfit failing with the gate's message and the fit passing | **Met locally; CI log lines pending.** Local lines: gpl `misfit gpl3-only-spec.md failed as required (exit 1)` with `… cites source pin 'gnutool' (GPL-3.0-only), which root <tmp>/anchors does not accept (accepts: GPL-2.0-only, GPL-2.0-or-later, Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause)`; docs as quoted above; permissive `… pin 'linux' (GPL-2.0-only), which root <tmp>/anchors does not accept (accepts: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause)`; each board misfit `license gate: repos entry …`; each fit `passed (exit 0)`. |
+| All three repos exist, public, CI green on `main` | **Met.** `gh repo view --json isPrivate,visibility` gives `{"isPrivate":false,"visibility":"PUBLIC"}` for each; first CI runs `completed success`: docs `45b449d`, run 37552264900; gpl `729b485`, run 37552281514; permissive `f45ac7e`, run 37552293363. |
+| Each self-test shows the misfit failing with the gate's message and the fit passing | **Met in CI.** From the GitHub logs: docs `self-test: misfit gpl-only-spec.md failed as required (exit 1)` with `… cites source pin 'linux' (GPL-2.0-only), which root <tmp>/anchors does not accept (accepts: none)` and `self-test: fit docs-named-spec.md passed (exit 0)`; gpl and permissive as below, plus `self-test: overlay without the second root failed as required (exit 1)` in permissive. Local lines, the same: Local lines: gpl `misfit gpl3-only-spec.md failed as required (exit 1)` with `… cites source pin 'gnutool' (GPL-3.0-only), which root <tmp>/anchors does not accept (accepts: GPL-2.0-only, GPL-2.0-or-later, Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause)`; docs as quoted above; permissive `… pin 'linux' (GPL-2.0-only), which root <tmp>/anchors does not accept (accepts: Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause)`; each board misfit `license gate: repos entry …`; each fit `passed (exit 0)`. |
 | The self-test can fail | Flipping markers in scratch copies fails it (`misfit gpl3-only-spec.md exited 0, expected 1`; docs likewise); the reviewer reproduced six ways, including origin/main's `spec_check.py` (`misfit widgetchip-gpl3-overlay.spec.md exited 0, expected 1`). |
 | Board-spec gate: new tests fail on the old script | origin/main's `spec_check.py` swapped in, then restored and compared with `cmp` (`ls5-old-scripts.log`): `FAILED (failures=13, skipped=1)`, every gate test failing; the four characterization tests (no flag, accepted licenses, an invalid license reported once, cross-root overlay resolution) pass. The shipped-marker test fails with origin/main's marker and the fixture-pair tests with origin/main's fixtures (`ls5-old-fixtures.log`). |
 | No private infrastructure in any file or commit message | `check-no-private-paths.py` from each repository: `OK: 7 tracked files`, `OK: 8`, `OK: 8`; a grep of files and `git log --format=%B` for host names, addresses, user names and home paths finds nothing. |
@@ -132,7 +133,6 @@ The fixes were checked by rerunning the local CI and the scratch probes above; n
 
 ## Limitations
 
-- Publication is pending: no repository exists on GitHub yet and no CI has run there.
 - CI resolves no `[src:]` anchor against its tree (it has no checkout of the cited sources); it
   checks form, pins and licenses. Resolution is part of verification.
 - Board-spec facts tagged `[inference]` or `[press]` pass the checks in every repository; whether

@@ -57,7 +57,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS2 | Root license fields and the license gate | LS1 | complete ([evidence](../evidence/LS2.md)) |
 | LS3 | Checkable doc anchors | LS1 | complete ([evidence](../evidence/LS3.md)) |
 | LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](../evidence/LS4.md)) |
-| LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | in progress: awaiting publication ([evidence](../evidence/LS5.md)) |
+| LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](../evidence/LS5.md)) |
 | LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | pending |
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | pending |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | pending |
@@ -211,12 +211,11 @@ Three small repos of the same shape; the uncertainty is CI wiring. Split point: 
 repos first, permissive (with the second-root checkout) as a second checkpoint.
 
 ### Evidence and findings
-Status: **in progress: awaiting publication.** Prepared and reviewed: the board-spec license gate
-in `spec_check.py --require-license` and the shipped root's license fields (the user's decisions
-of 2026-10-06), self-test fixtures, and the three repositories as local single-commit checkouts
-whose checks pass against this branch. Pending (orchestrator): replace each workflow's
-`DRIVER_LAB_PIN` with this milestone's merge commit, create the three public repositories, push
-(docs before permissive), and record visibility and green CI in the evidence.
+Status: **complete.** The board-spec license gate in `spec_check.py --require-license` and the
+shipped root's license fields (the user's decisions of 2026-10-06); `hardware-specs-gpl`,
+`hardware-specs-docs` and `hardware-specs-permissive` public, CI pinned to driver-lab `5d7eac2`
+and green, each self-test failing its misfit with the gate's message.
+Open limitation: CI checks form, pins and licenses, not `[src:]` resolution (no source checkout).
 Evidence: [LS5](../evidence/LS5.md). Notebook: [LS5](../notebook/LS5.md).
 
 ## LS6 — `cleanroom-skills` created with history
@@ -476,17 +475,11 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: **LS5, in progress: awaiting publication.** The driver-lab part is the
-  checkpoint commit `driver-porting: LS5 — spec repositories prepared; board-spec license gate` on
-  `license-split/ls5`; the three repositories are local single-commit checkouts beside driver-lab.
-- Left for LS5 (orchestrator, with the user's go already given): merge this branch; replace the
-  line `ref: DRIVER_LAB_PIN  # replaced at push` in each repository's
-  `.github/workflows/checks.yml` with the merge commit; create the three public repositories;
-  push `hardware-specs-docs` before `hardware-specs-permissive` (whose CI checks out the docs
-  repository's `main`); record `gh repo view --json visibility` and green CI with the self-test
-  lines in [LS5's evidence](../evidence/LS5.md).
+- Current milestone: LS5 complete; LS6 (`cleanroom-skills`) is next and needs the user's go to
+  create that public repository.
 - Open question for the user: the spec repositories accept only the design's named licenses
   (`Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`, plus GPL-2.0 in the GPL repository);
   whether to add ISC, 0BSD, X11 or Zlib.
-- Then: LS6 (`cleanroom-skills`), which needs its own go to create the repository.
-- Read first: the design, this plan's conventions and LS6, the notebook index, LS5's evidence.
+- Resume action: begin **LS6** on `license-split/ls6` from a fetched `origin/main`.
+- Read first: the design, this plan's conventions and LS6, the notebook index, TRANSITION.md (the
+  commit-map approach), and the three skill directories that move.

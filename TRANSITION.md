@@ -5,6 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Moving driver-porting to its own repository
 
+> **Frozen archive.** This record is kept as history of the work before driver-lab's license split
+> (2026-10-06) and is no longer updated. The clean-room skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 Written 2026-09-24, when the user decided to move this work out of `public-skills`. It is the
 starting point for whoever sets up the new repository, person or agent: what moves, what it
 leans on that stays behind, where the work stands, and what to do first.

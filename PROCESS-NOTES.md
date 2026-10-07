@@ -499,3 +499,13 @@ Cost: a few minutes deciding; no rework.
 Prevention: write an acceptance grep and the wording it is meant to allow together, and check
 the allowed wording against the pattern.
 Fix belongs in: the project-plan skill (acceptance criteria phrased as greps).
+
+### 2026-10-06T18:21-07:00 — notebook opened after the work, again
+Chapter: [LS8](notebook/LS8.md)
+What happened: the LS8 chapter was first written after `DESIGN.md`'s move had been drafted and
+the check script written, so its opening and decision entries carry the time of writing, not
+of the decisions (the 2026-09-24 entry "notebook opened mid-unit" recorded the same pattern).
+Cost: the decisions' times are lost; the content was recoverable from the scratch move list.
+Prevention: write the opening entry before the first edit, as the first tool call of a unit.
+Fix belongs in: the project-plan skill (session start: open the chapter before reading the
+code to be changed).

@@ -5,6 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 
 # ENC28J60 pilot
 
+> **Frozen archive.** This campaign (every file under `evals/enc28j60/`) is kept as history of the
+> work before driver-lab's license split (2026-10-06) and is no longer updated. The clean-room
+> skills it names now live in
+> [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills), with their
+> [design](https://github.com/curtisgalloway/cleanroom-skills/blob/main/DESIGN.md), and new
+> evaluation rounds run from there. Names and paths below are as they were then (`os-investigator`
+> is now `cleanroom-investigator`). See the [license-split design](../../docs/LICENSE-SPLIT.md),
+> requirement LS-R20.
+
 The calibration device for the driver-spec evaluation in `../../EVAL-PLAN.md`. The ENC28J60 is a
 small SPI Ethernet controller with fully public documentation. The pilot gets the ledger format,
 the scoring and the test quality right on something cheap before the method is pointed at a

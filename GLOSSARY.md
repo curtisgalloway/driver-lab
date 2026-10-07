@@ -32,7 +32,6 @@ evaluation; add other terms as the documents that use them are updated.
 | Mux | A selector that routes a connection; its selected mode can change which setup steps apply. |
 | GIC | Arm's Generic Interrupt Controller, which routes interrupt requests to processor cores. |
 | Requirement ledger | The independently authored answer key of hardware requirements used for evaluation scoring; called the ledger in evaluation documents. |
-| Provenance ledger | A record of where facts came from and what crossed the clean-room boundary; distinct from the evaluation answer key. |
 | Candidate | The generated specification or driver being evaluated. |
 | Reference driver | The existing driver selected as comparison evidence; it can contain defects. |
 | Corroborating implementation | Another OS's driver for the same device (Zephyr, NuttX, FreeBSD, …), used only as completeness evidence after its lineage and hardware version are checked; not an authority on the hardware. |
@@ -78,19 +77,16 @@ evaluation; add other terms as the documents that use them are updated.
 | Test model | A simplified executable description of expected behavior; its assumptions also need validation. |
 | Convergence | Progress toward predefined acceptance conditions as defects and uncertainty are resolved; repeated agreement alone does not establish correctness. |
 | Adjudication | Resolving conflicting readings of evidence, with unresolved questions kept explicit. |
-| Clean-room boundary | Separation of source-reading and implementation contexts, controlling which evidence crosses. |
 | SPI | Serial Peripheral Interface in bus discussions; Shared Peripheral Interrupt in Arm GIC descriptions. |
 | Erratum | A documented hardware defect or deviation, often specific to a device revision. |
 | Blind requirement list | Requirements written from a device manual before any spec exists, used afterward to measure what the spec left out; the e1000 list is `evals/e1000/requirements.yaml`. |
-| Transfer review | The clean-room gate a spec passes before anyone else may read it: a mechanical leak scan plus checks for copied code, structure, attractants, and the usage notice. It does not judge accuracy. |
-| Attractant | Anything in a clean-room spec that would pull a reader back to the encumbered source, such as a source file path or "the driver does X in function Y" narration. |
 | SDM | The Intel 8254x Software Developer's Manual (document 317453-006, revision 4.0), the e1000 hardware reference. |
 | Operator | In the driver-porting runs, the coordinating agent session that prepares inputs and briefs, launches the other agents, and writes the evidence; it writes no driver code. |
 | Review swarm | The `review-swarm` skill: four reviewer agents with narrow mandates, a mechanical check that drops findings not quotable from the code, and a referee. |
 | Lab notebook | Append-only, timestamped notes per unit of work (chapters) plus an index, kept as the work happens (`lab-notebook` skill); the driver-porting notebook is `notebook/`. |
 | Process log | A per-project log of where the agent's process cost time, as input for improving instructions and skills; for driver-porting, `PROCESS-NOTES.md`. |
-| Bubblewrap (`bwrap`) | A Linux tool that runs a program in a private view of the file system, showing it only the directories it is given; the clean-room sandbox (`cleanroom_sandbox.sh`) is built on it. |
-| strace | A Linux tool that logs the system calls a program and its children make (files opened, programs run, network connections); `sandbox_audit.py` reads its log. |
+| Bubblewrap (`bwrap`) | A Linux tool that runs a program in a private view of the file system, showing it only the directories it is given; L02's implementer sandbox was built on it. |
+| strace | A Linux tool that logs the system calls a program and its children make (files opened, programs run, network connections); L02's implementer audit read its log. |
 | Canary | A file planted in the workspace and read in a pilot run, to prove the audit log records the agent's reads before the log is trusted. |
 | Repair round | In L02f2, one repair of the candidate by the implementer, then the command-log audit, a build, and an isolated rerun of every scenario. |
 | Receive hold | QEMU's e1000 model delivers no received frame for one second after any write to RCTL; not described in the manual (L02f2, V6). |
@@ -100,7 +96,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Spec gap / spec error | A question a spec leaves unanswered, filed by an implementer / a place where the spec is wrong. |
 | Spec revision | A numbered, hashed version of a spec; each is verified before use, and a change produces a new revision rather than an edit in place (L02s made revision 5). |
 | MAC / PHY | The two halves of an Ethernet controller: the MAC moves frames between memory and the link logic; the PHY drives the wire, negotiates speed and duplex, and reports link and carrier. On the 82540EM the PHY is internal and reached through the MDIC register. |
-| Run ledger | The private per-run record in the run store: identities, commands, artifacts, attempts and reviewer references. Public evidence files cite it by run ID; distinct from the requirement ledger and the provenance ledger. |
+| Run ledger | The private per-run record in the run store: identities, commands, artifacts, attempts and reviewer references. Public evidence files cite it by run ID; distinct from the requirement ledger. |
 | Settling interval | In the QEMU harness, a documented, bounded wait after carrier returns and before recovery pings, longer than the model's receive hold plus a margin and confirmed from traces (L02f2b). |
 | Acceptance stage | The closing part of L02f3 (formerly the separate unit L02g): a final isolated run set, the A1–A7 acceptance table, and an independent review. |
 | Basis | The identities a verdict rests on: spec revision and sections read, source pins, harness, emulator or fixture, candidate build and toolchain, the model that read or implemented, and run IDs (continuous review, proposed 2026-09-26). |
@@ -136,9 +132,8 @@ evaluation; add other terms as the documents that use them are updated.
 | License gate | The check that fails a spec citing a source whose license the root's accepts list does not include: `anchor_check.py --root` for a peripheral spec's pins, `spec_check.py --require-license` for a board spec's `resources.repos` licenses. |
 | Placement rule | A spec lives in the most restrictive repository among the sources it anchors to, and never cites a source more restrictive than that repository. |
 | Spec repositories | `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`: the three public homes for specs, by license. |
-| `cleanroom-skills` | The repository and plugin holding the clean-room skills, split out of driver-lab; it depends on driver-lab, never the reverse. |
+| Open side | driver-lab outside its frozen archive since the license split: the method for specs that cite their sources and are published where their licenses fit. |
 | Frozen archive | The parts of driver-lab kept as history after the split (evals, evidence, notebook and the documents describing them); still checked by CI, no new rounds. |
 | SPDX | The standard short identifiers for licenses (`GPL-2.0-only`, `MIT`, `CC-BY-4.0`) and expressions combining them with `OR`, `AND` and `WITH`. |
 | Named pin | One of several pins in a spec, each with its own name and SPDX license (`Source pin: linux@abc123 GPL-2.0-only`); an anchor names the pin it resolves against (`[src:linux: drivers/net/foo.c:120]`). |
 | Docs registry / named doc anchor | A `docs:` list in a peripheral spec's front matter giving each cited document a name, title, URL and SHA-256 hash / a citation of a listed document by name and page or section (`[doc:trm p.12]`, no space after `doc:`), which `anchor_check.py` checks. Distinct from a board spec's `resources.docs`. |
-| Provenance attestation | `PROVENANCE.md`, filled by `cleanroom-spec` for each landed spec: who ran the method, the sources behind the wall, which agent saw what, pins, verifier reports and the spec's hash. The user's private record, never published; distinct from the provenance ledger, which it cites. |

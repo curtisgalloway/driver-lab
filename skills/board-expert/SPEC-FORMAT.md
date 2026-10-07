@@ -29,8 +29,9 @@ stated here; the skills point at this file instead of restating it.
   questions. See `QUESTIONS.md`.
 - **Root** — a directory holding a `board-specs.yaml` marker. Every `*.spec.md` below it is a spec.
 - **Accepts list / license gate / placement rule** — a root marker's `accepts:` names the SPDX
-  licenses its anchored specs' sources may carry; the license gate (`anchor_check.py --root`)
-  fails a spec citing a source the list does not include; the placement rule says which
+  licenses its specs' sources may carry; the license gate (`anchor_check.py --root` for
+  peripheral specs, `spec_check.py --require-license` for board specs' `resources.repos`) fails
+  a spec citing a source the list does not include; the placement rule says which
   repository a spec belongs in. **SPDX** is the standard license-identifier language
   (`GPL-2.0-only`, `GPL-2.0 OR MIT`). See *The root marker*, and driver-lab's `GLOSSARY.md`.
 - **Peripheral spec** — a spec of one device's programming model whose facts are anchored to
@@ -155,6 +156,12 @@ spec goes".
 - A marker without these fields still loads, with a warning for each, so older roots (a marker with
   only `layer`) keep working. `spec_check.py --require-license` makes their absence an error; the
   spec repositories run with it.
+- `spec_check.py --require-license` is also the license gate for board specs: a
+  `resources.repos` entry whose `license:` the root's `accepts:` does not accept is an error
+  (`license gate: repos entry 'fw' (GPL-2.0-only), which root … does not accept (accepts: …)`),
+  with the same rules as the anchor gate (`OR` passes when either side is accepted, `AND` only
+  when every part is). Overlays are gated by the root they live in. Without the flag, a repos
+  license is validated as SPDX but not compared with `accepts:`.
 - `anchor_check.py --root <dir>` (`anchored-peripheral-spec`) is the **license gate**: it fails
   every anchor whose pin's license `<dir>`'s `accepts:` does not list, and fails outright when the
   marker has no `accepts:`. Its own `--require-license` also requires the marker's `license:` and,
@@ -563,7 +570,8 @@ These are `os-investigator`'s caching rule applied to a file that may sit in the
 - `access: internal`, or a `via:` naming a skill outside the public set, under a `public` root;
 - a marker `license:` that is not an SPDX expression or an `accepts:` that is not a list of single
   SPDX identifiers (with `--require-license`, a marker missing either); a `resources.repos` entry
-  whose `license:` is not an SPDX expression, or that has none in a root that declares `accepts:`;
+  whose `license:` is not an SPDX expression, or that has none in a root that declares `accepts:`,
+  or (with `--require-license`) whose license the root's `accepts:` does not accept;
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
   `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
   `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires

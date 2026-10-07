@@ -35,7 +35,10 @@ What fails (exit 1):
     ``--require-license``, a marker without either field
   * a ``resources.repos`` entry whose ``license:`` is not an SPDX expression;
     in a root whose marker declares ``accepts:``, a repos entry with no
-    ``license:`` at all
+    ``license:`` at all; with ``--require-license``, a repos entry whose
+    ``license:`` the root's ``accepts:`` does not accept (the board-spec license
+    gate: ``A OR B`` passes when either side is accepted, ``A AND B`` only when
+    both are, as in ``anchor_check.py --root``)
   * an ``ip`` spec with no ``docs`` entry marked ``cite: true``
   * a fact bullet that does not END with its tag clause (one or more
     ``[tag]``, each optionally followed by a parenthetical citation, then at
@@ -408,6 +411,8 @@ class Spec:
     body: str
     # The root marker's accepts list (canonical SPDX ids), or None when the root declares none.
     accepts: tuple | None = None
+    # --require-license: resources.repos licenses must be in accepts (the board-spec gate).
+    gate: bool = False
 
     @property
     def is_overlay(self) -> bool:
@@ -511,7 +516,7 @@ def load_specs(
             if not isinstance(meta, dict):
                 findings.append(Finding("error", str(path), "frontmatter is not a mapping"))
                 continue
-            specs.append(Spec(path, root, layer, meta, m.group(2), accepts))
+            specs.append(Spec(path, root, layer, meta, m.group(2), accepts, require_license))
     return specs, preconditions
 
 
@@ -706,13 +711,30 @@ def check_resources(spec: Spec, findings: list[Finding]) -> None:
 
 
 def check_repo_license(spec: Spec, label: str, entry: dict, findings: list[Finding]) -> None:
-    """A repos entry's license is an SPDX expression; required when the root has accepts: (LS-R2)."""
+    """A repos entry's license is an SPDX expression; required when the root has accepts: (LS-R2).
+
+    Under --require-license it must also be accepted by the root's accepts: list (the
+    board-spec license gate, decided by the user on 2026-10-06), by the same rule as
+    anchor_check.py's gate. A root with no accepts: is already an error there.
+    """
     p = str(spec.path)
     if "license" in entry:
         try:
-            spdx.parse(entry["license"])
+            tree = spdx.parse(entry["license"])
         except spdx.SpdxError as exc:
             findings.append(Finding("error", p, f"repos entry {label!r}: license: {exc}"))
+            return
+        if spec.gate and spec.accepts is not None and not spdx.accepted(tree, spec.accepts):
+            listed = ", ".join(spec.accepts) or "none"
+            findings.append(
+                Finding(
+                    "error",
+                    p,
+                    f"license gate: repos entry {label!r} ({entry['license']}), which root "
+                    f"{spec.root} does not accept (accepts: {listed}); cite it from a root that "
+                    "accepts it, or drop it",
+                )
+            )
     elif spec.accepts is not None:
         findings.append(
             Finding(
@@ -1069,7 +1091,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--require-license",
         action="store_true",
-        help="a root marker without license: or accepts: is an error instead of a warning",
+        help="a root marker without license: or accepts: is an error instead of a warning, "
+        "and a resources.repos license the root's accepts: does not accept is an error",
     )
     parser.add_argument("--no-pyyaml", action="store_true", help="force the subset parser")
     parser.add_argument("--json", action="store_true", help="machine-readable output")

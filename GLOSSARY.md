@@ -133,7 +133,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Overlay | A spec in one root that adds to or corrects a spec of the same ID in another root, without copying it. |
 | Pin | A spec line naming a source tree and its commit (`Source pin: linux@abc123`); anchors cite lines at that commit. |
 | Accepts list | The SPDX license identifiers a spec root allows its anchored sources to carry (`accepts:` in the root marker). |
-| License gate | The `anchor_check.py` check that fails a spec citing a source whose license the root's accepts list does not include. |
+| License gate | The check that fails a spec citing a source whose license the root's accepts list does not include: `anchor_check.py --root` for a peripheral spec's pins, `spec_check.py --require-license` for a board spec's `resources.repos` licenses. |
 | Placement rule | A spec lives in the most restrictive repository among the sources it anchors to, and never cites a source more restrictive than that repository. |
 | Spec repositories | `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`: the three public homes for specs, by license. |
 | `cleanroom-skills` | The repository and plugin holding the clean-room skills, split out of driver-lab; it depends on driver-lab, never the reverse. |

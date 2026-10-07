@@ -466,3 +466,24 @@ Prevention: run repository checks from the worktree (`cd` once, or a script with
 as its working directory), and read the file count.
 Fix belongs in: project instructions (AGENTS.md, Checks) or the script (resolve the repository
 from its own path).
+
+### 2026-10-06T17:17-07:00 — a self-test pattern that matched an informational line
+Chapter: [LS5](notebook/LS5.md)
+What happened: the spec repositories' self-test first accepted a misfit when its output
+contained `license gate:` and the exit code was 1. `anchor_check.py --root` prints
+`license gate: root … accepts: …` for every spec, so a misfit failing for any other reason
+would have passed the self-test as a gate failure. Seen while reading the first local log.
+Cost: none (caught before any commit); one rerun.
+Prevention: when a check greps output for proof, match the error line's own prefix, and run
+the check once against a passing case to see what the pattern also matches.
+Fix belongs in: the project-plan skill (testing gate: "shown able to fail" covers the pattern,
+not only the exit code).
+
+### 2026-10-06T17:17-07:00 — an EXIT trap on a local variable
+Chapter: [LS5](notebook/LS5.md)
+What happened: `scripts/checks.sh` set `trap 'rm -rf "$tmp"' EXIT` inside a function where
+`tmp` was `local`; under `set -u` the trap fired after the function returned and failed with
+`tmp: unbound variable`, turning a passing run into exit 1.
+Cost: one regeneration and rerun of the three repositories' checks.
+Prevention: a variable an `EXIT` trap reads must be global.
+Fix belongs in: user instructions (shell command style), if it recurs.

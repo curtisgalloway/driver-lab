@@ -10,6 +10,8 @@
   "two-pins-spec.md":           {"gpl": 0, "docs": 1, "permissive": 1},
   "uncited-gpl-pin-spec.md":    {"gpl": 0, "docs": 1, "permissive": 1},
   "docs-only-spec.md":          {"gpl": 0, "docs": 0, "permissive": 0},
+  "docs-named-spec.md":         {"gpl": 0, "docs": 0, "permissive": 0},
+  "gpl3-only-spec.md":          {"gpl": 1, "docs": 1, "permissive": 1},
   "unlicensed-pin-spec.md":     {"gpl": 1, "docs": 1, "permissive": 1},
   "no-pin-spec.md":             {"gpl": 1, "docs": 1, "permissive": 1},
   "invalid-license-spec.md":    {"gpl": 1, "docs": 1, "permissive": 1}

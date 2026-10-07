@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Synthetic target root shaped like hardware-specs-permissive, for the worked example.
+layer: public
+name: example-permissive
+license: Apache-2.0
+accepts: [Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]

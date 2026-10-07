@@ -36,6 +36,9 @@ jobs:
       - name: peripheral-spec tests
         run: python3 -m unittest discover -s skills/peripheral-spec/tests -v
 
+      - name: hardware-investigator tests
+        run: python3 -m unittest discover -s skills/hardware-investigator/tests -v
+
       - name: board specs
         run: |
           python3 skills/board-expert/scripts/spec_check.py \

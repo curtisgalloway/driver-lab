@@ -62,7 +62,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
-| LS10 | `hardware-investigator` skill | LS9 | pending |
+| LS10 | `hardware-investigator` skill | LS9 | complete ([evidence](../evidence/LS10.md)) |
 | LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | pending |
 | LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | pending |
 | LS-G | Whole-outcome acceptance | LS1–LS12 | pending |
@@ -279,7 +279,7 @@ path (a PR in each); `cleanroom-skills` references.
 
 ### Acceptance criteria
 - [x] No `anchored-peripheral-spec` outside the frozen archive and history (quote the grep).
-- [ ] The three spec repos' CI green on the new pin; `cleanroom-skills` CI green (run locally and passing; remote CI is the orchestrator's check after pushing).
+- [x] The three spec repos' CI green on the new pin; `cleanroom-skills` CI green (run locally and passing; the orchestrator confirmed on 2026-10-07 that all five LS9 pull requests' CI succeeded and that they merged: driver-lab #53, `cleanroom-skills` #3, and #1 in each of `hardware-specs-gpl`, `-docs` and `-permissive`).
 - [x] The full check list passes.
 
 ### Testing and review
@@ -289,7 +289,7 @@ path (a PR in each); `cleanroom-skills` references.
 Mechanical rename across four repos. Low uncertainty.
 
 ### Evidence and findings
-Status: complete at the checkpoint; spec-repo and `cleanroom-skills` CI are checked by the orchestrator after pushing. Evidence: [LS9](../evidence/LS9.md). Notebook: [LS9](../notebook/LS9.md).
+Status: complete; the orchestrator confirmed the five pull requests' CI green and merged them on 2026-10-07. Evidence: [LS9](../evidence/LS9.md). Notebook: [LS9](../notebook/LS9.md).
 
 ## LS10 — `hardware-investigator`
 
@@ -312,10 +312,10 @@ for `peripheral-spec`; refusing (with the reason) a source the target root does 
 4. README skill table and glossary.
 
 ### Acceptance criteria
-- [ ] A reviewer following the skill on the fixture produces anchored facts that pass
+- [x] A reviewer following the skill on the fixture produces anchored facts that pass
       `anchor_check.py --root` for an accepting root, and is told to stop for a refusing one.
-- [ ] The skill names no clean-room concept; `check-open-side.py` passes.
-- [ ] Portability: `portability_scan.py` on any new script passes.
+- [x] The skill names no clean-room concept; `check-open-side.py` passes.
+- [x] Portability: `portability_scan.py` on any new script passes.
 
 ### Testing and review
 - Reviewer subagent runs the worked example as written. Focus: the skill's instructions are
@@ -326,7 +326,7 @@ One new skill; uncertainty is in how much method to write. Split point: SKILL.md
 worked example before any helper script.
 
 ### Evidence and findings
-Status: pending. Evidence: [LS10](../evidence/LS10.md). Notebook: [LS10](../notebook/LS10.md).
+Status: complete at the checkpoint. Evidence: [LS10](../evidence/LS10.md). Notebook: [LS10](../notebook/LS10.md).
 
 ## LS11 — Firewall by name
 
@@ -404,12 +404,11 @@ cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/
 
 ## Next session
 
-- Current milestone: LS9 complete (checkpoint commits in driver-lab, `cleanroom-skills` and the
-  three spec repositories, each on `license-split/ls9`; the orchestrator opens a pull request in
-  each, driver-lab first with a merge commit because the spec repositories pin its commit).
-  LS10 (`hardware-investigator`) is next.
+- Current milestone: LS10 complete (checkpoint commit on `license-split/ls10`; the orchestrator
+  opens the pull request). LS11 (firewall by name, in `cleanroom-skills`) is next; every blocked
+  name now exists: `board-expert`, `hardware-investigator`, `cleanroom-investigator`.
 - Open question for the user: whether the spec repositories should also accept ISC, 0BSD, X11 or
   Zlib (they accept only the design's named licenses).
-- Resume action: begin **LS10** on `license-split/ls10` from a fetched `origin/main` after the
-  LS9 pull requests merge and their CI is green.
-- Read first: the design, this plan's conventions and LS10, the notebook index, LS9's evidence.
+- Resume action: begin **LS11** on `license-split/ls11` in `cleanroom-skills` from a fetched
+  `origin/main` after the LS10 pull request merges; its review method is `review-swarm`.
+- Read first: the design, this plan's conventions and LS11, the notebook index, LS10's evidence.

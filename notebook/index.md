@@ -21,6 +21,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [LS10 — `hardware-investigator`](LS10.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; skill, worked example on fixtures, and a thin `license_gate.py`; the license
+check is placed before reading a source, not only before citing it.
+
 ### [LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`](LS9.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; directory, name field, CI and check-list paths renamed in five repositories;

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Synthetic target root shaped like hardware-specs-gpl, for the worked example.
+layer: public
+name: example-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, GPL-2.0-or-later, Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause]

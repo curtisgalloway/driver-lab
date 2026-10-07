@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+"""Runs WORKED-EXAMPLE.md's three runs, so the fixtures and the expected facts cannot rot.
+
+Run:  python3 -m unittest discover -s skills/hardware-investigator/tests -v
+
+Builds the two fixture source trees as git repositories in a temporary directory, fills the
+expected facts files with the real commits, and checks the gate and ``anchor_check.py --root``
+exit codes the example promises.
+"""
+
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+
+HERE = pathlib.Path(__file__).resolve().parent
+SKILL = HERE.parent
+GATE = SKILL / "scripts" / "license_gate.py"
+ANCHOR = SKILL.parent / "peripheral-spec" / "scripts" / "anchor_check.py"
+EX = SKILL / "examples"
+
+
+def git(repo, *args):
+    return subprocess.run(
+        ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@example.com",
+         "-c", "commit.gpgsign=false", *args],
+        check=True, capture_output=True, text=True).stdout.strip()
+
+
+def py(script, *args):
+    proc = subprocess.run([sys.executable, str(script), *map(str, args)],
+                          capture_output=True, text=True)
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+class WorkedExample(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = pathlib.Path(tempfile.mkdtemp(prefix="hw-investigator-test-"))
+        cls.rev = {}
+        for name in ("widget-linux", "widget-fw"):
+            dest = cls.tmp / name
+            shutil.copytree(EX / "sources" / name, dest)
+            git(dest, "init", "-q")
+            git(dest, "add", ".")
+            git(dest, "commit", "-q", "-m", "fixture")
+            cls.rev[name] = git(dest, "rev-parse", "HEAD")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, ignore_errors=True)
+
+    def facts(self, answer, name):
+        text = (EX / "expected" / answer).read_text().replace("@REV", "@" + self.rev[name])
+        path = self.tmp / answer
+        path.write_text(text)
+        return path
+
+    def anchor(self, answer, pin, tree, root):
+        return py(ANCHOR, self.facts(answer, tree), "--repo", f"{pin}={self.tmp / tree}",
+                  "--root", EX / "roots" / root, "--require-license")
+
+    def test_run_a_accepting_root_passes(self):
+        rc, out = py(GATE, "--root", EX / "roots" / "gpl", "GPL-2.0-only")
+        self.assertEqual(rc, 0, out)
+        rc, out = self.anchor("answer-linux.md", "linux", "widget-linux", "gpl")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("result: PASS", out)
+
+    def test_run_b_refusing_root_stops_at_the_gate(self):
+        rc, out = py(GATE, "--root", EX / "roots" / "permissive", "GPL-2.0-only")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("refused: GPL-2.0-only", out)
+
+    def test_run_b_backstop_fails_if_the_gpl_facts_are_cited_anyway(self):
+        rc, out = self.anchor("answer-linux.md", "linux", "widget-linux", "permissive")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("license gate:", out)
+
+    def test_run_c_other_source_passes_the_refusing_root(self):
+        rc, out = py(GATE, "--root", EX / "roots" / "permissive", "MIT")
+        self.assertEqual(rc, 0, out)
+        rc, out = self.anchor("answer-fw.md", "fw", "widget-fw", "permissive")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("result: PASS", out)
+
+    def test_source_licenses_match_the_example_text(self):
+        linux = (EX / "sources/widget-linux/drivers/tty/serial/widget.c").read_text()
+        fw = (EX / "sources/widget-fw/uart/widget_uart_init.c").read_text()
+        self.assertEqual(linux.splitlines()[0], "// SPDX-License-Identifier: GPL-2.0-only")
+        self.assertEqual(fw.splitlines()[0], "/* SPDX-License-Identifier: MIT */")
+
+
+if __name__ == "__main__":
+    unittest.main()

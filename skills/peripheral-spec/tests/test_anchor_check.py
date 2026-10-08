@@ -963,8 +963,14 @@ class TestNamedDocAnchors(CheckerCase):
             with self.subTest(case=name):
                 rc, report = self.run_json(self.spec(body))
                 self.assertEqual(rc, 1)
+                # "Note: ...\n---" is a setext heading in CommonMark: outside the spec
+                # Markdown profile, reported on its own line (RG-T1 round 7).
+                setext = [f["spec_line"] for f in report["findings"]
+                          if f["message"].startswith("a setext heading")]
+                self.assertEqual(setext, [] if name == "list" else [2])
                 self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]
-                                  if f["level"] == "error"],
+                                  if f["level"] == "error"
+                                  and not f["message"].startswith("a setext heading")],
                                  [(3 if name == "list" else 2, "malformed src anchor: "
                                    "'nosuch.c:abc' (expected [pin: ]path:L1[-L2] [(symbol)])")])
         s = self.spec("---\n- Resets. [doc: Widget TRM §4.2]\n---\n")
@@ -1473,9 +1479,12 @@ class TestOneMarkdownParse(CheckerCase):
         self.assertEqual(report["anchors"], 0)
 
     def test_an_uppercase_anchor_kind_is_an_error(self):
-        rc, report = self.anchors("- Fact. [SRC: drivers/drv.c:2]\n")
-        self.assertEqual(rc, 1)
-        self.assertTrue(any("is not lowercase" in m for m in self.messages(report, "error")))
+        for anchor in ("[SRC: drivers/drv.c:2]", "[Doc: TRM §1]", "[STALE: was x]"):
+            with self.subTest(anchor=anchor):
+                rc, report = self.anchors(f"- Fact. {anchor}\n")
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("is not lowercase" in m
+                                    for m in self.messages(report, "error")))
 
     def test_an_unclosed_fence_is_an_error(self):
         rc, report = self.anchors("```\n- Fact. [src: drivers/drv.c:2]\n")
@@ -1503,6 +1512,30 @@ class TestOneMarkdownParse(CheckerCase):
         rc, report = self.run_json(s, "--repo", self.linux)
         self.assertTrue(any("0xbeef" in m for m in self.messages(report, "warn")),
                         self.messages(report))
+
+
+class TestSharedAnchorShape(CheckerCase):
+    """RG-T1 round 7 (Codex round 6, blocker 1): a malformed [src: anchor fails anchor_check
+    too, in a documents-only root under --require-license."""
+
+    def test_malformed_anchors_fail_in_a_docs_root(self):
+        root = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        (root / "board-specs.yaml").write_text("layer: public\nlicense: CC-BY-4.0\naccepts: []\n")
+        cases = {
+            "unterminated at EOF": ("A fact. [src:fw: foo.c:1", "no closing ']'"),
+            "split across lines": ("A fact. [src:fw: foo.c:\n1]\n", "broken across lines"),
+            "spaced": ("A fact. [s r c:fw: foo.c:1]\n", "broken across lines"),
+        }
+        for name, (body, want) in cases.items():
+            with self.subTest(case=name):
+                rc, report = self.run_json(self.spec(body), "--root", root, "--require-license")
+                self.assertEqual(rc, 1, self.messages(report))
+                self.assertTrue(any(want in m for m in self.messages(report, "error")),
+                                self.messages(report))
+
+    def test_an_indented_4_closer_leaves_the_fence_open(self):
+        rc, report = self.run_json(self.spec("```\n- Fact. [src: drivers/drv.c:2]\n    ```\n"))
+        self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
 
 
 if __name__ == "__main__":

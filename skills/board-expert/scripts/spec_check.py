@@ -172,13 +172,7 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # An unsubstituted template placeholder: <...> starting with a letter, but not an
 # autolink (<https://...>) or a message id (<id@host>).
 PLACEHOLDER_RE = re.compile(r"<(?!https?://|mailto:)[A-Za-z][^>@\n]*>")
-FACT_SECTIONS = {
-    "Quick-facts",
-    "Gotchas",
-    "Standards and databook",
-    "Programming model",
-    "Known variants and quirks",
-}
+FACT_SECTIONS = mdtokens.FACT_SECTIONS if mdtokens else frozenset()
 TAG_NAMES = "databook|standard|rtl|DT|src|source-observed|doc|hardware|press|inference|emulated"
 # The classes a variants: row may name. Not [src]: its authority is the anchors in its
 # parenthetical, and a variants row has no place for them.
@@ -200,16 +194,12 @@ TAIL_RE = re.compile(
     rf"(?:{_TAG_CLAUSE})(?:\s*[,;]?\s*{_TAG_CLAUSE})*\.?"
     rf"(?:\s*TODO \(verify on hardware\)[^\[\]]*)?\s*$"
 )
-GAP_RE = re.compile(r"^(?:[-*+]|\d+[.)]) (?:\*\*[^*]+\*\*\s*)?TODO \(verify on hardware\)")
+# A gap bullet, read from the item's own parsed text (no list marker, no indentation).
+GAP_RE = re.compile(r"^(?:\*\*[^*]+\*\*\s*)?TODO \(verify on hardware\)")
 # Tags that must be followed by a parenthetical naming their source.
 NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated", "src")
 # Tags whose fact must carry the closing TODO (verify on hardware) sentence.
 TODO_TAGS = ("source-observed", "press", "inference", "emulated")
-# The start of a source anchor in any case and with any whitespace inside "[src:": only the
-# exact lowercase "[src:" (or "[impl:", "[tgt:", "[ref:") is the anchor anchor_check reads.
-ANCHOR_START_RE = re.compile(
-    r"\[\s*((?i:s\s*r\s*c|i\s*m\s*p\s*l|t\s*g\s*t|r\s*e\s*f))\s*:"
-)
 
 
 # Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
@@ -998,20 +988,17 @@ def check_references(specs: list[Spec], findings: list[Finding]) -> None:
 
 
 def iter_fact_bullets(doc):
-    """Yield (1-based body line, masked text) for every top-level list item in a fact section.
+    """Yield (1-based body line, text) for every top-level list item in a fact section.
 
-    Sections, list items and code come from the one Markdown parse (mdtokens): the item is
-    everything CommonMark puts in it, lazy continuation lines and nested lists included.
+    Sections, list items and code come from the one Markdown parse (mdtokens). The text is the
+    item's own masked inline content (its paragraphs, lazy continuation lines included), so
+    neither the list marker nor its indentation matters, and a nested item never lends its
+    tags to its parent (nested items in a fact section are a profile error of their own).
     """
-    sections = [(line, text) for line, level, text in doc.headings if level == 2]
     for idx in doc.top_items():
         item = doc.items[idx]
-        section = None
-        for line, text in sections:
-            if line < item.start:
-                section = text
-        if section in FACT_SECTIONS:
-            yield item.start + 1, "\n".join(doc.masked[item.start:item.end])
+        if mdtokens.section_of(doc, item.start) in FACT_SECTIONS:
+            yield item.start + 1, "\n".join(item.own)
 
 
 def paren_after(text: str, pos: int) -> tuple[int, int] | None:
@@ -1053,7 +1040,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
     p = str(spec.path)
     for line_no, raw in iter_fact_bullets(spec.doc):
         where = f"{p}:{line_no + spec.body_offset}"
-        if GAP_RE.match(raw):
+        if GAP_RE.match(raw.lstrip()):
             continue  # a gap-only bullet: "- **Topic.** TODO (verify on hardware) ..."
         bullet = " ".join(line.strip() for line in raw.splitlines())
         tail_match = TAIL_RE.search(bullet)
@@ -1123,15 +1110,13 @@ def load_anchor_check():
 
 
 def check_markdown(spec: Spec, findings: list[Finding]) -> None:
-    """A code fence that never closes (CommonMark runs it to the end of its container, so
-    every fact after it would be code), and a tag name not in its canonical case ([Src],
-    [SRC], [dt]) anywhere outside code: tag names are case-sensitive, never silently prose."""
+    """Every construct outside the spec Markdown profile (mdtokens.profile_violations: an
+    image, inline HTML, a setext heading, a code span inside a word, a nested list item in a
+    fact section, a code fence that never closes), and a tag name not in its canonical case
+    ([Src], [SRC], [dt]) anywhere outside code: tag names are case-sensitive."""
     p = str(spec.path)
-    for n in spec.doc.unclosed_fences:
-        findings.append(
-            Finding("error", f"{p}:{n + 1 + spec.body_offset}", "code fence never closes: "
-                    "everything after it to the end of its list item or of the file is code")
-        )
+    for n, message in mdtokens.profile_violations(spec.doc, FACT_SECTIONS):
+        findings.append(Finding("error", f"{p}:{n + 1 + spec.body_offset}", message))
     for n, line in enumerate(spec.doc.masked, 1):
         for m in ANY_CASE_TAG_RE.finditer(line):
             if m.group(1) not in TAG_NAMES.split("|"):
@@ -1146,38 +1131,6 @@ def check_markdown(spec: Spec, findings: list[Finding]) -> None:
                 )
 
 
-def anchor_shape_findings(spec: Spec) -> list[tuple[int, str]]:
-    """(1-based body line, message) for each anchor start that anchor_check would not read:
-    whitespace inside "[src:" (blank lines included), a non-lowercase kind, no closing "]"
-    before the end of its list item or paragraph, or a "]" only after a line break."""
-    doc = spec.doc
-    body = "\n".join(doc.masked)
-    starts = [0]
-    for line in doc.masked:
-        starts.append(starts[-1] + len(line) + 1)
-    out = []
-    for m in ANCHOR_START_RE.finditer(body):
-        line = body.count("\n", 0, m.start())
-        kind = re.sub(r"\s", "", m.group(1))
-        if re.search(r"\s", m.group(0)):
-            out.append((line + 1, "a [src:] anchor is broken across lines or by spaces; keep each "
-                        "anchor whole on one line (anchor_check.py reads one line at a time)"))
-            continue
-        if kind != kind.lower():
-            out.append((line + 1, f"anchor kind {m.group(0)!r} is not lowercase: write "
-                        f"[{kind.lower()}: ...] (anchor kinds are case-sensitive)"))
-        unit_end = next((end for start, end in doc.units if start <= line < end), line + 1)
-        limit = starts[min(unit_end, len(doc.masked))] - 1
-        close = body.find("]", m.end(), max(limit, m.end()))
-        if close < 0:
-            out.append((line + 1, "a [src:] anchor has no closing ']' before the end of its list "
-                        "item or paragraph"))
-        elif "\n" in body[m.end():close]:
-            out.append((line + 1, "a [src:] anchor is broken across lines or by spaces; keep each "
-                        "anchor whole on one line (anchor_check.py reads one line at a time)"))
-    return out
-
-
 def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     """Every [src:<repo>: path:L] anchor in the body names a pinned, accepted repos entry.
 
@@ -1189,8 +1142,8 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     are read from the masked body (mdtokens): code blocks and prose code spans hold none.
     """
     p = str(spec.path)
-    for n, message in anchor_shape_findings(spec):
-        findings.append(Finding("error", f"{p}:{n + spec.body_offset}", message))
+    for n, message in mdtokens.anchor_problems(spec.doc):
+        findings.append(Finding("error", f"{p}:{n + 1 + spec.body_offset}", message))
     ac = anchor_check
     repos = {}
     for group, entry in iter_resources(spec.meta):

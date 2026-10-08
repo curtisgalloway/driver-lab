@@ -192,7 +192,10 @@ class TagRules(unittest.TestCase):
         self.assertFalse(self.ok("- Fact. `[DT]` (node). TODO (verify on hardware): x. Also `[doc]` (p) more."))
 
     def test_gap_bullets(self):
-        gap = lambda text: spec_check.GAP_RE.match(masked(text))  # noqa: E731
+        # GAP_RE reads an item's own parsed text, without its list marker (round 7).
+        def gap(text):
+            doc = spec_check.mdtokens.parse(text)
+            return spec_check.GAP_RE.match(" ".join(doc.items[0].own))
         self.assertTrue(gap("- **Power.** `TODO (verify on hardware)`: PMIC."))
         self.assertTrue(gap("- TODO (verify on hardware): everything."))
         self.assertFalse(gap("- **Power.** The PMIC is X. TODO (verify on hardware)"))
@@ -1691,9 +1694,8 @@ resources:
 """ % COMMIT
 
 
-class Round6Tokenizer(unittest.TestCase):
-    """RG-T1 round 6 (user decision 2026-10-08): one CommonMark parse (mdtokens) for fences,
-    code spans and list items. Each round-5 finding has a test here, and so does each rule."""
+class BodyCheck:
+    """Helpers: check a spec body under SPEC6's frontmatter in a fresh root."""
 
     def check(self, body, marker=PERMISSIVE, *args):
         import tempfile
@@ -1711,6 +1713,12 @@ class Round6Tokenizer(unittest.TestCase):
     def assert_clean(self, body, marker=PERMISSIVE, *args):
         code, errors, data = self.check(body, marker, *args)
         self.assertEqual((code, errors), (0, []), json.dumps(data))
+
+
+
+class Round6Tokenizer(BodyCheck, unittest.TestCase):
+    """RG-T1 round 6 (user decision 2026-10-08): one CommonMark parse (mdtokens) for fences,
+    code spans and list items. Each round-5 finding has a test here, and so does each rule."""
 
     # --- round-5 findings ---------------------------------------------------------------
 
@@ -1833,6 +1841,57 @@ class Round6Tokenizer(unittest.TestCase):
         self.assertEqual(proc.returncode, 3, proc.stderr)
         self.assertIn("missing dependency: the checkers are pinned to markdown-it-py==4.2.0",
                       proc.stderr)
+
+
+class Round7Profile(BodyCheck, unittest.TestCase):
+    """RG-T1 round 7 (user decision 2026-10-08): the spec Markdown profile, the shared
+    malformed-anchor check, fence closure from the parser, and items read from their parsed
+    content. Each Codex round-6 finding has a test; each fails without its change."""
+
+    def test_codex2_an_indented_4_closer_leaves_the_fence_open(self):
+        self.assert_error("## Quick-facts\n\n```\n- Fact without provenance.\n    ```\n",
+                          "code fence never closes")
+
+    def test_codex2_a_fence_inside_a_list_item_closes(self):
+        self.assert_clean("## Quick-facts\n\n- A fact. `[DT]` (x)\n\n  ```text\n  code\n  ```\n\n"
+                          "- Next. `[DT]` (y)\n")
+
+    def test_codex3_a_heading_inside_a_quote_is_not_a_section(self):
+        self.assert_error("## Quick-facts\n\n> ## Example\n\n- Magic is 0x1234 with no provenance.\n",
+                          "fact bullet has no provenance tag")
+
+    def test_codex4_a_child_item_lends_no_tags_to_its_parent(self):
+        body = "## Quick-facts\n\n- Magic is 0x1234. [src] (GPL driver, a.c:1)\n  - Detail. [databook]\n"
+        self.assert_error(body, "[src] parenthetical cites no anchor")
+        self.assert_error(body, "a nested list item in a fact section")
+
+    def test_nested_items_outside_fact_sections_are_allowed(self):
+        self.assert_clean("## Orientation\n\n- Topic.\n  - Detail.\n")
+
+    def test_codex5_a_code_span_inside_a_word(self):
+        for body in ("- Magic is 0x1234. [data`book`]\n", "- A. `[DT]` (x [sr`c`:fw: a.c:1])\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "code span starts or ends inside a word")
+        self.assert_error("## Quick-facts\n\n- Magic is 0x1234. [data`book`]\n",
+                          "fact bullet has no provenance tag")
+
+    def test_codex6_gap_bullets_are_read_from_the_parsed_item(self):
+        for body in ("  - TODO (verify on hardware): clock rate.\n",
+                     "-  TODO (verify on hardware): clock rate.\n",
+                     "- **Clock.** `TODO (verify on hardware)`: rate.\n"):
+            with self.subTest(body=body):
+                code, errors, data = self.check("## Quick-facts\n\n" + body)
+                self.assertFalse(any("provenance tag" in e for e in errors), errors)
+
+    def test_codex7_and_the_rest_of_the_profile(self):
+        cases = {
+            "image": ("- A. `[DT]` (x) ![note `see [src:fw: a.c:1]`](image.svg)\n", "an image"),
+            "inline html": ("- A. <b>bold</b> `[DT]` (x)\n", "raw HTML"),
+            "setext": ("Title\n=====\n\n- A. `[DT]` (x)\n", "setext heading"),
+        }
+        for name, (body, want) in cases.items():
+            with self.subTest(name=name):
+                self.assert_error("## Quick-facts\n\n" + body, want)
 
 
 if __name__ == "__main__":

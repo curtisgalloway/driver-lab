@@ -408,6 +408,25 @@ How the checkers read a bullet (one CommonMark parse, shared by `spec_check.py` 
   `TODO (verify on hardware)`; it records what is missing and carries no tag:
   `- **Power.** `TODO (verify on hardware)`: the PMIC part is not recorded here yet.`
 
+### The spec Markdown profile
+
+A spec is written in a restricted subset of CommonMark, so the checkers never have to decide
+what an unusual construct means. Both checkers (`spec_check.py`, and `anchor_check.py` on any
+spec it reads) report each of these as an error at its file line:
+
+- an image (`![...](...)`), or inline raw HTML (`<b>`, `<span>`);
+- a setext heading (a title underlined with `===` or `---`): write `## Title`;
+- a code span that starts or ends inside a word (``[data`book`]``, ``[sr`c`:fw: a.c:1]``):
+  bound every code span by whitespace or punctuation;
+- a nested list item inside a fact section: each fact is its own top-level bullet (nested
+  lists elsewhere, such as `Orientation`, are fine);
+- a code fence that never closes, as the parser decides it (a "closer" indented four spaces is
+  content, not a closer).
+
+Raw HTML blocks and block quotes are outside the profile as well, but are not yet enforced:
+every spec opens with its SPDX header in an HTML comment, and a source notice the license asks
+a spec to carry is quoted as a block quote. How those two are written is pending a decision.
+
 ### Facts read from source: `[src]`
 
 A board spec states a fact read from source code with the `[src]` class and cites the lines with
@@ -705,6 +724,8 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
   by spaces inside `[src:`, or with no `]` before the end of its list item or paragraph. The
   anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
   beside this one when a spec uses them;
+- a construct outside *The spec Markdown profile* (an image, inline HTML, a setext heading, a
+  code span inside a word, a nested list item in a fact section, a fence that never closes);
 - a `resources.repos` entry whose `url` is not an `https://` URL;
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;

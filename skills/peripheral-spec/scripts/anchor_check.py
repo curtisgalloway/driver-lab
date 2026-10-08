@@ -125,8 +125,6 @@ except ImportError:
 # The body keeps its leading whitespace: "[doc:trm p.12]" (none) is a named doc anchor,
 # "[doc: Widget TRM §4]" an unnamed citation. Other kinds strip it.
 TAG_RE = re.compile(r"\[(src|tgt|impl|ref|doc|stale):([^\]]*)\]")
-# An anchor kind in any case: only the lowercase kind is an anchor; another case is an error.
-ANY_CASE_KIND_RE = re.compile(r"\[((?i:src|tgt|impl|ref|doc|stale)):")
 KIND_ALIAS = {"impl": "src", "ref": "tgt"}
 PIN_ALIAS = {"impl": "source", "ref": "target"}
 ANCHOR_RE = re.compile(
@@ -389,9 +387,12 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
     lines = text.split("\n")
     doc = mdtokens.parse("\n".join([""] * min(skip, len(lines)) + lines[skip:]))
     item_firsts = {item.start + 1 for item in doc.items}
-    for n in doc.unclosed_fences:
-        report.add("error", n + 1, "code fence never closes: everything after it to the end of "
-                                   "its list item or of the file is code, and holds no anchors")
+    # The spec Markdown profile and the malformed-anchor check, shared with spec_check.py
+    # (mdtokens): fact sections exist only in a board spec.
+    for n, message in mdtokens.profile_violations(doc, mdtokens.FACT_SECTIONS if board else ()):
+        report.add("error", n + 1, message)
+    for n, message in mdtokens.anchor_problems(doc):
+        report.add("error", n + 1, message)
     item_start = 0  # first line of the list item being read, 0 outside one
     items: dict[int, list[str]] = {}  # item first line -> its lines, tags removed
     # A tags-only line "arms" a block anchor; it covers the next contiguous block
@@ -423,11 +424,6 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
         item_start = doc.items[idx].start + 1 if idx is not None else 0
         if item_start:
             items.setdefault(item_start, []).append(TAG_RE.sub("", masked.strip()).strip(" -*"))
-        for m in ANY_CASE_KIND_RE.finditer(masked):
-            if m.group(1) != m.group(1).lower():
-                report.add("error", i, f"anchor kind {m.group(0)!r} is not lowercase: write "
-                                       f"[{m.group(1).lower()}: ...] (anchor kinds are "
-                                       "case-sensitive)")
         tags = TAG_RE.findall(masked)
         claim = TAG_RE.sub("", masked).strip(" |-*")
         if tags and len(claim) < 40 and not stripped.startswith(("|", "-", "*")) \

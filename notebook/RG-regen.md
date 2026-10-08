@@ -212,3 +212,19 @@ the skills before RG2.
 
 Verifier disagreement again on one item (Compute Module UART defaults, where the vendor page
 contradicts itself); the stricter reading applies, as for the earlier adjudications.
+
+### 2026-10-08 — RG-T1 rounds 6–8, merge, and the format decision
+
+The markdown-it-py rewrite closed every regex-era bypass; Codex rounds 6–8 then found new ones
+each time, all of one kind: text that renders as provenance while the checker reads it
+otherwise (quoted headings, comments closed early, entities, emphasis inside an anchor, invisible
+characters). A profile banning HTML and block quotes forced the SPDX header into the front matter
+and the source notice into a fenced block. A proposed "plain-ASCII tail" rule would have failed 94
+verified bullets: the orchestrator had asserted the specs already met it without checking, and the
+implementer's corpus survey caught it before any edit.
+
+User decision: merge RG-T1 and RG1 as they are, with the remaining gaps recorded in the evidence
+file, and replace the spec format, board and peripheral alike, with YAML validated by a JSON
+Schema, rendered to Markdown and later a viewer. The lesson for the skills: a schema imposed on a
+format designed for many equivalent spellings will keep leaking; when the data is structured,
+store it structured.

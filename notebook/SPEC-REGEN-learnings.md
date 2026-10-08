@@ -37,6 +37,8 @@ request, not inside a unit.
 | `spec-verifier` or a new reviewer role | A coverage review is a different job from claim verification; run it separately, without the records, after verification converges | RG1 Codex r2 (18 of 20 not found by three verifier rounds) | Codex | proposed |
 | `spec-verifier` | Make the contrary-evidence glance a standing step; in RG1's final pass it found a vendor document contradicted by the pinned source tree, found independently by two verifiers | RG1 final pass | verifiers | proposed |
 | plan / orchestration | Set a unit's stop rule before verification starts (rounds, scope of re-verification, merge threshold) | RG1 (five verification rounds) | orchestrator | proposed |
+| spec format | Store facts as structured data (YAML + JSON Schema) and render prose views from it; do not parse provenance out of Markdown | RG-T1 rounds 3–8 | Codex, orchestrator | decided; design next |
+| orchestrator briefs | Before proposing a rule as "the specs already comply", survey the corpus; the implementer's survey caught a false claim that would have failed 94 bullets | RG-T1 round 10 | implementer | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison

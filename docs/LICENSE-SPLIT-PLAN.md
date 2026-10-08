@@ -65,7 +65,7 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS10 | `hardware-investigator` skill | LS9 | complete; merged (driver-lab #54) ([evidence](../evidence/LS10.md)) |
 | LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete; merged, with the re-review (driver-lab #55, #58) ([evidence](../evidence/LS11.md)) |
 | LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete; merged (driver-lab #57) ([evidence](../evidence/LS12.md)) |
-| LS-G | Whole-outcome acceptance | LS1–LS12 | complete at the checkpoint; published-CI half of item 2 pending ([evidence](../evidence/LS-G.md)) |
+| LS-G | Whole-outcome acceptance | LS1–LS12 | complete; published CI matched item 2's matrix ([evidence](../evidence/LS-G.md)) |
 
 Ordering: tooling and spec repos first (the user's decision), so LS1–LS4 land under the current
 skill names and LS9 renames them. The split (LS6–LS11) follows. LS12 touches each consumer once,
@@ -400,9 +400,9 @@ the consumer greps (item 5). Review: `review-swarm` over the combined state, foc
 cross-milestone interactions (pins, paths, names).
 
 ### Evidence and findings
-Status: complete at the checkpoint (branch `license-split/ls-g`). Items 1, 3, 4 and 5 met from
-fresh clones; item 2 met by running each spec repository's CI steps locally, with the nine
-scratch pull requests for the published CI listed for the orchestrator. Evidence:
+Status: complete. Items 1, 3, 4 and 5 met from fresh clones; item 2 met by running each spec
+repository's CI steps locally and by nine scratch pull requests whose published CI matched every
+cell. Evidence:
 [LS-G](../evidence/LS-G.md). Notebook: [LS-G](../notebook/LS-G.md).
 
 ## Discovered work / backlog
@@ -419,13 +419,10 @@ scratch pull requests for the published CI listed for the orchestrator. Evidence
 
 ## Next session
 
-- Current milestone: LS-G complete at the checkpoint (branch `license-split/ls-g`). LS1–LS12 and
-  the LS11 re-review are merged (driver-lab #57 and #58 are the last two). Acceptance items 1, 3,
-  4 and 5 are met from fresh clones; item 2 is met locally, and its published-CI half waits on
-  the nine scratch pull requests listed in [LS-G's evidence](../evidence/LS-G.md), which the
-  orchestrator opens as drafts, records, closes and deletes.
-- Resume action: record the nine scratch pull requests' CI verdicts in LS-G's evidence, then
-  merge LS-G. The two small fixes in other repositories under the backlog close the split; the next workstream is spec regeneration
+- Current milestone: LS-G complete. LS1–LS12 and the LS11 re-review are merged (driver-lab #57
+  and #58), and all five acceptance items are met, item 2 also in published CI
+  ([LS-G's evidence](../evidence/LS-G.md)).
+- Resume action: the two small fixes in other repositories under the backlog close the split; the next workstream is spec regeneration
   (backlog below).
 - Read first: [LS-G's evidence](../evidence/LS-G.md) (its limitations and the findings left for
   other repositories).

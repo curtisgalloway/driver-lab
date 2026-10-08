@@ -19,9 +19,9 @@ Design: [LICENSE-SPLIT.md](../docs/LICENSE-SPLIT.md#acceptance-for-the-whole-out
 items 1–5). Plan: [LS-G](../docs/LICENSE-SPLIT-PLAN.md#ls-g--whole-outcome-acceptance). Notebook:
 [LS-G](../notebook/LS-G.md). Run ID: `lsg-20261007-01` (private run store).
 
-**Status: complete at the checkpoint.** Items 1, 3, 4 and 5 are met. Item 2 is met locally; the
-published-CI half waits on nine scratch pull requests, which the orchestrator opens, records and
-closes (below).
+**Status: complete.** All five items are met. Item 2 is met locally and in published CI: nine
+scratch pull requests, one per cell, each got the expected verdict and were closed unmerged
+(below).
 
 ## Revisions tested
 
@@ -48,7 +48,7 @@ and used for the local runs. Between `c221716` and `739f0e8` neither checker
 | Item (design) | Result | Evidence |
 | --- | --- | --- |
 | 1. LS-R1 to LS-R20 each met, with evidence linked from the plan | Met, apart from one clause open in `cleanroom-skills` (LS-R19's public-skills pin bump; CI unaffected) | [Item 1](#item-1-every-requirement-met-with-evidence-linked-from-the-plan); the plan's coverage table gained an Evidence column |
-| 2. Scratch setup: GPL-2.0-only pin fails docs and permissive, passes GPL; datasheet-only passes all three; `GPL-2.0 OR MIT` pin passes permissive and GPL | Met locally, all nine cells; published CI pending | [Item 2](#item-2-the-scratch-setup) |
+| 2. Scratch setup: GPL-2.0-only pin fails docs and permissive, passes GPL; datasheet-only passes all three; `GPL-2.0 OR MIT` pin passes permissive and GPL | Met, all nine cells, locally and in published CI | [Item 2](#item-2-the-scratch-setup) |
 | 3. `cleanroom-skills` beside driver-lab: moved tests pass; an implementer session reading `board-expert` is blocked | Met | [Item 3](#item-3-cleanroom-skills-beside-driver-lab) |
 | 4. driver-lab's full check list, the anchor-tool tests, the open-side check and the frozen archive's checks pass | Met | [Item 4](#item-4-driver-labs-checks) |
 | 5. No stale skill names in `fuchsia-skills`, `bringup-kit`, `public-skills` | Met, with `bringup-kit`'s declared historical records as the accepted exception | [Item 5](#item-5-no-stale-skill-names-in-the-consumers) |
@@ -141,23 +141,24 @@ ERROR L16: license gate: [src:dts: arch/arm64/boot/dts/widget/widget.dtsi:40] ci
 
 The passing cells print `result: PASS` and `anchors: 1 peripheral spec(s) checked, 0 failed`.
 
-### Published CI: branches for the orchestrator
+### Published CI
 
-Each branch is one commit on the repository's `main` named above, adding one file. Open each as a
-draft pull request (the workflows run on `pull_request`), record the verdict here, close without
-merging and delete the branch.
+Each branch is one commit on the repository's `main` named above, adding one file. Each was opened
+as a draft pull request (the workflows run on `pull_request`), its verdict recorded here, then
+closed without merging and the branch deleted. Every failure is in the `Peripheral specs`
+(anchors) step.
 
 | Repository | Branch | Commit | Expected CI | Published CI |
 | --- | --- | --- | --- | --- |
-| `hardware-specs-gpl` | `ls-g/scratch-gpl-pin` | `398148a` | pass | pending |
-| `hardware-specs-gpl` | `ls-g/scratch-datasheet` | `82f149b` | pass | pending |
-| `hardware-specs-gpl` | `ls-g/scratch-dt-dual` | `8f08aa4` | pass | pending |
-| `hardware-specs-docs` | `ls-g/scratch-gpl-pin` | `08fc715` | fail (anchors step) | pending |
-| `hardware-specs-docs` | `ls-g/scratch-datasheet` | `1e39dd9` | pass | pending |
-| `hardware-specs-docs` | `ls-g/scratch-dt-dual` | `c94d00a` | fail (anchors step) | pending |
-| `hardware-specs-permissive` | `ls-g/scratch-gpl-pin` | `3bd8ede` | fail (anchors step) | pending |
-| `hardware-specs-permissive` | `ls-g/scratch-datasheet` | `e72e6ba` | pass | pending |
-| `hardware-specs-permissive` | `ls-g/scratch-dt-dual` | `e030515` | pass | pending |
+| `hardware-specs-gpl` | `ls-g/scratch-gpl-pin` | `398148a` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-gpl/actions/runs/37707982429) (PR #3, closed unmerged) |
+| `hardware-specs-gpl` | `ls-g/scratch-datasheet` | `82f149b` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-gpl/actions/runs/37707987788) (PR #4, closed unmerged) |
+| `hardware-specs-gpl` | `ls-g/scratch-dt-dual` | `8f08aa4` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-gpl/actions/runs/37707992124) (PR #5, closed unmerged) |
+| `hardware-specs-docs` | `ls-g/scratch-gpl-pin` | `08fc715` | fail (anchors step) | fail (anchors step), [run](https://github.com/curtisgalloway/hardware-specs-docs/actions/runs/37707997518) (PR #3, closed unmerged) |
+| `hardware-specs-docs` | `ls-g/scratch-datasheet` | `1e39dd9` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-docs/actions/runs/37708001606) (PR #4, closed unmerged) |
+| `hardware-specs-docs` | `ls-g/scratch-dt-dual` | `c94d00a` | fail (anchors step) | fail (anchors step), [run](https://github.com/curtisgalloway/hardware-specs-docs/actions/runs/37708007068) (PR #5, closed unmerged) |
+| `hardware-specs-permissive` | `ls-g/scratch-gpl-pin` | `3bd8ede` | fail (anchors step) | fail (anchors step), [run](https://github.com/curtisgalloway/hardware-specs-permissive/actions/runs/37708012020) (PR #3, closed unmerged) |
+| `hardware-specs-permissive` | `ls-g/scratch-datasheet` | `e72e6ba` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-permissive/actions/runs/37708015878) (PR #4, closed unmerged) |
+| `hardware-specs-permissive` | `ls-g/scratch-dt-dual` | `e030515` | pass | pass, [run](https://github.com/curtisgalloway/hardware-specs-permissive/actions/runs/37708019802) (PR #5, closed unmerged) |
 
 ## Item 3: `cleanroom-skills` beside driver-lab
 
@@ -254,9 +255,6 @@ and `peripheral-spec` tests rerun (final run in the checkpoint report). No secon
 
 ## Limitations
 
-- Item 2's published-CI half is not yet observed: the local runs use the same script, the same
-  driver-lab pin and the same second root as the workflows, but the verdicts on GitHub are the
-  orchestrator's to record.
 - Item 3 ran on side-by-side checkouts, not on a harness plugin install; the plugin-cache layout is
   covered by `cleanroom-skills`' own tests, not by this fixture.
 - The spec repositories' `anchors` step checks form, pins and licenses, not that a `[src:]` line

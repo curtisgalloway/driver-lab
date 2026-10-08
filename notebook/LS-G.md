@@ -64,3 +64,10 @@ commits). The bump is a `cleanroom-skills` change, outside this unit; reported, 
 The first scratch commits carried an Apache-2.0 SPDX header in all three repositories; the GPL
 and docs repositories require their own identifier on every file. Amended before any push (the
 SHAs in the evidence are the amended ones); the local verdicts did not change.
+
+### 2026-10-07 — published CI matched all nine cells
+
+The nine scratch pull requests (#3–#5 in each spec repository) ran the published workflows: the
+GPL repository passed all three, docs failed the GPL-only and dual-licensed device-tree pins,
+permissive failed only the GPL-only pin. Each failure was in the anchors step, as locally. All
+nine were closed unmerged and their branches deleted.

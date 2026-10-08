@@ -35,6 +35,8 @@ request, not inside a unit.
 | review practice | When a fix round opens new holes in the same layer, stop patching and redesign; set the stop rule before the next round | RG-T1 rounds 3–5 | orchestrator | applied |
 | `spec-verifier` | Add a "contrary evidence" step: for each claim, look beside the cited line (the driver that consumes a DT value, the next table, the errata) for anything that qualifies it | RG1 Codex r2 row 1 | Codex | proposed |
 | `spec-verifier` or a new reviewer role | A coverage review is a different job from claim verification; run it separately, without the records, after verification converges | RG1 Codex r2 (18 of 20 not found by three verifier rounds) | Codex | proposed |
+| `spec-verifier` | Make the contrary-evidence glance a standing step; in RG1's final pass it found a vendor document contradicted by the pinned source tree, found independently by two verifiers | RG1 final pass | verifiers | proposed |
+| plan / orchestration | Set a unit's stop rule before verification starts (rounds, scope of re-verification, merge threshold) | RG1 (five verification rounds) | orchestrator | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison

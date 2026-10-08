@@ -196,3 +196,19 @@ records, asked what a bring-up needs and what the source says beyond the cited l
 qualification the cited DT line hides (row 1) by reading the driver beside it. The verifier skill
 asks "does the source say what the claim says"; nothing in it asks "does anything nearby say
 otherwise", or "what is missing".
+
+### 2026-10-08 — RG1 final pass: contrary evidence finds a stale vendor document
+
+The final pass added one step to every verifier brief: glance beside each cited passage for
+anything that qualifies the claim. Results: docs 28 PASS / 6 FAIL, permissive 9 / 4, GPL 16 / 2,
+second reader 27 / 7 over 34 bring-up bullets. Still no wrong value. The new step found the most
+interesting item of the unit: the pinned `armstubs/Makefile` (2022) builds a high-peripheral
+AArch64 stub into the firmware's embedded-stub header, while the Raspberry Pi documentation
+(2026-10-06) still says stub support for high peripheral mode is missing. Both verifiers found it
+independently. User decisions: attribute the claim to the documentation and add a hardware TODO,
+still without citing the unlicensed Makefile; and a stop rule for RG1 — apply this batch,
+re-verify only the changed bullets, merge at zero FAIL, and carry the remaining learnings into
+the skills before RG2.
+
+Verifier disagreement again on one item (Compute Module UART defaults, where the vendor page
+contradicts itself); the stricter reading applies, as for the earlier adjudications.

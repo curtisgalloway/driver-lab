@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for the format 2 schemas through `spec.py validate`.
 
-Run in the pinned environment:
-  uv run --with-requirements skills/spec-format/requirements.txt \
-    python3 -m unittest discover -s skills/spec-format/tests -v
+Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
+  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
 
 Valid fixtures: one file per kind under fixtures/valid (plus a root marker with a test
 extension fragment and a verification record), and the design's worked example under
@@ -179,7 +178,7 @@ def facts_file(**changes) -> dict:
 
 
 def marker(**changes) -> dict:
-    return apply({"format": 2, "layer": "public", "name": "r"}, changes)
+    return apply({"format": 2, "layer": "public", "name": "r", "accepts": ["MIT"]}, changes)
 
 
 def verdict(**changes) -> dict:
@@ -1000,16 +999,17 @@ class SingleLineAndIdentifiers(Validator):
             ("ref with a dot component", with_repo(commit=DROP, ref="a/.b")),
             ("symbol as an option", soc(facts=[fact(support=[{"class": "src", "anchors": [
                 dict(src, symbol="--help")]}])])),
-            ("symbol with a space", soc(facts=[fact(support=[{"class": "src", "anchors": [
-                dict(src, symbol="X EN")]}])])),
-            ("symbol with a semicolon", soc(facts=[fact(support=[{"class": "src", "anchors": [
-                dict(src, symbol="X;rm")]}])])),
+            ("symbol with a doubled space", soc(facts=[fact(support=[{"class": "src", "anchors": [
+                dict(src, symbol="struct  x")]}])])),
+            ("symbol with a trailing space", soc(facts=[fact(support=[{"class": "src", "anchors": [
+                dict(src, symbol="x ")]}])])),
             ("node as an option", soc(facts=[fact(support=[{"class": "DT", "anchors": [
                 {"repo": "linux", "path": "fw/b.dtb", "node": "-oProxyCommand=x"}]}])])),
             ("tool via not a skill", soc(resources={"tools": [{"kind": "bench", "name": "b",
                                                                "via": "sh -c x"}]})),
             ("retrieval via with a shell character",
              with_document(retrieval=[{"url": "https://example.invalid/x", "via": "curl|sh"}])),
+            ("fetch_via with a semicolon", with_repo(fetch_via="a;b")),
             ("fetch_via as an option", with_repo(fetch_via="--exec=x")),
         ]
         for label, data in cases:
@@ -1229,6 +1229,143 @@ class FragmentFiles(Validator):
                 code, result = self.run_with(text)
                 self.assertEqual(code, 1)
                 self.assertIn(expected, result["findings"][0]["message"])
+
+
+class RoundTwo(Validator):
+    """Round-2 review fixes and the orchestrator's decisions of 2026-10-08."""
+
+    def test_option_like_identifiers(self):
+        """Claude S1: each guard on ref and node has an input only it refuses."""
+        for ref in ["-x", "a..b", "a//b", "main@{1}", "/main", "+main", COMMIT, "a" * 64]:
+            with self.subTest(ref=ref):
+                self.assert_invalid(with_repo(commit=DROP, ref=ref), "does not match")
+        for ref in ["main", "refs/heads/main", "release/2026.10", "rpi-6.12.y", "a" * 39]:
+            with self.subTest(ref=ref):
+                self.assert_valid(with_repo(commit=DROP, ref=ref))
+        self.assert_invalid(soc(facts=[fact(support=[{"class": "DT", "anchors": [
+            {"repo": "linux", "path": "fw/b.dtb", "node": "-x"}]}])]), "does not match")
+
+    def test_symbols_cite_cpp_and_assembler(self):
+        src = READ["src"]["anchors"][0]
+        def entry(symbol):
+            return soc(facts=[fact(support=[{"class": "src", "anchors": [
+                dict(src, symbol=symbol)]}])])
+        for good in ["~Foo", "operator<<", "operator()", "Foo<T>", "foo()",
+                     "ns::Class::method", "$label", "struct gic_chip_data", "X;rm"]:
+            with self.subTest(good):
+                self.assert_valid(entry(good))
+        for bad in ["-x", "--help", " x", "x ", "a  b", "a\nb"]:
+            with self.subTest(repr(bad)):
+                self.assert_invalid(entry(bad), "does not match")
+
+    def test_fetch_methods_are_prose(self):
+        for good in ["curl (manual)", "Arm's documentation service", "git clone"]:
+            with self.subTest(good):
+                self.assert_valid(with_repo(fetch_via=good))
+        for bad in ["a;b", "a | b", "$(id)", "-x", "a\\b"]:
+            with self.subTest(bad):
+                self.assert_invalid(with_repo(fetch_via=bad), "does not match")
+
+    def test_ports(self):
+        for port in ["1", "443", "65535"]:
+            self.assert_valid(with_repo(url=f"https://example.invalid:{port}/x"))
+        for port in ["0", "65536", "99999", "080", "123456"]:
+            with self.subTest(port):
+                self.assert_invalid(with_repo(url=f"https://example.invalid:{port}/x"),
+                                    "does not match")
+
+    def test_resources_absent_or_non_empty(self):
+        self.assert_invalid(board(resources={}), "should be non-empty")
+        self.assert_invalid(ip(resources={}), "should be non-empty")
+        self.assert_valid(board())
+
+    def test_accepts_is_required(self):
+        self.assert_invalid(marker(accepts=DROP), "'accepts' is a required",
+                            name="board-specs.yaml")
+        self.assert_valid(marker(accepts=[]), name="board-specs.yaml")
+
+    def test_shared_path_rules_on_spec_file_and_extension(self):
+        for bad in ["~/x.spec.yaml", ".git/config.spec.yaml", "a/.git/x.spec.yaml", "-x.spec.yaml"]:
+            with self.subTest(bad):
+                self.assert_invalid(record(spec_file=bad), "does not match",
+                                    name="w.verify.yaml")
+        self.assert_valid(record(spec_file="sub/w.spec.yaml"), name="w.verify.yaml")
+        for bad in [".git/f.json", "~/f.json", "a/../f.json"]:
+            with self.subTest(bad):
+                self.assert_invalid(marker(extensions=[{"class": "source-observed",
+                                                        "schema": bad}]),
+                                    "does not match", name="board-specs.yaml")
+
+    def test_duplicate_readers(self):
+        reader = {"verifier": "v", "verdict": "PASS"}
+        self.assert_invalid(record({"f1": verdict(readers=[reader, reader])}),
+                            "has non-unique elements", name="w.verify.yaml")
+
+    def test_fragment_names_and_patterns(self):
+        def entry(field):
+            return soc(facts=[fact(support=[{"class": "source-observed", field: "x"}],
+                                   todo=TODO)])
+        cases = [
+            ("field name with a newline", {"type": "object", "properties": {
+                "observer\n": {"type": "string"}}, "required": ["observer\n"]},
+             "field name 'observer\\n' not allowed", "observer\n"),
+            ("class with a newline", {"type": "object", "properties": {
+                "class\n": {"type": "string"}}}, "field name 'class\\n' not allowed", "class\n"),
+            ("pattern with $", {"type": "object", "properties": {
+                "observer": {"type": "string", "pattern": "^x$"}}}, "uses $", "observer"),
+            ("pattern property with $", {"type": "object", "properties": {
+                "observer": {"type": "object", "patternProperties": {"^a$": {}}}}},
+             "uses $", "observer"),
+            ("legacy dependencies", {"type": "object", "properties": {
+                "observer": {"dependencies": {"t": {"$ref": "https://example.invalid/o"}}}}},
+             "dependencies at properties/observer/dependencies is not a draft 2020-12 keyword",
+             "observer"),
+            ("a typo", {"type": "object", "properties": {"observer": {"maxLenght": 3}}},
+             "maxLenght at properties/observer/maxLenght is not a draft 2020-12 keyword",
+             "observer"),
+            ("escaped bidi in a description", {"type": "object", "description": "a‮b",
+                                               "properties": {"observer": {"type": "string"}}},
+             "U+202E", "observer"),
+        ]
+        for label, frag, expected, field in cases:
+            with self.subTest(label):
+                code, result = self.validate(entry(field), fragment=frag)
+                messages = [f["message"] for f in result["findings"]]
+                self.assertEqual(code, 1)
+                self.assertTrue(any(expected in m for m in messages), messages)
+        self.assert_valid(entry("observer"), fragment={"type": "object", "properties": {
+            "observer": {"type": "string", "pattern": "^[a-z$]+(?![\\s\\S])"}}})
+
+    def test_raw_bidi_in_fragment_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = pathlib.Path(tmp)
+            (tmp / "frag.json").write_text(
+                '{"type": "object", "description": "a‮b",'
+                ' "properties": {"observer": {"type": "string"}}}', encoding="utf-8")
+            (tmp / "board-specs.yaml").write_text(dump(marker(extensions=[
+                {"class": "source-observed", "schema": "frag.json"}])), encoding="utf-8")
+            code, result = run(["validate", "--json", str(tmp / "board-specs.yaml")])
+        self.assertEqual(code, 1)
+        self.assertIn("frag.json:1:", result["findings"][0]["message"])
+        self.assertIn("U+202E", result["findings"][0]["message"])
+
+    def test_unknown_key_declared_in_another_branch_is_reported(self):
+        """Codex 2: the filter keeps only keys of the branch that applies."""
+        code, result = self.validate(soc(facts=[fact(todo={"check": "bogus", "text": "t",
+                                                           "url": "https://example.invalid/"})]))
+        messages = [f["message"] for f in result["findings"]]
+        self.assertEqual(code, 1)
+        self.assertIn("facts[0].todo.url: unknown key 'url' here", messages)
+        code, result = self.validate(soc(parts=["x"], instances=[instance(bogus=1)]))
+        messages = [f["message"] for f in result["findings"]]
+        self.assertEqual(sorted(messages), ["instances[0].bogus: unknown key 'bogus' here",
+                                            "parts: unknown key 'parts' here"])
+        code, result = self.validate(soc(facts=[fact(support=[dict(READ["src"], doc="trm",
+                                                                    anchors=[{"repo": "linux",
+                                                                              "path": "x.c"}])])]))
+        messages = [f["message"] for f in result["findings"]]
+        self.assertIn("facts[0].support[0].doc: unknown key 'doc' here", messages)
+        self.assertNotIn("facts[0].support[0].anchors: unknown key 'anchors' here", messages)
 
 
 if __name__ == "__main__":

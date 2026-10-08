@@ -4,7 +4,7 @@
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 root marker, board-specs.yaml (design: Roots, layers, overlays and the license gate; D1, D15).",
   "title": "Spec format 2: root marker (board-specs.yaml)",
   "type": "object",
-  "required": ["format", "layer", "name"],
+  "required": ["format", "layer", "name", "accepts"],
   "properties": {
     "format": {"const": 2},
     "layer": {"enum": ["public", "ip-vendor", "soc-vendor", "product", "local"]},
@@ -22,7 +22,7 @@
     },
     "license": {"$ref": "spec.schema.json#/$defs/spdxExpression"},
     "accepts": {
-      "$comment": "Single SPDX identifiers, no expressions; [] accepts no source tree.",
+      "$comment": "Required in format 2 (orchestrator decision 2026-10-08): single SPDX identifiers, no expressions; [] means documents only, accepting no source tree.",
       "type": "array",
       "uniqueItems": true,
       "items": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+(?![\\s\\S])"}
@@ -39,7 +39,7 @@
           "class": {"const": "source-observed"},
           "schema": {
             "type": "string",
-            "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|(?![\\s\\S])))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*\\.json(?![\\s\\S])"
+            "allOf": [{"$ref": "spec.schema.json#/$defs/filePath"}, {"pattern": "\\.json(?![\\s\\S])"}]
           }
         },
         "additionalProperties": false

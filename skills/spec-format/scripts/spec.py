@@ -9,7 +9,8 @@ Subcommands built so far (SF2-1): `validate`. Later milestones add `check`, `sta
 Exit status (the house contract): 0 every file valid; 1 a file failed to load or validate;
 2 usage (bad arguments, a path that does not exist, a file name that says no schema);
 3 a pinned dependency is missing or at another version than skills/spec-format/requirements.txt
-pins (there is no fallback parser).
+pins, or that file holds a marker spec.py cannot evaluate (there is no fallback parser);
+4 an internal error in spec.py itself, not a verdict on any file.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ import re
 import sys
 from pathlib import Path
 
-EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION = 0, 1, 2, 3
+EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 4
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
@@ -61,7 +62,7 @@ run did not validate (then `files` is empty and each finding has path "" and lin
 A file that cannot be read is a finding on that file.
 
 Exit status: 0 all valid; 1 a file invalid; 2 usage; 3 a pinned dependency missing or at
-another version.
+another version; 4 an internal error in spec.py (the files were not judged).
 """
 
 
@@ -73,17 +74,21 @@ class Precondition(Exception):
     """A missing precondition: exit 3."""
 
 
-_MARKER = re.compile(r"^python_(full_)?version\s*(<=|>=|==|!=|<|>)\s*'([0-9.]+)'$")
+_MARKER = re.compile(
+    r"python_(full_)?version\s*(<=|>=|==|!=|<|>)\s*'([0-9]+(?:\.[0-9]+){0,2})'")
 
 
 def _marker_applies(marker: str) -> bool:
-    """Evaluate the one marker form uv writes here (python_full_version < 'X'); any other
-    marker counts as applying, so its package is checked rather than skipped."""
-    m = _MARKER.match(marker.strip())
+    """Evaluate a requirements marker. Only `python_version` and `python_full_version`
+    compared with a version are understood, as three-part versions padded with zeros
+    (python_version is the running major.minor.0). Anything else raises ValueError: spec.py
+    never guesses whether a pin applies."""
+    m = _MARKER.fullmatch(marker.strip())
     if not m:
-        return True
+        raise ValueError(f"requirements marker not understood: {marker.strip()!r}")
     want = tuple(int(x) for x in m.group(3).split("."))
-    have = tuple(sys.version_info[:len(want)])
+    want = want + (0,) * (3 - len(want))
+    have = tuple(sys.version_info[:3]) if m.group(1) else tuple(sys.version_info[:2]) + (0,)
     return {"<": have < want, "<=": have <= want, ">": have > want, ">=": have >= want,
             "==": have == want, "!=": have != want}[m.group(2)]
 
@@ -109,6 +114,8 @@ def check_dependencies() -> list[str]:
         pins = pinned_versions()
     except OSError as exc:
         return [f"cannot read {REQUIREMENTS}: {exc}"]
+    except ValueError as exc:
+        return [f"{REQUIREMENTS.name}: {exc}"]
     problems = []
     for dist, module in DIRECT.items():
         want = pins.get(dist)
@@ -181,7 +188,37 @@ _DEFAULT_EXTENSION = {
 }
 
 _FRAGMENT_KEYS = {"$comment", "title", "description", "type", "properties", "required"}
-_FRAGMENT_PROPERTY = re.compile(r"^[a-z][a-z0-9_]*$")
+_FRAGMENT_PROPERTY = re.compile(r"[a-z][a-z0-9_]*")  # used with fullmatch
+# Draft 2020-12's keywords. A fragment may use no other: a keyword the validator does not know
+# (draft-07's `dependencies`, a typo) would be a silently ignored constraint.
+_KEYWORDS_2020_12 = {
+    "$schema", "$id", "$ref", "$anchor", "$dynamicRef", "$dynamicAnchor", "$vocabulary",
+    "$comment", "$defs", "allOf", "anyOf", "oneOf", "not", "if", "then", "else",
+    "dependentSchemas", "prefixItems", "items", "contains", "properties", "patternProperties",
+    "additionalProperties", "propertyNames", "unevaluatedItems", "unevaluatedProperties",
+    "type", "enum", "const", "multipleOf", "maximum", "exclusiveMaximum", "minimum",
+    "exclusiveMinimum", "maxLength", "minLength", "pattern", "maxItems", "minItems",
+    "uniqueItems", "maxContains", "minContains", "maxProperties", "minProperties", "required",
+    "dependentRequired", "format", "contentEncoding", "contentMediaType", "contentSchema",
+    "title", "description", "default", "deprecated", "readOnly", "writeOnly", "examples",
+}
+
+
+def _dollar_anchor(pattern: str) -> bool:
+    """Whether a regex uses an unescaped `$` (outside a character class)."""
+    escaped = in_class = False
+    for ch in pattern:
+        if escaped:
+            escaped = False
+        elif ch == "\\":
+            escaped = True
+        elif ch == "[":
+            in_class = True
+        elif ch == "]":
+            in_class = False
+        elif ch == "$" and not in_class:
+            return True
+    return False
 
 
 def schema_kind(path: Path) -> str:
@@ -255,7 +292,7 @@ def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
     for name in props:
         if name in reserved:
             problems.append(f"{where}: field name {name!r} is a core field; choose another")
-        elif not _FRAGMENT_PROPERTY.match(name):
+        elif not _FRAGMENT_PROPERTY.fullmatch(name):
             problems.append(f"{where}: field name {name!r} not allowed (lowercase letters, "
                             f"digits and _)")
     required = fragment.get("required", [])
@@ -273,6 +310,16 @@ def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
             at = "/".join(trail + (key,))
             if key.startswith("$") and key != "$comment":
                 problems.append(f"{where}: {key} at {at} not allowed")
+            elif key not in _KEYWORDS_2020_12:
+                problems.append(f"{where}: {key} at {at} is not a draft 2020-12 keyword")
+            if key == "pattern" and isinstance(value, str) and _dollar_anchor(value):
+                problems.append(f"{where}: pattern at {at} uses $, which in Python also matches "
+                                f"before a final newline; end it with (?![\\s\\S])")
+            if key == "patternProperties" and isinstance(value, dict):
+                for name in value:
+                    if _dollar_anchor(name):
+                        problems.append(f"{where}: pattern {name!r} at {at} uses $; end it "
+                                        f"with (?![\\s\\S])")
             if key in _SCHEMA_ONE:
                 walk(value, trail + (key,))
             elif key in _SCHEMA_MAP and isinstance(value, dict):
@@ -328,27 +375,35 @@ def _short(error) -> str:
     return message
 
 
-def _declared_names(node, out: set) -> set:
-    """Every property name any schema declares, anywhere."""
-    if isinstance(node, dict):
-        props = node.get("properties")
-        if isinstance(props, dict):
-            out.update(props)
-        for v in node.values():
-            _declared_names(v, out)
-    elif isinstance(node, list):
-        for v in node:
-            _declared_names(v, out)
-    return out
+def _branch_names(schema, instance, resolve, is_valid, depth=0) -> set:
+    """Property names the schema declares for this instance: its own properties and those of
+    the in-place branches that apply (allOf, anyOf, oneOf, $ref, and then or else as its if
+    decides). A kind's or a class's branch counts only when the instance is of that kind."""
+    names: set = set()
+    if not isinstance(schema, dict) or depth > 32:
+        return names
+    props = schema.get("properties")
+    if isinstance(props, dict):
+        names.update(props)
+    for key in ("allOf", "anyOf", "oneOf"):
+        for sub in schema.get(key, []):
+            names |= _branch_names(sub, instance, resolve, is_valid, depth + 1)
+    if "$ref" in schema:
+        names |= _branch_names(resolve(schema["$ref"]), instance, resolve, is_valid, depth + 1)
+    if "if" in schema:
+        branch = "then" if is_valid(schema["if"], instance) else "else"
+        names |= _branch_names(schema.get(branch), instance, resolve, is_valid, depth + 1)
+    return names
 
 
-def schema_findings(validator, data, loaded, path: Path, declared: set) -> list[Finding]:
+def schema_findings(validator, data, loaded, path: Path, resolve) -> list[Finding]:
     """Findings for every schema error, each placed at its line and column.
 
-    An unknown-key report (unevaluatedProperties) has a cascade: when a value inside a kind or
-    class branch fails, the branch fails and every key it declared reads as unevaluated. So a
-    key that some schema declares is reported as unknown only when nothing else failed at or
-    below the object holding it; a key no schema declares is always reported.
+    An unknown-key report from unevaluatedProperties has a cascade: when a value inside a
+    kind's or class's branch fails, the branch's annotations are dropped and every key it
+    declared reads as unevaluated. Such a key is left out only when the branch that applies to
+    this object declares it and another error lies at or below the object; any other key is
+    reported. additionalProperties has no cascade and is always reported.
     """
     from jsonschema.exceptions import best_match
 
@@ -369,10 +424,13 @@ def schema_findings(validator, data, loaded, path: Path, declared: set) -> list[
         if error.validator in unknown and isinstance(error.instance, dict):
             shadowed = any(p[:len(at)] == at and (len(p) > len(at) or not is_unknown)
                            for p, is_unknown in others if (p, is_unknown) != (at, True))
+            own = (_branch_names(error.schema, error.instance, resolve,
+                                 lambda sub, inst: validator.evolve(schema=sub).is_valid(inst))
+                   if error.validator == "unevaluatedProperties" and shadowed else set())
             for key in error.instance:
                 if repr(key) not in error.message:
                     continue
-                if shadowed and key in declared:
+                if key in own:
                     continue
                 m = loaded.mark(at + (key,), key=True)
                 out.append(Finding(path, m.line, m.column,
@@ -399,6 +457,23 @@ def schema_findings(validator, data, loaded, path: Path, declared: set) -> list[
 
 # --- validate -------------------------------------------------------------------------------
 
+def _bad_json_string(node) -> str | None:
+    """The first refused character in any key or string of parsed JSON (escapes decoded)."""
+    import specload
+
+    if isinstance(node, str):
+        bad = specload.bad_character(node)
+        return f"a string holding {bad}" if bad else None
+    items = node.items() if isinstance(node, dict) else enumerate(node) if isinstance(
+        node, list) else ()
+    for k, v in items:
+        found = _bad_json_string(k) if isinstance(k, str) else None
+        found = found or _bad_json_string(v)
+        if found:
+            return found
+    return None
+
+
 def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     """The source-observed fragment a valid marker names, or None; problems become findings."""
     if not isinstance(data, dict) or not data.get("extensions"):
@@ -409,10 +484,21 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     if root not in target.parents:
         findings.append(Finding(marker, 1, 1, f"extensions: {rel} lies outside the root"))
         return None
+    import specload
+
     try:
         fragment = _strict_json(target)
+        specload.check_text(target, target.read_text(encoding="utf-8"))
+    except specload.LoadError as exc:
+        findings.append(Finding(marker, 1, 1, f"extensions: {rel}:{exc.line}:{exc.column}: "
+                                              f"{exc.problem}"))
+        return None
     except (OSError, ValueError) as exc:
         findings.append(Finding(marker, 1, 1, f"extensions: {rel}: {exc}"))
+        return None
+    bad = _bad_json_string(fragment)
+    if bad:
+        findings.append(Finding(marker, 1, 1, f"extensions: {rel}: {bad}"))
         return None
     problems = check_fragment(fragment, Path(rel), core_fields(load_schemas()))
     for p in problems:
@@ -439,8 +525,18 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]) -> tu
         extension = None  # a marker is validated with its own fragment, below
     registry = registry_for(schemas, extension)
     validator = jsonschema.Draft202012Validator(schemas[kind], registry=registry)
-    declared = _declared_names(list(schemas.values()) + [extension or {}], set())
-    findings.extend(schema_findings(validator, loaded.data, loaded, path, declared))
+    def resolve(ref: str):
+        if ref == EXTENSION_URN:
+            return extension if extension and kind != "root" else _DEFAULT_EXTENSION
+        doc, _, pointer = ref.partition("#")
+        node = schemas[kind]
+        if doc:
+            node = next((v for v in schemas.values() if v["$id"].endswith("/" + doc)), {})
+        for part in pointer.strip("/").split("/") if pointer.strip("/") else []:
+            node = node.get(part, {}) if isinstance(node, dict) else {}
+        return node
+
+    findings.extend(schema_findings(validator, loaded.data, loaded, path, resolve))
     data = loaded.data
     if kind == "spec" and isinstance(data, dict) and isinstance(data.get("kind"), str):
         is_facts_name = path.name.endswith(".facts.yaml")
@@ -501,7 +597,7 @@ class _Parser(argparse.ArgumentParser):
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
-        epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing",
+        epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 4 internal",
     )
     parser.add_argument("--skill", action="store_true", help="print the usage skill and exit")
     sub = parser.add_subparsers(dest="command")
@@ -562,7 +658,7 @@ def main(argv: list[str] | None = None) -> int:
         import traceback
 
         traceback.print_exc(file=sys.stderr)
-        return fail("internal", EXIT_INVALID, [f"{type(exc).__name__}: {exc}"])
+        return fail("internal", EXIT_INTERNAL, [f"{type(exc).__name__}: {exc}"])
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))

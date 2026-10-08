@@ -152,14 +152,14 @@
       "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|(0[48]|[2468][048]|[13579][26])00)-02-29)(?![\\s\\S])"
     },
     "gitRef": {
-      "$comment": "A git ref name for a map-only repos entry: no leading '-', no white space or shell metacharacters, none of git's forbidden forms (.., //, @{, a component starting with '.', a trailing '/' or '.', .lock).",
+      "$comment": "A git ref name for a map-only repos entry: no leading '-', no white space or shell metacharacters, none of git's forbidden forms (.., //, a component starting with '.', a trailing '/' or '.', .lock; @{ cannot occur, as the character set has no braces), no leading '+' (a refspec's force flag), and not 40 or 64 hex digits (that is a commit, written as commit).",
       "type": "string",
-      "pattern": "^(?!-)(?!/)(?!.*\\.\\.)(?!.*//)(?!.*@\\{)(?!(.*/)?\\.)(?!.*\\.lock(/|(?![\\s\\S])))(?!.*[/.](?![\\s\\S]))[A-Za-z0-9._/+-]+(?![\\s\\S])"
+      "pattern": "^(?!-)(?!\\+)(?!([0-9a-f]{40}|[0-9a-f]{64})(?![\\s\\S]))(?!/)(?!.*\\.\\.)(?!.*//)(?!(.*/)?\\.)(?!.*\\.lock(/|(?![\\s\\S])))(?!.*[/.](?![\\s\\S]))[A-Za-z0-9._/+-]+(?![\\s\\S])"
     },
     "symbol": {
-      "$comment": "A symbol, macro, label or property name in source: no leading '-', no white space or shell metacharacters.",
+      "$comment": "A symbol, macro, label or property name as the source spells it, C++ and assembler included (~Foo, operator<<, Foo<T>, ns::Class::method, $label, struct gic_chip_data): single-line, no leading '-', no leading, trailing or doubled space. Orchestrator decision 2026-10-08. It reaches a command line (SF2-6) only as a separate argument after --, never through a shell.",
       "type": "string",
-      "pattern": "^(?!-)[A-Za-z0-9_.:@,/#+\\[\\]-]+(?![\\s\\S])"
+      "pattern": "^(?!-)\\S+( \\S+)*(?![\\s\\S])"
     },
     "dtNode": {
       "$comment": "A device-tree node name or path: no leading '-', no white space or shell metacharacters.",
@@ -167,9 +167,9 @@
       "pattern": "^(?!-)[A-Za-z0-9_.,@/:#+-]+(?![\\s\\S])"
     },
     "method": {
-      "$comment": "How something was fetched (via, fetch_via): single-line words, no leading '-', no shell metacharacters.",
+      "$comment": "How something was fetched (via, fetch_via): prose for a reader, never executed by any tool. Single-line, no leading '-'; parentheses and apostrophes allowed; no ; | & $ backquote backslash < > (orchestrator decision 2026-10-08).",
       "type": "string",
-      "pattern": "^(?!-)[^\\s;|&$`'\"\\\\<>(){}*?!]+( [^\\s;|&$`'\"\\\\<>(){}*?!]+)*(?![\\s\\S])"
+      "pattern": "^(?!-)[^\\s;|&$`\\\\<>]+( [^\\s;|&$`\\\\<>]+)*(?![\\s\\S])"
     },
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
     "commit": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})(?![\\s\\S])"},
@@ -178,9 +178,9 @@
       "pattern": "^0x(0|[1-9a-f][0-9a-f]*)(?![\\s\\S])"
     },
     "httpsUrl": {
-      "$comment": "https only; a host of DNS labels (no user information, no empty or hyphen-edged label); no white space or backslash; nothing else reaches a tool (RG-T1 R1).",
+      "$comment": "https only; a host of DNS labels (no user information, no empty or hyphen-edged label), a port from 1 to 65535; no white space or backslash; nothing else reaches a tool (RG-T1 R1).",
       "type": "string",
-      "pattern": "^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:[0-9]{1,5})?(/[^\\s\\\\]*)?(?![\\s\\S])"
+      "pattern": "^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3}))?(/[^\\s\\\\]*)?(?![\\s\\S])"
     },
     "path": {
       "$comment": "A path inside a repository: relative, no empty, '.', '..' or '.git' segment, no leading '-', no '~', a trailing '/' for a directory.",
@@ -698,7 +698,9 @@
     },
 
     "resources": {
+      "$comment": "Absent or non-empty: {} would be a second spelling of an absent key.",
       "type": "object",
+      "minProperties": 1,
       "properties": {
         "documents": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/document"}},
         "repos": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/repo"}},

@@ -101,6 +101,7 @@ FAILING = [
     ("blank Braille pattern", b"a: x\xe2\xa0\x80y\n", 1, 5, "U+2800"),
     ("tag character", b"a: x\xf3\xa0\x80\x81y\n", 1, 5, "U+E0001"),
     ("escaped grapheme joiner", b'a: "x\\u034fy"\n', 1, 4, "U+034F"),
+    ("escaped supplementary variation selector", b'a: "x\\U000e0100y"\n', 1, 4, "U+E0100"),
     # Invisible characters in comments, too.
     ("zero-width space in a comment", b"a: 1 # x\xe2\x80\x8by\n", 1, 9, "U+200B"),
     ("bidi override in a comment", b"# \xe2\x80\xaeabc\na: 1\n", 1, 3, "U+202E"),

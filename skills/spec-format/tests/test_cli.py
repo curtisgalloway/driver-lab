@@ -129,9 +129,46 @@ class ExitCodes(unittest.TestCase):
         self.assertFalse(spec_cli._marker_applies(f"python_full_version != '{here}'"))
         self.assertFalse(spec_cli._marker_applies("python_full_version < '3.0'"))
         self.assertTrue(spec_cli._marker_applies("python_full_version >= '3.0'"))
-        self.assertTrue(spec_cli._marker_applies("sys_platform == 'win32'"))
+        with self.assertRaises(ValueError):
+            spec_cli._marker_applies("sys_platform == 'win32'")
         pins = spec_cli.pinned_versions()
         self.assertEqual("typing-extensions" in pins, sys.version_info < (3, 13))
+
+    def test_marker_semantics(self):
+        """Padded three-part versions; python_version is major.minor.0."""
+        with mock.patch.object(spec_cli.sys, "version_info", (3, 12, 7, "final", 0)):
+            f = spec_cli._marker_applies
+            self.assertFalse(f("python_full_version == '3.12'"))
+            self.assertTrue(f("python_full_version == '3.12.7'"))
+            self.assertTrue(f("python_full_version >= '3.12'"))
+            self.assertTrue(f("python_version < '3.12.5'"))
+            self.assertTrue(f("python_version == '3.12'"))
+            self.assertTrue(f("python_full_version < '3.13'"))
+        for bad in ["sys_platform == 'win32'", 'python_version < "3.13"',
+                    "python_version < '3.13' and os_name == 'nt'", "python_version < '3..1'",
+                    "python_version ~= '3.12'", "implementation_name == 'cpython'"]:
+            with self.subTest(bad), self.assertRaises(ValueError):
+                spec_cli._marker_applies(bad)
+
+    def test_every_marker_in_requirements_parses(self):
+        import re
+        text = spec_cli.REQUIREMENTS.read_text(encoding="utf-8")
+        markers = re.findall(r"^[A-Za-z0-9_.-]+==[^\s;\\]+\s*;([^\\]*)", text, re.M)
+        self.assertTrue(markers)
+        for marker in markers:
+            spec_cli._marker_applies(marker)
+
+    def test_unparsable_marker_is_3(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            req = pathlib.Path(tmp) / "requirements.txt"
+            text = spec_cli.REQUIREMENTS.read_text(encoding="utf-8")
+            req.write_text(text.replace("python_full_version < '3.13'", "sys_platform == 'x'"),
+                           encoding="utf-8")
+            with mock.patch.object(spec_cli, "REQUIREMENTS", req):
+                code, out, err = run(["validate", "--json", str(GOOD)])
+        self.assertEqual(code, 3)
+        self.assert_failure_object(out, "precondition")
+        self.assertIn("marker not understood", out)
 
     def test_unreadable_file_is_a_finding(self):
         if hasattr(os, "geteuid") and os.geteuid() == 0:
@@ -153,7 +190,7 @@ class ExitCodes(unittest.TestCase):
     def test_internal_error_still_emits_json(self):
         with mock.patch.object(spec_cli, "cmd_validate", side_effect=RuntimeError("boom")):
             code, out, err = run(["validate", "--json", str(GOOD)])
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 4)
         self.assert_failure_object(out, "internal")
         self.assertIn("RuntimeError: boom", out)
         self.assertIn("Traceback", err)
@@ -190,7 +227,7 @@ class Output(unittest.TestCase):
     def test_json_findings(self):
         with tempfile.TemporaryDirectory() as tmp:
             bad = pathlib.Path(tmp) / "board-specs.yaml"
-            bad.write_text("format: 2\nlayer: public\nname: X\n", encoding="utf-8")
+            bad.write_text("format: 2\nlayer: public\nname: X\naccepts: []\n", encoding="utf-8")
             code, out, _ = run(["validate", "--json", str(bad)])
         self.assertEqual(code, 1)
         result = json.loads(out)
@@ -206,6 +243,7 @@ class Output(unittest.TestCase):
         self.assertTrue(out.startswith("---\nname: "))
         self.assertIn("Exit status", out)
         self.assertIn("--require-hashes", out)
+        self.assertIn("4 an internal error", out)
         self.assertNotIn("uv run --with-requirements skills", out)
 
     def test_runs_as_a_script(self):

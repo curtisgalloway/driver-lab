@@ -843,6 +843,18 @@ Orchestrator decisions during SF2-1's review (2026-10-08), within the design's s
   soc, `clocks`, `facts`, `sources`, `accepts`) keep `[]`. The design's worked example drops its
   `aliases: []` and `readers: []` lines.
 
+Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
+
+- **`symbol`** cites C++ and assembler names as spelled (`~Foo`, `operator<<`, `Foo<T>`,
+  `$label`, `struct gic_chip_data`): single-line, no leading `-`. SF2-6 passes symbols, nodes,
+  refs and paths to a command only as separate arguments after `--`, never through a shell.
+- **`accepts`** is required in a format 2 root marker; `[]` means documents only.
+- **`resources`** is absent or non-empty (`{}` was a second spelling).
+- **`fetch_via` and retrieval `via`** are prose, never executed.
+- **Exit code 4** is `spec.py`'s internal error, apart from 1 (a file is invalid).
+- **Requirements markers:** only `python_version` and `python_full_version` comparisons, as
+  padded three-part versions; anything else is exit 3.
+
 ## Needs a user decision (later)
 
 - **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07

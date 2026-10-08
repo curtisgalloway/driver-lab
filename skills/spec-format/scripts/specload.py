@@ -43,7 +43,7 @@ from yaml.composer import Composer
 from yaml.events import AliasEvent
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 from yaml.parser import Parser
-from yaml.reader import Reader, ReaderError
+from yaml.reader import Reader
 from yaml.resolver import BaseResolver
 from yaml.scanner import Scanner
 from yaml.tokens import DirectiveToken
@@ -134,8 +134,9 @@ def _position(source: str, at: int) -> Mark:
     return Mark(line, at - (source.rfind("\n", 0, at) + 1) + 1)
 
 
-def _check_source(path: Path, source: str) -> None:
-    """Refuse a character anywhere in the file, before PyYAML normalizes line breaks."""
+def check_text(path: Path, source: str) -> None:
+    """Refuse a character anywhere in a text file (a YAML file before PyYAML normalizes line
+    breaks, or a schema fragment): every refused character but a tab, and a CR not in CRLF."""
     for at, ch in enumerate(source):
         if ch == "\n" or ch == " " or ch == "\t":
             continue
@@ -276,7 +277,7 @@ def load_strict_marked(path: Path | str) -> Loaded:
     """
     path = Path(path)
     source = _decode(path, path.read_bytes())
-    _check_source(path, source)
+    check_text(path, source)
     loader = None
     try:
         loader = _Loader(source)
@@ -295,10 +296,6 @@ def load_strict_marked(path: Path | str) -> Loaded:
         if "expected a single document" in str(exc):
             problem = "more than one YAML document; a file holds exactly one"
         raise LoadError(path, line, column, problem) from None
-    except ReaderError as exc:  # PyYAML's own check; _check_source normally refuses first
-        m = _position(source, exc.position)
-        raise LoadError(path, m.line, m.column,
-                        f"a control character U+{exc.character:04X} in the file") from None
     except (ValueError, OverflowError) as exc:  # e.g. an escape naming no code point
         m = _mark(loader.get_mark()) if loader is not None else Mark(1, 1)
         raise LoadError(path, m.line, m.column, f"a malformed scalar ({exc})") from None

@@ -9,8 +9,9 @@
     "format": {"const": 2},
     "spec": {"$ref": "spec.schema.json#/$defs/specId"},
     "spec_file": {
+      "$comment": "A path relative to the root, under the shared path rules, ending .spec.yaml.",
       "type": "string",
-      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|(?![\\s\\S])))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*\\.spec\\.yaml(?![\\s\\S])"
+      "allOf": [{"$ref": "spec.schema.json#/$defs/filePath"}, {"pattern": "\\.spec\\.yaml(?![\\s\\S])"}]
     },
     "spec_sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
     "canonical": {"const": "fact-v1"},

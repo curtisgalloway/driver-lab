@@ -170,9 +170,14 @@ class SubsetParser(unittest.TestCase):
             )
 
 
+def masked(text):
+    """text as the checker reads it: the one Markdown parse's masked lines, joined."""
+    return " ".join(line.strip() for line in spec_check.mdtokens.parse(text).masked)
+
+
 class TagRules(unittest.TestCase):
     def ok(self, bullet):
-        return bool(spec_check.TAIL_RE.search(bullet))
+        return bool(spec_check.TAIL_RE.search(masked(bullet)))
 
     def test_tail_accepts_the_documented_shapes(self):
         self.assertTrue(self.ok("- Fact. `[DT]`"))
@@ -187,29 +192,37 @@ class TagRules(unittest.TestCase):
         self.assertFalse(self.ok("- Fact. `[DT]` (node). TODO (verify on hardware): x. Also `[doc]` (p) more."))
 
     def test_gap_bullets(self):
-        self.assertTrue(spec_check.GAP_RE.match("- **Power.** `TODO (verify on hardware)`: PMIC."))
-        self.assertTrue(spec_check.GAP_RE.match("- TODO (verify on hardware): everything."))
-        self.assertFalse(spec_check.GAP_RE.match("- **Power.** The PMIC is X. TODO (verify on hardware)"))
+        # GAP_RE reads an item's own parsed text, without its list marker (round 7).
+        def gap(text):
+            doc = spec_check.mdtokens.parse(text)
+            return spec_check.GAP_RE.match(" ".join(doc.items[0].own))
+        self.assertTrue(gap("- **Power.** `TODO (verify on hardware)`: PMIC."))
+        self.assertTrue(gap("- TODO (verify on hardware): everything."))
+        self.assertFalse(gap("- **Power.** The PMIC is X. TODO (verify on hardware)"))
+
+    def unnamed(self, tag, tail):
+        """Whether check_tags reports [tag] without its parenthetical in "- Fact. <tail>"."""
+        body = f"## Gotchas\n\n- Fact. {tail} TODO (verify on hardware)\n"
+        return any(m.startswith(f"[{tag}] must be followed by a parenthetical")
+                   for m in self.tags_of(body))
 
     def test_doc_needs_a_parenthetical(self):
-        self.assertIsNone(spec_check.DOC_UNNAMED_RE.search("`[doc]` (page)"))
-        self.assertIsNone(spec_check.DOC_UNNAMED_RE.search("[doc] (page)"))
-        self.assertIsNotNone(spec_check.DOC_UNNAMED_RE.search("`[doc]`"))
-        self.assertIsNotNone(spec_check.DOC_UNNAMED_RE.search("`[doc]`, `[DT]` (node)"))
+        self.assertFalse(self.unnamed("doc", "`[doc]` (page)"))
+        self.assertFalse(self.unnamed("doc", "[doc] (page)"))
+        self.assertTrue(self.unnamed("doc", "`[doc]`"))
+        self.assertTrue(self.unnamed("doc", "`[doc]`, `[DT]` (node)"))
 
     def test_dt_needs_a_parenthetical(self):
-        dt = spec_check.UNNAMED_RES["DT"]
-        self.assertIsNone(dt.search("`[DT]` (`bcm2712.dtsi`)"))
-        self.assertIsNone(dt.search("[DT] (lga-b0.dtb from a prebuilt tree)"))
-        self.assertIsNotNone(dt.search("`[DT]`"))
-        self.assertIsNotNone(dt.search("`[DT]`, `[databook]` (DDI 0183)"))
+        self.assertFalse(self.unnamed("DT", "`[DT]` (`bcm2712.dtsi`)"))
+        self.assertFalse(self.unnamed("DT", "[DT] (lga-b0.dtb from a prebuilt tree)"))
+        self.assertTrue(self.unnamed("DT", "`[DT]`"))
+        self.assertTrue(self.unnamed("DT", "`[DT]`, `[databook]` (DDI 0183)"))
 
     def test_inference_needs_a_parenthetical(self):
-        inf = spec_check.UNNAMED_RES["inference"]
-        self.assertIsNone(inf.search("`[inference]` (the driver clears it before reset; ordering follows)"))
-        self.assertIsNone(inf.search("[inference] (premises: x; derivation: y)"))
-        self.assertIsNotNone(inf.search("`[inference]`"))
-        self.assertIsNotNone(inf.search("`[inference]`, `[databook]` (DDI 0183)"))
+        self.assertFalse(self.unnamed("inference", "`[inference]` (the driver clears it before reset; ordering follows)"))
+        self.assertFalse(self.unnamed("inference", "[inference] (premises: x; derivation: y)"))
+        self.assertTrue(self.unnamed("inference", "`[inference]`"))
+        self.assertTrue(self.unnamed("inference", "`[inference]`, `[databook]` (DDI 0183)"))
 
     def test_inference_is_a_tag_in_the_tail(self):
         self.assertTrue(
@@ -253,11 +266,10 @@ class TagRules(unittest.TestCase):
         )
 
     def test_emulated_needs_a_parenthetical(self):
-        emu = spec_check.UNNAMED_RES["emulated"]
-        self.assertIsNone(emu.search("`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02)"))
-        self.assertIsNone(emu.search("[emulated] (widget-model 1.0, run widget-q1-01)"))
-        self.assertIsNotNone(emu.search("`[emulated]`"))
-        self.assertIsNotNone(emu.search("`[emulated]`, `[databook]` (Widget TRM 4.2)"))
+        self.assertFalse(self.unnamed("emulated", "`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02)"))
+        self.assertFalse(self.unnamed("emulated", "[emulated] (widget-model 1.0, run widget-q1-01)"))
+        self.assertTrue(self.unnamed("emulated", "`[emulated]`"))
+        self.assertTrue(self.unnamed("emulated", "`[emulated]`, `[databook]` (Widget TRM 4.2)"))
 
     def test_emulated_beside_another_class_passes(self):
         body = (
@@ -928,7 +940,9 @@ class Verification(unittest.TestCase):
                     any(k.startswith("verification stale") and v == "warning" for k, v in by_level.items())
                 )
 
-    def test_stale_record_with_fail_verdicts_is_an_error(self):
+    def test_stale_record_with_fail_verdicts_reports_stale_not_its_old_fails(self):
+        """A stale record's FAILs were for another version of the file (RG1 friction,
+        2026-10-07): the fix may already be in, so the record is stale, not failing."""
         import shutil, tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -942,14 +956,13 @@ class Verification(unittest.TestCase):
                     with self.subTest(flags=flags, require=require):
                         args = ["--require-verified"] if require else []
                         code, data, err = run(root, *args, flags=flags)
-                        self.assertEqual(code, 1, err + json.dumps(data))
+                        self.assertEqual(code, 1 if require else 0, err + json.dumps(data))
                         self.assertEqual(data["verification"], {"stale": 1})
                         by_level = {f["message"]: f["level"] for f in without_license_absent(data)}
                         self.assertEqual(by_level, {
-                            "verification stale: resources/vstalefail.verify.md was written for another version of this file":
+                            "verification stale: resources/vstalefail.verify.md was written for "
+                            "another version of this file (its 1 FAIL verdict(s) were for that version)":
                                 "error" if require else "warning",
-                            "verification record reports 1 FAIL verdict(s); see resources/vstalefail.verify.md":
-                                "error",
                         })
 
     def test_require_verified_upgrades_the_warnings(self):
@@ -1020,6 +1033,941 @@ class Verification(unittest.TestCase):
                 "\n".join(messages(data)),
             )
 
+
+
+COMMIT = "439b6198a9b340de5998dd14a26a0d9d38a6bcac"
+PERMISSIVE = "layer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0, MIT, BSD-3-Clause]\n"
+DOCS_ONLY = "layer: public\nlicense: CC-BY-4.0\naccepts: []\n"
+SRC_CHIP = """\
+---
+kind: chip
+id: schip
+name: Source class chip
+triggers: [schip]
+resources:
+  repos:
+    - name: stub
+      url: https://example.com/stub
+      ref: {ref}
+      license: {lic}
+---
+
+## Quick-facts
+
+- **Counter frequency.** The stub writes 54000000 to `CNTFRQ_EL0`. `[src]`
+  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])
+{extra}"""
+
+
+class SrcClass(unittest.TestCase):
+    """[src]: a fact read from source at a pinned commit (RG-T1, user decision 2026-10-07)."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def chip(self, ref=COMMIT, lic="BSD-3-Clause", extra=""):
+        return {"c.spec.md": SRC_CHIP.format(ref=ref, lic=lic, extra=extra)}
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_pinned_accepted_src_fact_passes_without_a_todo(self):
+        for flags in PARSER_FLAGS:
+            for args in ([], ["--require-license"]):
+                with self.subTest(flags=flags, args=args):
+                    code, data, err = self.check(PERMISSIVE, self.chip(), *args, flags=flags)
+                    self.assertEqual(code, 0, err + json.dumps(data))
+                    self.assertEqual(substantive(data), [])
+
+    def test_src_needs_a_parenthetical_with_an_anchor(self):
+        extra = (
+            "- **Bare.** A fact. `[src]`\n"
+            "- **No anchor.** A fact. `[src]` (armstub8.S, the timer block)\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        errors = self.errors(data)
+        self.assertEqual(len(errors), 2, errors)
+        self.assertIn("[src] must be followed by a parenthetical naming the [src:<repo>: path:L]", errors[0])
+        self.assertIn("[src] parenthetical cites no anchor", errors[1])
+
+    def test_unpinned_src_fails(self):
+        for ref in ("main", "439b619", "None"):
+            with self.subTest(ref=ref):
+                code, data, _ = self.check(PERMISSIVE, self.chip(ref=ref))
+                self.assertEqual(code, 1)
+                errors = self.errors(data)
+                self.assertEqual(len(errors), 1, errors)  # once per repo, not once per anchor
+                self.assertIn("is not a full commit id", errors[0])
+
+    def test_anchor_must_name_a_listed_repo(self):
+        extra = (
+            "- **Unnamed.** A fact. `[src]` ([src: armstubs/armstub8.S:1])\n"
+            "- **Unknown.** A fact. `[src]` ([src:linux: drivers/x.c:1])\n"
+            "- **Malformed.** A fact. `[src]` ([src:stub: armstubs/armstub8.S])\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        errors = "\n".join(self.errors(data))
+        self.assertIn("[src: armstubs/armstub8.S:1] names no repo", errors)
+        self.assertIn("[src:linux: drivers/x.c:1] names repo 'linux', but the spec's resources.repos entries are: stub", errors)
+        self.assertIn("malformed src anchor", errors)
+
+    def test_license_not_accepted_fails_even_without_require_license(self):
+        for args in ([], ["--require-license"]):
+            with self.subTest(args=args):
+                code, data, _ = self.check(PERMISSIVE, self.chip(lic="GPL-2.0-only"), *args)
+                self.assertEqual(code, 1)
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), 1, self.errors(data))
+                self.assertIn("'stub' (GPL-2.0-only), which root", gate[0])
+                self.assertIn("does not accept (accepts: Apache-2.0, MIT, BSD-3-Clause)", gate[0])
+
+    def test_docs_root_accepts_no_src(self):
+        for lic in ("BSD-3-Clause", "MIT"):
+            with self.subTest(lic=lic):
+                code, data, _ = self.check(DOCS_ONLY, self.chip(lic=lic))
+                self.assertEqual(code, 1)
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), 1, self.errors(data))
+                self.assertIn("(accepts: none)", gate[0])
+
+    def test_root_without_accepts_accepts_no_src(self):
+        code, data, _ = self.check("layer: public\n", self.chip())
+        self.assertEqual(code, 1)
+        self.assertIn("declares no accepts: list", "\n".join(self.errors(data)))
+
+    def test_anchor_broken_across_lines_fails(self):
+        extra = (
+            "- **Split.** A fact. `[src]` ([src:stub:\n"
+            "  armstubs/armstub8.S:1-2])\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        broken = [f for f in data["findings"] if "broken across lines" in f["message"]]
+        self.assertEqual(len(broken), 1, data["findings"])
+        # A file line number, counting the frontmatter (12 lines), not a body line number.
+        self.assertTrue(broken[0]["path"].endswith("c.spec.md:18"), broken[0]["path"])
+
+    def test_src_anchor_as_an_inference_premise_is_checked_too(self):
+        extra = (
+            "- **Derived.** A conclusion. `[inference]` (premises: the stub writes it "
+            "[src:stub: armstubs/armstub8.S:1-2]) `TODO (verify on hardware)`: read it.\n"
+        )
+        code, data, err = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 0, err + json.dumps(data))
+        code, data, _ = self.check(DOCS_ONLY, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+
+    def test_the_src_overlay_fixture_against_the_three_repo_shaped_roots(self):
+        """The fixture the spec repositories' self-tests copy (license-gate/README.md)."""
+        import shutil, tempfile
+
+        for name, want in (("gpl", 0), ("permissive", 0), ("docs", 1)):
+            with self.subTest(root=name), tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp) / name
+                shutil.copytree(GATE_ROOTS / name, root)
+                for f in ("widgetchip.spec.md", "widgetchip-src-overlay.spec.md"):
+                    shutil.copy(GATE_BOARD / f, root)
+                code, data, err = run(root, "--require-license", flags=["--no-pyyaml"])
+                self.assertEqual(code, want, err + json.dumps(data))
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), want, self.errors(data))
+
+    def test_src_is_not_a_variant_tag(self):
+        self.assertNotIn("src", spec_check.TAG_CLASSES)
+        self.assertIn("src", spec_check.TAG_NAMES.split("|"))
+
+
+OVERLAY_BASE = """\
+---
+kind: chip
+id: ochip
+name: Overlay base chip
+triggers: [ochip]
+---
+
+## Quick-facts
+
+- A fact. `[doc]` (Widget TRM 1.0)
+"""
+
+OVERLAY_SPEC = """\
+---
+overlays: ochip
+---
+
+## Quick-facts
+
+- An added fact. `[doc]` (Widget TRM 2.0)
+"""
+
+
+class OverlayVerification(unittest.TestCase):
+    """Overlays are verified under their own root, one record each (spec-verifier)."""
+
+    def roots(self, tmp, record=None):
+        import hashlib
+
+        base = pathlib.Path(tmp) / "base"
+        over = pathlib.Path(tmp) / "over"
+        for root in (base, over):
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+        (base / "ochip.spec.md").write_text(OVERLAY_BASE)
+        spec = over / "ochip-extra.spec.md"
+        spec.write_text(OVERLAY_SPEC)
+        if record is not None:
+            digest = hashlib.sha256(spec.read_bytes()).hexdigest()
+            (over / "resources").mkdir()
+            (over / "resources" / "ochip-extra.verify.md").write_text(record.format(digest=digest))
+        return base, over
+
+    RECORD = (
+        "---\nspec: ochip\nspec_file: ochip-extra.spec.md\nspec_sha256: {digest}\n"
+        "verified: 2026-10-07\nverifier: synthetic\nsources: []\n"
+        "summary: {{pass: 1, fail: FAIL, unverifiable: 0, gap: 0}}\n---\n"
+    )
+
+    def test_overlay_without_a_record_warns_unverified(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base, over = self.roots(tmp)
+            code, data, _ = run(over, base, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertEqual(data["verification"], {"unverified": 2})
+            unverified = [f["path"] for f in data["findings"] if f["message"].startswith("unverified:")]
+            self.assertIn(str(over / "ochip-extra.spec.md"), unverified)
+            code, data, _ = run(over, base, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+
+    def test_overlay_record_is_checked(self):
+        import tempfile
+
+        for fail, want_code, status in (("0", 0, "verified"), ("1", 1, "failing")):
+            with self.subTest(fail=fail), tempfile.TemporaryDirectory() as tmp:
+                base, over = self.roots(tmp, self.RECORD.replace("FAIL", fail))
+                code, data, err = run(over, base, flags=["--no-pyyaml"])
+                self.assertEqual(code, want_code, err + json.dumps(data))
+                self.assertEqual(data["verification"], {status: 1, "unverified": 1})
+                if fail != "0":
+                    self.assertIn(
+                        "verification record reports 1 FAIL verdict(s); see resources/ochip-extra.verify.md",
+                        "\n".join(messages(data)),
+                    )
+
+    def test_overlay_record_names_the_overlaid_id(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base, over = self.roots(tmp, self.RECORD.replace("FAIL", "0").replace("spec: ochip", "spec: other"))
+            code, data, _ = run(over, base, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec 'other' is not 'ochip'", "\n".join(messages(data)))
+
+
+
+class ReviewFixes(unittest.TestCase):
+    """RG-T1 review findings (2026-10-07): each test fails without its fix."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def chip(self, extra):
+        return {"c.spec.md": SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra=extra)}
+
+    def test_empty_src_anchors_fail(self):
+        for bullet in ("- **Empty.** A fact. `[src]` ([src:])\n",
+                       "- **Blank.** A fact. `[src]` ([src: ; ])\n"):
+            for marker in (PERMISSIVE, DOCS_ONLY):
+                with self.subTest(bullet=bullet, marker=marker):
+                    code, data, _ = self.check(marker, self.chip(bullet))
+                    self.assertEqual(code, 1)
+                    errors = "\n".join(self.errors(data))
+                    self.assertIn("[src] parenthetical cites no anchor", errors)
+                    self.assertIn("empty [src:", errors)
+
+    def test_other_anchor_kinds_are_rejected_in_a_board_spec(self):
+        for kind in ("impl", "tgt", "ref"):
+            with self.subTest(kind=kind):
+                extra = (f"- **Alias.** A conclusion. `[inference]` (premises: [{kind}:stub: "
+                         "armstubs/armstub8.S:1-2]) `TODO (verify on hardware)`: read it.\n")
+                code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+                self.assertEqual(code, 1)
+                self.assertIn(f"[{kind}:stub: armstubs/armstub8.S:1-2] is not a board-spec anchor",
+                              "\n".join(self.errors(data)))
+
+    def test_src_clause_nested_in_an_inference_passes(self):
+        extra = ("- **Derived.** A conclusion. `[inference]` (premises: the stub writes it `[src]` "
+                 "([src:stub: armstubs/armstub8.S:1-2 (OSC_FREQ)]); derivation: x) "
+                 "`TODO (verify on hardware)`: read it.\n")
+        code, data, err = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 0, err + json.dumps(data))
+        self.assertEqual(substantive(data), [])
+
+    def test_anchor_broken_before_its_colon_fails(self):
+        extra = "- **Split.** A fact. `[inference]` (premises: [src\n  :stub: a.S:1]) `TODO (verify on hardware)`: x.\n"
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_tag_findings_cite_file_line_numbers(self):
+        extra = "- **Untagged.** A fact with no tag.\n"
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 1)
+        untagged = [f for f in data["findings"] if f["message"] == "fact bullet has no provenance tag"]
+        self.assertEqual(len(untagged), 1, data["findings"])
+        self.assertTrue(untagged[0]["path"].endswith("c.spec.md:18"), untagged[0]["path"])
+
+    def test_overlay_variants_are_checked(self):
+        overlay = "---\noverlays: ochip\nvariants:\n  - {name: v2, tag: src}\n---\n\n## Quick-facts\n\n- A fact. `[doc]` (TRM)\n"
+        code, data, _ = self.check("layer: public\n", {"o.spec.md": OVERLAY_BASE, "x.spec.md": overlay})
+        self.assertEqual(code, 1)
+        self.assertIn("variants: entry 'v2': tag must be a provenance class, not 'src'",
+                      "\n".join(self.errors(data)))
+
+
+class RecordsPerFile(unittest.TestCase):
+    """A record is named for its spec file; spec_file must name that file."""
+
+    def record(self, spec_id, spec_file, digest, fail=0):
+        return (f"---\nspec: {spec_id}\nspec_file: {spec_file}\nspec_sha256: {digest}\n"
+                "verified: 2026-10-07\nverifier: synthetic\nsources: []\n"
+                f"summary: {{pass: 1, fail: {fail}, unverifiable: 0, gap: 0}}\n---\n")
+
+    def root(self, tmp, files, records):
+        import hashlib
+
+        root = pathlib.Path(tmp) / "root"
+        (root / "resources").mkdir(parents=True)
+        (root / "board-specs.yaml").write_text("layer: public\n")
+        for name, text in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+        for rec, (sid, spec_file) in records.items():
+            digest = hashlib.sha256((root / spec_file).read_bytes()).hexdigest()
+            (root / "resources" / rec).write_text(self.record(sid, spec_file, digest))
+        return root
+
+    def test_base_and_overlay_in_one_root_each_have_a_record(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"ochip.spec.md": OVERLAY_BASE, "ochip-extra.spec.md": OVERLAY_SPEC},
+                             {"ochip.verify.md": ("ochip", "ochip.spec.md"),
+                              "ochip-extra.verify.md": ("ochip", "ochip-extra.spec.md")})
+            code, data, err = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            self.assertEqual(data["verification"], {"verified": 2})
+
+    def test_spec_file_must_name_the_file(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"ochip.spec.md": OVERLAY_BASE}, {})
+            import hashlib
+            digest = hashlib.sha256((root / "ochip.spec.md").read_bytes()).hexdigest()
+            (root / "resources" / "ochip.verify.md").write_text(
+                self.record("ochip", "nonexistent.spec.md", digest))
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec_file 'nonexistent.spec.md' is not 'ochip.spec.md'",
+                          "\n".join(messages(data)))
+
+    def test_two_files_sharing_a_record_name_fail(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"a/ochip.spec.md": OVERLAY_BASE, "b/ochip.spec.md": OVERLAY_SPEC}, {})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("would share the verification record resources/ochip.verify.md",
+                          "\n".join(messages(data)))
+
+
+class OverlayMergeAndContext(unittest.TestCase):
+    """User decisions B and C (2026-10-07)."""
+
+    def roots(self, tmp, *layouts):
+        out = []
+        for name, files in layouts:
+            root = pathlib.Path(tmp) / name
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+            for fname, text in files.items():
+                (root / fname).write_text(text)
+            out.append(root)
+        return out
+
+    def test_overlays_of_one_id_in_different_roots_of_one_layer_do_not_warn(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, perm, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": OVERLAY_BASE}),
+                                         ("perm", {"ochip.spec.md": OVERLAY_SPEC}),
+                                         ("gpl", {"ochip.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, perm, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertNotIn("overlays for 'ochip'", "\n".join(messages(data)))
+
+    def test_two_overlays_of_one_id_in_one_root_warn(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": OVERLAY_BASE}),
+                                   ("gpl", {"a.spec.md": OVERLAY_SPEC, "b.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertIn("2 overlays for 'ochip' in layer 'public' in one root", "\n".join(messages(data)))
+
+    def test_context_root_findings_are_warnings(self):
+        import tempfile
+
+        bad = OVERLAY_BASE.replace("`[doc]` (Widget TRM 1.0)", "no tag here")
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": bad}),
+                                   ("gpl", {"ochip.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            code, data, err = run(gpl, "--context-root", docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            ctx = [f for f in data["findings"] if f["message"].startswith("context root: ")]
+            self.assertTrue(any("no provenance tag" in f["message"] and f["level"] == "warning" for f in ctx), ctx)
+            # Its own errors still fail, and the context root still resolves overlay targets.
+            (gpl / "ochip.spec.md").write_text(OVERLAY_SPEC.replace("`[doc]` (Widget TRM 2.0)", "untagged"))
+            code, data, _ = run(gpl, "--context-root", docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertNotIn("resolves to nothing", "\n".join(messages(data)))
+
+
+
+class Round2Fixes(unittest.TestCase):
+    """RG-T1 round-2 review findings: each test fails without its fix."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_repos_url_must_be_https(self):
+        for url in ("--upload-pack=touch /tmp/x", "file:///tmp/fw", "git@example.com:fw.git",
+                    "http://example.com/fw"):
+            with self.subTest(url=url):
+                spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+                    "https://example.com/stub", f'"{url}"')
+                code, data, _ = self.check(PERMISSIVE, {"c.spec.md": spec})
+                self.assertEqual(code, 1)
+                self.assertIn("must be an https:// URL", "\n".join(self.errors(data)))
+
+    def test_a_lone_anchor_split_before_its_colon_fails(self):
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [src\n  :stub: armstubs/armstub8.S:53-57])")
+        self.assertNotIn("[src:", spec)
+        code, data, _ = self.check(PERMISSIVE, {"c.spec.md": spec})
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_prose_ending_in_a_bracket_is_not_a_split(self):
+        extra = "\nOrientation text that ends in a bracket [\nand goes on.\n"
+        code, data, err = self.check(PERMISSIVE, {"c.spec.md": SRC_CHIP.format(
+            ref=COMMIT, lic="BSD-3-Clause", extra="") + extra})
+        self.assertEqual(code, 0, err + json.dumps(data))
+
+    def test_context_root_may_not_be_a_checked_root(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, "layer: public\n", {"bad.spec.md": "no frontmatter\n"})
+            for ctx in (root, pathlib.Path(str(root) + "/"), root / ".." / "root", root.parent):
+                with self.subTest(ctx=ctx):
+                    code, _, err = run(root, "--context-root", ctx, flags=["--no-pyyaml"])
+                    self.assertEqual(code, 2, err)
+                    self.assertIn("a context root must be a separate root", err)
+
+    def test_spec_file_null_is_malformed(self):
+        import tempfile, shutil
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "root"
+            (root / "resources").mkdir(parents=True)
+            shutil.copy(VERIFY / "board-specs.yaml", root)
+            shutil.copy(VERIFY / "vok.spec.md", root)
+            rec = (VERIFY / "resources" / "vok.verify.md").read_text().replace(
+                "spec_file: vok.spec.md", "spec_file: null")
+            (root / "resources" / "vok.verify.md").write_text(rec)
+            code, data, _ = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec_file None is not 'vok.spec.md'",
+                          "\n".join(messages(data)))
+
+    def test_a_record_owned_by_no_spec_file_warns(self):
+        import tempfile, shutil
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "root"
+            (root / "resources").mkdir(parents=True)
+            shutil.copy(VERIFY / "board-specs.yaml", root)
+            shutil.copy(VERIFY / "vok.spec.md", root)
+            shutil.copy(VERIFY / "resources" / "vok.verify.md", root / "resources")
+            shutil.copy(VERIFY / "resources" / "vfail.verify.md", root / "resources")
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            orphans = [f for f in data["findings"] if "belongs to no spec file" in f["message"]]
+            self.assertEqual(len(orphans), 1, data["findings"])
+            self.assertTrue(orphans[0]["path"].endswith("vfail.verify.md"))
+
+
+
+class Round3Fixes(unittest.TestCase):
+    """RG-T1 round-3 review findings: each test fails without its fix."""
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_an_anchor_split_over_three_lines_fails(self):
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [s\n  r\n  c:stub: armstubs/armstub8.S:53-57])")
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, PERMISSIVE, {"c.spec.md": spec})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_an_orphan_record_in_a_root_without_specs_warns(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, "layer: public\n", {})
+            (root / "resources").mkdir()
+            (root / "resources" / "deleted.verify.md").write_text("---\nspec: deleted\n---\n")
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertIn("verification record belongs to no spec file", "\n".join(messages(data)))
+
+    def test_a_tag_named_in_prose_inside_a_parenthetical_is_not_a_tag(self):
+        # User decision 2026-10-08: a code span holding only a tag is that tag, so prose names
+        # a tag inside a parenthetical in a longer code span or in words.
+        extra = ("- **Derived.** A conclusion. `[inference]` (premises: the previous bullet's "
+                 "`[src] anchors` and the DT values; derivation: x) `TODO (verify on hardware)`: y.\n"
+                 "- **Doc.** A fact. `[doc]` (vendor page, unlike the press-class report)\n")
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, PERMISSIVE, {"c.spec.md": SRC_CHIP.format(
+                ref=COMMIT, lic="BSD-3-Clause", extra=extra)})
+            code, data, err = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 0, err + json.dumps(data))
+        self.assertEqual(substantive(data), [])
+
+
+
+class Round4Simplify(unittest.TestCase):
+    """RG-T1 round 4 (user decision 2026-10-08: simplify): each test fails without its change."""
+
+    def errors(self, data):
+        return [f for f in data["findings"] if f["level"] == "error"]
+
+    def two_roots(self, tmp):
+        ctx = pathlib.Path(tmp) / "context"
+        checked = pathlib.Path(tmp) / "checked"
+        for root in (ctx, checked):
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+        (ctx / "a.spec.md").write_text(OVERLAY_BASE)
+        return ctx, checked
+
+    def test_a_file_link_in_a_checked_root_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx, checked = self.two_roots(tmp)
+            os.symlink(ctx / "a.spec.md", checked / "a.spec.md")
+            code, data, _ = run(checked, "--context-root", ctx, "--require-verified",
+                                flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertTrue(any(f["path"] == str(checked / "a.spec.md") and "symbolic link"
+                                in f["message"] for f in self.errors(data)), data["findings"])
+
+    def test_a_directory_link_in_a_checked_root_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ext = pathlib.Path(tmp) / "external"
+            ext.mkdir()
+            (ext / "chip.spec.md").write_text("no frontmatter\n")
+            root = write_root(tmp, "layer: public\n", {})
+            os.symlink(ext, root / "imported")
+            code, data, _ = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertTrue(any(f["path"] == str(root / "imported") for f in self.errors(data)),
+                            data["findings"])
+
+    def test_a_link_in_a_context_root_refuses_to_run(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx, checked = self.two_roots(tmp)
+            sep = write_root(tmp, "layer: public\n", {"b.spec.md": "no frontmatter\n"})
+            os.symlink(sep, ctx / "linked")
+            code, _, err = run(checked, "--context-root", ctx, flags=["--no-pyyaml"])
+            self.assertEqual(code, 2, err)
+            self.assertIn("a context root may hold no links", err)
+            # The review's case: a checked root reached through a link under the context root.
+            code, _, err = run(ctx / "linked", "--context-root", ctx, flags=["--no-pyyaml"])
+            self.assertEqual(code, 2, err)
+
+    def test_a_checked_root_reached_through_a_link_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            real = write_root(tmp, "layer: public\n", {"b.spec.md": "no frontmatter\n"})
+            link = pathlib.Path(tmp) / "alias"
+            os.symlink(real, link)
+            code, data, _ = run(link, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("reached through, a symbolic link", "\n".join(f["message"] for f in self.errors(data)))
+
+    def test_a_split_anchor_across_a_blank_line_fails(self):
+        import tempfile
+
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [s\n\n  r\n  c:stub: armstubs/armstub8.S:53-57])")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, DOCS_ONLY, {"c.spec.md": spec})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(f["message"] for f in self.errors(data)))
+
+    def test_unbackticked_nested_tags_count(self):
+        import tempfile
+
+        cases = {
+            "- **A.** Magic is 0x1234. `[doc]` ([src] GPL driver, foo.c:42)\n": "[src] must be followed",
+            "- **B.** A fact. `[doc]` ([press] (launch article))\n": "[press] fact without",
+            "- **C.** A fact. `[doc]` ([emulated] (QEMU v9, run 1))\n": "[emulated] fact without",
+        }
+        for bullet, want in cases.items():
+            with self.subTest(bullet=bullet), tempfile.TemporaryDirectory() as tmp:
+                root = write_root(tmp, DOCS_ONLY, {"c.spec.md": OVERLAY_BASE.replace(
+                    "- A fact. `[doc]` (Widget TRM 1.0)\n", bullet)})
+                code, data, _ = run(root, "--require-license", flags=["--no-pyyaml"])
+                self.assertEqual(code, 1)
+                self.assertIn(want, "\n".join(f["message"] for f in self.errors(data)))
+
+
+SPEC6 = """\
+---
+kind: chip
+id: tchip
+name: Tokenizer chip
+triggers: [tchip]
+resources:
+  repos:
+    - name: fw
+      url: https://example.com/fw
+      ref: %s
+      license: BSD-3-Clause
+---
+
+""" % COMMIT
+
+
+class BodyCheck:
+    """Helpers: check a spec body under SPEC6's frontmatter in a fresh root."""
+
+    def check(self, body, marker=PERMISSIVE, *args):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, {"t.spec.md": SPEC6 + body})
+            code, data, err = run(root, *args, flags=["--no-pyyaml"])
+        return code, [f["message"] for f in data["findings"] if f["level"] == "error"], data
+
+    def assert_error(self, body, want, marker=PERMISSIVE, *args):
+        code, errors, data = self.check(body, marker, *args)
+        self.assertEqual(code, 1, json.dumps(data))
+        self.assertTrue(any(want in e for e in errors), (want, errors))
+
+    def assert_clean(self, body, marker=PERMISSIVE, *args):
+        code, errors, data = self.check(body, marker, *args)
+        self.assertEqual((code, errors), (0, []), json.dumps(data))
+
+
+
+class Round6Tokenizer(BodyCheck, unittest.TestCase):
+    """RG-T1 round 6 (user decision 2026-10-08): one CommonMark parse (mdtokens) for fences,
+    code spans and list items. Each round-5 finding has a test here, and so does each rule."""
+
+    # --- round-5 findings ---------------------------------------------------------------
+
+    def test_r5_1_a_backticked_nested_src_clause_is_a_tag(self):
+        self.assert_error(
+            "## Quick-facts\n\n- Magic is 0x1234. `[doc]` (`[src]` (GPL driver, foo.c:42))\n",
+            "[src] parenthetical cites no anchor", DOCS_ONLY, "--require-license")
+
+    def test_r5_2_an_indented_opening_fence_closes_where_commonmark_says(self):
+        body = ("  ```text\n  example\n```\n\n## Quick-facts\n\n"
+                "- Magic is 0x1234. `[DT]` (widget.dtsi; [src:fw: foo.c:\n  42])\n\n"
+                "```text\nexample\n```\n")
+        self.assert_error(body, "broken across lines", DOCS_ONLY)
+
+    def test_r5_3_an_unterminated_anchor_at_eof_without_a_newline(self):
+        self.assert_error("## Quick-facts\n\n- Magic is 0x1234. `[DT]` (widget.dtsi; [src:fw: foo.c:42)",
+                          "no closing ']'")
+
+    def test_r5_4_a_link_cancelled_by_dotdot_is_still_a_link(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            real = pathlib.Path(tmp) / "a" / "b"
+            real.mkdir(parents=True)
+            root = write_root(real, PERMISSIVE, {"t.spec.md": SPEC6 + "## Quick-facts\n"})
+            os.symlink(real, pathlib.Path(tmp) / "l")
+            given = pathlib.Path(tmp) / "l" / ".." / "b" / "root"
+            self.assertTrue((given / "board-specs.yaml").exists())
+            self.assertTrue(spec_check.through_link(given))
+            self.assertFalse(spec_check.through_link(root))
+            code, data, _ = run(given, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("symbolic link", "\n".join(messages(data)))
+
+    def test_r5_5_every_nested_src_clause_needs_its_own_anchor(self):
+        self.assert_error("## Quick-facts\n\n- Value is 1. [src] ([src:fw: a.c:1]; [src] (b.c:2))\n",
+                          "[src] parenthetical cites no anchor")
+        self.assert_clean("## Quick-facts\n\n- Value is 1. [src] ([src:fw: a.c:1]; [src] ([src:fw: b.c:2]))\n")
+
+    def test_r5_6_uppercase_anchor_kinds_are_errors(self):
+        for anchor in ("[SRC:missing: foo.c:42]", "[Src:fw: foo.c:42]", "[sRc:fw: foo.c:42]"):
+            with self.subTest(anchor=anchor):
+                self.assert_error(f"## Quick-facts\n\n- Magic is 0x1234. `[DT]` (widget.dtsi; {anchor})\n",
+                                  "is not lowercase")
+
+    # --- the grammar on the token stream, table-driven ----------------------------------
+
+    def test_adversarial_table(self):
+        ok = None
+        cases = [
+            # (name, body, expected error substring or None for clean)
+            ("eof without newline, valid", "## Quick-facts\n\n- A fact. `[DT]` (x.dtsi)", ok),
+            ("tilde fence hides nothing after it",
+             "## Quick-facts\n\n~~~\n[src:fw: a.c:1]\n~~~\n\n- A fact. no tag here\n", "no provenance tag"),
+            ("anchor inside a tilde fence is code", "## Quick-facts\n\n~~~\n[SRC:x: a.c:1]\n~~~\n", ok),
+            ("indented fence opener", "## Quick-facts\n\n   ```\n[SRC:x: a.c:1]\n   ```\n", ok),
+            ("unterminated fence", "## Quick-facts\n\n```\n- A fact. no tag\n", "code fence never closes"),
+            ("unterminated fence inside an item",
+             "## Quick-facts\n\n- A fact. `[DT]` (x)\n  ```\n  code\n- Next. `[DT]` (y)\n",
+             "code fence never closes"),
+            ("4-space indented ``` is a code block, not a fence",
+             "## Quick-facts\n\n    ```\n\n- A fact. `[DT]` (x)\n", ok),
+            ("longer code span with a tag is prose", "## Quick-facts\n\n- A fact. `[DT] (x.dtsi)`\n",
+             "fact bullet has no provenance tag"),
+            ("code span holding only a tag is the tag", "## Quick-facts\n\n- A fact. `[DT]` (x)\n", ok),
+            ("double-backtick span holding only a tag", "## Quick-facts\n\n- A fact. `` [DT] `` (x)\n", ok),
+            ("prose span names a tag in a parenthetical",
+             "## Quick-facts\n\n- A fact. `[doc]` (page; unlike the `[press] report`)\n", ok),
+            ("nested press clause needs its TODO",
+             "## Quick-facts\n\n- A fact. [inference] (premise [press] (article))\n", "[press] fact without"),
+            ("three-deep nested src without an anchor",
+             "## Quick-facts\n\n- A fact. [inference] (p [doc] (q [src] (r))) TODO (verify on hardware)\n",
+             "[src] parenthetical cites no anchor"),
+            ("an outer src clause cannot borrow a nested clause's anchor",
+             "## Quick-facts\n\n- A fact. [src] (via [src] ([src:fw: a.c:1]))\n",
+             "[src] parenthetical cites no anchor"),
+            ("tag case variant", "## Quick-facts\n\n- A fact. [Src] ([src:fw: a.c:1])\n", "canonical case"),
+            ("tag case variant in a code span", "## Quick-facts\n\n- A fact. `[dt]` (x)\n", "canonical case"),
+            ("tag case variant in prose", "## Quick-facts\n\n- The [Doc] says so. `[DT]` (x)\n", "canonical case"),
+            ("anchor in a backticked span alone counts",
+             "## Quick-facts\n\n- A fact. [src] (`[src:fw: a.c:1]`)\n", ok),
+            ("anchor in a longer code span is prose",
+             "## Quick-facts\n\n- A fact. [src] (`see [src:fw: a.c:1]`)\n", "[src] parenthetical cites no anchor"),
+            ("anchor across a soft break", "## Quick-facts\n\n- A fact. [src] ([src:fw:\n  a.c:1])\n",
+             "broken across lines"),
+            ("anchor across a blank line", "## Quick-facts\n\n- A fact. [DT] (x [s\n\n  r\n  c:fw: a.c:1])\n",
+             "broken across lines"),
+            ("unterminated anchor before the next item",
+             "## Quick-facts\n\n- A. [DT] (x [src:fw: a.c:1)\n- B. [DT] (y])\n", "no closing ']'"),
+            ("lazy continuation line is part of the item",
+             "## Quick-facts\n\n- A fact. `[DT]` (x)\nand more prose.\n", "does not end with its tag clause"),
+        ]
+        for name, body, want in cases:
+            with self.subTest(name=name):
+                if want is None:
+                    self.assert_clean(body)
+                else:
+                    self.assert_error(body, want)
+
+    def test_masked_lines_keep_file_line_numbers(self):
+        code, errors, data = self.check("## Quick-facts\n\n- `x\n  y` z. [DT] (x)\n- B. [Src] (y)\n")
+        where = [f["path"] for f in data["findings"] if "canonical case" in f["message"]]
+        self.assertEqual(len(where), 1)
+        self.assertTrue(where[0].endswith(":18"), where)  # 13 lines before the body, then 5
+
+    def test_missing_dependency_exits_3(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # A markdown_it package that is the wrong version: the pin is the contract.
+            fake = pathlib.Path(tmp) / "markdown_it"
+            fake.mkdir()
+            (fake / "__init__.py").write_text('__version__ = "0.0.0"\n')
+            root = write_root(tmp, PERMISSIVE, {"t.spec.md": SPEC6})
+            env = dict(os.environ, PYTHONPATH=tmp)
+            proc = subprocess.run([sys.executable, str(CHECKER), str(root)],
+                                  capture_output=True, text=True, env=env)
+        self.assertEqual(proc.returncode, 3, proc.stderr)
+        self.assertIn("missing dependency: the checkers are pinned to markdown-it-py==4.2.0",
+                      proc.stderr)
+
+
+class Round7Profile(BodyCheck, unittest.TestCase):
+    """RG-T1 round 7 (user decision 2026-10-08): the spec Markdown profile, the shared
+    malformed-anchor check, fence closure from the parser, and items read from their parsed
+    content. Each Codex round-6 finding has a test; each fails without its change."""
+
+    def test_codex2_an_indented_4_closer_leaves_the_fence_open(self):
+        self.assert_error("## Quick-facts\n\n```\n- Fact without provenance.\n    ```\n",
+                          "code fence never closes")
+
+    def test_codex2_a_fence_inside_a_list_item_closes(self):
+        self.assert_clean("## Quick-facts\n\n- A fact. `[DT]` (x)\n\n  ```text\n  code\n  ```\n\n"
+                          "- Next. `[DT]` (y)\n")
+
+    def test_codex3_a_heading_inside_a_quote_is_not_a_section(self):
+        self.assert_error("## Quick-facts\n\n> ## Example\n\n- Magic is 0x1234 with no provenance.\n",
+                          "fact bullet has no provenance tag")
+
+    def test_codex4_a_child_item_lends_no_tags_to_its_parent(self):
+        body = "## Quick-facts\n\n- Magic is 0x1234. [src] (GPL driver, a.c:1)\n  - Detail. [databook]\n"
+        self.assert_error(body, "[src] parenthetical cites no anchor")
+        self.assert_error(body, "a nested list item in a fact section")
+
+    def test_nested_items_outside_fact_sections_are_allowed(self):
+        self.assert_clean("## Orientation\n\n- Topic.\n  - Detail.\n")
+
+    def test_codex5_a_code_span_inside_a_word(self):
+        for body in ("- Magic is 0x1234. [data`book`]\n", "- A. `[DT]` (x [sr`c`:fw: a.c:1])\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "code span starts or ends inside a word")
+        self.assert_error("## Quick-facts\n\n- Magic is 0x1234. [data`book`]\n",
+                          "fact bullet has no provenance tag")
+
+    def test_codex6_gap_bullets_are_read_from_the_parsed_item(self):
+        for body in ("  - TODO (verify on hardware): clock rate.\n",
+                     "-  TODO (verify on hardware): clock rate.\n",
+                     "- **Clock.** `TODO (verify on hardware)`: rate.\n"):
+            with self.subTest(body=body):
+                code, errors, data = self.check("## Quick-facts\n\n" + body)
+                self.assertFalse(any("provenance tag" in e for e in errors), errors)
+
+    def test_codex7_and_the_rest_of_the_profile(self):
+        cases = {
+            "image": ("- A. `[DT]` (x) ![note `see [src:fw: a.c:1]`](image.svg)\n", "an image"),
+            "inline html": ("- A. <b>bold</b> `[DT]` (x)\n", "raw HTML"),
+            "setext": ("Title\n=====\n\n- A. `[DT]` (x)\n", "setext heading"),
+        }
+        for name, (body, want) in cases.items():
+            with self.subTest(name=name):
+                self.assert_error("## Quick-facts\n\n" + body, want)
+
+
+class Round9NoExceptions(BodyCheck, unittest.TestCase):
+    """RG-T1 round 9 (user decision 2026-10-08): no profile exceptions. HTML blocks and block
+    quotes fail everywhere; the SPDX header is YAML comments in the frontmatter; a source
+    notice goes in a fenced text block. Codex round 7's findings each have a test."""
+
+    def test_html_blocks_and_quotes_fail_everywhere(self):
+        cases = {
+            "leading SPDX comment": "<!--\nSPDX-License-Identifier: CC-BY-4.0\n-->\n\n## Quick-facts\n\n- A. `[DT]` (x)\n",
+            "comment in a fact section": "## Quick-facts\n\n<!-- note -->\n\n- A. `[DT]` (x)\n",
+            "codex1 bang-closed comment": ("<!-- SPDX-License-Identifier: CC-BY-4.0\n--!>\n"
+                                           "Magic is 0x1234. [src] ([src:gpl: a.c:1])\n<!-- -->\n"),
+        }
+        for name, body in cases.items():
+            with self.subTest(name=name):
+                self.assert_error(body, "raw HTML is outside the spec Markdown profile")
+        for body in ("## Source notices\n\n> Copyright (c) 2016 Example Ltd.\n",
+                     "## Source notices\n\n> <!--\n> Copyright Example.\n\n## Quick-facts\n\n"
+                     "- Clock is 54 MHz. [DT] (board.dtsi)\n"):
+            with self.subTest(body=body):
+                self.assert_error(body, "a block quote is outside the spec Markdown profile")
+
+    def test_the_documented_forms_pass(self):
+        import tempfile
+
+        spec = SPEC6.replace("---\nkind: chip", "---\n# SPDX-FileCopyrightText: 2026 contributors\n"
+                             "# SPDX-License-Identifier: CC-BY-4.0\nkind: chip", 1)
+        body = ("## Quick-facts\n\n- A fact. `[DT]` (x)\n\n## Source notices\n\n"
+                "The source carries this notice:\n\n```text\nCopyright (c) 2016 Example Ltd.\n"
+                "[src:gpl: a.c:1] [Src]\n```\n")
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as tmp:
+                root = write_root(tmp, PERMISSIVE, {"t.spec.md": spec + body})
+                code, data, err = run(root, flags=list(flags))
+                self.assertEqual(code, 0, err + json.dumps(data))
+                self.assertEqual([f for f in data["findings"] if f["level"] == "error"], [])
+
+    def test_codex3_character_references_fail(self):
+        for body in ("- Magic is 0x1234. [DT] (x.dtsi; &#91;src:gpl: a.c:1&#93;)\n",
+                     "- Magic. [DT] (x; &lsqb;src&rsqb; (y))\n", "- A &amp; B. `[DT]` (x)\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "character reference")
+
+    def test_backslash_escapes_of_syntax_fail(self):
+        self.assert_error("## Quick-facts\n\n- Magic. [DT] (x; \\[src\\] (y))\n", "backslash escape")
+
+    def test_codex4_a_higher_heading_ends_the_section(self):
+        self.assert_error("## Orientation\n\nText.\n\n# Device behavior\n\n## Quick-facts\n\n"
+                          "- Untagged fact.\n", "fact bullet has no provenance tag")
+        code, errors, _ = self.check("## Quick-facts\n\n- A. `[DT]` (x)\n\n# Device behavior\n\n"
+                                     "- Not in a fact section.\n")
+        self.assertEqual((code, errors), (0, []))
+
+    def test_a_heading_inside_a_list_item_fails(self):
+        self.assert_error("## Quick-facts\n\n- ## Orientation\n", "a heading inside a list item")
+
+    def test_codex5_provenance_only_from_link_text(self):
+        for body in ('- Magic is 0x1234. [src] ([manual](https://example.com "[src:fw: a.c:1]"))\n',
+                     "- Magic is 0x1234. [src] ([manual](<https://e.com/[src:fw: a.c:1]>))\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "provenance is read only from link text")
+                self.assert_error("## Quick-facts\n\n" + body, "[src] parenthetical cites no anchor")
+        self.assert_clean("## Quick-facts\n\n- A fact. `[doc]` ([the manual](https://e.com/m \"x\"))\n")
+
+    def test_reference_definitions_fail_and_do_not_count(self):
+        body = "## Quick-facts\n\n- A. `[DT]` (x)\n\n[src:gpl: a.c:1]: https://e.com\n"
+        self.assert_error(body, "link reference definition")
+        _, errors, _ = self.check(body)
+        self.assertFalse(any("gpl" in e for e in errors), errors)  # never read as an anchor
+
+    def test_codex6_code_span_line_numbers(self):
+        code, errors, data = self.check("## Quick-facts\n\n- Fact\n  with a broken `code`word. [DT] (x)\n")
+        where = [f["path"] for f in data["findings"] if "inside a word" in f["message"]]
+        self.assertEqual(len(where), 1)
+        self.assertTrue(where[0].endswith(":17"), where)  # 13 lines before the body, then 4
 
 if __name__ == "__main__":
     unittest.main()

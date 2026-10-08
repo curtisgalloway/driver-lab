@@ -1,7 +1,7 @@
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
+---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+---
 
 # A pin whose license is not SPDX (synthetic license-gate fixture)
 

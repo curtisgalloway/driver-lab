@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: <year> contributors
+# SPDX-License-Identifier: Apache-2.0
 kind: soc
 id: <soc-id>
 name: <SoC vendor and part number>
@@ -71,11 +73,6 @@ resources:
       note: exception levels, the generic timer, the MMU
   tools: []
 ---
-
-<!--
-SPDX-FileCopyrightText: <year> contributors
-SPDX-License-Identifier: Apache-2.0
--->
 
 # <SoC display name>
 

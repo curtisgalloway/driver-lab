@@ -43,7 +43,7 @@ Quote the reference sparingly (a few lines, only when the exact expression IS th
 never paste reference code into the implementation.
 
 SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    python3 <peripheral-spec>/scripts/anchor_check.py <scratch path> \
+    uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py <scratch path> \
         --impl-repo <impl checkout> --ref-repo <ref checkout>
     python3 <peripheral-spec>/scripts/inventory_check.py <scratch path> \
         --repo <ref checkout>@<ref-commit> --headers <reference register header(s)>

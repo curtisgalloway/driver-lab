@@ -651,6 +651,7 @@ class TestLicenseGate(CheckerCase):
         alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
         alone.mkdir(parents=True)
         shutil.copy(CHECKER, alone / "anchor_check.py")
+        shutil.copy(CHECKER.parent / "mdtokens.py", alone / "mdtokens.py")
         proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
                                str(GATE / "specs" / "invalid-license-spec.md")],
                               capture_output=True, text=True)
@@ -669,7 +670,9 @@ class TestDocTagCharacterization(CheckerCase):
 
     def test_unnamed_forms_count_and_warn_as_before(self):
         s = self.spec("""\
-            <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+            ---
+            # SPDX-License-Identifier: CC-BY-4.0
+            ---
 
             # Widget
 
@@ -736,8 +739,8 @@ docs:
     url: https://example.invalid/widget-ds.pdf
     sha256: "{DS_SHA.upper()}"
     file: sheets/widget-ds.pdf
+# SPDX-License-Identifier: CC-BY-4.0
 ---
-<!-- SPDX-License-Identifier: CC-BY-4.0 -->
 
 """
 
@@ -762,14 +765,16 @@ class TestNamedDocAnchors(CheckerCase):
         return d
 
     def test_correct_spec_passes(self):
-        s = self.spec(REGISTRY + """\
+        # The bullets are dedented on their own: REGISTRY is not indented, so dedenting the
+        # whole would leave them as a 12-space indented code block, which holds no anchors.
+        s = self.spec(REGISTRY + textwrap.dedent("""\
             - Resets in 10 us. [doc:trm p.12]
             - FIFO depth 64. [doc:trm pp.12-14]
             - Clock gating. [doc:trm §4.3]
             - Last page. [doc:trm §A.1 p.120]
             - Both documents. [doc:trm p.12; ds §3.1]
             - Unnamed beside them. [doc: Widget app note §2]
-            """)
+            """))
         for extra in ((), ("--strict",), ("--docs-dir", self.docs_dir())):
             with self.subTest(extra=extra):
                 rc, report = self.run_json(s, *extra)
@@ -960,8 +965,14 @@ class TestNamedDocAnchors(CheckerCase):
             with self.subTest(case=name):
                 rc, report = self.run_json(self.spec(body))
                 self.assertEqual(rc, 1)
+                # "Note: ...\n---" is a setext heading in CommonMark: outside the spec
+                # Markdown profile, reported on its own line (RG-T1 round 7).
+                setext = [f["spec_line"] for f in report["findings"]
+                          if f["message"].startswith("a setext heading")]
+                self.assertEqual(setext, [] if name == "list" else [2])
                 self.assertEqual([(f["spec_line"], f["message"]) for f in report["findings"]
-                                  if f["level"] == "error"],
+                                  if f["level"] == "error"
+                                  and not f["message"].startswith("a setext heading")],
                                  [(3 if name == "list" else 2, "malformed src anchor: "
                                    "'nosuch.c:abc' (expected [pin: ]path:L1[-L2] [(symbol)])")])
         s = self.spec("---\n- Resets. [doc: Widget TRM §4.2]\n---\n")
@@ -978,6 +989,7 @@ class TestNamedDocAnchors(CheckerCase):
         alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
         alone.mkdir(parents=True)
         shutil.copy(CHECKER, alone / "anchor_check.py")
+        shutil.copy(CHECKER.parent / "mdtokens.py", alone / "mdtokens.py")
         proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
                                self.spec(REGISTRY + "- Fact. [doc:trm p.2]\n")],
                               capture_output=True, text=True)
@@ -1070,6 +1082,496 @@ class TestRequireNamedDocs(CheckerCase):
             f"--root {root}: root marker: no license: field (the SPDX expression for this "
             "root's own license); --require-license makes this an error"])
 
+
+
+class TestBoardSpecPins(CheckerCase):
+    """A board spec's resources.repos entries are its Source pins (RG-T1, [src] facts)."""
+
+    def board(self, ref, lic="BSD-3-Clause", body_pin=""):
+        return self.spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {ref}
+                  license: {lic}
+            ---
+
+            {body_pin}
+
+            ## Quick-facts
+
+            - **Magic.** The stub's magic word is 0x5afe570b. `[src]`
+              ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+
+    def test_repos_entry_is_a_pin_and_anchors_resolve(self):
+        s = self.board(self.fw_rev)
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([(p["name"], p["rev"], p["license"]) for p in report["pin_list"]["source"]],
+                         [("fw", self.fw_rev, "BSD-3-Clause")])
+        self.assertEqual(report["anchors"], 1)
+        self.assertNotIn("anchors not resolved", "\n".join(self.messages(report)))
+
+    def test_a_wrong_line_fails_against_the_repos_pin(self):
+        s = self.board(self.fw_rev)
+        path = pathlib.Path(s)
+        path.write_text(path.read_text().replace("stub.c:2 (STUB_MAGIC)", "stub.c:9"))
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("has 3 lines" in m for m in self.messages(report, "error")))
+
+    def test_license_gate_reads_the_repos_license(self):
+        s = self.board(self.fw_rev)
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "permissive", "--require-license")
+        self.assertEqual(rc, 0, self.messages(report))
+        for root in ("docs",):
+            rc, report = self.run_json(s, "--root", GATE / "roots" / root, "--require-license")
+            self.assertEqual(rc, 1)
+            self.assertTrue(any(m.startswith("license gate: [src:fw: stub.c:2 (STUB_MAGIC)] cites "
+                                             "source pin 'fw' (BSD-3-Clause)")
+                                for m in self.messages(report, "error")), self.messages(report))
+
+    def test_an_agreeing_source_pin_line_is_allowed(self):
+        s = self.board(self.fw_rev, body_pin=f"Source pin: fw@{self.fw_rev} BSD-3-Clause")
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(len(report["pin_list"]["source"]), 1)
+
+    def test_a_disagreeing_source_pin_line_fails(self):
+        for line in (f"Source pin: fw@{self.linux_rev} BSD-3-Clause", f"Source pin: fw@{self.fw_rev} MIT",
+                     f"Source pin: fw@{self.fw_rev}"):
+            with self.subTest(line=line):
+                s = self.board(self.fw_rev, body_pin=line)
+                rc, report = self.run_json(s)
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("disagrees with resources.repos entry 'fw'" in m
+                                    for m in self.messages(report, "error")), self.messages(report))
+
+    def test_a_peripheral_spec_without_resources_is_unchanged(self):
+        s = self.spec(f"""\
+            ---
+            docs: []
+            ---
+            Source pin: linux@{self.linux_rev}
+
+            The control register is at 0x10. [src: drivers/drv.c:2 (WIDGET_CTRL)]
+            """)
+        rc, report = self.run_json(s, "--repo", self.linux)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([p["name"] for p in report["pin_list"]["source"]], ["linux"])
+
+
+
+class TestBoardSpecReviewFixes(CheckerCase):
+    """RG-T1 review findings (2026-10-07): each test fails without its fix."""
+
+    def board(self, body, note=""):
+        return self._write(body, note)
+
+    def _write(self, body, note):
+        head = textwrap.dedent(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {self.fw_rev}
+                  license: BSD-3-Clause{note}
+            ---
+
+            ## Quick-facts
+
+            """)
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write(head + textwrap.dedent(body))
+        f.close()
+        return f.name
+
+    def test_wrapped_bullet_keeps_its_claim_for_the_hex_check(self):
+        body = """\
+            - **Magic.** The stub's magic word is 0xdeadbeef and nothing else, as written here.
+              `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertTrue(any("none of the claim's hex literals (0xdeadbeef)" in m
+                            for m in self.messages(report, "warn")), self.messages(report))
+
+    def test_a_sibling_anchor_holding_the_value_satisfies_the_hex_check(self):
+        body = """\
+            - **Magic.** The stub's magic word is 0x5afe570b, and the entry point follows it.
+              `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)];
+              [src:fw: stub.c:3 (stub_entry)])
+            """
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(self.messages(report, "warn"), [])
+
+    def test_untagged_fact_heuristic_is_off_for_board_specs(self):
+        body = """\
+            - **Offset.** The register at offset 0x10 resets to zero. `[doc]` (Widget TRM §4)
+            """
+        rc, report = self.run_json(self.board(body))
+        self.assertFalse(any("carries no" in m for m in self.messages(report)), self.messages(report))
+
+    def test_unnamed_anchor_fails_in_a_board_spec(self):
+        body = "- **Magic.** Value 0x5afe570b. `[src]` ([src: stub.c:2])\n"
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("in a board spec write [src:<repo>: stub.c:2]" in m
+                            for m in self.messages(report, "error")), self.messages(report))
+
+    def test_empty_anchor_fails(self):
+        for tag in ("[src:]", "[src: ; ]"):
+            with self.subTest(tag=tag):
+                rc, report = self.run_json(self.board(f"- **Empty.** A fact. `[src]` ({tag})\n"))
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("empty [src:] anchor" in m for m in self.messages(report, "error")))
+
+    def test_anchor_in_a_front_matter_note_keeps_the_pins(self):
+        note = "\n" + " " * 18 + 'note: "the stub, cited as [src:fw: stub.c:2] below"'
+        rc, report = self.run_json(self.board("- **Magic.** Value. `[src]` ([src:fw: stub.c:2])\n", note),
+                                   "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([p["name"] for p in report["pin_list"]["source"]], ["fw"])
+
+    def test_drift_rewrite_moves_the_repos_ref(self):
+        repo, rev = make_repo(self.tmp, "fw-drift", {"stub.c": FW_C})
+        new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        path = self.spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {rev}
+                  license: BSD-3-Clause
+            ---
+
+            ## Quick-facts
+
+            - **Magic.** 0x5afe570b. `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+        rc, out = self.run_check(path, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        text = pathlib.Path(path).read_text()
+        self.assertIn(f"ref: {new_rev}", text, out)
+        self.assertNotIn(rev, text)
+        self.assertIn("[src:fw: stub.c:3 (STUB_MAGIC)]", text)
+        rc, report = self.run_json(path, "--repo", f"fw={repo}")
+        self.assertEqual(rc, 0, self.messages(report))
+
+
+class TestRound2Fixes(CheckerCase):
+    """RG-T1 round-2 review findings: each test fails without its fix."""
+
+    board = TestBoardSpecReviewFixes.board
+    _write = TestBoardSpecReviewFixes._write
+
+    def test_a_value_at_the_start_of_a_long_item_is_still_checked(self):
+        body = ("- **Magic.** The magic word is 0xdeadbeef. " + "word " * 70 + "\n"
+                "  `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertTrue(any("none of the claim's hex literals (0xdeadbeef)" in m
+                            for m in self.messages(report, "warn")), self.messages(report))
+
+    def test_line_zero_fails(self):
+        rc, report = self.run_json(self.board("- **Zero.** A fact. `[src]` ([src:fw: stub.c:0])\n"))
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("lines count from 1" in m for m in self.messages(report, "error")))
+
+    def test_drift_rewrite_touches_the_repos_entry_not_a_same_named_doc(self):
+        repo, rev = make_repo(self.tmp, "fw-drift2", {"stub.c": FW_C})
+        new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        path = self.spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              docs:
+                - name: fw
+                  title: Firmware manual
+                  url: https://example.invalid/fw.pdf
+                  ref: manual-v1
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {rev}
+                  license: BSD-3-Clause
+            ---
+
+            ## Quick-facts
+
+            - **Magic.** 0x5afe570b. `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+        rc, out = self.run_check(path, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        text = pathlib.Path(path).read_text()
+        self.assertIn("ref: manual-v1", text, out)
+        self.assertIn(f"ref: {new_rev}", text, out)
+        self.assertNotIn(rev, text)
+
+
+class TestRound3Fixes(CheckerCase):
+    """RG-T1 round-3 review findings: each test fails without its fix."""
+
+    LAYOUTS = {
+        "comment after repos": "  repos: # pinned firmware\n    - name: fw\n      url: https://example.invalid/fw\n      ref: {rev}\n      license: BSD-3-Clause\n",
+        "dash at the repos indent": "  repos:\n  - name: fw\n    url: https://example.invalid/fw\n    ref: {rev}  # the pin\n    license: BSD-3-Clause\n",
+    }
+
+    def test_drift_rewrite_finds_the_entry_in_valid_layouts(self):
+        for label, block in self.LAYOUTS.items():
+            with self.subTest(layout=label):
+                repo, rev = make_repo(self.tmp, f"fw-l{len(label)}", {"stub.c": FW_C})
+                new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+                f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+                f.write("---\noverlays: widgetchip\nresources:\n" + block.format(rev=rev) +
+                        "---\n\n## Quick-facts\n\n- **Magic.** 0x5afe570b. `[src]` "
+                        "([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+                f.close()
+                rc, out = self.run_check(f.name, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+                text = pathlib.Path(f.name).read_text()
+                self.assertIn(new_rev, text, out)
+                self.assertNotIn(rev, text)
+                self.assertIn("[src:fw: stub.c:3 (STUB_MAGIC)]", text)
+
+    def test_drift_rewrite_writes_nothing_when_the_ref_cannot_be_set(self):
+        repo, rev = make_repo(self.tmp, "fw-flow", {"stub.c": FW_C})
+        commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write("---\noverlays: widgetchip\nresources:\n  repos:\n"
+                f"    - {{name: fw, url: https://example.invalid/fw, ref: {rev}, license: BSD-3-Clause}}\n"
+                "---\n\n## Quick-facts\n\n- **Magic.** 0x5afe570b. `[src]` "
+                "([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+        f.close()
+        before = pathlib.Path(f.name).read_text()
+        rc, out = self.run_check(f.name, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        self.assertEqual(pathlib.Path(f.name).read_text(), before, out)
+        self.assertIn("nothing was written", out)
+        self.assertNotIn("pin is now", out)
+
+
+FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"
+
+
+class TestFetchSrcPins(CheckerCase):
+    """board-expert's fetch_src_pins.py: the CI path that resolves board-spec anchors.
+
+    Real specs may only name https:// URLs; these tests fetch local repositories through the
+    hidden --allow-local flag, which adds file:// and nothing else.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.aux, cls.aux_rev = make_repo(cls.tmp, "aux", {"aux.c": "int aux;\n"})
+        for repo in (cls.fw, cls.aux):
+            git(repo, "config", "uploadpack.allowFilter", "true")
+            git(repo, "config", "uploadpack.allowAnySHA1InWant", "true")
+
+    def spec_for(self, url, ref, anchors="[src:fw: stub.c:2 (STUB_MAGIC)]", extra=""):
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write("---\noverlays: widgetchip\nresources:\n  repos:\n" + extra +
+                f"    - name: fw\n      url: {url}\n      ref: {ref}\n      license: BSD-3-Clause\n"
+                f"    - name: aux\n      url: file://{self.aux}\n      ref: {self.aux_rev}\n"
+                "      license: BSD-3-Clause\n---\n\n## Quick-facts\n\n"
+                f"- **Magic.** 0x5afe570b. `[src]` ({anchors})\n")
+        f.close()
+        return f.name
+
+    def fetch(self, spec, *args, cache=None):
+        cache = cache or tempfile.mkdtemp(dir=self.tmp)
+        proc = subprocess.run([sys.executable, str(FETCH), spec, cache, *args],
+                              capture_output=True, text=True)
+        return proc.returncode, proc.stdout.split(), proc.stderr
+
+    def test_fetches_the_pin_and_anchors_resolve(self):
+        spec = self.spec_for(f"file://{self.fw}", self.fw_rev)
+        rc, repos, err = self.fetch(spec, "--allow-local")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(len(repos), 1, err)
+        self.assertTrue(repos[0].startswith("fw="))
+        rc, report = self.run_json(spec, "--repo", repos[0])
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertNotIn("anchors not resolved", "\n".join(self.messages(report)))
+
+    def test_only_https_without_the_test_flag(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev))
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("is not an https:// URL", err)
+
+    def test_an_option_shaped_url_never_runs(self):
+        probe = pathlib.Path(self.tmp) / "PWNED"
+        url = f"--upload-pack=touch {probe}"
+        rc, repos, err = self.fetch(self.spec_for(url, self.fw_rev), "--allow-local")
+        self.assertEqual(rc, 1)
+        self.assertFalse(probe.exists())
+        # And the git call itself: the URL sits after "--", so even past the scheme check, and
+        # with the local transport allowed (which would otherwise run the upload-pack), it is a
+        # repository name, never an option.
+        sys.path.insert(0, str(FETCH.parent))
+        import fetch_src_pins  # noqa: PLC0415
+        local = fetch_src_pins.GIT_SAFE + ["-c", "protocol.file.allow=always"]
+        kind, why = fetch_src_pins.fetch(url, str(self.fw), pathlib.Path(tempfile.mkdtemp(dir=self.tmp)),
+                                         1 << 30, 60, local)
+        self.assertEqual(kind, "fail", why)
+        self.assertFalse(probe.exists())
+
+    def test_over_the_limit_is_skipped_with_a_note(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev),
+                                    "--allow-local", "--limit-mb", "0")
+        self.assertEqual((rc, repos), (0, []))
+        self.assertIn("skipped (size: the fetched objects are 0 MB, over the 0 MB limit)", err)
+
+    def test_an_unknown_commit_fails(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "deadbeef" * 5), "--allow-local")
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("error:", err)
+        self.assertIn("git fetch failed", err)
+
+    def test_branch_ref_fails(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "main"), "--allow-local")
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("is not a full commit id", err)
+
+    def test_discovery_uses_the_anchor_parser(self):
+        for anchors in ("[src: fw: stub.c:2]; [src:aux: aux.c:1]", "[src:fw: stub.c:2; aux: aux.c:1]"):
+            with self.subTest(anchors=anchors):
+                rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev, anchors),
+                                            "--allow-local")
+                self.assertEqual(rc, 0, err)
+                self.assertEqual(sorted(r.split("=")[0] for r in repos), ["aux", "fw"])
+
+    def test_a_malformed_unused_entry_does_not_crash(self):
+        extra = "    - name: [unexpected-list]\n      url: https://example.invalid/x\n"
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev, extra=extra),
+                                    "--allow-local")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual([r.split("=")[0] for r in repos], ["fw"])
+
+    def test_a_second_spec_reuses_the_fetch(self):
+        cache = tempfile.mkdtemp(dir=self.tmp)
+        spec = self.spec_for(f"file://{self.fw}", self.fw_rev)
+        rc, first, _ = self.fetch(spec, "--allow-local", cache=cache)
+        marker = pathlib.Path(first[0].split("=", 1)[1]) / "reused"
+        marker.write_text("x")
+        rc, second, err = self.fetch(spec, "--allow-local", cache=cache)
+        self.assertEqual((rc, second), (0, first), err)
+        self.assertTrue(marker.exists())
+
+
+class TestOneMarkdownParse(CheckerCase):
+    """RG-T1 round 6: code blocks, code spans and list items come from mdtokens, the parse
+    spec_check.py reads too (user decision 2026-10-08)."""
+
+    def anchors(self, body):
+        rc, report = self.run_json(self.spec(f"Source pin: linux@{self.linux_rev}\n\n" + body))
+        return rc, report
+
+    def test_a_code_span_holding_only_an_anchor_is_that_anchor(self):
+        rc, report = self.anchors("- Fact. `[src: drivers/nope.c:1]`\n")
+        self.assertEqual(report["anchors"], 1)
+
+    def test_an_anchor_in_a_longer_code_span_or_a_fence_is_prose(self):
+        rc, report = self.anchors("- Fact. `see [src: drivers/nope.c:1]`\n\n"
+                                  "~~~\n[src: drivers/nope.c:2]\n~~~\n")
+        self.assertEqual(report["anchors"], 0)
+
+    def test_an_uppercase_anchor_kind_is_an_error(self):
+        for anchor in ("[SRC: drivers/drv.c:2]", "[Doc: TRM §1]", "[STALE: was x]"):
+            with self.subTest(anchor=anchor):
+                rc, report = self.anchors(f"- Fact. {anchor}\n")
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("is not lowercase" in m
+                                    for m in self.messages(report, "error")))
+
+    def test_an_unclosed_fence_is_an_error(self):
+        rc, report = self.anchors("```\n- Fact. [src: drivers/drv.c:2]\n")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
+
+    def test_list_items_are_the_parse_s_items(self):
+        # "2." cannot interrupt a paragraph in CommonMark, so this is paragraph text, not an
+        # untagged list item; "* " can, so the next line is an item and its fact is flagged.
+        rc, report = self.anchors("Intro text\n2. Delay 0x10 ms\n* Timeout 0x20 ms\n")
+        warned = [m for m in self.messages(report, "warn") if "carries no" in m]
+        self.assertEqual(len(warned), 1, warned)
+        self.assertIn("0x20", warned[0])
+
+    def test_a_nested_item_is_its_own_claim(self):
+        # The outer item states 0x10, which the cited line holds; the nested item's own claim
+        # (0xbeef) does not appear there, so its anchor warns. Reading the nested item as part
+        # of the outer one would borrow 0x10 and hide the mismatch.
+        s = self.spec(f"""\
+            Source pin: linux@{self.linux_rev}
+
+            - Outer 0x10.
+              - Inner 0xbeef. [src: drivers/drv.c:2 (WIDGET_CTRL)]
+            """)
+        rc, report = self.run_json(s, "--repo", self.linux)
+        self.assertTrue(any("0xbeef" in m for m in self.messages(report, "warn")),
+                        self.messages(report))
+
+
+class TestSharedAnchorShape(CheckerCase):
+    """RG-T1 round 7 (Codex round 6, blocker 1): a malformed [src: anchor fails anchor_check
+    too, in a documents-only root under --require-license."""
+
+    def test_malformed_anchors_fail_in_a_docs_root(self):
+        root = pathlib.Path(tempfile.mkdtemp(dir=self.tmp))
+        (root / "board-specs.yaml").write_text("layer: public\nlicense: CC-BY-4.0\naccepts: []\n")
+        cases = {
+            "unterminated at EOF": ("A fact. [src:fw: foo.c:1", "no closing ']'"),
+            "split across lines": ("A fact. [src:fw: foo.c:\n1]\n", "broken across lines"),
+            "spaced": ("A fact. [s r c:fw: foo.c:1]\n", "broken across lines"),
+        }
+        for name, (body, want) in cases.items():
+            with self.subTest(case=name):
+                rc, report = self.run_json(self.spec(body), "--root", root, "--require-license")
+                self.assertEqual(rc, 1, self.messages(report))
+                self.assertTrue(any(want in m for m in self.messages(report, "error")),
+                                self.messages(report))
+
+    def test_an_indented_4_closer_leaves_the_fence_open(self):
+        rc, report = self.run_json(self.spec("```\n- Fact. [src: drivers/drv.c:2]\n    ```\n"))
+        self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
+
+
+class TestNoProfileExceptions(CheckerCase):
+    """RG-T1 round 9 (user decision 2026-10-08): no HTML block or block quote anywhere; the
+    SPDX header is YAML comments in the front matter."""
+
+    def test_html_and_quotes_fail_anywhere(self):
+        for body in ("<!-- SPDX-License-Identifier: CC-BY-4.0 -->\n\nText.\n",
+                     "## Source notices\n\n> Copyright Example.\n"):
+            with self.subTest(body=body):
+                rc, report = self.run_json(self.spec(body))
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("outside the spec Markdown profile" in m
+                                    for m in self.messages(report, "error")))
+
+    def test_a_comment_only_front_matter_is_front_matter(self):
+        rc, report = self.run_json(self.spec(
+            "---\n# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: "
+            "CC-BY-4.0\n---\n\n# Widget\n\n- Resets. [doc: Widget TRM §4.2]\n"))
+        self.assertEqual((rc, report["findings"]), (0, []))
+        # The block is front matter, not body: a comment in it is never read as an anchor.
+        rc, report = self.run_json(self.spec(
+            "---\n# SPDX-License-Identifier: CC-BY-4.0 [src: drivers/nope.c:1]\n---\n\nText.\n"))
+        self.assertEqual((rc, report["anchors"]), (0, 0), self.messages(report))
+
+    def test_entities_and_link_metadata(self):
+        for body, want in (("- Fact. &#91;src: drivers/drv.c:2&#93;\n", "character reference"),
+                           ('- Fact. ([m](https://e.com "[src: drivers/drv.c:2]"))\n',
+                            "provenance is read only from link text")):
+            with self.subTest(body=body):
+                rc, report = self.run_json(self.spec(body))
+                self.assertEqual(rc, 1)
+                self.assertEqual(report["anchors"], 0)
+                self.assertTrue(any(want in m for m in self.messages(report, "error")))
 
 if __name__ == "__main__":
     unittest.main()

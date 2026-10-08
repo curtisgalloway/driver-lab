@@ -6,8 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 # Tests for `scripts/spec_check.py` and `scripts/spdx.py`
 
 ```bash
-python3 -m unittest discover -s skills/board-expert/tests -v
+uv run --with markdown-it-py==4.2.0 python3 -m unittest discover -s skills/board-expert/tests -v
 ```
+
+The checker reads Markdown through peripheral-spec's `mdtokens.py`, which needs
+markdown-it-py at exactly 4.2.0; without it the checker exits 3 (`missing dependency`).
 
 ## Two parsers
 
@@ -19,7 +22,7 @@ Without PyYAML, both runs use the same parser (the checker's last line says `par
 To exercise the real second path, run the suite once under a Python that has it:
 
 ```bash
-uv run --with pyyaml python -m unittest discover -s skills/board-expert/tests -v
+uv run --with pyyaml --with markdown-it-py==4.2.0 python -m unittest discover -s skills/board-expert/tests -v
 ```
 
 ## Fixtures

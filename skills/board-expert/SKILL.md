@@ -72,8 +72,10 @@ and IP names in the question.
      head unless a `ref:` was given) is the map, the standards and databook in its `docs` are the
      authority, and the report says there are no instance facts.
 4. **Overlay.** Apply overlays for every id in the composition in layer order (`public`, `ip-vendor`,
-   `soc-vendor`, `product`, `local`) using the merge rules in `SPEC-FORMAT.md`. Keep a note of which
-   files and layers contributed; it goes in the report.
+   `soc-vendor`, `product`, `local`) using the merge rules in `SPEC-FORMAT.md`. Within one layer,
+   overlays from different roots apply in the order the roots were given (pointer order; for the
+   spec repositories: `hardware-specs-docs`, then `hardware-specs-permissive`, then
+   `hardware-specs-gpl`). Keep a note of which files and layers contributed; it goes in the report.
 
 If nothing matches, go to *Without a spec* below. If something matches but a fork in
 `QUESTIONS.md` (which variant, which instance, which tree, anchored or generic) is unanswered and
@@ -127,8 +129,10 @@ where to look first, and the gotchas are the assumptions to check.
    datasheet; the device tree is the only public map" situations.
 
 **Tag every fact** with a provenance class from `SPEC-FORMAT.md` (§ Terms, *Provenance tag*). A fact
-read only from driver or firmware code has no class of its own: cite the file and line at the
-commit read, as that entry says. Keep what the code
+read from driver or firmware code is `[src]`, with `[src:<repo>: path:L]` anchors into a
+`resources.repos` entry pinned to a full commit, when the spec's root accepts that tree's license
+(§ Facts read from source); otherwise cite the file and line at the commit read, as that entry
+says, and use it only as an `[inference]` premise. Keep what the code
 does apart from what the hardware requires:
 
 - "The driver does X" is a fact about the driver; "the hardware requires X, because the driver does
@@ -186,7 +190,8 @@ Then add a short **Spec provenance** block:
   visible to the verifier;
 - for an IP: the mode (anchored to which board and instance, or generic), and the commit of every
   tree read;
-- for every spec used, its verification status from `<root>/resources/<id>.verify.md`: the
+- for every spec and overlay used, its verification status from its record,
+  `<root>/resources/<file name>.verify.md` (the spec's file name with `.spec.md` replaced): the
   record's `verified` date and `summary` counts, "stale" when the record's `spec_sha256` no longer
   matches the file, or "unverified" when there is no record. Read the record's frontmatter only;
   its body is not for you and would only spend context.

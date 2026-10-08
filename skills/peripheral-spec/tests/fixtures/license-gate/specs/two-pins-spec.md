@@ -1,7 +1,7 @@
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
+---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+---
 
 # Two named pins: BSD firmware and a GPL-2.0-only kernel (synthetic license-gate fixture)
 

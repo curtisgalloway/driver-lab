@@ -150,7 +150,9 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
 - **Sources** are the bullet's tag clause: `[DT] (file)` names a device tree in a `repos` or
   `series` entry at its `ref`; `[databook]`, `[standard]`, `[doc]` name a `docs` entry or a document
   id; `[hardware]` names a board and a method; `[press]` names a page and is compared against it like
-  any other claim, TODO or not; a class an extension defines is verified as that extension says; `[inference]` names its
+  any other claim, TODO or not; `[src]` names anchors (`[src:<repo>: path:L1-L2 (symbol)]`)
+  into a `repos` entry pinned to a commit, and is verified as the next bullet says; a class an
+  extension defines is verified as that extension says; `[inference]` names its
   premises and derivation in its parenthetical, and is verified on whether those premises hold and
   whether the conclusion follows from them; `[emulated]` names a device model, its version and
   run IDs, and is compared against an extract of what those runs recorded (traces, captures,
@@ -158,6 +160,23 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   the model's mechanism rather than an observation. `instances:` rows are claims
   too: each `reg`, `irq`, and `clocks` value against the device tree it came from, keyed
   `instances/<name>`.
+- **`[src]` facts**, and `[src:]` anchors that are an `[inference]`'s premises, are verified in
+  three steps. (1) **The anchors resolve at the pin**: run `peripheral-spec/scripts/anchor_check.py
+  <spec> --root <root> --require-license --repo <name>=<checkout>` with one `--repo` per `repos`
+  entry the anchors name, each checkout able to reach the entry's `ref` (the checker reads each
+  entry with a `ref` as a Source pin; no `Source pin:` line is needed;
+  `board-expert/scripts/fetch_src_pins.py <spec> <dir>` makes such checkouts and prints the
+  `--repo` values; it fetches `https://` URLs only, and fails on a commit or repository that
+  does not exist). An unresolved path, line
+  range or symbol is a `FAIL` for that claim, and so is a warning that an anchor's repository was
+  not given, until it is given. (2) **The claim matches the anchored lines**: render them with
+  `anchor_check.py --show` and judge, as for a peripheral spec, whether the lines support the
+  claim; a claim that says what the hardware requires, or that a product runs this code, is not
+  supported by `[src]` alone and is a `FAIL` on its class (it should be an `[inference]`). (3)
+  **The pin's license is in the root's accepts list**: the entry's `license:` must describe the
+  cited files (check the file's notice or SPDX line at the pin) and be accepted by the root's
+  `accepts:`; a mismatch with the files, or a `license gate:` error from either checker, is a
+  `FAIL`. Record each entry under `sources` with its `commit`.
 - **Composition.** The verifier may read the specs a board composes through `parts`, so "see
   `bcm2712`" resolves, but each spec file gets its own record. Overlays are verified under their own
   root, one record each.
@@ -165,10 +184,18 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   state, and the debug UART bullets of every `soc` spec in the composition, and the debug console
   bullet of the board.
 - **Mechanical check**: `board-expert/scripts/spec_check.py <root>... --stubs-from <skills dir>`
-  before and after; afterwards it must accept the record (`--require-verified` makes a missing or
-  stale record an error).
-- **Record location**: `<root>/resources/<id>.verify.md`, beside the root marker; `spec_file` is
-  relative to the root.
+  before and after (with the roots an overlay's target lives in, so it resolves). The checker
+  accepts a record only when its `summary.fail` is zero: a current record with any `FAIL` is an
+  error, the expected result until the spec is fixed and verified again. Once the spec is edited
+  the record is stale and reports only that, so a fix can be checked before the next pass.
+  Once `FAIL` is zero, the checker must accept the record with no error and no `verification
+  stale` warning (`--require-verified` makes a missing or stale record an error).
+- **Record location**: `<root>/resources/<name>.verify.md`, where `<root>` is the directory
+  holding the root marker `board-specs.yaml` (`specs/` in the spec repositories) and `<name>` is
+  the spec file's name without `.spec.md` (one record per spec file, so an overlay and its base,
+  or two overlays of one id, in one root never share one). `spec` is the id (an overlay's: the id
+  it overlays); `spec_file` is the file's path relative to `<root>`, and the checker rejects a
+  record whose `spec_file` names another file.
 
 ## Peripheral specs and reviews
 

@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 Status: **design draft, 2026-10-08, for the user's approval.** Nothing here is built. The
 direction (one YAML format for every spec, validated by a JSON Schema, with Markdown as a rendered
 view) was approved by the user on 2026-10-08 ([RG-regen](../notebook/RG-regen.md), "RG-T1 rounds
-6–8, merge, and the format decision"). The choices the user still has to make are listed under
-[Open decisions](#open-decisions); where the body below depends on one, it states the
-recommended option and points there.
+6–8, merge, and the format decision"). The user settled the design's open choices the same day;
+they are recorded under [Decisions (2026-10-08)](#decisions-2026-10-08), and the body below
+follows them. Where the body depends on one, it names it (D1–D19).
 
 ## Terms
 
@@ -24,8 +24,9 @@ recommended option and points there.
 - **Fact record** — one claim in a spec, stored as a YAML mapping with a stable **fact id**, the
   claim text, and structured **support entries**. A **support entry** is one piece of evidence:
   its **provenance class** (`databook`, `src`, `inference`, …) and the fields that class requires.
-- **Fact reference** — `<spec id>#<fact id>`, or a bare `<fact id>` inside the same spec: how a
-  premise, a relation or a verification verdict names a fact.
+- **Fact reference** — how a premise or a relation names a fact: `#<fact id>` in the same file,
+  `<spec id>#<fact id>` in the same root, and `<spec id>@<root name>#<fact id>` (a
+  **root-qualified reference**) in another root (D1).
 - **Root / root marker / layer / overlay / accepts list / license gate** — as today
   ([`SPEC-FORMAT.md`](../skills/board-expert/SPEC-FORMAT.md), [license split](LICENSE-SPLIT.md)):
   a directory of specs with a `board-specs.yaml` marker; the marker's position in the merge
@@ -38,8 +39,12 @@ recommended option and points there.
   **basis hash** is a fingerprint of everything one verdict depends on (the fact record, the
   resource entries it cites, and the basis hashes of the facts it references); when it changes,
   that verdict is stale.
-- **Rendered view** — the Markdown generated from the YAML for people to read. It is never
-  edited and never parsed for meaning.
+- **Rendered view** — the Markdown generated from the YAML for people to read, built and
+  published by CI, never committed, never edited and never parsed for meaning.
+- **Viewer** — the published HTML view CI builds from the same YAML. It shows each fact's
+  provenance as **badges**: labels drawn from the structured fields (class, verdict, TODO,
+  origin), placed outside the author's text, which author text cannot produce. The viewer, not the
+  Markdown view, is where a cited fact is guaranteed to look different from prose.
 - **Canonical form** — one fixed serialization of parsed YAML data (sorted keys, no whitespace),
   so that two files holding the same data hash the same whatever their layout.
 
@@ -71,7 +76,8 @@ RG1's verification history adds three costs a structured format removes:
   make both mechanical ([Verification records](#verification-records)).
 - **Prose premises.** A GPL inference cited a docs fact as "as the `bcm2711` spec in
   hardware-specs-docs states, Addressing model", and its record pinned the docs spec by commit to
-  make that checkable. A fact reference (`bcm2711#addressing-model`) does it directly.
+  make that checkable. A fact reference (`bcm2711@hardware-specs-docs#addressing-model`) does it
+  directly.
 - **Unchecked parentheticals.** `[DT]` parentheticals such as "(bcm2711.dtsi lines 10-11,
   linux)" were never resolved against the pinned tree, and `[doc]` locators were never checked
   against the document's page count. Structured citations make both mechanical.
@@ -82,8 +88,8 @@ User decisions of 2026-10-08:
 
 - **R1 One format for every spec**: board, SoC, chip, IP block, peripheral spec, review, and the
   facts file `hardware-investigator` returns. YAML, validated by a JSON Schema (draft 2020-12).
-- **R2 Markdown is a rendered view** (later also a viewer and search UI). It is generated, never
-  edited, and never parsed for meaning.
+- **R2 Markdown is a rendered view** (with an HTML viewer, later also search). It is generated,
+  never edited, and never parsed for meaning.
 - **R3 Facts are records with stable ids; citations are structured fields**, never prose
   patterns.
 
@@ -93,7 +99,8 @@ placement rule, root markers with `license:` and `accepts:`, overlays across rep
 license gate, and per-file verification records.
 
 Non-goals: changing what the evidence classes mean ([DESIGN.md](../DESIGN.md), "Evidence
-model"); new specs; the viewer itself; the frozen archive (it stays as it is, see
+model"); new specs; the viewer's search and navigation beyond the first static version
+([Rendering](#rendering-and-the-viewer)); the frozen archive (it stays as it is, see
 [Migration](#migration)).
 
 ## Overview
@@ -105,15 +112,16 @@ model"); new specs; the viewer itself; the frozen archive (it stays as it is, se
 | Peripheral spec | `<device>-spec.md` (`Source pin:` lines, anchors in prose) | `<name>.spec.yaml`, `kind: peripheral` |
 | Review | `<driver>-review.md` (`Impl pin:`/`Ref pin:`) | `<name>.spec.yaml`, `kind: review` |
 | Investigator facts file | Markdown with `Source pin:` | `<name>.facts.yaml`, `kind: facts` |
-| Root marker | `board-specs.yaml` | `board-specs.yaml`, plus `format: 2` and `fact_prefix` |
+| Root marker | `board-specs.yaml` | `board-specs.yaml`, plus `format: 2`; `name` becomes required |
 | Verification record | `<root>/resources/<name>.verify.md` | `<root>/resources/<name>.verify.yaml` |
-| Rendered view | none (the spec is the view) | `rendered/<name>.md`, generated (D5) |
+| Rendered view and viewer | none (the spec is the view) | Markdown and HTML built by CI and published (Pages, and an artifact on pull requests); not committed (D5) |
 | Schema | none | `spec.schema.json`, `verify.schema.json`, `root.schema.json` (D7) |
 
 One loader reads every file (the [YAML loader](#the-yaml-loader)); the validator checks it
 against the schema; a small checker does what a schema cannot
 ([Validation](#validation-schema-and-checker)). One command-line tool, `spec.py`, has the
-subcommands `check`, `resolve`, `render`, `show`, `status`, `drift`, `inventory` and `migrate`,
+subcommands `check`, `resolve`, `render` (Markdown and the HTML viewer), `show`, `status`,
+`drift`, `inventory` and `migrate`,
 following the house exit-code contract (0 passed, 1 a check failed, 2 usage, 3 missing
 precondition) and `--json`.
 
@@ -186,7 +194,7 @@ they cannot disagree with the data.
 ### The fact record
 
 ```yaml
-- id: gic-arm-local-not-legacy        # [a-z0-9-] (overlay facts: <prefix>.<id>); unique in the merged spec
+- id: gic-arm-local-not-legacy        # [a-z0-9][a-z0-9-]*; unique among this spec's files in this root
   section: gotchas
   title: The GIC and ARM_LOCAL bases are not legacy addresses.
   claim: >-
@@ -202,7 +210,7 @@ they cannot disagree with the data.
   scope: {boards: [...], revisions: [...], modes: [...], builds: [...]}
   critical: true                              # bring-up-critical: two verifiers required
   requirement: as-implemented                 # peripheral and review facts; see below
-  relates: [{fact: "bcm2711#addressing-model", relation: qualifies}]
+  relates: [{fact: "#addressing-model", relation: qualifies}]   # fact references: see References
   conflicts: [...]                            # see Conflict entries
   data: {...}                                 # typed payload: register, sequence, finding, ...
   note: "..."                                 # uninterpreted remark for readers
@@ -210,9 +218,9 @@ they cannot disagree with the data.
 
 | Field | Rule |
 | --- | --- |
-| `id` | Stable for the life of the fact: editing the claim, moving the section or reordering never changes it. Overlay facts carry their root's prefix (D1). A deleted fact's id is not reused. |
-| `title` | The bold lead-in today. Required for board-spec kinds (every bcm2711 bullet has one); optional elsewhere. |
-| `claim` | Plain text with `` `code spans` `` (D4). Never contains a citation: provenance lives only in `support`. One claim per fact: a sentence concluded rather than read is its own `inference` fact (D3). |
+| `id` | Stable for the life of the fact: editing the claim, moving the section or reordering never changes it. Unique among the files of one spec id in one root; facts in different roots may share an id, because a reference into another root names the root (D1). A deleted fact's id is not reused. |
+| `title` | The bold lead-in today; plain text, escaped when rendered. Required for board-spec kinds (every bcm2711 bullet has one); optional elsewhere. |
+| `claim` | CommonMark (lists, emphasis, links, tables, code), with no raw HTML (D4). No tool parses it for meaning. Never contains a citation: provenance lives only in `support`, and only the viewer's badges, drawn from `support`, show it. One claim per fact: a sentence concluded rather than read is its own `inference` fact (D3). |
 | `support` | One or more support entries ([Provenance classes](#provenance-classes)). Entries of read classes support the claim jointly, as a v1 tag clause does. An `inference` entry stands alone. `emulated` never stands alone. |
 | `todo` | `check`: `hardware`, `document` or `source` (what kind of check would settle it); `text`: what to check and how; optional `method` when the method is worth stating apart, so the verifier can judge whether it can observe the thing (RG1 C4). Required for `press`, `inference`, `emulated` and extension classes; allowed on any fact. |
 | `assumes` | Ids from the spec's `assumptions` registry. A fact resting on an unstated assumption was a recurring verifier finding (RG1 A4); here the assumption is named once and every fact that rests on it lists it. |
@@ -221,7 +229,7 @@ they cannot disagree with the data.
 | `requirement` | Peripheral specs and reviews: `hw-required` (must have a document-class support entry), `comment-explained` (must cite a code comment), `driver-choice`, `as-implemented` (goes on the generated verify-on-hardware list). |
 | `relates` | Typed links to other facts: `qualifies`, `contradicts`, `refines`, `same-as`. Used by the renderer, by staleness ([Verification records](#verification-records)) and later by the viewer. |
 | `data` | A typed payload for structured facts (instances, registers, sequences, findings); see [Peripheral specs and reviews](#peripheral-specs-and-reviews). |
-| `note` | Free text, rendered as a note; never evidence. |
+| `note` | CommonMark with no raw HTML, like `claim`; rendered as a note; never evidence. |
 
 A **gap fact** has no `support` and must carry a `todo`; it renders as "Gap" and gets the verdict
 `GAP`. `open-questions` facts in peripheral specs and reviews are gap facts.
@@ -268,9 +276,12 @@ and its TODO like any fact.
 ### Prose that is not a fact
 
 `orientation` (all kinds) and a few kind-specific prose fields (`milestones` for peripheral
-specs, `notes` for reviews) hold text that no tool interprets. The renderer prints them under
-their headings, marked as uncited context, and escapes them (D4). A fact never lives in prose: a
-statement a reader would act on goes in `facts`.
+specs, `notes` for reviews) hold text that no tool interprets. They may use CommonMark with no
+raw HTML, like claims (D4). The renderer prints them under their headings, marked as uncited
+context; the viewer gives them no badges. A fact never lives in prose: a statement a reader would
+act on goes in `facts`. Prose can still be written to look like a cited fact in the Markdown view;
+[Rendering and the viewer](#rendering-and-the-viewer) says why the viewer, not the text, is where
+that distinction holds.
 
 `notices` carries the source notices a license asks a spec to carry, each `{repo, path, text}`,
 rendered as a fenced text block under "Source notices". Nothing in a notice is a citation.
@@ -336,7 +347,7 @@ anchors:
 support:
   - class: inference
     premises:
-      - fact: "bcm2711#addressing-model"             # a fact; its claim is the premise
+      - fact: "bcm2711@hardware-specs-docs#addressing-model"   # a fact; its claim is the premise
         uses: "Low Peripheral mode places Main peripherals at 0x0_FC00_0000-0x0_FF7F_FFFF"
       - states: "the stub writes all-ones to eight group words"
         support:                                     # read classes only; never another inference
@@ -355,11 +366,34 @@ permissive overlay's "build-identity step in the first bullet" is used by three 
 
 ## References
 
-| Form | Resolves to | Where allowed |
+Fact ids are unique per spec id per root, not globally (D1): the docs spec and a GPL overlay of
+the same id may both hold a fact named `addressing-model`. A reference therefore says how far it
+reaches:
+
+| Form | Resolves to | Example |
 | --- | --- | --- |
-| `<fact id>` | a fact in the same merged spec (base and every overlay) | premises, `relates`, records |
-| `<spec id>#<fact id>` | a fact in another spec, or in this spec across files | the same; required when the target lives in another file |
-| `<assumption id>` | an entry of the same file's `assumptions` | `assumes`, premises |
+| `#<fact id>` | a fact in the same file | `#scr-el3-bits` |
+| `<spec id>#<fact id>` | a fact in the files of spec `<spec id>` in the citing file's own root (a base spec, or overlays of that id there) | `bcm2711#which-build-ships` |
+| `<spec id>@<root name>#<fact id>` | a fact in the files of spec `<spec id>` in the root whose marker `name` is `<root name>` | `bcm2711@hardware-specs-docs#addressing-model` |
+| `<assumption id>` | an entry of the same file's `assumptions` (a separate namespace, never written with `#`) | `stub-build-identity` |
+
+Precisely:
+
+- The grammar is `^((<spec id>)(@<root name>)?)?#<fact id>$`, with `<spec id>` and `<fact id>`
+  normalized ids (`[a-z0-9][a-z0-9-]*`) and `<root name>` matching `[a-z0-9][a-z0-9._-]*`.
+- A reference into **another root must** name it. Naming the citing file's own root is allowed
+  and means the same as the short form. The short forms never search other roots, so adding a fact
+  in one repository can never change what a reference in another resolves to.
+- Root `name` becomes required in a format 2 marker, and two roots read together with the same
+  name are an error. Root names are therefore part of every cross-root reference: renaming a root
+  is a breaking change, and the checker reports every reference it leaves dangling.
+- A `#` starts a comment after a space in YAML, so a reference is always quoted:
+  `fact: "#scr-el3-bits"`.
+- A fact's **full reference**, `<spec id>@<root name>#<fact id>`, is what the merged view,
+  the viewer and the basis hash use, so two facts with the same id in different roots never
+  collide anywhere.
+- Verification records are per file and are keyed by the bare fact id
+  ([Verification records](#verification-records)).
 
 The checker resolves every reference against the roots it was given, and rejects:
 
@@ -438,17 +472,17 @@ The rules of [SPEC-FORMAT.md](../skills/board-expert/SPEC-FORMAT.md) ("Roots and
 the license split carry over. Restated for format 2:
 
 - **Root marker.** `board-specs.yaml` keeps its name and fields (`layer`, `name`, `roots`,
-  `license`, `accepts`) and gains `format: 2` and `fact_prefix` (required when the root holds
-  an overlay; D1). The three repositories would declare `fact_prefix: perm` and `gpl`; the
-  documents-only root holds base specs and needs none. Two roots read together with the same
-  prefix are an error.
+  `license`, `accepts`) and gains `format: 2`. `name` becomes required, because root-qualified
+  references name it (D1): the three repositories' markers already declare
+  `hardware-specs-docs`, `hardware-specs-permissive` and `hardware-specs-gpl`. Two roots read
+  together with the same name are an error.
 - **Discovery.** The same four pointer sources; never a tree walk. Every `*.spec.yaml` below a
   root is a spec. No symbolic links inside a root.
 - **Merge order.** By layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then
   pointer order; the spec repositories in the order docs, permissive, gpl. Composition first
   (`parts`, then `instances[].ip`), then overlays.
 - **Merging.** An overlay's `facts` are appended to the target's facts, each keeping its
-  `origin` (root name and layer) in the merged view; the renderer groups them under the target's
+  `origin` (root name and layer) and its full reference in the merged view; the renderer groups them under the target's
   sections with an "Overlay: <layer> (<root>)" sub-heading, as today. `resources` lists
   concatenate (a later entry with the same `name` replaces the earlier one); scalars: later wins;
   `id`, `kind` and `parts` cannot be overridden. An overlay never edits a base fact: it adds a
@@ -487,7 +521,7 @@ sources:                            # everything consulted, with what identifies
      sha256: 15463e9ac6c82114378b4dc7cee1fb4eaa545f4b5073af4bf8a57d22b9403c52, fetch: ok}
 summary: {pass: 2, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
 verdicts:
-  gpl.gic-node:
+  gic-node:                         # the bare fact id: records are per file
     basis: <64 hex>                 # the fact's basis hash when this verdict was reached
     verdict: PASS                   # PASS | FAIL | UNVERIFIABLE | GAP | ADJUDICATE
     date: 2026-10-08
@@ -501,8 +535,10 @@ verdicts:
 
 Rules (all checked by `spec.py check`):
 
-- **Keyed by fact id.** A verdict key is a fact id, or `<fact id>.<sub-id>` for a register field
-  or sequence step that carries its own support. Keys survive every edit that keeps the id, and
+- **Keyed by fact id.** A record belongs to one spec file, so a verdict key is the bare fact id
+  of a fact in that file (never a reference), or `<fact id>.<sub-id>` for a register field or
+  sequence step that carries its own support (fact ids hold no `.`, so the separator is
+  unambiguous). Keys survive every edit that keeps the id, and
   a mapping cannot hold a key twice (the loader rejects duplicates). A key that names no fact is
   an error.
 - **`summary` has all five keys**, `adjudicate` included, and equals the counts of `verdict`
@@ -529,7 +565,7 @@ basis(fact) = sha256( "fact-v1\n"
                       + canonical(fact without `section`)
                       + "\n" + canonical(the resource entries the fact cites, identity fields only)
                       + "\n" + canonical(the assumptions it names)
-                      + "\n" + sorted "<ref> <basis(ref)>" lines for every fact it references )
+                      + "\n" + sorted "<full reference> <basis(ref)>" lines for every fact it references )
 ```
 
 - *Canonical* is JSON with sorted keys, no insignificant whitespace, UTF-8, strings in Unicode
@@ -552,15 +588,28 @@ facts, which is exactly the delta a re-verification has to cover. RG1's stop rul
 only the changed bullets") becomes mechanical.
 
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and
-errors under `--require-verified` (the spec repositories' CI). A stale verdict caused only by a
-fact in another root changing (a cross-root reference) is reported as such, so the repository
-whose CI fails can see the cause is upstream (see [Risks](#risks)).
+errors under `--require-verified`. A stale verdict caused only by a fact in another root
+changing (through a root-qualified reference) is reported as **upstream-stale**, naming the
+upstream fact.
+
+How the spec repositories' CI uses this (D19):
+
+- **On pull requests** to a repository, its CI runs `--require-verified`: every stale or
+  unverified fact of that repository is an error, upstream-stale ones included. A pull request
+  to the GPL repository cannot merge until the facts a docs edit staled there are re-verified.
+- **On `main`** (pushes and the weekly scheduled run), the same CI reports upstream-stale facts
+  as warnings and does not fail, so an edit merged in one repository never turns another
+  repository's `main` red. Facts staled by the repository's own files cannot reach `main`
+  without a pull request, which already required them verified.
+- A pull request to the *upstream* repository is not blocked by the staleness it causes
+  downstream: its CI does not read the downstream roots. The warning on the downstream `main`
+  is the signal, and the next pull request there carries the re-verification.
 
 Evaluation against the alternatives (the decision is D2):
 
 | Option | Delta verification | Format-only edits | Cross-spec premises | Cost |
 | --- | --- | --- | --- | --- |
-| Per-fact basis hashes (recommended) | mechanical: the stale set is computed | no staleness | stale exactly when the premise fact changes | the canonicalization is a contract; changing it stales everything once |
+| Per-fact basis hashes (chosen) | mechanical: the stale set is computed | no staleness | stale exactly when the premise fact changes | the canonicalization is a contract; changing it stales everything once |
 | Whole-file `spec_sha256` (today) | by hand, as RG1 did three times | stale everything | not tracked (the record pins the other spec by commit in prose) | none new |
 | Both, stale if either changes | none (the file hash dominates) | stale everything | tracked | most conservative; gives up the delta |
 
@@ -716,9 +765,10 @@ copies its records into the spec unchanged, ids included.
 | Enums: `kind`, `class`, `section` by kind, `layer`, verdicts, `fetch`, `role` | yes | | |
 | Per-class required fields; `todo` for press, inference, emulated | yes | | |
 | `emulated` not alone; `inference` alone; gap facts have `todo` | yes | | |
-| Patterns: ids, prefixed overlay ids, commits, sha256, `https://` URLs, hex values, dates | yes | | |
+| Patterns: fact ids, fact references, commits, sha256, `https://` URLs, hex values, dates | yes | | |
 | Unique fact ids within a file | | yes (`uniqueItems` compares whole items, not a key) | |
-| Fact ids unique across the merged spec; overlay prefix matches the root's | | yes | |
+| Fact ids unique per spec id per root; root names present and unique; references into another root qualified by root | | yes | |
+| No raw HTML in claim, prose and note fields (lexical rule below) | | yes | |
 | Every `repo`, `doc`, `assumption` name resolves in the file's `resources` | | yes | |
 | Citation `class` matches the document's `class`; numeric pages within `pages` | | yes | |
 | Fact references resolve; no cycles; layer order respected | | yes | |
@@ -727,14 +777,28 @@ copies its records into the spec unchanged, ids included.
 | Public-layer privacy (`access: internal`, `via:` to a private skill) | | yes | |
 | Template placeholders left in | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |
-| Rendered views current | | yes (`render --check`) | |
+| Markdown view and viewer build, every claim self-contained (publish step, D5) | | yes (`render`) | |
 | Anchors resolve at the pin: path, line range, symbol near the range | | | yes |
 | Cited files' SPDX lines fit the entry's license | | | yes |
 | Document files hash to `sha256` (`--docs-dir`) | | | yes |
 | Values in a claim appear in the cited lines (warning); `inventory` against headers | | | yes |
 
 Everything in the schema column is declarative and can be read by people and other tools; the
-checker column is a small amount of Python over already-parsed data. Neither ever reads prose.
+checker column is a small amount of Python over already-parsed data. Neither ever reads prose
+for meaning.
+
+**No raw HTML** (D4, a decision, not a default). The checker rejects, in every claim, title,
+prose and `note` string, any `<` immediately followed by a letter, `/`, `!` or `?`: the start of
+every HTML tag, comment, declaration and processing instruction CommonMark recognizes. The rule is
+lexical and applies inside code spans and to autolinks too, so it needs no Markdown parse and
+cannot disagree with one; the cost is that an angle-bracketed name such as a C header in angle
+brackets is written without the brackets, and a URL as a `[text](url)` link. Values such as
+`<0 0 0>` and `<&gic>` pass, and no claim in the three bcm2711 specs trips the rule (checked
+2026-10-08). `notices` are exempt: they are rendered only as fenced text. The viewer also renders
+with HTML disabled, so the check is a guard, not the only defense.
+
+A warning (not an error) flags text in claims and prose that spells a v1 tag (`[databook]`,
+`[src:`): harmless to tools, misleading in the Markdown view.
 
 ### Schema excerpt
 
@@ -759,7 +823,9 @@ The schema is one file with `$defs` per record. The support entry dispatches on 
   ],
   "unevaluatedProperties": false,
   "$defs": {
-    "factId": {"type": "string", "pattern": "^([a-z0-9]+\\.)?[a-z0-9][a-z0-9-]*$"},
+    "factId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "factRef": {"type": "string",
+                "pattern": "^([a-z0-9][a-z0-9-]*(@[a-z0-9][a-z0-9._-]*)?)?#[a-z0-9][a-z0-9-]*$"},
     "fact": {
       "type": "object",
       "required": ["id", "section"],
@@ -851,39 +917,116 @@ names the file line, which keeps the format writable by agents and people alike.
   draft 2020-12.
 - **Step before pinning**: score the candidates with the `dep-quality` skill, as the house rule
   requires before any new dependency is pinned. Not run for this design.
-- **Retired**: markdown-it-py and `mdtokens.py`, once v1 is gone (D11). The checker then needs
-  PyYAML and the validator, pinned in CI with hashes; without them it exits 3, never falling back
-  to a second parser (the RG-T1 lesson: count the parsers).
+- **CommonMark library for the publish step** (D4, D5): the Markdown view's containment check
+  and the viewer's HTML both need a CommonMark implementation with raw HTML disabled.
+  markdown-it-py (already pinned here at 4.2.0) is the incumbent; it moves from the checkers to
+  the publish step, and is scored with `dep-quality` with the other new pins.
+- **Retired from the checking path**: `mdtokens.py` and every Markdown parse in `spec_check.py`
+  and `anchor_check.py`, once v1 is gone (D11). The checker then needs only PyYAML and the
+  validator, pinned in CI with hashes; without them it exits 3, never falling back to a second
+  parser (the RG-T1 lesson: count the parsers). The checker never imports the CommonMark library.
 
-## Rendering
+## Rendering and the viewer
 
-`spec.py render <root>... [--spec <id>] [--merged] [--with-status]` writes Markdown. The rendered
-view:
+`spec.py render <root>... [--spec <id>] [--merged] [--with-status] --format md|html` builds two
+views from the YAML and the records: the **Markdown view** and the **viewer** (static HTML). Both
+are generated; neither is committed or edited (D5). Both carry the same content:
 
-- opens with a generated-file banner naming the YAML file, the canonical-form version and the
-  `driver-lab` commit that rendered it, and saying it must not be edited;
-- prints the identity block (kind, id, name, triggers) and the resources as tables (documents
-  with class, revision and hash; repos with commit and license);
-- prints `orientation` under its heading, labeled "Context (not facts)";
-- prints each section's facts in order as `**Title.** claim`, then the scope, then one line per
-  support entry with its class and a rendered citation, then the TODO, then the fact reference
-  as a code span (`bcm2711#gic-node`) so a reader can cite it;
-- prints inference premises as a nested list, each naming the fact it references by its fact
-  reference;
-- in a merged view, prints overlay facts under "Overlay: <layer> (<root>)" sub-headings;
-- with `--with-status`, adds each fact's verdict, date and whether it was carried forward;
-- for peripheral specs and reviews, generates the provenance notice, the canonical-references
-  table, the register tables, the verify-on-hardware list and the open-questions list.
+- a generated-file banner naming the YAML files, the commits they were built from, the
+  canonical-form version and the `driver-lab` commit, and saying the view must not be edited;
+- the identity block (kind, id, name, triggers) and the resources as tables (documents with
+  class, revision and hash; repos with commit and license);
+- `orientation` and other prose under "Context (not facts)";
+- each section's facts in order, each with its generated provenance (support entries with their
+  rendered citations, inference premises naming the facts they reference, derivation, TODO,
+  scope) and its full fact reference, so a reader can cite it;
+- in a merged view, overlay facts under "Overlay: <layer> (<root>)" sub-headings;
+- with `--with-status`, each fact's verdict, date, freshness and whether it was carried forward;
+- for peripheral specs and reviews, the generated provenance notice, canonical-references table,
+  register tables, verify-on-hardware list and open-questions list.
 
-Every string from the YAML is escaped for Markdown (backslash-escaping of Markdown syntax
-characters; code spans re-emitted with a fence long enough for their content), so a claim that
-contains `[databook]` renders as that literal text and cannot pass for a citation. Because no
-tool parses the rendered view, the profile restrictions of today's format (no HTML, no block
-quotes, no character references) stop being needed for safety; the renderer simply never emits
-them.
+### Publishing (D5)
 
-Where rendered files live is D5. The later viewer reads the YAML (and the records), not the
-rendered Markdown: the data already carries fact ids, classes, sources and verdicts to index.
+- **Pull requests.** Each spec repository's CI builds both views and uploads them as a workflow
+  artifact, so a reviewer can read the rendered result beside the YAML diff. A build failure (a
+  claim that is not self-contained, below) fails the pull request.
+- **Main.** On every merge, and in the weekly scheduled run, a publish workflow builds both views
+  and deploys them to the repository's GitHub Pages site, following the house pattern of a docs
+  workflow that assembles and deploys a site. The repository README links each spec's page.
+- **Merged views.** Each repository publishes views of its own files, and the merged view of
+  every spec it overlays, built with the other roots as context (the GPL repository publishes the
+  docs, permissive and GPL `bcm2711` merged).
+- Nothing generated is committed, so there is no freshness check: what is published is what the
+  last build of `main` produced, and the banner says which commits it was built from.
+
+### The Markdown view: how author Markdown is embedded
+
+Claims, prose and notes are CommonMark without raw HTML (D4). The renderer keeps them apart from
+everything it generates:
+
+1. **Generated text is generated.** Titles, fact references, citations, scope, TODOs and status
+   come only from structured fields and are escaped (backslash escapes for Markdown syntax
+   characters; code spans with a backtick fence longer than their content), so a title or a
+   citation is never interpreted as Markdown.
+2. **One block per fact.** Each fact is a heading (`####` under its section, the escaped title),
+   then the claim exactly as written, as its own blocks separated by blank lines, then a
+   generated **provenance block**: a fixed label line followed by a list, one item per support
+   entry (class, then the rendered citation), then premises and derivation for an inference, the
+   TODO, the scope, and the fact's full reference as a code span.
+3. **Containment.** The publish step renders each claim and prose field on its own with the
+   CommonMark library and fails the build, naming the fact, when the field does not stand alone:
+   an unclosed code fence, or a heading (either would swallow or split the blocks that follow).
+   This parse checks layout only; it decides nothing about the fact, and it runs in the publish
+   step, never in the checker.
+
+What the Markdown view **cannot** do: an author can type anything the renderer emits. A claim or
+an orientation paragraph can contain a bold "Provenance" line and a list that looks like a
+citation, and in plain Markdown it will look like one. The Markdown view is a convenience for
+reading on GitHub, in a terminal or in an agent's context; it does not guarantee that a cited
+fact looks different from prose that imitates one. The viewer does.
+
+### The viewer: badges prose cannot produce
+
+The viewer renders each fact as an HTML element whose structure comes from the fields:
+
+```html
+<article class="fact" id="bcm2711@hardware-specs-gpl#gic-node">
+  <header><h4>GIC node</h4></header>
+  <div class="claim"><!-- the claim, rendered by CommonMark with raw HTML disabled --></div>
+  <div class="provenance">
+    <span class="badge class-dt">DT</span> <a href="...">linux@8d3ae59 bcm2711.dtsi 56–66</a>
+    <span class="badge verdict-pass">PASS 2026-10-08 · carried</span>
+    <span class="badge critical">bring-up critical · second reader missing</span>
+    <span class="badge origin">public · hardware-specs-gpl</span>
+  </div>
+</article>
+```
+
+The guarantee rests on two facts: author Markdown is rendered with raw HTML disabled (and the
+checker already rejects it), and a CommonMark renderer emits only its fixed set of elements,
+with no `class` or `id` attributes. So no author text can produce an element carrying a badge
+class, and nothing author-written can appear outside its `claim` container (each field is
+rendered separately, so an unbalanced construct ends at the container's edge). Further rules:
+images in author text render as links, not `<img>` elements; link URLs are limited to `https:`,
+`http:`, `mailto:` and in-page anchors; prose sections render in a container labeled "Context
+(not facts)" that never carries badges.
+
+Badges, all drawn from fields:
+
+| Badge | From | Shows |
+| --- | --- | --- |
+| Class | each support entry's `class` | `databook`, `standard`, `doc`, `rtl`, `DT`, `src`, `hardware`, `emulated`, `press`, `inference`, or the extension class, each linked to its citation (the document and locator; the repository at its commit, path and lines) |
+| Verdict | the record | `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, `ADJUDICATE` with date; `stale`, `upstream-stale`, `unverified`; `carried` when carried forward |
+| TODO | `todo.check` | what would settle the fact (`verify on hardware`, on a document, in source) |
+| Critical | `critical` and the record's `readers` | bring-up critical; "second reader missing" until one is recorded |
+| Origin | the file's root and layer | which repository and layer the fact comes from |
+| Assumes | `assumes` | the named assumptions the fact rests on |
+| Contested | `conflicts` without `resolution` | an open conflict entry |
+| Requirement / assessment | `requirement`; a finding's `assessment` | `hw-required`, `as-implemented`, …; `bug`, `suspect`, … |
+| Gap | no `support` | the fact records something unknown |
+
+The viewer reads the YAML and the records, not the Markdown view. Search and navigation across
+specs build on the same data later; this design covers the first static version only.
 
 ## Migration
 
@@ -899,26 +1042,32 @@ rendered Markdown: the data already carries fact ids, classes, sources and verdi
 | `skills/board-expert/tests/fixtures/` | good, bad, vendor and verify roots, stubs | rewritten; each bad fixture keeps the one defect it tests, now as a data defect |
 | `skills/hardware-investigator/examples/` | expected facts files | rewritten as `kind: facts` |
 | `skills/board-spec-scaffold/templates/` | 6 spec templates and the root marker | rewritten as YAML templates |
-| `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2` |
+| `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2`; keeps its `name` |
+| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name` (already present) is now required, because references use it |
+| The three spec repositories' CI | `scripts/checks.sh`, one workflow | `checks.sh` on format 2, plus a publish workflow for the Pages site (D5); nothing generated is committed |
 
 ### Converting a spec
 
 1. **Mechanical part** (`spec.py migrate <v1 file>`, using today's one Markdown parse for the
    last time): identity and resources; one fact per bullet, its `id` the slug of the bold
-   lead-in (unique in the file, with the root's prefix for overlays), its `section`, its `claim`
+   lead-in (unique among the spec's files in its root; no prefix), its `section`, its `claim`
    (the bullet text before the tag clause, byte for byte), its `todo` text; every `[src:]` anchor
    into `anchors`; every `[DT]` parenthetical of the form "(<file> lines A-B, <repo>)" into `DT`
    anchors; hashes moved out of `note` into `sha256`; `fetch_via` URLs into `retrieval`.
 2. **Citation part** (a fresh agent with the v1 and the draft v2 file, no sources): turn each
    free-text document parenthetical into a `doc` name and structured locators, and each inference
-   parenthetical into `premises` and `derivation`, keeping the premise wording.
+   parenthetical into `premises` and `derivation`, keeping the premise wording. A premise that
+   names a fact of another bullet becomes a fact reference: `#<id>` in the same file, and the
+   root-qualified form for a fact in another repository (the GPL overlay's prose "as the
+   `bcm2711` spec in hardware-specs-docs states, Addressing model" becomes
+   `bcm2711@hardware-specs-docs#addressing-model`).
 3. **Split mixed bullets** (D3): a bullet whose tag clause mixes `[inference]` with read classes
    becomes a read fact and an inference fact that references it. In bcm2711: docs Quick-facts/2
    (two facts), permissive Gotchas/3 (three: the `src`+`databook` fact about the two builds' bases,
    the `doc` fact about the documentation, and the inference), GPL Quick-facts/1 (two). Three
    bullets become seven facts.
 4. **Conversion-fidelity check** (D10): a fresh agent compares each v1 bullet with its v2 record
-   and the rendered output: claim text identical, every v1 citation present with the same target
+   and the Markdown view: claim text identical, every v1 citation present with the same target
    and locator, nothing added. It writes a fidelity report; it opens no source.
 
 ### Carrying verdicts
@@ -948,29 +1097,30 @@ conversion error, and is recorded as one.
 
 ### Transition (D11)
 
-Recommended: driver-lab ships format 2 alongside a read-only v1 checker; each spec repository
-migrates in one pull request that bumps its driver-lab pin, converts the spec and the record, and
-switches `scripts/checks.sh`; when all three are on format 2, driver-lab removes the v1 code,
-`mdtokens.py` and the markdown-it-py dependency in one change. During the window, v1 and v2 roots
-can be read together for overlays only if the reader supports both; the recommendation is to
-migrate the three repositories in sequence docs, permissive, gpl within one unit so no mixed
-composition has to be supported.
+driver-lab ships format 2 alongside a read-only v1 checker; each spec repository migrates in one
+pull request that bumps its driver-lab pin, converts the spec and the record, switches
+`scripts/checks.sh` and adds the publish workflow; the three migrate in sequence docs,
+permissive, gpl within one unit, so no mixed v1 and v2 composition has to be supported. When all
+three are on format 2, driver-lab removes the v1 code and `mdtokens.py` in one change, and
+markdown-it-py leaves the checking path (it stays only as the publish step's CommonMark library,
+if `dep-quality` keeps it there).
 
 ## Effects on the skills and the spec repositories
 
 | Component | Today | Format 2 |
 | --- | --- | --- |
-| `SPEC-FORMAT.md` | the contract, 780 lines, much of it the Markdown profile and tag-clause parsing rules | a shorter contract pointing at the schema for shapes; classes, references, roots, records, rendering. The profile and tag-clause sections are deleted (D7 decides where it lives) |
-| `board-expert` (reader) | reads `*.spec.md` and record front matter | reads `spec.py render --merged --with-status` output for the composition (smaller than raw YAML, and verdicts included), and the YAML when it needs a citation's exact fields; reports `bcm2711#fact` references in answers; "Suggested spec change" names the fact id or proposes a new record |
+| `SPEC-FORMAT.md` | the contract, 780 lines, much of it the Markdown profile and tag-clause parsing rules | a shorter contract in the new `skills/spec-format/` reference skill (D7), pointing at the schema for shapes; classes, references, roots, records, rendering. The profile and tag-clause sections are deleted; `board-expert/SPEC-FORMAT.md` becomes a pointer |
+| `board-expert` (reader) | reads `*.spec.md` and record front matter | reads `spec.py render --merged --with-status` output for the composition (smaller than raw YAML, and verdicts included), and the YAML when it needs a citation's exact fields; reports full fact references (`bcm2711@hardware-specs-docs#addressing-model`) in answers; "Suggested spec change" names the fact id or proposes a new record |
 | `board-spec-scaffold` | Markdown templates, tag-clause rules | YAML templates per kind; the subagent that researches facts returns fact records directly; `spec.py check` instead of `spec_check.py`; RG1's checklist items (console routing, entry contract, memory reservations, interrupt table) stay prose guidance |
 | `hardware-investigator` | Markdown facts file, `Source pin:` lines, `anchor_check.py --root` | `kind: facts` YAML; `license_gate.py` reads the same SPDX logic; per-file license confirmation is a field (`license_from`) checked by `resolve` |
 | `peripheral-spec` | anchor grammar, pins, block anchors, labels in prose; `anchor_check.py`, `inventory_check.py` | the grammar section is replaced by the record types above; `requirement` field; `spec.py check/resolve/show/drift/inventory`; templates for the spec subagent and verifier rewritten around records |
 | `reference-driver-review` | `[impl:]`/`[ref:]` aliases, Markdown findings | `role: impl`/`ref` repos, `findings` with `data.finding`, `assessment` in place of the finding verdict |
 | `spec-verifier` | keys by section and ordinal or anchor text; whole-file hash; `summary` without `adjudicate` in board specs | keys by fact id; basis hashes; `readers`, `contrary_evidence`, `citation_precision`, `carried_from`; delta verification from `spec.py status --stale`; the verifier writes YAML and `spec.py check` validates it |
-| `campaign-review` | `claims.yaml` `cites` spec section ids of the frozen e1000 spec | unchanged for the frozen campaign; a new campaign cites `spec#fact`, and its sweep can use fact basis hashes as the basis identities of verdicts (DESIGN, continuous review C1 and C2) |
-| Spec repository `scripts/checks.sh` | `specs` (spec_check), `anchors` (anchor_check, fetch, resolve), `self-test` | `check` (`spec.py check specs --context-root ... --require-license --require-verified`), `resolve` (fetch pins, resolve `src` and `DT` anchors, per-file licenses), `render` (`rendered/` current, if D5 commits it), `self-test` (the v2 fixtures; same fit/misfit pairs) |
-| Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | PyYAML and the chosen validator, pinned |
-| Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's rendered view |
+| `campaign-review` | `claims.yaml` `cites` spec section ids of the frozen e1000 spec | unchanged for the frozen campaign; a new campaign cites full fact references, and its sweep can use fact basis hashes as the basis identities of verdicts (DESIGN, continuous review C1 and C2) |
+| Spec repository `scripts/checks.sh` | `specs` (spec_check), `anchors` (anchor_check, fetch, resolve), `self-test` | `check` (`spec.py check specs --context-root ... --require-license`, plus `--require-verified` on pull requests), `resolve` (fetch pins, resolve `src` and `DT` anchors, per-file licenses), `render` (builds the Markdown view and the viewer, uploads them as an artifact on pull requests), `self-test` (the v2 fixtures; same fit/misfit pairs). On `main`, upstream-stale facts warn (D19) |
+| Spec repository publish workflow | none | builds both views on merges to `main` and weekly, deploys them to GitHub Pages (D5) |
+| Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | checks: PyYAML and the chosen validator, pinned; render and publish: also the CommonMark library |
+| Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's page on the published site |
 | driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | `uv run --with pyyaml --with <validator> ...` |
 | Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as v1 until it migrates |
 
@@ -978,7 +1128,7 @@ composition has to be supported.
 
 A slice of the bcm2711 specs as the migration would produce it, with every claim text copied
 unchanged from the published files except where a split is noted. Facts and resources the slice
-does not show (for example `perm.patch-words`) are in the full migrated files. Hashes in the
+does not show (for example the permissive overlay's `patch-words`) are in the full migrated files. Hashes in the
 record are shown as `<64 hex>`, since the canonical form is not built yet.
 
 ### `hardware-specs-docs/specs/bcm2711.spec.yaml` (slice)
@@ -1244,9 +1394,9 @@ assumptions:
       document states
     todo:
       check: hardware
-      text: compare the stub image the firmware loads with this build (see perm.which-build-ships)
+      text: compare the stub image the firmware loads with this build (see #which-build-ships)
 facts:
-  - id: perm.which-build-ships
+  - id: which-build-ships
     section: quick-facts
     title: Which build ships
     claim: >-
@@ -1280,7 +1430,7 @@ facts:
               the firmware finds a magic value in the stub and writes the kernel and device-tree
               load addresses into it
             support: [{class: doc, doc: tfa-rpi4, at: [{heading: TF-A port design}]}]
-          - fact: perm.patch-words
+          - fact: "#patch-words"
             uses: this source carries the magic word and those two words
           - states: its comment says the firmware clears the magic slot for reuse as a release slot
             support:
@@ -1303,7 +1453,7 @@ facts:
         compare it with this build, excluding the words the firmware patches at
         `0xF0`–`0xFF`; or boot this build with `armstub=` and scope observations to it.
 
-  - id: perm.generic-timer-frequency
+  - id: generic-timer-frequency
     section: quick-facts
     title: Generic timer frequency
     claim: The BCM2711 build writes 54000000 (54 MHz) to `CNTFRQ_EL0` and 0 to `CNTVOFF_EL2`.
@@ -1314,7 +1464,7 @@ facts:
           - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [110, 112], symbol: OSC_FREQ}
           - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [114, 115], symbol: CNTVOFF_EL2}
 
-  - id: perm.scr-el3-bits
+  - id: scr-el3-bits
     section: quick-facts
     title: SCR_EL3 bits
     claim: >-
@@ -1334,21 +1484,21 @@ facts:
           - {section: "D24.2.168", heading: "SCR_EL3 HCE and SMD", pages: ["D24-9639", "D24-9640"]}
           - {section: "D24.2.168", heading: "SCR_EL3 NS", page: "D24-9641"}
 
-  - id: perm.scr-el3-value
+  - id: scr-el3-value
     section: quick-facts
     title: SCR_EL3 value
     claim: The value the stub writes is `0x5B1`.
     support:
       - class: inference
         premises:
-          - fact: perm.scr-el3-bits
+          - fact: "#scr-el3-bits"
             uses: the six bits its anchors show, which the source names by bit position and never sums
         derivation: 0x400 + 0x100 + 0x80 + 0x20 + 0x10 + 0x1 = 0x5B1
     todo:
       check: hardware
       text: the register is EL3-only, so read it with a debugger that can access EL3 state.
 
-  - id: perm.smpen-at-el3
+  - id: smpen-at-el3
     section: quick-facts
     title: SMPEN at EL3
     claim: Before dropping to EL2 the stub writes `CPUECTLR_EL1` with only bit 6, SMPEN, set.
@@ -1396,7 +1546,7 @@ resources:
       note: "Linux v7.2. bcm283x.dtsi carries no SPDX line and falls under the tree's GPL-2.0 COPYING."
 facts:
   # Split from v1 Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
-  - id: gpl.address-translation-in-the-tree
+  - id: address-translation-in-the-tree
     section: quick-facts
     title: Address translation in the tree
     critical: true
@@ -1412,16 +1562,16 @@ facts:
           - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, lines: [34, 45], node: soc}
 
   # ... and the cross-spec inference, which now references the docs fact by id.
-  - id: gpl.tree-describes-low-peripheral-mode
+  - id: tree-describes-low-peripheral-mode
     section: quick-facts
     title: The tree describes Low Peripheral mode
     claim: The tree describes Low Peripheral mode.
     support:
       - class: inference
         premises:
-          - fact: gpl.address-translation-in-the-tree
+          - fact: "#address-translation-in-the-tree"
             uses: the tree's physical targets
-          - fact: "bcm2711#addressing-model"
+          - fact: "bcm2711@hardware-specs-docs#addressing-model"
             uses: >-
               Low Peripheral mode places Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and
               ARM Local at `0x0_FF80_0000`
@@ -1432,7 +1582,7 @@ facts:
       check: hardware
       text: compare the live tree on a board booted with arm_peri_high=1.
 
-  - id: gpl.gic-node
+  - id: gic-node
     section: quick-facts
     title: GIC node
     critical: true
@@ -1447,7 +1597,7 @@ facts:
         anchors:
           - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, lines: [56, 66]}
 
-  - id: gpl.reserved-stub-page
+  - id: reserved-stub-page
     section: quick-facts
     title: Reserved stub page
     claim: >-
@@ -1459,7 +1609,9 @@ facts:
           - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm283x.dtsi, lines: [8, 11]}
 ```
 
-The cross-root inference is gated transitively: its premise `bcm2711#addressing-model` lives in
+The cross-root inference names its premise's root, `bcm2711@hardware-specs-docs#addressing-model`;
+the GPL overlay may also hold a fact named `addressing-model` without any clash. The reference is
+gated transitively: its premise lives in
 the documents-only root and cites no repository, so nothing it reaches is outside the GPL root's
 accepts list. The same reference written from the docs root to a GPL fact would fail the gate.
 
@@ -1477,7 +1629,7 @@ sources:
   - {name: linux, commit: 8d3ae59288f1e7d58d76558a6ee96d533bc5019f, fetch: ok}
 summary: {pass: 2, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
 verdicts:
-  gpl.gic-node:
+  gic-node:
     basis: <64 hex>
     verdict: PASS
     date: 2026-10-08
@@ -1494,7 +1646,7 @@ verdicts:
       path: specs/resources/bcm2711.verify.md
       key: 'Quick-facts/2 "GIC node"'
       format: 1
-  gpl.reserved-stub-page:
+  reserved-stub-page:
     basis: <64 hex>
     verdict: PASS
     date: 2026-10-08
@@ -1514,20 +1666,26 @@ verdicts:
 
 The carried verdicts leave out `contrary_evidence` and `citation_precision`: the format 1 record
 did not state them per bullet, and a carried verdict records only what the earlier record said.
-What `spec.py status` reports for this slice: `gpl.gic-node` and `gpl.reserved-stub-page`
-current (carried); `gpl.address-translation-in-the-tree` and
-`gpl.tree-describes-low-peripheral-mode` unverified, because the split changed the first claim's
-text and created the second. `gpl.gic-node` is `critical` and has one reader, so under
+What `spec.py status` reports for this slice: `gic-node` and `reserved-stub-page`
+current (carried); `address-translation-in-the-tree` and
+`tree-describes-low-peripheral-mode` unverified, because the split changed the first claim's
+text and created the second. `gic-node` is `critical` and has one reader, so under
 `--require-verified` the check also asks for a second reader (the v1 record ran its second reader
 separately and recorded no verdict of its own, so there is nothing to carry). Delta verification
 covers exactly those items; nothing else is re-read. If the docs spec later edits
-`addressing-model`, only `gpl.tree-describes-low-peripheral-mode` goes stale here.
+`addressing-model`, only `tree-describes-low-peripheral-mode` goes stale here: it shows as
+upstream-stale, a warning on the GPL repository's `main`, and an error on the next pull request
+to that repository until it is re-verified (D19).
 
-### Rendered view (merged, with status; slice)
+### Markdown view (merged, with status; slice)
+
+The Markdown view CI publishes for the merged `bcm2711`. Headings, provenance blocks and status
+are generated from fields; the claim paragraphs are the authors' text as written. The viewer shows
+the same facts with badges ([Rendering and the viewer](#rendering-and-the-viewer)).
 
 ~~~markdown
-<!-- Generated by spec.py render from hardware-specs-docs/specs/bcm2711.spec.yaml and its
-     overlays (canonical form fact-v1, driver-lab <commit>). Do not edit. -->
+<!-- Generated by spec.py render from hardware-specs-docs, hardware-specs-permissive and
+     hardware-specs-gpl at <commits> (canonical form fact-v1, driver-lab <commit>). Do not edit. -->
 
 # Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 
@@ -1539,216 +1697,110 @@ The BCM2711 is the SoC of the Raspberry Pi 4 Model B, ...
 
 ## Quick-facts
 
-- **Addressing model.** The chip has a full 35-bit address map, ... is `0x0_FE20_1000` in Low
-  Peripheral mode.
-  - databook: BCM2711 ARM Peripherals (release 4), §1.2.1–1.2.4, pp. 4–6; §6.5.1–6.5.2, p. 92;
-    §11.5, pp. 146–147
-  - `bcm2711#addressing-model` · bring-up critical · PASS 2026-10-08 (carried from format 1)
-- **High peripheral mode is likely the full map.** High peripheral mode is likely the one in
-  which the Arm cores use the full-map addresses.
-  - inference, from:
-    - the documentation names high peripheral mode as the alternative to the default (doc:
-      Raspberry Pi documentation, legacy config.txt boot options, "arm_peri_high")
-    - the datasheet gives the Arm cores only two views, ... (databook: BCM2711 ARM Peripherals,
-      §1.2.1, p. 4; §1.2.3, p. 6)
-  - derivation: if high peripheral mode is not Low Peripheral mode, it is the full map; ...
-  - TODO (verify on hardware): with arm_peri_high=1, read the GIC distributor's ID registers at
-    the full-map address.
-  - `bcm2711#high-peripheral-mode-is-full-map` · unverified
+#### Addressing model
+
+The chip has a full 35-bit address map, ... is `0x0_FE20_1000` in Low Peripheral mode.
+
+**Provenance** (generated):
+
+- databook: BCM2711 ARM Peripherals (release 4), §1.2.1–1.2.4, pp. 4–6; §6.5.1–6.5.2, p. 92;
+  §11.5, pp. 146–147
+- `bcm2711@hardware-specs-docs#addressing-model` · bring-up critical · PASS 2026-10-08 (carried
+  from format 1)
+
+#### High peripheral mode is likely the full map
+
+High peripheral mode is likely the one in which the Arm cores use the full-map addresses.
+
+**Provenance** (generated):
+
+- inference, from:
+  - the documentation names high peripheral mode as the alternative to the default (doc:
+    Raspberry Pi documentation, legacy config.txt boot options, "arm_peri_high")
+  - the datasheet gives the Arm cores only two views, ... (databook: BCM2711 ARM Peripherals,
+    §1.2.1, p. 4; §1.2.3, p. 6)
+- derivation: if high peripheral mode is not Low Peripheral mode, it is the full map; ...
+- TODO (verify on hardware): with arm_peri_high=1, read the GIC distributor's ID registers at
+  the full-map address.
+- `bcm2711@hardware-specs-docs#high-peripheral-mode-is-full-map` · unverified
 
 ### Overlay: public (hardware-specs-gpl)
 
-- **The tree describes Low Peripheral mode.** The tree describes Low Peripheral mode.
-  - inference, from:
-    - `bcm2711#gpl.address-translation-in-the-tree` (Address translation in the tree): the
-      tree's physical targets
-    - `bcm2711#addressing-model` (Addressing model): Low Peripheral mode places Main peripherals
-      at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000`
-  - derivation: the targets fall in those ranges, not in the full-map ranges ...
-  - TODO (verify on hardware): compare the live tree on a board booted with arm_peri_high=1.
-  - `bcm2711#gpl.tree-describes-low-peripheral-mode` · unverified
-- **GIC node.** `arm,gic-400`, `#interrupt-cells = <3>`, ...
-  - DT: linux@8d3ae59 (GPL-2.0-only) arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66
-  - `bcm2711#gpl.gic-node` · bring-up critical · PASS 2026-10-08 (carried from format 1; second
-    reader missing)
+#### The tree describes Low Peripheral mode
+
+The tree describes Low Peripheral mode.
+
+**Provenance** (generated):
+
+- inference, from:
+  - `bcm2711@hardware-specs-gpl#address-translation-in-the-tree` (Address translation in the
+    tree): the tree's physical targets
+  - `bcm2711@hardware-specs-docs#addressing-model` (Addressing model): Low Peripheral mode
+    places Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000`
+- derivation: the targets fall in those ranges, not in the full-map ranges ...
+- TODO (verify on hardware): compare the live tree on a board booted with arm_peri_high=1.
+- `bcm2711@hardware-specs-gpl#tree-describes-low-peripheral-mode` · unverified
+
+#### GIC node
+
+`arm,gic-400`, `#interrupt-cells = <3>`, ...
+
+**Provenance** (generated):
+
+- DT: linux@8d3ae59 (GPL-2.0-only) arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66
+- `bcm2711@hardware-specs-gpl#gic-node` · bring-up critical · PASS 2026-10-08 (carried from
+  format 1; second reader missing)
 ~~~
 
-## Open decisions
+Nothing in this Markdown stops a claim from containing its own "**Provenance** (generated):"
+line; that is the limit the viewer exists to close.
 
-Each is a choice for the user; the recommended option is first.
+## Decisions (2026-10-08)
 
-**D1. Fact ids in overlays.**
-1. *(Recommended)* Each root that holds overlays declares `fact_prefix` in its marker
-   (`perm`, `gpl`); overlay fact ids must start with it (`gpl.gic-node`). Collisions across
-   repositories are impossible by construction, and a reference shows which root it points into.
-   Cost: one more marker field; ids are a little longer.
-2. Free ids, unique across the merged spec, checked when the roots are read together. Shorter
-   ids; but a docs commit can later add an id that collides with an existing GPL overlay fact and
-   break the GPL repository's CI after the fact.
-3. Free ids, with references qualified by root (`bcm2711@hardware-specs-gpl#gic-node`). No
-   collisions; every reference is long, and the root name becomes part of every citation.
+The user settled each open choice of the first draft on 2026-10-08. The body above follows these;
+where the user chose other than the draft's recommendation, the entry says so.
 
-**D2. Freshness of verdicts.**
-1. *(Recommended)* Per-fact basis hashes decide staleness; `spec_sha256` is kept for information.
-   Delta verification becomes mechanical and format-only edits stale nothing. Cost: the
-   canonical form is a contract (changing it stales every verdict once); a verdict that relied on
-   something the fact does not cite is not staled by it.
-2. Whole-file `spec_sha256`, as today. Simple; every edit stales every verdict, and delta records
-   stay manual.
-3. Both: stale when either changes. Most conservative; in practice the file hash dominates and
-   the delta is lost.
-
-**D3. Facts that mix classes.**
-1. *(Recommended)* Read classes may support one claim jointly (as v1 tag clauses do); an
-   `inference` stands alone in its fact; a sentence that is concluded rather than read becomes its
-   own inference fact referencing the read fact. Migration splits three bcm2711 bullets into
-   seven facts, whose verdicts do not carry.
-2. Exactly one class per fact. Simplest to verify and render; splits most multi-citation
-   bullets (the interrupt-controller bullet alone cites three classes), so far fewer verdicts carry.
-3. Allow mixing, with a `covers:` text on each support entry saying which part of the claim it
-   supports. Nothing splits; `covers:` is prose again, which the format exists to avoid.
-
-**D4. Markup in claims and prose.**
-1. *(Recommended)* Plain text plus `` `code spans` `` everywhere; the renderer escapes everything
-   else. A claim can never render as a citation or as structure.
-2. Plain text in claims; CommonMark passed through in `orientation` and notes. Richer context
-   prose (lists, links); a prose paragraph can be made to look like a cited fact in the rendered
-   view.
-3. CommonMark everywhere, rendered as written. Most familiar to authors; reopens the
-   render-versus-meaning gap for human readers.
-
-**D5. Where the rendered Markdown lives.**
-1. *(Recommended)* Committed under `rendered/` (outside the spec root) in each spec repository,
-   with CI failing when it is not current. People browsing the repository on GitHub see readable
-   specs; pull requests show the rendered diff beside the YAML diff.
-2. Built by CI and published (Pages or an artifact), nothing committed. No duplicate files; a
-   reader on GitHub sees only YAML until the viewer exists.
-3. On demand only (`spec.py render`). Least machinery; the published repositories have no
-   human-readable view.
-
-**D6. Numbers and scalar types in YAML.**
-1. *(Recommended)* The loader resolves only `true`, `false`, `null` and decimal integers;
-   addresses, offsets and masks are hex strings with schema patterns; dates are strings. No
-   implicit-typing surprises; hex keeps its spelling (`0x4_7C00_0000`). Cost: the checker parses
-   hex strings where it needs arithmetic.
-2. YAML integers, hex allowed (`reg: 0x107d001000`, as today's `instances:`). Arithmetic is free;
-   the spelling is lost, and loaders disagree (YAML 1.1 and 1.2 read `0o`, `012` and underscores
-   differently).
-3. Every scalar a string (PyYAML's base loader); booleans become `"true"`/`"false"` enums. Fully
-   predictable; awkward for anyone reading the schema or using another tool.
-
-**D7. Where the format lives.**
-1. *(Recommended)* A new reference skill, `skills/spec-format/` (not user-invocable), holding the
-   contract document, the schemas, the loader, `spec.py` and the renderer; `board-expert`,
-   `peripheral-spec`, `spec-verifier` and the others point at it, and
-   `board-expert/SPEC-FORMAT.md` becomes a pointer. One home for rules every spec skill shares.
-   Adds a skill name (none is renamed).
-2. Keep everything under `board-expert`, as today. No new skill; the peripheral and review
-   skills keep depending on a board skill's directory.
-3. A separate repository for the format and tools, pinned by driver-lab and the spec
-   repositories. Clean versioning; one more repository and pin to keep in step.
-
-**D8. JSON Schema validator** (each to be scored with `dep-quality` before pinning).
-1. *(Recommended, subject to the score)* `jsonschema` (python-jsonschema): the most used Python
-   implementation, full 2020-12 support; brings `rpds-py`, a compiled dependency.
-2. `jschon`: pure Python, 2020-12; smaller community.
-3. A restricted validator written here for the schema subset used. No dependency; a second
-   implementation of a standard, which is the kind of parser this design is trying to stop
-   writing.
-
-**D9. YAML library and in-place rewriting.**
-1. *(Recommended)* PyYAML for loading; `drift --rewrite` replaces scalar spans located by
-   PyYAML's node marks, keeping comments and layout. One library, already used here.
-2. ruamel.yaml, which round-trips comments and layout. Rewriting is simpler; a second YAML
-   library, and its YAML 1.2 defaults differ from the loader's rules.
-3. PyYAML, and rewrite by dumping the whole file. Simplest; comments (including the SPDX header)
-   and layout are lost on every rewrite.
-
-**D10. Carrying v1 verdicts.**
-1. *(Recommended)* Carry a verdict when the claim text is byte-identical and a fresh agent's
-   conversion-fidelity check passes the fact's citations; re-verify split facts and anything
-   flagged. At most 61 of the 65 v1 verdicts carry; cost is one fidelity pass per spec.
-2. Re-verify all 65 facts fresh, with second readers for the critical ones. Cleanest record; the
-   cost of RG1's verification rounds again, for facts whose text did not change.
-3. Carry every verdict whose claim text is unchanged, with no fidelity check. Cheapest; a
-   conversion error in a citation would carry a PASS it never earned.
-
-**D11. Transition.**
-1. *(Recommended)* driver-lab ships format 2 plus a read-only v1 checker; the three spec
-   repositories migrate in sequence (docs, permissive, gpl) in one unit; then v1 code and
-   markdown-it-py are removed in one change.
-2. Hard cutover: one coordinated change across driver-lab and the three repositories. No
-   dual-format code; four pull requests must land together.
-3. Support both formats indefinitely. No deadline; two parsers forever, the condition RG-T1
-   showed leaks.
-
-**D12. Licenses per cited file.**
-1. *(Recommended)* One license per repos entry; a closed `files` list naming how each file's
-   license was confirmed; `resolve` checks each cited file's SPDX line against the entry. A
-   repository with files under two licenses gets two entries, as the GPL overlay does today.
-2. Entry-level license only, as today. Less to write; RG1's unlicensed-Makefile case is caught
-   only by the verifier.
-3. A license on every file entry, gated per file. Most precise; every citation's license lives on
-   a different line from its entry, and the gate becomes per file.
-
-**D13. References across roots.**
-1. *(Recommended)* Transitive gate: everything a referenced fact cites, followed through its own
-   references, must pass the citing root's accepts list. Docs facts are referenceable from
-   everywhere; a docs fact can never rest on a GPL fact.
-2. Direction by merge order only (later roots may reference earlier ones). Simple; equivalent
-   for the three public repositories, wrong for a vendor root whose accepts list differs.
-3. No references across roots; restate a premise with its own citations. Each root stands alone;
-   premises are duplicated and drift apart.
-
-**D14. Second readers.**
-1. *(Recommended)* `critical: true` on facts; the checker requires a second reader's verdict in
-   the record for each critical fact under `--require-verified`. Answers RG1's "say whether the
-   second verifier ran".
-2. Keep it a procedural rule in `spec-verifier` only. No schema change; nothing shows whether it
-   happened.
-3. Two readers for every fact. Strongest; doubles verification cost (RG1 found the second
-   reader's value concentrated in disagreements on a few facts).
-
-**D15. The extension class `source-observed`.**
-1. *(Recommended)* Keep the name in the class enum with v1's rule (needs a TODO); its citation
-   fields come from a schema fragment the extension supplies, named in the root marker. The
-   extension keeps working without driver-lab defining its content.
-2. Drop it from format 2; the extension defines its own spec kind. A cleaner core; the extension
-   must change before it can use format 2.
-3. A generic `x-<name>` class mechanism for any extension. Most general; more machinery than one
-   known extension needs.
-
-**D16. Verdict granularity for registers and sequences.**
-1. *(Recommended)* One verdict per register or sequence fact; a field or step that carries its
-   own support gets its own sub-key (`reg-ctrl.en`, `seq-init.s2`).
-2. Every field and step is its own fact. Uniform; register maps become hundreds of records.
-3. One verdict per table (all registers). Fewest verdicts; one wrong bit fails a whole map.
-
-**D17. File names.**
-1. *(Recommended)* Every spec is `<name>.spec.yaml`; `kind` says what it is. One glob, one rule.
-2. Keep the split (`<id>.spec.yaml` board kinds, `<device>-spec.yaml` peripheral). Familiar;
-   the split existed only because the board checker globbed `*.spec.md`.
-
-**D18. Conflict entries.**
-1. *(Recommended)* Include the `conflicts` field now. The DESIGN.md proposal gets a home, and
-   RG1's documentation-versus-source contradiction (high peripheral mode) is recorded as one.
-2. Defer it to a later revision of the format. Less to build now; contradictions stay in claim
-   prose and `note`.
+| # | Question | Decision | Reason |
+| --- | --- | --- | --- |
+| D1 | Fact ids in overlays | **Root-qualified references** (not the recommended root prefix). Ids are free and unique per spec id per root; a reference into another root names it, `bcm2711@hardware-specs-gpl#gic-node`; `#<id>` and `<spec id>#<id>` stay short within a root | no collisions across repositories and no extra marker field; every cross-root reference says which repository it points into ([References](#references)) |
+| D2 | Freshness of verdicts | Per-fact basis hashes; `spec_sha256` kept for information | delta verification becomes mechanical and format-only edits stale nothing |
+| D3 | Facts that mix classes | Read classes support a claim jointly; an `inference` stands alone in its fact | keeps most v1 bullets whole while every conclusion gets its own verifiable record |
+| D4 | Markup in claims and prose | **CommonMark allowed, enforced separation in the viewer** (not the recommended plain text). Claims, prose and notes may use lists, emphasis, links, tables and code; **no raw HTML**, rejected by the checker (a decision, confirmed by the user, not an overridable default); no tool parses the Markdown for meaning; the viewer's badges, drawn from fields, carry provenance | authors keep full Markdown; the Markdown view cannot stop prose that imitates a cited fact, so the guarantee lives in the viewer, where author text cannot produce a badge ([Rendering and the viewer](#rendering-and-the-viewer)) |
+| D5 | Where rendered views live | **Built and published by CI** (Pages on `main`, an artifact on pull requests), **not committed** (not the recommended committed `rendered/`) | no generated files in the repositories and no freshness check; readers use the published site |
+| D6 | Scalar types | The loader resolves only `true`, `false`, `null` and decimal integers; hex values are strings with patterns | no implicit-typing surprises; values keep their spelling |
+| D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
+| D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
+| D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces scalar spans found by node marks | one library, already used here; comments and the SPDX header survive |
+| D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
+| D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and take markdown-it-py off the checking path | no mixed v1 and v2 composition, and no second parser left behind |
+| D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed, checked by `resolve` | catches a file whose license differs from its entry without a per-file gate |
+| D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
+| D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
+| D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without driver-lab defining its content |
+| D16 | Verdict granularity | One verdict per register or sequence fact; sub-keys for fields or steps with their own support | precise where the author cited precisely, without hundreds of records |
+| D17 | File names | Every spec is `<name>.spec.yaml`; `kind` says what it is | one glob, one rule |
+| D18 | Conflict entries | The `conflicts` field now | DESIGN.md's proposal gets a home, and RG1's documentation-versus-source contradiction is recorded as one |
+| D19 | Cross-root staleness (raised from the draft's Risks table) | A fact staled through a reference into another root is a **warning on the dependent repository's `main`**; **any pull request to the dependent repository must re-verify** it (`--require-verified` treats it as an error there) | an upstream merge never turns another repository's `main` red, and stale facts cannot ride along on the next change there ([Freshness](#freshness-per-fact-basis-hashes-d2)) |
 
 ## Risks
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
-| Free text still exists (claims, premises' `states`, notes) | a misleading string can still mislead a person | no tool reads it; the renderer escapes it; a lint warns on tag-like tokens (`[databook]`, `[src:`) in text |
+| Author Markdown imitates provenance (D4) | in the Markdown view, a claim or prose paragraph can look like a cited fact | stated as a limit of the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on v1 tag spellings in text; review reads the viewer, not the Markdown |
+| Author Markdown breaks layout (an unclosed fence, a heading in a claim) | later facts swallowed or split in the Markdown view | the publish step's containment check fails the build, naming the fact; each field is rendered separately in the viewer |
+| Raw HTML reaches a page | script or markup injected into the published site | the checker's lexical rule rejects it; the viewer renders with HTML disabled; image and link URL rules |
 | YAML authoring errors by agents (indentation, quoting long claims) | failed checks, retries | block scalars for long text; every error carries a line and column; templates per kind; `spec.py check` run before any review |
 | The canonical form changes | every verdict stale at once | versioned (`canonical: fact-v1`); a change ships with a re-hash command that re-keys verdicts only when the old and new forms agree on the data |
 | A verdict depends on something its fact does not cite | not staled when that changes | coverage review separate; `spec_sha256` kept; the verifier is told to record any extra dependency as a `relates` link |
-| Cross-root staleness | a docs edit fails the GPL repository's CI under `--require-verified` | the status line names the upstream fact; an option (in the unit plan) to report cross-root staleness as a warning in CI and an error only at release |
+| Cross-root staleness | a docs edit stales facts in the GPL repository | decided (D19): a warning on that repository's `main`, an error on its next pull request; the status line names the upstream fact |
+| A root is renamed | every root-qualified reference into it dangles (D1) | root names are an interface: the checker reports each dangling reference, and a rename is a planned change across the repositories that cite it |
+| Published views are stale or the Pages deploy fails | readers see an older view than `main` | the banner names the commits the view was built from; the weekly scheduled build; the YAML on GitHub is always current |
+| Reviewers miss the rendered effect of a change, since nothing is committed | a layout or badge regression merges | pull requests upload both views as an artifact; the containment check fails the build |
 | Conversion error carried as PASS | a wrong citation keeps a verdict | fidelity check (D10); `resolve` runs on every anchor during migration |
-| New dependency risk (validator, compiled `rpds-py`) | supply-chain and build breakage in CI | `dep-quality` score before pinning; hash-pinned CI requirements; exit 3 without them |
+| New dependency risk (validator, compiled `rpds-py`, the publish step's CommonMark library) | supply-chain and build breakage in CI | `dep-quality` score before pinning; hash-pinned CI requirements; exit 3 without them; the checker never imports the CommonMark library |
 | The schema grows its own equivalent spellings (optional fields that mean the same) | the leak returns at the data level | closed records (`unevaluatedProperties: false`); one field per meaning; review asks "is there a second way to say this?" for every schema change |
 | Consumers outside driver-lab read `*.spec.md` | they break at the cutover | `board-expert` is the only reader of specs; bringup-kit reads through it; transition window (D11) |
-| Viewer demand pulls design forward | scope creep | the viewer reads the same YAML; nothing here waits for it |
+| The viewer grows past its first static version | scope creep | this design covers the static viewer with badges only; search and navigation are later work on the same data |
 
 ## Implementation outline
 
@@ -1760,23 +1812,30 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
    `load_strict` with every pitfall in the loader table as a failing fixture; `spec.schema.json`,
    `verify.schema.json`, `root.schema.json`; schema fixtures (one good file per kind, one bad file
    per rule).
-2. **SF2-2 Checker.** `spec.py check`: id uniqueness and prefixes, name resolution, references
-   and cycles, layer order, license gate direct and transitive, records (keys, summary, basis
-   hashes, two readers), privacy, placeholders; the license-gate fixture matrix and the
+2. **SF2-2 Checker.** `spec.py check`: id uniqueness per spec per root, root names, the three
+   reference forms with root-qualified references across roots, cycles, layer order, license gate
+   direct and transitive, records (keys, summary, basis hashes, upstream-stale, two readers),
+   `--require-verified` behavior on pull requests versus `main` (D19), the raw-HTML rule, privacy,
+   placeholders; the license-gate fixture matrix and the
    board-expert fixtures rewritten in format 2, with `expected.json` carried over.
 3. **SF2-3 Resolve and drift.** `spec.py resolve` (fetch pins, `src` and `DT` anchors, per-file
    licenses, document hashes), `show`, `drift --rewrite` on YAML, `inventory` on register records.
-4. **SF2-4 Render and status.** `spec.py render` (single and merged, with status), the escaping
-   rules with adversarial fixtures, `status --stale`; a decision on D5 applied.
+4. **SF2-4 Render, viewer and status.** `spec.py render` for the Markdown view and the static
+   viewer (single and merged, with status); escaping of generated text, the containment check and
+   the viewer's badge and HTML rules, each with adversarial fixtures (claims that imitate
+   provenance, unclosed fences, headings, HTML, `javascript:` links); `status --stale`; the
+   `dep-quality` score for the CommonMark library.
 5. **SF2-5 Skills.** The contract document (D7), `spec-verifier`, `board-expert`,
    `board-spec-scaffold` templates, `hardware-investigator`, `peripheral-spec` and its subagent
    and verifier templates, `reference-driver-review`; glossary; grep every skill for v1 rules (the
    RG-T1 T7 lesson).
 6. **SF2-6 Migration of bcm2711.** `spec.py migrate`, citation pass, splits, fidelity check,
    carried records, delta verification of the rest; the three spec repositories' pull requests
-   (docs, permissive, gpl) with their `checks.sh` and CI on format 2.
-7. **SF2-7 Retire format 1.** Remove the v1 checker, `mdtokens.py`, `anchor_check.py`'s Markdown
-   mode and markdown-it-py; update driver-lab's `AGENTS.md` check list and CI.
+   (docs, permissive, gpl) with their `checks.sh` and CI on format 2, and each repository's
+   publish workflow and Pages site.
+7. **SF2-7 Retire format 1.** Remove the v1 checker, `mdtokens.py` and `anchor_check.py`'s
+   Markdown mode; take markdown-it-py off the checking path (it remains only in the publish step);
+   update driver-lab's `AGENTS.md` check list and CI.
 
 ## What this design does not cover
 

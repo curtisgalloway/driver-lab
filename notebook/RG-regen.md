@@ -83,3 +83,26 @@ Reading: the verifiers checked what each claim says against its citation and fou
 almost every time; Codex found what the claims leave out, routing a summary table hides, and
 sources the author did not reach. The second Claude verifier agreed with the first on every
 shared bullet, so it added no new findings here.
+
+### 2026-10-07 — RG-T1 reviews: Claude reviewer and Codex each found a gate bypass the other missed
+
+RG-T1 (the `[src]` class) was reviewed by one Claude reviewer that ran the checks, 45 break
+cases and 8 mutations, and by Codex read-only from the diff. Neither found everything.
+
+| # | Reviewer | Finding | Verdict | Other caught? | Would have prevented it |
+|---|---|---|---|---|---|
+| T1 | Codex | empty anchor `[src:]` passes both checkers with no repo or license | accepted, blocker | no | break cases should include degenerate inputs (empty, whitespace, separators only) |
+| T2 | Claude | `[impl:]` alias evades every `[src]` rule; full-commit rule enforced nowhere | accepted | no | review every alias the parser accepts, not only the documented tag |
+| T3 | both | one record path for base and overlay of one id; `spec_file` unchecked | accepted | yes | — |
+| T4 | Codex | drift rewrite updates `Source pin:` lines but not repos-entry refs | accepted | no | when a pin's home moves, review every writer of pins |
+| T5 | Codex | overlays skip the variants check | accepted | no | — |
+| T6 | Codex | wrapped bullet loses its claim in `anchor_check` | accepted | partly (N4) | — |
+| T7 | Codex | `board-expert/SKILL.md` still says code facts have no class | accepted | no | grep every skill for the old rule when a format rule changes |
+| T8 | Codex | GPL `AGENTS.md` command now exits 2 | accepted | no | — |
+| T9 | Claude | line-number fix has no test that fails on revert | accepted | no | mutation testing (Claude ran it; Codex did not) |
+| T10 | Claude | GPL CI fails on errors in the other repos' `main` | accepted; user: further roots are context only | no | — |
+| T11 | Claude | five nits (frontmatter anchor message, split regex, unnamed form, hex warning, log noise) | accepted where cheap | no | — |
+| T12 | both | spec repos fail CI until the driver-lab pin moves | known ordering, not a defect | yes | — |
+
+User decisions recorded with these: CI resolves `[src:]` anchors only for pinned repos below a
+size limit; overlays of one id in one layer merge in root order; further roots are context only.

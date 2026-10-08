@@ -22,6 +22,9 @@ request, not inside a unit.
 | `hardware-investigator` | Confirm the license per cited file at the pin, not per repository | RG1 V3, C5 | both | proposed |
 | docs, permissive `AGENTS.md`/README | Their citation rules describe peripheral specs only; add the board-spec form (`resources.docs`, hash in `note`) | RG1 implementer friction 3, 4 | implementer | proposed |
 | `SPEC-FORMAT.md`, `spec_check` | `[src]` class with pin and license gate; check overlay records; CI anchor-checks board specs | RG1 implementer friction 1, 2; V4 | implementer, verifier | in RG-T1 |
+| review practice | For a gate or checker, run both an executing reviewer (break cases, mutations) and a diff reader; in RG-T1 each found a bypass the other missed | RG-T1 T1, T2, T9 | both | proposed |
+| review practice | Break cases must include degenerate inputs (empty anchors, aliases of the tag under test) | RG-T1 T1, T2 | Codex, Claude | proposed |
+| review practice | When a format rule changes, grep every skill for the old rule | RG-T1 T7 | Codex | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison
@@ -30,4 +33,5 @@ Per unit: findings accepted from each reviewer, and how many each caught that th
 
 | Unit | `spec-verifier` accepted | Codex accepted | Verifier only | Codex only | Both |
 |---|---|---|---|---|---|
+| RG-T1 (tooling; Claude column is the code reviewer) | 6 | 8 | 4 (T2, T9, T10, T11) | 6 (T1, T4–T8) | 2 (T3, T12) |
 | RG1 | 4 | 20 | 2 (V1, V4) | 18 | 2 (V3/C5, V2/C13 partly) |

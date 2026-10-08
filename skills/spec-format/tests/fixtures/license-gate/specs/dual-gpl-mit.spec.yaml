@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A GPL-2.0 OR MIT device-tree source, cited as DT (v1 gated only [src]) (synthetic license-gate fixture; format 2 of the v1 dual-gpl-mit-spec.md)
+format: 2
+kind: ip
+id: gate-dual-gpl-mit
+name: Widget block, dual-gpl-mit
+triggers: [gate dual gpl mit]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: dts
+      url: https://example.invalid/dts
+      commit: "2222222222222222222222222222222222222222"
+      license: GPL-2.0 OR MIT
+      files: [{path: arch/arm64/boot/dts/widget.dtsi, license_from: spdx-line}]
+facts:
+  - id: uart-base
+    section: programming-model
+    title: UART base
+    claim: The UART is at 0xfe201000.
+    support:
+      - class: DT
+        anchors: [{repo: dts, path: arch/arm64/boot/dts/widget.dtsi, lines: [2, 2]}]

@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an anchor's lines written last first.
+format: 2
+kind: chip
+id: lines-backwards
+name: Lines-Backwards
+triggers: [lines-backwards]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+      license: BSD-3-Clause
+      files: [{path: drivers/widget.c, license_from: spdx-line}]
+facts:
+  - id: ctrl-offset
+    section: quick-facts
+    title: CTRL offset
+    claim: CTRL is at offset 0x10.
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/widget.c, lines: [9, 4], symbol: WIDGET_CTRL}]

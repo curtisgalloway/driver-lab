@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# One defect per file, except fine*: format 2 of board-expert's bad_root.
+format: 2
+layer: public
+name: bad
+license: Apache-2.0
+accepts: [BSD-3-Clause]

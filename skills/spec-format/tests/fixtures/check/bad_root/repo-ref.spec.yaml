@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an anchor naming a repos entry pinned by a ref, not a commit.
+format: 2
+kind: chip
+id: repo-ref
+name: Repo-Ref
+triggers: [repo-ref]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      ref: main
+      license: BSD-3-Clause
+      files: [{path: drivers/widget.c, license_from: spdx-line}]
+facts:
+  - id: ctrl-offset
+    section: quick-facts
+    title: CTRL offset
+    claim: CTRL is at offset 0x10.
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/widget.c, lines: [2, 2], symbol: WIDGET_CTRL}]

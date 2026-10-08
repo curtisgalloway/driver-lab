@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an instance whose intid does not agree with its SPI number.
+format: 2
+kind: soc
+id: irq-mismatch
+name: Irq-Mismatch
+triggers: [irq-mismatch]
+instances:
+  - id: uart0
+    name: uart0
+    ip: fineip
+    reg: "0x7e201000"
+    irq: {kind: SPI, number: 121, intid: 150}
+    clocks: []
+    support: [{class: databook, doc: widget-trm, at: [{section: "6.1"}]}]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

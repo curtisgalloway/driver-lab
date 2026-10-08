@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Shaped like the hardware-specs-gpl repository's marker, for spec.py check.
+format: 2
+layer: public
+name: hardware-specs-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, GPL-2.0-or-later, Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, X11, Zlib]

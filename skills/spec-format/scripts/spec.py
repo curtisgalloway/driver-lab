@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
-Subcommands built so far (SF2-1): `validate`. Later milestones add `check`, `status`,
-`render`, `resolve`, `show`, `drift`, `inventory` and `migrate`.
+Subcommands built so far: `validate` (SF2-1) and `check` (SF2-2, in speccheck.py). Later
+milestones add `status`, `render`, `resolve`, `show`, `drift`, `inventory` and `migrate`.
 
-Exit status (the house contract): 0 every file valid; 1 a file failed to load or validate;
-2 usage (bad arguments, a path that does not exist, a file name that says no schema);
-3 a pinned dependency is missing or at another version than skills/spec-format/requirements.txt
-pins, or that file holds a marker spec.py cannot evaluate (there is no fallback parser);
+Exit status (the house contract): 0 every file valid, or every root checked with no error
+(warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
+(bad arguments, a path that does not exist, a file name that says no schema, roots that are the
+same or nested, a context root holding a symbolic link); 3 a pinned dependency is missing or at
+another version than skills/spec-format/requirements.txt pins, or that file holds a marker
+spec.py cannot evaluate (there is no fallback parser), or a root has no board-specs.yaml;
 100 an internal error in spec.py itself, not a verdict on any file (the tool-specific band
 100-124 of the house exit-code contract; 4 is reserved there for "target unreachable").
 """
@@ -39,12 +41,15 @@ DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markd
 SKILL = """\
 ---
 name: spec-format-cli
-description: Drive spec.py, the spec format 2 tool (validate a spec, facts file, verification record or root marker against its schema).
+description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references and the license gate).
 ---
 
 # spec.py
 
     python3 skills/spec-format/scripts/spec.py validate <file>... [--root <dir>] [--json]
+    python3 skills/spec-format/scripts/spec.py check <root>... [--context-root <dir>]...
+        [--require-license] [--public-skill <name>]... [--stub <SKILL.md>]...
+        [--stubs-from <skills dir>]... [--json]
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -62,8 +67,21 @@ object, always: `{"ok": bool, "files": [{"path", "schema", "valid"}], "findings"
 run did not validate (then `files` is empty and each finding has path "" and line and column 0).
 A file that cannot be read is a finding on that file.
 
-Exit status: 0 all valid; 1 a file invalid; 2 usage; 3 a pinned dependency missing or at
-another version; 100 an internal error in spec.py (the files were not judged).
+`check` reads each root's `board-specs.yaml`, validates every `*.spec.yaml` below it, then
+checks what a schema cannot: names (`doc`, `repo`, `assumption`) resolving in the citing file,
+document classes and page bounds, ids unique per spec id per root, composition (`parts`,
+`variant_of`, `instances[].ip`, overlays), fact references (`#id`, `spec#id`,
+`spec@root#id`) with layer order and no premise cycles, and the license gate, direct and
+through references. `--context-root` reads a further root so references and overlays resolve;
+findings in its own files are warnings. `--require-license` also gates repos entries no anchor
+cites. `--public-skill` names a skill a public root's tools may name in `via:`. Output: one
+`path:line:column: error|warning: message` per finding, then a summary; `--json` prints
+`{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "findings": [{"path",
+"line", "column", "level", "message"}]}`, with `"error"` as for `validate` when no check ran.
+
+Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a file invalid or a
+check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
+board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 """
 
 
@@ -525,7 +543,8 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     return None if problems else fragment
 
 
-def validate_file(path: Path, schemas, extension, findings: list[Finding]) -> tuple[bool, str]:
+def validate_file(path: Path, schemas, extension, findings: list[Finding]):
+    """Load and schema-check one file: (valid, schema kind, Loaded or None)."""
     import jsonschema
 
     import specload
@@ -536,10 +555,10 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]) -> tu
         loaded = specload.load_strict_marked(path)
     except specload.LoadError as exc:
         findings.append(Finding(path, exc.line, exc.column, exc.problem))
-        return False, kind
+        return False, kind, None
     except OSError as exc:
         findings.append(Finding(path, 1, 1, f"cannot read the file: {exc.strerror or exc}"))
-        return False, kind
+        return False, kind, None
     if kind == "root":
         extension = None  # a marker is validated with its own fragment, below
     registry = registry_for(schemas, extension)
@@ -566,19 +585,51 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]) -> tu
             findings.append(Finding(path, m.line, m.column, f"kind: {want}"))
     if kind == "root" and len(findings) == before:
         load_extension(path, data, findings)
-    return len(findings) == before, kind
+    return len(findings) == before, kind, loaded
 
 
 def read_root(root: Path, schemas, findings: list[Finding]) -> dict | None:
     marker = root / MARKER
     if not marker.is_file():
         raise Usage(f"--root {root}: no {MARKER} there")
-    ok, _ = validate_file(marker, schemas, None, findings)
+    ok, _, _ = validate_file(marker, schemas, None, findings)
     if not ok:
         return None
     import specload
 
     return load_extension(marker, specload.load_strict(marker), [])
+
+
+def cmd_check(args) -> tuple[int, dict]:
+    import types
+
+    import speccheck
+
+    api = types.SimpleNamespace(validate_file=validate_file, load_extension=load_extension)
+    try:
+        checker = speccheck.check(
+            api, load_schemas(), args.roots, context_roots=args.context_root,
+            require_license=args.require_license, public_skills=args.public_skill,
+            stubs=args.stub, stubs_from=args.stubs_from)
+    except speccheck.UsageError as exc:
+        raise Usage(str(exc)) from None
+    except speccheck.PreconditionError as exc:
+        raise Precondition(str(exc)) from None
+    uniq = {(f.path, f.line, f.column, f.level, f.message): f for f in checker.findings}
+    ordered = sorted(uniq.values(), key=lambda f: (f.path, f.line, f.column, f.message))
+    errors = sum(1 for f in ordered if f.level == "error")
+    warnings = len(ordered) - errors
+    summary = (f"{len(checker.roots)} root(s), {len(checker.files)} spec file(s), "
+               f"{checker.stubs} stub(s): {errors} error(s), {warnings} warning(s)")
+    return (EXIT_INVALID if errors else EXIT_OK), {
+        "ok": not errors,
+        "roots": [{"path": str(r.given), "name": r.name, "layer": r.layer, "context": r.context}
+                  for r in checker.roots],
+        "specs": len(checker.files),
+        "stubs": checker.stubs,
+        "findings": [f.as_dict() for f in ordered],
+        "_text": [str(f) for f in ordered] + [summary],
+    }
 
 
 def cmd_validate(args) -> tuple[int, dict]:
@@ -593,7 +644,7 @@ def cmd_validate(args) -> tuple[int, dict]:
     extension = read_root(args.root, schemas, findings) if args.root else None
     files = []
     for p in args.files:
-        ok, kind = validate_file(p, schemas, extension, findings)
+        ok, kind, _ = validate_file(p, schemas, extension, findings)
         files.append({"path": str(p), "schema": kind, "valid": ok})
     uniq = {f.key(): f for f in findings}
     ordered = sorted(uniq.values(), key=lambda f: (f.path, f.line, f.column, f.message))
@@ -624,11 +675,29 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("files", nargs="+", type=Path)
     v.add_argument("--root", type=Path, help="a root whose marker names extension fragments")
     v.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    c = sub.add_parser("check", help="check spec roots: names, composition, references, the "
+                                     "license gate", allow_abbrev=False)
+    c.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    c.add_argument("--context-root", action="append", default=[], type=Path,
+                   help="a further root read so references and overlays resolve; findings in "
+                        "its own files are warnings")
+    c.add_argument("--require-license", action="store_true",
+                   help="also gate repos entries no anchor or notice names")
+    c.add_argument("--public-skill", action="append", default=[],
+                   help="a skill a public root's tools may name in via:")
+    c.add_argument("--stub", action="append", default=[], type=Path, help="a stub SKILL.md")
+    c.add_argument("--stubs-from", action="append", default=[], type=Path,
+                   help="a skills directory; every */SKILL.md calling itself a stub is checked")
+    c.add_argument("--json", action="store_true", help="one JSON object on stdout")
     return parser
 
 
-def _failure(kind: str, messages: list[str]) -> str:
-    """The --json object for a run that did not validate (usage, precondition, internal)."""
+def _failure(kind: str, messages: list[str], command: str | None = None) -> str:
+    """The --json object for a run that judged nothing (usage, precondition, internal)."""
+    if command == "check":
+        return json.dumps({"ok": False, "error": kind, "roots": [], "specs": 0, "stubs": 0,
+                           "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
+                                         "message": m} for m in messages]}, sort_keys=True)
     return json.dumps({"ok": False, "error": kind, "files": [],
                        "findings": [{"path": "", "line": 0, "column": 0, "message": m}
                                     for m in messages]}, sort_keys=True)
@@ -637,11 +706,12 @@ def _failure(kind: str, messages: list[str]) -> str:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     want_json = any(a == "--json" or a.startswith("--json=") for a in argv)
+    command = next((a for a in argv if not a.startswith("-")), None)
     parser = build_parser()
 
     def fail(kind: str, code: int, messages: list[str], hint: str = "") -> int:
         if want_json:
-            print(_failure(kind, messages))
+            print(_failure(kind, messages, command))
         else:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
@@ -659,7 +729,7 @@ def main(argv: list[str] | None = None) -> int:
         print(SKILL, end="")
         return EXIT_OK
     if args.command is None:
-        return fail("usage", EXIT_USAGE, ["name a subcommand: validate"])
+        return fail("usage", EXIT_USAGE, ["name a subcommand: validate, check"])
 
     try:
         problems = check_dependencies()
@@ -673,7 +743,7 @@ def main(argv: list[str] | None = None) -> int:
                     "install: pip install --require-hashes -r skills/spec-format/requirements.txt")
     sys.path.insert(0, str(HERE))
     try:
-        code, result = cmd_validate(args)
+        code, result = (cmd_check if args.command == "check" else cmd_validate)(args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
@@ -687,6 +757,9 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
+    elif args.command == "check":
+        for line in text:
+            print(line)
     else:
         for line in text:
             print(line)

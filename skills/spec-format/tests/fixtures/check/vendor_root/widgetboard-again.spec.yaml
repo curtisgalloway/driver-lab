@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: overlay
+overlays: widgetboard
+facts:
+  - id: duplicate-overlay
+    section: gotchas
+    title: Second overlay
+    claim: A second overlay of the same id in one root.
+    todo: {check: document, text: merge it into the first overlay.}

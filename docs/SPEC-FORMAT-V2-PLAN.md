@@ -103,7 +103,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
-| SF2-2 | Checker: composition, references, license gate | SF2-1 | pending |
+| SF2-2 | Checker: composition, references, license gate | SF2-1 | in progress: implemented, awaiting review ([notebook](../notebook/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
@@ -306,7 +306,8 @@ code unit. Split point: the transitive gate and cross-root reference fixtures (s
 SF2-2b if steps 1–3 take the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-2.md`. Notebook: `notebook/SF2-2.md`.
+Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-2.md` (written after
+review). Notebook: [SF2-2](../notebook/SF2-2.md).
 
 ---
 

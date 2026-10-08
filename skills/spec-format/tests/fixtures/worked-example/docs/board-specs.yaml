@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Shaped like the hardware-specs-docs repository's marker, for spec.py check.
+format: 2
+layer: public
+name: hardware-specs-docs
+license: CC-BY-4.0
+accepts: []

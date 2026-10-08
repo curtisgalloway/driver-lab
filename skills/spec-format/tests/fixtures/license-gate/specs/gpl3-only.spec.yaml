@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A GPL-3.0-only source (synthetic license-gate fixture; format 2 of the v1 gpl3-only-spec.md)
+format: 2
+kind: ip
+id: gate-gpl3-only
+name: Widget block, gpl3-only
+triggers: [gate gpl3 only]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: gnutool
+      url: https://example.invalid/gnutool
+      commit: "3333333333333333333333333333333333333333"
+      license: GPL-3.0-only
+      files: [{path: src/widget.c, license_from: spdx-line}]
+facts:
+  - id: ctrl-offset
+    section: programming-model
+    title: CTRL offset
+    claim: CTRL is at offset 0x10.
+    support:
+      - class: src
+        anchors: [{repo: gnutool, path: src/widget.c, lines: [2, 2], symbol: WIDGET_CTRL}]

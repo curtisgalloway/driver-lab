@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a colon and space inside a plain scalar.
+format: 2
+kind: chip
+id: colon
+name: Colon Chip
+triggers: [colon]
+facts: []
+note: TODO (verify on hardware): unquoted

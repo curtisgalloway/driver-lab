@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a citation of a map-only (cite: false) document.
+format: 2
+kind: ip
+id: uncitable-doc
+name: Uncitable-Doc
+triggers: [uncitable-doc]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", cite: false}
+facts:
+  - id: reset-time
+    section: programming-model
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Docs base: one databook fact.
+format: 2
+kind: chip
+id: widgetchip
+name: Widget Chip
+triggers: [widgetchip]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: addressing
+    section: quick-facts
+    title: Addressing
+    claim: Peripherals sit at 0x7e000000 in the legacy view.
+    support: [{class: databook, doc: widget-trm, at: [{section: "1.2", page: "4"}]}]

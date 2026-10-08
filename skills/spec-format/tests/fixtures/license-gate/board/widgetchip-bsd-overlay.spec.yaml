@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# An overlay adding a BSD-3-Clause repos entry no anchor cites: under --require-license it fits
+# the GPL and permissive roots, not the docs root.
+format: 2
+kind: overlay
+overlays: widgetchip
+resources:
+  repos:
+    - name: tools
+      url: https://example.invalid/tools
+      commit: "1111111111111111111111111111111111111111"
+      license: BSD-3-Clause
+facts:
+  - id: bsd-note
+    section: gotchas
+    title: Firmware tools
+    claim: The firmware tools are kept beside the chip's documentation.
+    support: [{class: hardware, board: Widget Board rev B, method: listed the tools on the board, date: 2026-10-01}]

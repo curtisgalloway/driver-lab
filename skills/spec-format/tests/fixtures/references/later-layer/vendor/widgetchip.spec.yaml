@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A product-layer overlay with an erratum.
+format: 2
+kind: overlay
+overlays: widgetchip
+resources:
+  documents:
+    - {name: errata, class: databook, title: Widget errata, url: "https://example.invalid/errata.pdf", access: internal}
+facts:
+  - id: errata
+    section: gotchas
+    title: Erratum 7
+    claim: Reset twice.
+    support: [{class: databook, doc: errata, at: [{section: "7"}]}]

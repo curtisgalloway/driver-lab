@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a kind the schema does not know.
+format: 2
+kind: widget
+id: unknownkind
+name: Unknown
+facts: []

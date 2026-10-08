@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a page number with a leading zero (a second spelling of 40).
+format: 2
+kind: chip
+id: page-zeros
+name: Page-Zeros
+triggers: [page-zeros]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: cited
+    section: quick-facts
+    title: Cited
+    claim: A cited value.
+    support: [{class: databook, doc: widget-trm, at: [{page: "040"}]}]

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T14:49-07:00
+Updated: 2026-10-08T15:15-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
+Entries: 2026-10-08T14:58-07:00 through 2026-10-08T15:40-07:00
+Outcome: in progress (implemented, awaiting review). The license-gate matrix gives format 1's codes
+under `--require-license`; without it only the two uncited-entry rows differ, as the design says.
+Loading `spdx.py` by path needs `sys.modules` for its dataclasses.
 
 ### [SF2-1 — Strict loader, pinned dependencies, core schemas](SF2-1.md)
 Entries: 2026-10-08T12:17-07:00 through 2026-10-08T14:49-07:00

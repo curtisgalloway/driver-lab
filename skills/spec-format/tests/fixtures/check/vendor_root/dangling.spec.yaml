@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: overlay
+overlays: nosuchboard
+facts: []

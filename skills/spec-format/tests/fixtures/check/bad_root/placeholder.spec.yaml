@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: one unsubstituted placeholder, in name; the claim's code span and autolinks are fine.
+format: 2
+kind: chip
+id: placeholder
+name: Placeholder <Chip name>
+triggers: [placeholder]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: window
+    section: quick-facts
+    title: Address window
+    claim: The tuple `<type number flags>` is fine; see <https://example.invalid/ok> and <id@example.invalid>.
+    support: [{class: databook, doc: widget-trm, at: [{section: "2.1"}]}]

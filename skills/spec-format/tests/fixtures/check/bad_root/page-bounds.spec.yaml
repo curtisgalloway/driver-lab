@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a page beyond the document's 80 pages.
+format: 2
+kind: chip
+id: page-bounds
+name: Page-Bounds
+triggers: [page-bounds]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: cited
+    section: quick-facts
+    title: Cited
+    claim: A cited value.
+    support: [{class: databook, doc: widget-trm, at: [{page: "92"}]}]

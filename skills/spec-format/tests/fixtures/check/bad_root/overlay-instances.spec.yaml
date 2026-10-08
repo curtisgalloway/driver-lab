@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: instances in an overlay of a board, which has none.
+format: 2
+kind: overlay
+overlays: fineboard
+instances:
+  - id: uart9
+    name: uart9
+    ip: fineip
+    reg: null
+    irq: null
+    clocks: []
+    todo: {check: document, text: find it.}
+facts: []

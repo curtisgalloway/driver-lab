@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A repos entry that states no license (a schema error) (synthetic license-gate fixture; format 2 of the v1 unlicensed-pin-spec.md)
+format: 2
+kind: ip
+id: gate-unlicensed-pin
+name: Widget block, unlicensed-pin
+triggers: [gate unlicensed pin]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: tools
+      url: https://example.invalid/tools
+      commit: "1111111111111111111111111111111111111111"
+      files: [{path: armstubs/armstub8.S, license_from: spdx-line}]
+facts:
+  - id: stub-magic
+    section: programming-model
+    title: Stub magic
+    claim: The stub magic is at 0xF0.
+    support:
+      - class: src
+        anchors: [{repo: tools, path: armstubs/armstub8.S, lines: [2, 2], symbol: stub_magic}]

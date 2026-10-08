@@ -247,7 +247,8 @@ class ValidFixtures(Validator):
 
     def test_worked_example_validates(self):
         files = sorted(str(p) for p in WORKED.rglob("*.yaml"))
-        self.assertEqual(len(files), 4)
+        # three slices and the record, plus the three root markers SF2-2 added for spec.py check
+        self.assertEqual(len(files), 7)
         code, result = run(["validate", "--json"] + files)
         self.assertEqual(code, 0, json.dumps(result["findings"], indent=1))
 

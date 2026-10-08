@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# An IP spec in a subdirectory, with a map-only repos entry and a citable document.
+format: 2
+kind: ip
+id: widgetuart
+name: Widget UART
+triggers: [widgetuart]
+cache: widgetuart-resources
+resources:
+  documents:
+    - {name: uart-trm, class: databook, title: Widget UART TRM, url: "https://example.invalid/uart-trm.pdf", access: public}
+  repos:
+    - {name: linux, url: "https://example.invalid/linux", ref: master, license: GPL-2.0-only}
+facts:
+  - id: fifo-depth
+    section: programming-model
+    title: FIFO depth
+    claim: The receive FIFO holds 16 entries.
+    support: [{class: databook, doc: uart-trm, at: [{table: "3-2"}]}]

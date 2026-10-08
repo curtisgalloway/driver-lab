@@ -1,0 +1,22 @@
+{
+  "comment": "Expected exit codes of `spec.py check <root> --require-license`, the root holding one marker from roots/ and one spec from specs/: 0 passes, 1 fails. Rows and codes are carried over from peripheral-spec/tests/fixtures/license-gate/expected.json row for row (v1 file <row>-spec.md is <row>.spec.yaml here). without_require_license lists the only codes that differ without the flag: a repos entry no anchor or notice names is gated only under --require-license (design, Roots, layers, overlays and the license gate).",
+  "gpl-only.spec.yaml":           {"gpl": 0, "docs": 1, "permissive": 1},
+  "gpl-or-later.spec.yaml":       {"gpl": 0, "docs": 1, "permissive": 1},
+  "gpl-with-exception.spec.yaml": {"gpl": 0, "docs": 1, "permissive": 1},
+  "dual-gpl-mit.spec.yaml":       {"gpl": 0, "docs": 1, "permissive": 0},
+  "gpl-and-mit.spec.yaml":        {"gpl": 0, "docs": 1, "permissive": 1},
+  "bsd.spec.yaml":                {"gpl": 0, "docs": 1, "permissive": 0},
+  "bsd-target.spec.yaml":         {"gpl": 0, "docs": 1, "permissive": 0},
+  "two-pins.spec.yaml":           {"gpl": 0, "docs": 1, "permissive": 1},
+  "uncited-gpl-pin.spec.yaml":    {"gpl": 0, "docs": 1, "permissive": 1},
+  "docs-only.spec.yaml":          {"gpl": 0, "docs": 0, "permissive": 0},
+  "docs-named.spec.yaml":         {"gpl": 0, "docs": 0, "permissive": 0},
+  "gpl3-only.spec.yaml":          {"gpl": 1, "docs": 1, "permissive": 1},
+  "unlicensed-pin.spec.yaml":     {"gpl": 1, "docs": 1, "permissive": 1},
+  "no-pin.spec.yaml":             {"gpl": 1, "docs": 1, "permissive": 1},
+  "invalid-license.spec.yaml":    {"gpl": 1, "docs": 1, "permissive": 1},
+  "without_require_license": {
+    "bsd-target.spec.yaml":       {"docs": 0},
+    "uncited-gpl-pin.spec.yaml":  {"docs": 0, "permissive": 0}
+  }
+}

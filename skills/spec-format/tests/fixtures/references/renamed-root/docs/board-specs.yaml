@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+layer: public
+name: ref-documents
+license: CC-BY-4.0
+accepts: []

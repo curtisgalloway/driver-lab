@@ -26,10 +26,13 @@ root marker.
   `resources.repos[].license` with the root's `accepts:`. `widgetchip.spec.md` cites a document
   only and fits every root; `widgetchip-bsd-overlay.spec.md` adds a BSD-3-Clause repository
   (fits the GPL and permissive roots, not the docs root); `widgetchip-gpl3-overlay.spec.md` adds
-  a GPL-3.0-only one (fits none). The overlays also prove that an overlay in one root resolves
+  a GPL-3.0-only one (fits none); `widgetchip-src-overlay.spec.md` adds a `[src]` fact anchored
+  to a BSD-3-Clause repository pinned to a commit (fits the GPL and permissive roots; the docs
+  root accepts no `[src]`, so it fails there with `license gate: [src]`). The overlays also prove that an overlay in one root resolves
   against a spec in another when both roots are given (the permissive repository's overlays
   target specs in the docs repository). `board-expert/tests/test_spec_check.py`
-  (`BoardSpecGate`) runs them.
+  (`BoardSpecGate`, `SrcClass`) runs them, and `anchor_check.py --root` reads the `[src]`
+  overlay's repository entry as its Source pin.
 
 A spec repository's CI self-test can copy its root's column: the specs marked 0 must pass and
 those marked 1 must fail with a `license gate:` message (or, for `invalid-license-spec.md`,
@@ -44,6 +47,10 @@ The pairs the three spec repositories' self-tests copy, each run with `--root <r
 | `hardware-specs-gpl` | `gpl-only-spec.md` | `gpl3-only-spec.md` | `widgetchip-bsd-overlay` / `widgetchip-gpl3-overlay` |
 | `hardware-specs-docs` | `docs-named-spec.md` | `gpl-only-spec.md` | none / `widgetchip-bsd-overlay` |
 | `hardware-specs-permissive` | `bsd-spec.md` | `gpl-only-spec.md` | `widgetchip-bsd-overlay` / `widgetchip-gpl3-overlay` |
+
+Each self-test also runs `widgetchip-src-overlay.spec.md` beside `widgetchip.spec.md` through
+`spec_check.py --require-license` and `anchor_check.py --root --require-license`: both pass in
+the GPL and permissive repositories and fail in the docs repository.
 
 The permissive repository's self-test also places `widgetchip.spec.md` under the docs
 repository's marker and the BSD overlay under its own, and checks that the overlay fails alone

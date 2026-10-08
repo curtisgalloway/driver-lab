@@ -1021,5 +1021,242 @@ class Verification(unittest.TestCase):
             )
 
 
+
+COMMIT = "439b6198a9b340de5998dd14a26a0d9d38a6bcac"
+PERMISSIVE = "layer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0, MIT, BSD-3-Clause]\n"
+DOCS_ONLY = "layer: public\nlicense: CC-BY-4.0\naccepts: []\n"
+SRC_CHIP = """\
+---
+kind: chip
+id: schip
+name: Source class chip
+triggers: [schip]
+resources:
+  repos:
+    - name: stub
+      url: https://example.com/stub
+      ref: {ref}
+      license: {lic}
+---
+
+## Quick-facts
+
+- **Counter frequency.** The stub writes 54000000 to `CNTFRQ_EL0`. `[src]`
+  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])
+{extra}"""
+
+
+class SrcClass(unittest.TestCase):
+    """[src]: a fact read from source at a pinned commit (RG-T1, user decision 2026-10-07)."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def chip(self, ref=COMMIT, lic="BSD-3-Clause", extra=""):
+        return {"c.spec.md": SRC_CHIP.format(ref=ref, lic=lic, extra=extra)}
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_pinned_accepted_src_fact_passes_without_a_todo(self):
+        for flags in PARSER_FLAGS:
+            for args in ([], ["--require-license"]):
+                with self.subTest(flags=flags, args=args):
+                    code, data, err = self.check(PERMISSIVE, self.chip(), *args, flags=flags)
+                    self.assertEqual(code, 0, err + json.dumps(data))
+                    self.assertEqual(substantive(data), [])
+
+    def test_src_needs_a_parenthetical_with_an_anchor(self):
+        extra = (
+            "- **Bare.** A fact. `[src]`\n"
+            "- **No anchor.** A fact. `[src]` (armstub8.S, the timer block)\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        errors = self.errors(data)
+        self.assertEqual(len(errors), 2, errors)
+        self.assertIn("[src] must be followed by a parenthetical naming the [src:<repo>: path:L]", errors[0])
+        self.assertIn("[src] parenthetical cites no anchor", errors[1])
+
+    def test_unpinned_src_fails(self):
+        for ref in ("main", "439b619", "None"):
+            with self.subTest(ref=ref):
+                code, data, _ = self.check(PERMISSIVE, self.chip(ref=ref))
+                self.assertEqual(code, 1)
+                errors = self.errors(data)
+                self.assertEqual(len(errors), 1, errors)  # once per repo, not once per anchor
+                self.assertIn("is not a full commit id", errors[0])
+
+    def test_anchor_must_name_a_listed_repo(self):
+        extra = (
+            "- **Unnamed.** A fact. `[src]` ([src: armstubs/armstub8.S:1])\n"
+            "- **Unknown.** A fact. `[src]` ([src:linux: drivers/x.c:1])\n"
+            "- **Malformed.** A fact. `[src]` ([src:stub: armstubs/armstub8.S])\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        errors = "\n".join(self.errors(data))
+        self.assertIn("[src: armstubs/armstub8.S:1] names no repo", errors)
+        self.assertIn("[src:linux: drivers/x.c:1] names repo 'linux', but the spec's resources.repos entries are: stub", errors)
+        self.assertIn("malformed src anchor", errors)
+
+    def test_license_not_accepted_fails_even_without_require_license(self):
+        for args in ([], ["--require-license"]):
+            with self.subTest(args=args):
+                code, data, _ = self.check(PERMISSIVE, self.chip(lic="GPL-2.0-only"), *args)
+                self.assertEqual(code, 1)
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), 1, self.errors(data))
+                self.assertIn("'stub' (GPL-2.0-only), which root", gate[0])
+                self.assertIn("does not accept (accepts: Apache-2.0, MIT, BSD-3-Clause)", gate[0])
+
+    def test_docs_root_accepts_no_src(self):
+        for lic in ("BSD-3-Clause", "MIT"):
+            with self.subTest(lic=lic):
+                code, data, _ = self.check(DOCS_ONLY, self.chip(lic=lic))
+                self.assertEqual(code, 1)
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), 1, self.errors(data))
+                self.assertIn("(accepts: none)", gate[0])
+
+    def test_root_without_accepts_accepts_no_src(self):
+        code, data, _ = self.check("layer: public\n", self.chip())
+        self.assertEqual(code, 1)
+        self.assertIn("declares no accepts: list", "\n".join(self.errors(data)))
+
+    def test_anchor_broken_across_lines_fails(self):
+        extra = (
+            "- **Split.** A fact. `[src]` ([src:stub:\n"
+            "  armstubs/armstub8.S:1-2])\n"
+        )
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+        broken = [f for f in data["findings"] if "broken across lines" in f["message"]]
+        self.assertEqual(len(broken), 1, data["findings"])
+        # A file line number, counting the frontmatter (12 lines), not a body line number.
+        self.assertTrue(broken[0]["path"].endswith("c.spec.md:18"), broken[0]["path"])
+
+    def test_src_anchor_as_an_inference_premise_is_checked_too(self):
+        extra = (
+            "- **Derived.** A conclusion. `[inference]` (premises: the stub writes it "
+            "[src:stub: armstubs/armstub8.S:1-2]) `TODO (verify on hardware)`: read it.\n"
+        )
+        code, data, err = self.check(PERMISSIVE, self.chip(extra=extra))
+        self.assertEqual(code, 0, err + json.dumps(data))
+        code, data, _ = self.check(DOCS_ONLY, self.chip(extra=extra))
+        self.assertEqual(code, 1)
+
+    def test_the_src_overlay_fixture_against_the_three_repo_shaped_roots(self):
+        """The fixture the spec repositories' self-tests copy (license-gate/README.md)."""
+        import shutil, tempfile
+
+        for name, want in (("gpl", 0), ("permissive", 0), ("docs", 1)):
+            with self.subTest(root=name), tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp) / name
+                shutil.copytree(GATE_ROOTS / name, root)
+                for f in ("widgetchip.spec.md", "widgetchip-src-overlay.spec.md"):
+                    shutil.copy(GATE_BOARD / f, root)
+                code, data, err = run(root, "--require-license", flags=["--no-pyyaml"])
+                self.assertEqual(code, want, err + json.dumps(data))
+                gate = [m for m in self.errors(data) if m.startswith("license gate: [src]")]
+                self.assertEqual(len(gate), want, self.errors(data))
+
+    def test_src_is_not_a_variant_tag(self):
+        self.assertNotIn("src", spec_check.TAG_CLASSES)
+        self.assertIn("src", spec_check.TAG_NAMES.split("|"))
+
+
+OVERLAY_BASE = """\
+---
+kind: chip
+id: ochip
+name: Overlay base chip
+triggers: [ochip]
+---
+
+## Quick-facts
+
+- A fact. `[doc]` (Widget TRM 1.0)
+"""
+
+OVERLAY_SPEC = """\
+---
+overlays: ochip
+---
+
+## Quick-facts
+
+- An added fact. `[doc]` (Widget TRM 2.0)
+"""
+
+
+class OverlayVerification(unittest.TestCase):
+    """Overlays are verified under their own root, one record each (spec-verifier)."""
+
+    def roots(self, tmp, record=None):
+        import hashlib
+
+        base = pathlib.Path(tmp) / "base"
+        over = pathlib.Path(tmp) / "over"
+        for root in (base, over):
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+        (base / "ochip.spec.md").write_text(OVERLAY_BASE)
+        spec = over / "ochip-extra.spec.md"
+        spec.write_text(OVERLAY_SPEC)
+        if record is not None:
+            digest = hashlib.sha256(spec.read_bytes()).hexdigest()
+            (over / "resources").mkdir()
+            (over / "resources" / "ochip.verify.md").write_text(record.format(digest=digest))
+        return base, over
+
+    RECORD = (
+        "---\nspec: ochip\nspec_file: ochip-extra.spec.md\nspec_sha256: {digest}\n"
+        "verified: 2026-10-07\nverifier: synthetic\nsources: []\n"
+        "summary: {{pass: 1, fail: FAIL, unverifiable: 0, gap: 0}}\n---\n"
+    )
+
+    def test_overlay_without_a_record_warns_unverified(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base, over = self.roots(tmp)
+            code, data, _ = run(over, base, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertEqual(data["verification"], {"unverified": 2})
+            unverified = [f["path"] for f in data["findings"] if f["message"].startswith("unverified:")]
+            self.assertIn(str(over / "ochip-extra.spec.md"), unverified)
+            code, data, _ = run(over, base, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+
+    def test_overlay_record_is_checked(self):
+        import tempfile
+
+        for fail, want_code, status in (("0", 0, "verified"), ("1", 1, "failing")):
+            with self.subTest(fail=fail), tempfile.TemporaryDirectory() as tmp:
+                base, over = self.roots(tmp, self.RECORD.replace("FAIL", fail))
+                code, data, err = run(over, base, flags=["--no-pyyaml"])
+                self.assertEqual(code, want_code, err + json.dumps(data))
+                self.assertEqual(data["verification"], {status: 1, "unverified": 1})
+                if fail != "0":
+                    self.assertIn(
+                        "verification record reports 1 FAIL verdict(s); see resources/ochip.verify.md",
+                        "\n".join(messages(data)),
+                    )
+
+    def test_overlay_record_names_the_overlaid_id(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            base, over = self.roots(tmp, self.RECORD.replace("FAIL", "0").replace("spec: ochip", "spec: other"))
+            code, data, _ = run(over, base, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec 'other' is not 'ochip'", "\n".join(messages(data)))
+
+
 if __name__ == "__main__":
     unittest.main()

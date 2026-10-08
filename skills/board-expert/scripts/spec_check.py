@@ -60,6 +60,15 @@ What fails (exit 1):
     ``[emulated]``, since a model observation is never the sole authority
     for a fact: another class stands beside it, or the observation is a
     premise of an ``[inference]``
+  * a ``[src]`` in the tail not followed by a parenthetical holding at least
+    one ``[src:<repo>: path:L1-L2 (symbol)]`` anchor (peripheral-spec's
+    anchor grammar, parsed by its ``anchor_check.py``); anywhere in the body,
+    a ``[src:]`` anchor that is malformed, names no repo, names a repo the
+    spec's own ``resources.repos`` does not list, or names one whose ``ref``
+    is not a full commit id, that has no ``license:``, or whose license the
+    root's ``accepts:`` does not accept (always, not only under
+    ``--require-license``; a root with no ``accepts:``, or ``accepts: []``,
+    accepts no ``[src]``); a ``[src:]`` anchor broken across lines
   * an unsubstituted template placeholder (``<...>`` starting with a letter,
     outside backtick code spans, not a URL or a message id) in a spec's
     frontmatter or body, or in a stub
@@ -67,7 +76,8 @@ What fails (exit 1):
     ``*/SKILL.md`` whose frontmatter says "stub over") whose ``spec: <id>``
     does not resolve
   * a verification record (``<root>/resources/<id>.verify.md``, written by
-    the ``spec-verifier`` skill) whose frontmatter is malformed, or whose
+    the ``spec-verifier`` skill; an overlay's is under its own root, named for
+    the id it overlays) whose frontmatter is malformed, or whose
     ``summary.fail`` is not zero (even when the record is stale); with
     ``--require-verified``, also a spec with no record or a record whose
     ``spec_sha256`` no longer matches
@@ -135,8 +145,10 @@ FACT_SECTIONS = {
     "Programming model",
     "Known variants and quirks",
 }
-TAG_NAMES = "databook|standard|rtl|DT|source-observed|doc|hardware|press|inference|emulated"
-TAG_CLASSES = tuple(TAG_NAMES.split("|"))
+TAG_NAMES = "databook|standard|rtl|DT|src|source-observed|doc|hardware|press|inference|emulated"
+# The classes a variants: row may name. Not [src]: its authority is the anchors in its
+# parenthetical, and a variants row has no place for them.
+TAG_CLASSES = tuple(t for t in TAG_NAMES.split("|") if t != "src")
 TAG_RE = re.compile(rf"\[({TAG_NAMES})\]")
 TODO_RE = re.compile(r"TODO \(verify on hardware\)")
 # One tag with an optional parenthetical citation (one level of nesting allowed).
@@ -148,13 +160,20 @@ TAIL_RE = re.compile(
 )
 GAP_RE = re.compile(r"^- (?:\*\*[^*]+\*\*\s*)?`?TODO \(verify on hardware\)")
 # Tags that must be followed by a parenthetical naming their source.
-NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated")
+NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated", "src")
 # Tags whose fact must carry the closing TODO (verify on hardware) sentence.
 TODO_TAGS = ("source-observed", "press", "inference", "emulated")
 UNNAMED_RES = {
     tag: re.compile(rf"\[{tag}\](?:`|(?!`))(?!\s*\()") for tag in NAMED_TAGS
 }
 DOC_UNNAMED_RE = UNNAMED_RES["doc"]
+# A [src] tag in a tail clause and the parenthetical that must follow it.
+SRC_CLAUSE_RE = re.compile(r"`?\[src\]`?\s*(\((?:[^()]|\([^()]*\))*\))?")
+# A [src:] anchor whose closing bracket is not on the same line: anchor_check.py reads one
+# line at a time, so it would never see the anchor.
+SPLIT_SRC_RE = re.compile(r"\[src:[^\]]*$")
+# A [src] pin: a full commit id (SHA-1, or SHA-256 for a repository in that object format).
+COMMIT_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.S)
 
 
@@ -413,6 +432,8 @@ class Spec:
     accepts: tuple | None = None
     # --require-license: resources.repos licenses must be in accepts (the board-spec gate).
     gate: bool = False
+    # Lines before the body (the frontmatter and its fences), so findings cite file lines.
+    body_offset: int = 0
 
     @property
     def is_overlay(self) -> bool:
@@ -516,7 +537,10 @@ def load_specs(
             if not isinstance(meta, dict):
                 findings.append(Finding("error", str(path), "frontmatter is not a mapping"))
                 continue
-            specs.append(Spec(path, root, layer, meta, m.group(2), accepts, require_license))
+            offset = text[: m.start(2)].count("\n")
+            specs.append(
+                Spec(path, root, layer, meta, m.group(2), accepts, require_license, offset)
+            )
     return specs, preconditions
 
 
@@ -874,7 +898,7 @@ def iter_fact_bullets(body: str):
 def check_tags(spec: Spec, findings: list[Finding]) -> None:
     p = str(spec.path)
     for line_no, raw in iter_fact_bullets(spec.body):
-        where = f"{p}:{line_no}"
+        where = f"{p}:{line_no + spec.body_offset}"
         if GAP_RE.match(raw):
             continue  # a gap-only bullet: "- **Topic.** TODO (verify on hardware) ..."
         bullet = " ".join(line.strip() for line in raw.splitlines())
@@ -910,9 +934,21 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     "inference": "its premises and derivation",
                     "rtl": "the design, its revision, and the module",
                     "emulated": "the device model, its version and the run IDs",
+                    "src": "the [src:<repo>: path:L] anchors it was read from",
                 }[tag]
                 findings.append(
                     Finding("error", where, f"[{tag}] must be followed by a parenthetical naming {what}")
+                )
+        # A [src] fact's parenthetical carries its anchors; check_src_anchors judges each one.
+        for m in SRC_CLAUSE_RE.finditer(tail):
+            if m.group(1) is not None and "[src:" not in m.group(1):
+                findings.append(
+                    Finding(
+                        "error",
+                        where,
+                        "[src] parenthetical cites no anchor: write [src:<repo>: path:L1-L2 (symbol)] "
+                        "naming a resources.repos entry pinned to a commit",
+                    )
                 )
         # A model observation is never the sole authority for a fact: it stands beside
         # another class, or it is a premise of an [inference] (which then carries the tag).
@@ -925,6 +961,134 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     "it, or make the observation a premise of an [inference]",
                 )
             )
+
+
+_ANCHOR_CHECK: list = []  # [module or None], loaded once
+
+
+def load_anchor_check():
+    """peripheral-spec's anchor_check module, beside this skill, or None.
+
+    [src:] anchors in a board spec use peripheral-spec's anchor grammar; this script parses
+    them with that module rather than with a second parser of its own.
+    """
+    if not _ANCHOR_CHECK:
+        path = Path(__file__).resolve().parent.parent.parent / "peripheral-spec" / "scripts"
+        if str(path) not in sys.path:
+            sys.path.append(str(path))
+        try:
+            import anchor_check  # noqa: PLC0415
+        except ImportError:
+            anchor_check = None
+        _ANCHOR_CHECK.append(anchor_check)
+    return _ANCHOR_CHECK[0]
+
+
+def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
+    """Every [src:<repo>: path:L] anchor in the body names a pinned, accepted repos entry.
+
+    The pin is the spec's own resources.repos entry of that name: its ref must be a full
+    commit id and its license one the root's accepts: list accepts. Unlike the repos gate
+    under --require-license, this applies always, and a root with no accepts: (or an empty
+    one, a documents-only root) accepts no [src] at all. Resolving the anchors against the
+    tree is anchor_check.py's job; this checks only what the spec itself can show.
+    """
+    p = str(spec.path)
+    lines = spec.body.splitlines()
+    if not any("[src:" in line for line in lines):
+        return
+    ac = load_anchor_check()
+    if ac is None:
+        findings.append(
+            Finding(
+                "error",
+                p,
+                "[src:] anchors cannot be checked: peripheral-spec's anchor_check.py was not "
+                "found beside board-expert (install peripheral-spec beside this skill)",
+            )
+        )
+        return
+    repos = {}
+    for group, entry in iter_resources(spec.meta):
+        if group == "repos" and isinstance(entry.get("name"), str):
+            repos.setdefault(entry["name"], entry)
+    listed = ", ".join(spec.accepts) if spec.accepts else "none"
+    judged: dict[str, str | None] = {}  # repo name -> why it cannot pin a [src] anchor
+
+    def pin_problem(name: str) -> str | None:
+        entry = repos.get(name)
+        if entry is None:
+            have = ", ".join(repos) or "none"
+            return f"names repo {name!r}, but the spec's resources.repos entries are: {have}"
+        ref = entry.get("ref")
+        if not isinstance(ref, str) or not COMMIT_RE.match(ref):
+            return (
+                f"cites repos entry {name!r}, whose ref {ref!r} is not a full commit id "
+                "(40 lowercase hex digits): a [src] fact is read at a pinned commit"
+            )
+        if "license" not in entry:
+            return f"cites repos entry {name!r}, which states no license:"
+        try:
+            tree = spdx.parse(entry["license"])
+        except spdx.SpdxError:
+            return None  # reported by check_repo_license
+        if spec.accepts is None:
+            return (
+                f"license gate: [src] cites repos entry {name!r} ({entry['license']}), but root "
+                f"{spec.root} declares no accepts: list"
+            )
+        if not spdx.accepted(tree, spec.accepts):
+            return (
+                f"license gate: [src] cites repos entry {name!r} ({entry['license']}), which root "
+                f"{spec.root} does not accept (accepts: {listed}); move the fact to a root that "
+                "accepts it"
+            )
+        return None
+
+    in_code = False
+    for n, line in enumerate(lines, 1):
+        if line.strip().startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
+        where = f"{p}:{n + spec.body_offset}"
+        if SPLIT_SRC_RE.search(line):
+            findings.append(
+                Finding(
+                    "error",
+                    where,
+                    "a [src:] anchor is broken across lines; keep each anchor on one line "
+                    "(anchor_check.py reads one line at a time)",
+                )
+            )
+        report = ac.Report(spec=p)
+        anchors = []
+        for kind, body in ac.TAG_RE.findall(line):
+            if kind == "src":
+                anchors += ac.parse_tag_body(kind, body, n, "", report)
+        for f in report.findings:
+            if f.level == "error":
+                findings.append(Finding("error", where, f.message))
+        for a in anchors:
+            if a.pin is None:
+                findings.append(
+                    Finding(
+                        "error",
+                        where,
+                        f"[src: {a.raw}] names no repo: write [src:<repo>: {a.raw}] with the "
+                        "name of a resources.repos entry",
+                    )
+                )
+                continue
+            if a.pin not in judged:
+                judged[a.pin] = pin_problem(a.pin)
+                # One finding per repo, at its first anchor, not one per anchor.
+                problem = judged[a.pin]
+                if problem is not None:
+                    if not problem.startswith("license gate:"):
+                        problem = f"[src:{a.raw}] {problem}"
+                    findings.append(Finding("error", where, problem))
 
 
 RECORD_KEYS = ("spec", "spec_file", "spec_sha256", "verified", "verifier", "sources", "summary")
@@ -1113,8 +1277,10 @@ def main(argv: list[str] | None = None) -> int:
         check_frontmatter(spec, findings)
         check_public(spec, public_skills, findings)
         check_tags(spec, findings)
+        check_src_anchors(spec, findings)
         check_placeholders(spec.path.read_text(), str(spec.path), findings)
-        if isinstance(spec.id, str) and not spec.is_overlay:
+        if isinstance(spec.id, str):
+            # Overlays too: each is verified under its own root (spec-verifier, Board specs).
             status = check_verification(spec, use_pyyaml, args.require_verified, findings)
             verification[status] = verification.get(status, 0) + 1
     check_references(specs, findings)

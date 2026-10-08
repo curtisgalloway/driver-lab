@@ -68,6 +68,12 @@ also makes a missing ``license:`` in DIR's marker an error, as
 ``spec_check.py --require-license`` does, and requires named doc anchors in a
 root that accepts no source.
 
+A board spec (``board-expert/SPEC-FORMAT.md``) states its pins in front matter instead:
+each ``resources.repos`` entry with a ``name`` and a ``ref`` is a Source pin of that name,
+at that ref, with the entry's ``license:``, and its ``[src]`` facts cite
+``[src:<name>: path:L]``. A ``Source pin:`` line naming the same tree must agree with the
+entry.
+
 The ``reference-driver-review`` skill uses the same machinery under different
 names: ``[impl:]`` is an alias of ``[src:]`` (with ``Impl pin:`` and
 ``--impl-repo``) and ``[ref:]`` an alias of ``[tgt:]`` (with ``Ref pin:`` and
@@ -854,6 +860,45 @@ def read_docs_registry(front: str | None, meta: dict | None, report: Report) -> 
     return registry
 
 
+def read_repos_pins(front: str | None, meta: dict | None, report: Report) -> None:
+    """A board spec's ``resources.repos`` entries are its Source pins.
+
+    A board spec (``board-expert/SPEC-FORMAT.md``) states each source tree once, as a
+    ``resources.repos`` entry with ``name``, ``ref`` and ``license``; its ``[src]`` facts cite
+    ``[src:<name>: path:L]``. Each entry with a usable name and a ``ref`` becomes a Source pin
+    here, so the anchors resolve and the license gate reads the same license
+    ``spec_check.py`` does. A ``Source pin:`` line of the same name may also be present; it
+    must state the same revision and license.
+    """
+    resources = (meta or {}).get("resources")
+    repos = resources.get("repos") if isinstance(resources, dict) else None
+    if not isinstance(repos, list):
+        return
+    same = report.pin_list.setdefault("source", [])
+    for entry in repos:
+        if not isinstance(entry, dict):
+            continue
+        name, ref, lic = entry.get("name"), entry.get("ref"), entry.get("license")
+        if not isinstance(name, str) or not re.fullmatch(PIN_NAME, name) or ref is None:
+            continue
+        ref = str(ref)
+        lic = str(lic).strip() if lic is not None else None
+        line = entry_line(front, name, 1)
+        stated = next((p for p in same if p["name"] == name), None)
+        if stated is not None:
+            if stated["rev"] != ref or (stated["license"] or None) != lic:
+                report.add("error", stated["line"],
+                           f"Source pin {name!r} ({stated['rev']} {stated['license'] or 'no license'}) "
+                           f"disagrees with resources.repos entry {name!r} ({ref} "
+                           f"{lic or 'no license'}); state the pin once, in resources.repos")
+            continue
+        entry_pin = {"name": name, "rev": ref, "license": lic, "line": line}
+        same.append(entry_pin)
+        report.pins.setdefault("source", entry_pin)
+    if not same:
+        del report.pin_list["source"]
+
+
 def check_doc_anchors(report: Report, registry: dict) -> None:
     """Every named doc anchor must name a listed document, at a page within it."""
     listed = ", ".join(registry) or "none"
@@ -1029,6 +1074,7 @@ def main(argv=None) -> int:
     front, skip = split_front_matter(text)
     meta, skip = read_front_matter(front, skip, report, tools[1] if tools else None)
     anchors = parse_spec(text, report, args.strict, skip)
+    read_repos_pins(front, meta, report)
     registry = read_docs_registry(front, meta, report)
     check_doc_anchors(report, registry)
     if args.docs_dir:

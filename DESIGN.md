@@ -194,7 +194,9 @@ The investigation tags distinguish `[databook]`, `[standard]`, `[DT]`, `[source-
 `[inference]`. Board specs add `[rtl]`, `[doc]`, `[hardware]`, and `[press]`. These mean,
 respectively, hardware documentation, a standard, device-tree values, observed software, a
 reasoned conclusion, the hardware design itself, project or vendor documentation, a measurement,
-and third-party reporting. Testing against a device model adds `[emulated]`: a result observed on
+and third-party reporting. Board specs also add `[src]`: what source code at a pinned commit
+defines or does, cited with line anchors into a repository whose license the spec's root accepts
+(adopted 2026-10-07, RG-T1). Testing against a device model adds `[emulated]`: a result observed on
 an emulator rather than on silicon (proposed in the [QEMU differential
 design](QEMU-DIFFERENTIAL.md), adopted 2026-09-25 after L02 showed how it is used; follow-on
 SF-1). The format specifies where tags go and what accompanying citations and cautions they
@@ -224,6 +226,7 @@ disagreement. This section states the assumptions so they can be checked and arg
 | `[DT]` | Placement: addresses, interrupts, clocks, and wiring for the image it came from | It is the description the bootloader actually selects | Overlays and bootloader changes; binding examples that are not production values |
 | `[source-observed]` | What a working driver does | The driver works on this revision | Workarounds for other revisions, delays nobody measured, bugs the driver happens to survive |
 | Independent drivers agreeing (Linux and a BSD, for example) | Raises confidence in a `[source-observed]` fact | They were written independently | One copied from the other, or both from the same vendor code: agreement then adds nothing |
+| `[src]` | What the cited code defines or does at the pinned commit (a constant, a register write, an order of operations) | The anchored lines are the code that runs in the case the claim names (the right build, configuration, and file) | Code for another build or revision; a fact about the code read as a hardware requirement (that is an `[inference]` with the anchors as premises) |
 | `[doc]` | What a vendor or project says about its own work | The author knew and the text is current | Marketing pages, docs for a different part or revision |
 | `[press]`, forums, other low-confidence reports | A lead worth checking | None | Allowed only with `TODO (verify on hardware)`, as today |
 | `[inference]` | A conclusion from tagged premises | The derivation is sound | Carries its own confidence; never stronger than its weakest premise |

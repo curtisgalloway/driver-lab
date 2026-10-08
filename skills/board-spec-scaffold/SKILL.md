@@ -117,7 +117,9 @@ chain bullet.
    `TODO (verify on hardware)` rather than guessing. Put the tag clause at the end of every bullet
    (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]`, `[inference]` and
    `[emulated]` carry the TODO, and an `[emulated]` observation names its
-   model version and runs and never stands alone. Sibling models go in `variants:` or their
+   model version and runs and never stands alone; a fact read from code is `[src]` with its
+   `[src:<repo>: path:L]` anchors into a `repos` entry pinned to a full commit, when the root
+   accepts that entry's license (§ Facts read from source). Sibling models go in `variants:` or their
    own `variant_of` spec (`QUESTIONS.md` item 6).
 4. **Write the root marker, stub, overlay, and vendor skill** if wanted, from their templates.
    Placeholders only in the vendor templates: the real names belong in the vendor's private repo.

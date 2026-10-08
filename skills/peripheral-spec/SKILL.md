@@ -175,7 +175,10 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   describe the files you cite through that pin, since it is what the license gate reads. A
   published spec states one on every pin: in a root that declares `accepts:`, a pin with no
   license fails the gate. A line that starts `Source pin:` but does not have this shape is a
-  warning, and an error under `--root`.
+  warning, and an error under `--root`. A *board* spec (`board-expert/SPEC-FORMAT.md`, "Facts
+  read from source") states its pins in front matter instead: the checker reads each
+  `resources.repos` entry with a `name` and a `ref` as a Source pin, with the entry's
+  `license:`, and a `Source pin:` line of the same name must agree with it.
 - **Documents** may be listed in YAML front matter (the `---` block at the very top of the spec)
   and cited by name:
   ```

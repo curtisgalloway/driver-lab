@@ -48,13 +48,15 @@ stated here; the skills point at this file instead of restating it.
   `--stubs-from` finds stubs by the sentence.
 - **Cache** — the out-of-tree directory `~/src/<cache>/` where the expert clones reference source.
 - **Provenance tag** — the class of authority behind a fact. This format defines `[databook]`,
-  `[standard]`, `[rtl]`, `[DT]`, `[doc]`, `[hardware]`, `[press]` and `[inference]`; testing against
-  a device model adds `[emulated]`; `[source-observed]` is defined by an extension. This format has
-  no class for a fact read only from code (what a driver does, a module file name, a prebuilt
-  tree's file listing): a report cites such a fact by `<repo>@<commit>` file and line, and a spec
-  uses it only as a cited premise of an `[inference]`, or under a class an extension defines. What
-  each class is trusted for, what that trust assumes, and how conflicts between classes are recorded is in
-  `DESIGN.md`, "Evidence model". The classes, with what falls in each:
+  `[standard]`, `[rtl]`, `[DT]`, `[src]`, `[doc]`, `[hardware]`, `[press]` and `[inference]`;
+  testing against a device model adds `[emulated]`; `[source-observed]` is defined by an
+  extension. A fact read from code is `[src]` when the code is a repository the spec pins to a
+  commit under a license its root accepts (*Facts read from source*); otherwise (a tree the root
+  does not accept, a prebuilt tree's file listing, a ref that is a branch) a report cites it by
+  `<repo>@<commit>` file and line, and a spec uses it only as a cited premise of an
+  `[inference]`, or under a class an extension defines. What each class is trusted for, what that
+  trust assumes, and how conflicts between classes are recorded is in `DESIGN.md`, "Evidence
+  model". The classes, with what falls in each:
   - `[databook]` — the IP databook, TRM, or datasheet; cite the section.
   - `[standard]` — a public standard or architecture specification (ARM ARM, GICv3, PSCI, USB, IEEE
     802.3, the 16550 register model, the arm64 boot protocol in `booting.rst`); cite the clause.
@@ -68,6 +70,14 @@ stated here; the skills point at this file instead of restating it.
     entry in a DTBO image), where the blob came from; the origin may be the `name` of a
     `resources.repos` entry declared once, so `[DT] (lga-b0.dtb, laguna-kernel-prebuilts)` is
     complete.
+  - `[src]` — read from source code at a pinned commit: what the cited code defines or does (a
+    constant's value, the value a register write stores, the order of operations in that code, a
+    file the tree carries). Always followed by a parenthetical holding one or more anchors in
+    `peripheral-spec`'s grammar, `[src:<repo>: path:L1-L2 (symbol)]`, each naming a
+    `resources.repos` entry of the same spec file that carries a full commit `ref` and a
+    `license:` the root accepts. It is a fact about the code. That the hardware requires what the
+    code does, or that a shipped product runs this code, is an `[inference]` whose premises are
+    the anchors. Needs no `TODO (verify on hardware)`. See *Facts read from source*.
   - `[doc]` — a project's or vendor's own published documentation: a vendor's official
     specification page, a platform documentation site, a repository README, a commit message, a
     patch cover letter, or a maintainer's reply on a list. Always followed by a parenthetical naming
@@ -104,7 +114,8 @@ stated here; the skills point at this file instead of restating it.
 - **Variant** — a model of a board that shares the SoC and most facts with a base model (a "Pro"
   phone, a board revision). Listed under `variants:` on the base spec, or a spec of its own with
   `variant_of:` when its board facts differ materially.
-- **Verification record** — `<root>/resources/<id>.verify.md`: the verdicts a fresh verifier
+- **Verification record** — `<root>/resources/<id>.verify.md`, where `<root>` is the directory
+  holding the root marker `board-specs.yaml` (not the repository top): the verdicts a fresh verifier
   reached when it re-derived every fact bullet from the authority it cites, kept outside the spec so
   no reader spends context on it. Written by `spec-verifier` as the scaffold's last step and on
   demand; the checker reads only its frontmatter. See *Verification*.
@@ -143,7 +154,8 @@ spec goes".
 
 - `license:` is an SPDX expression for the root's own license (`GPL-2.0-only`, `CC-BY-4.0`,
   `Apache-2.0`).
-- `accepts:` is a list of single SPDX identifiers that the pins of the root's peripheral specs may
+- `accepts:` is a list of single SPDX identifiers that the pins of the root's peripheral specs,
+  and the `resources.repos` entries of its board specs (the pins of their `[src]` facts), may
   carry; no expressions in the list. `accepts: []` is declared and empty: the root accepts no
   source tree, so its specs cite documents only.
 - Identifiers are checked against a short known list (`board-expert/scripts/spdx.py`) and matched
@@ -159,6 +171,9 @@ spec goes".
   with the same rules as the anchor gate (`OR` passes when either side is accepted, `AND` only
   when every part is). Overlays are gated by the root they live in. Without the flag, a repos
   license is validated as SPDX but not compared with `accepts:`.
+- A `[src:]` anchor in a board spec is gated always, not only under `--require-license`: its
+  repos entry's license must be accepted, and a root with no `accepts:` or with `accepts: []`
+  accepts no `[src]` (*Facts read from source*).
 - `anchor_check.py --root <dir>` (`peripheral-spec`) is the **license gate**: it fails
   every anchor whose pin's license `<dir>`'s `accepts:` does not list, and fails outright when the
   marker has no `accepts:`. Its own `--require-license` also requires the marker's `license:` and,
@@ -295,7 +310,8 @@ the base spec's `variants:` (`name`, `triggers`, `shares`: which fact groups app
 line, and optionally `tag` and `source`). A row rests on some authority like any fact: the default
 is documentation-grade (`tag: doc`, the vendor's own page); a row known only from press says so
 with `tag: press`; a row known only from code or the shape of a prebuilt tree is `tag: inference`,
-its premise cited as *Provenance tag* says; either names the source in `source`. A model whose board
+its premise cited as *Provenance tag* says; either names the source in `source`. `src` is not a
+`tag` value: a row has no place for the anchors a `[src]` fact needs. A model whose board
 facts differ materially (another SoC stepping, another console path, another PMIC) is a board spec
 of its own with `variant_of: <base id>`, carrying only
 what differs and pointing at the base for the rest.
@@ -341,7 +357,10 @@ tag token inside it would be read as a tag.
 ```
 
 - `[press]`, `[inference]` and `[emulated]` facts, and `[source-observed]` facts (an extension's
-  class), must carry `TODO (verify on hardware)`.
+  class), must carry `TODO (verify on hardware)`. `[src]` facts need none.
+- `[src]` is always followed by a parenthetical holding at least one `[src:<repo>: path:L]`
+  anchor; the rules for those anchors are in *Facts read from source*. `[src:]` anchors may also
+  appear as premises inside an `[inference]`'s parenthetical, under the same rules.
 - `[inference]` is always followed by a parenthetical giving its premises and derivation, so a
   reader can check the reasoning without re-reading the source it was reasoned from.
 - `[emulated]` is always followed by a parenthetical naming the device model, its version and the
@@ -361,6 +380,51 @@ tag token inside it would be read as a tag.
 - A **gap bullet** is one whose text, after the optional bold lead-in, starts with
   `TODO (verify on hardware)`; it records what is missing and carries no tag:
   `- **Power.** `TODO (verify on hardware)`: the PMIC part is not recorded here yet.`
+
+### Facts read from source: `[src]`
+
+A board spec states a fact read from source code with the `[src]` class and cites the lines with
+anchors in `peripheral-spec`'s grammar ("The anchor grammar"), parsed by its `anchor_check.py`:
+
+```
+resources:
+  repos:
+    - name: rpi-tools
+      url: https://github.com/raspberrypi/tools
+      ref: 439b6198a9b340de5998dd14a26a0d9d38a6bcac
+      license: BSD-3-Clause
+...
+- **Counter frequency.** The `armstub8-gic` build writes 54000000 to `CNTFRQ_EL0`. `[src]`
+  ([src:rpi-tools: armstubs/armstub8.S:53-57 (OSC_FREQ)];
+  [src:rpi-tools: armstubs/armstub8.S:110-112 (OSC_FREQ)])
+```
+
+- **The pin is the repos entry.** Each anchor names a `resources.repos` entry of the same spec
+  file (`[src:<name>: path:L1-L2 (symbol)]`; the unnamed form `[src: path:L]` is an error). That
+  entry is the pin: its `ref` is a full commit id (40 lowercase hex digits, or 64 for a SHA-256
+  repository), never a branch or tag, and its `license:` is the SPDX expression of the files
+  cited through it. An overlay's anchors name the overlay's own entries, since the license gate
+  is the overlay's root's.
+- **No `Source pin:` line is needed.** `anchor_check.py` reads each repos entry with a `name` and
+  a `ref` as a Source pin of that name, so the commit and license are stated once and the two
+  checkers gate the same license. A `Source pin:` line naming the same tree is allowed and must
+  state the same commit and license, or `anchor_check.py` fails it.
+- **The license gate always applies.** `spec_check.py` fails a `[src:]` anchor whose entry's
+  license the root's `accepts:` does not accept, and every `[src:]` anchor in a root that declares
+  no `accepts:` or `accepts: []` (the documents-only root), with or without `--require-license`.
+  A fact whose only source the root does not accept moves to an overlay in a root that does.
+- **One anchor per line.** `anchor_check.py` reads a line at a time, so an anchor broken across
+  lines is never resolved; the checker fails it. Break the line between anchors instead.
+- **What the anchors are checked for.** `spec_check.py` checks what the spec alone shows: the
+  anchor's shape, the entry it names, the commit, the license. `anchor_check.py <spec> --root
+  <root> --require-license` applies the same gate, and with `--repo <name>=<checkout>` per entry it
+  resolves every anchor at the pin (path, line range, symbol, hex literals). A spec repository's
+  CI runs it on every board spec carrying a `[src:]` anchor; whether the lines support the claim
+  is the verifier's (`spec-verifier` § Board specs).
+- **Names and values, not excerpts.** A `[src]` fact may name symbols and constants from the
+  code; it never reproduces the code. When the license asks that its notice travel with
+  material taken from the source, the spec carries the notice, as the permissive repository's
+  overlays do.
 
 ### Peripheral specs in a licensed root
 
@@ -383,8 +447,8 @@ board specs: name them `<device>-spec.md` (as `peripheral-spec` does), not
   lists authorities by title and URL with `cite:` and `access:` and has no hash.
 - **The checks a spec repository runs.** `spec_check.py <root> --require-license` on the root and
   its board specs; `anchor_check.py <spec> --repo <name>=<checkout>... --root <root>
-  --require-license` on each peripheral spec, with `--docs-dir <dir>` where the documents are at
-  hand. A named anchor whose document is not listed, a page outside `pages`, a malformed registry
+  --require-license` on each peripheral spec and on each board spec carrying a `[src:]` anchor,
+  with `--docs-dir <dir>` where the documents are at hand. A named anchor whose document is not listed, a page outside `pages`, a malformed registry
   entry, or (with `--docs-dir`) a file whose hash differs are errors.
 
 ### Overlays
@@ -455,7 +519,8 @@ An IP spec resolves in one of two modes, and the report names which:
   Linux repository at its `ref` as the map. If several instances match and the question does not
   say which, that is a `Needs decision`. Mainline is still read for provenance; both commits go in
   the report. A fact present only in the board's tree is cited to that tree as *Provenance tag* says
-  for code-only facts, because it may be a vendor addition rather than the IP's behavior.
+  for code-only facts (`[src]` when the root accepts the tree's license), because it may be a
+  vendor addition rather than the IP's behavior.
 - **Generic** (`ip: <id>` alone): the IP spec's own repository entry is the map, by default
   `torvalds/linux` at head with the commit actually read recorded in the report. A caller may pin
   `ref:`. The public standards and databook in the IP spec's `docs` are the authority. The report
@@ -491,8 +556,11 @@ that never saw the author's reasoning, and records the result **outside the spec
 `spec-verifier` § Board specs (the one statement of it; the scaffold runs it as its last step and it
 runs again on demand). This section fixes only what the format and the checker rely on.
 
-- **Location.** `<root>/resources/<id>.verify.md`, in a `resources/` directory beside the root
-  marker, one file per spec, overlays included under their own root. It is not a spec: the reader
+- **Location.** `<root>/resources/<id>.verify.md`, where `<root>` is the directory holding the
+  root marker `board-specs.yaml` (in the spec repositories, `specs/`, so the record is
+  `specs/resources/<id>.verify.md`), one file per spec. An overlay has its own record under its
+  own root, named for the id it overlays (`<id>` is the `overlays:` value), and the checker
+  treats it like any other record. It is not a spec: the reader
   globs `*.spec.md` only and loads nothing from `resources/`. `board-expert` reports a spec's
   verification status from the record's **frontmatter only**.
 - **Frontmatter.** `spec` (the id), `spec_file` (relative to the root), `spec_sha256` (the spec
@@ -561,19 +629,26 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
   or (with `--require-license`) whose license the root's `accepts:` does not accept;
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
   `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
-  `[rtl]`, `[inference]` or `[emulated]` without a following parenthetical (the format requires
-  that it name the source; the checker tests only that it is there); or a tail clause whose only
-  tag is `[emulated]` (tag names in the prose are ignored);
+  `[rtl]`, `[inference]`, `[emulated]` or `[src]` without a following parenthetical (the format
+  requires that it name the source; the checker tests only that it is there, and for `[src]` that
+  it holds a `[src:]` anchor); or a tail clause whose only tag is `[emulated]` (tag names in the
+  prose are ignored);
+- anywhere in a spec's body, a `[src:]` anchor that is malformed, names no repo, names one the
+  spec's `resources.repos` does not list, names one whose `ref` is not a full commit id or that
+  has no `license:`, or whose license the root's `accepts:` does not accept (always; a root
+  without `accepts:` or with `accepts: []` accepts none); or one broken across lines. The
+  anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
+  beside this one when a spec uses them;
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;
 - a stub whose `spec: <id>` does not resolve. `--stubs-from` finds every `*/SKILL.md` under a
   skills directory whose frontmatter says "stub over", so CI cannot forget one;
-- a verification record (`<root>/resources/<id>.verify.md`) whose frontmatter is malformed or whose
-  `summary.fail` is not zero; with `--require-verified`, also a spec with no record or with a stale
-  one.
+- a verification record (`<root>/resources/<id>.verify.md`, an overlay's included) whose
+  frontmatter is malformed or whose `summary.fail` is not zero; with `--require-verified`, also a
+  spec or overlay with no record or with a stale one.
 
 It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one layer, on a part whose `cache`
-differs from its board's, on a spec with no verification record (`unverified`), and on a record
+differs from its board's, on a spec or overlay with no verification record (`unverified`), and on a record
 whose `spec_sha256` no longer matches the spec (`verification stale`). It is stdlib-only: PyYAML when available, otherwise its own parser for the
 format's YAML subset, and its last line says which one ran (`parser: pyyaml` or `parser: subset`).
 The two agree on the quoting traps above by construction. It does not check URL reachability. CI has

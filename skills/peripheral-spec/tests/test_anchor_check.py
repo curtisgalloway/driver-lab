@@ -1071,5 +1071,87 @@ class TestRequireNamedDocs(CheckerCase):
             "root's own license); --require-license makes this an error"])
 
 
+
+class TestBoardSpecPins(CheckerCase):
+    """A board spec's resources.repos entries are its Source pins (RG-T1, [src] facts)."""
+
+    def board(self, ref, lic="BSD-3-Clause", body_pin=""):
+        return self.spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {ref}
+                  license: {lic}
+            ---
+
+            {body_pin}
+
+            ## Quick-facts
+
+            - **Magic.** The stub's magic word is 0x5afe570b. `[src]`
+              ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+
+    def test_repos_entry_is_a_pin_and_anchors_resolve(self):
+        s = self.board(self.fw_rev)
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([(p["name"], p["rev"], p["license"]) for p in report["pin_list"]["source"]],
+                         [("fw", self.fw_rev, "BSD-3-Clause")])
+        self.assertEqual(report["anchors"], 1)
+        self.assertNotIn("anchors not resolved", "\n".join(self.messages(report)))
+
+    def test_a_wrong_line_fails_against_the_repos_pin(self):
+        s = self.board(self.fw_rev)
+        path = pathlib.Path(s)
+        path.write_text(path.read_text().replace("stub.c:2 (STUB_MAGIC)", "stub.c:9"))
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("has 3 lines" in m for m in self.messages(report, "error")))
+
+    def test_license_gate_reads_the_repos_license(self):
+        s = self.board(self.fw_rev)
+        rc, report = self.run_json(s, "--root", GATE / "roots" / "permissive", "--require-license")
+        self.assertEqual(rc, 0, self.messages(report))
+        for root in ("docs",):
+            rc, report = self.run_json(s, "--root", GATE / "roots" / root, "--require-license")
+            self.assertEqual(rc, 1)
+            self.assertTrue(any(m.startswith("license gate: [src:fw: stub.c:2 (STUB_MAGIC)] cites "
+                                             "source pin 'fw' (BSD-3-Clause)")
+                                for m in self.messages(report, "error")), self.messages(report))
+
+    def test_an_agreeing_source_pin_line_is_allowed(self):
+        s = self.board(self.fw_rev, body_pin=f"Source pin: fw@{self.fw_rev} BSD-3-Clause")
+        rc, report = self.run_json(s, "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(len(report["pin_list"]["source"]), 1)
+
+    def test_a_disagreeing_source_pin_line_fails(self):
+        for line in (f"Source pin: fw@{self.linux_rev} BSD-3-Clause", f"Source pin: fw@{self.fw_rev} MIT",
+                     f"Source pin: fw@{self.fw_rev}"):
+            with self.subTest(line=line):
+                s = self.board(self.fw_rev, body_pin=line)
+                rc, report = self.run_json(s)
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("disagrees with resources.repos entry 'fw'" in m
+                                    for m in self.messages(report, "error")), self.messages(report))
+
+    def test_a_peripheral_spec_without_resources_is_unchanged(self):
+        s = self.spec(f"""\
+            ---
+            docs: []
+            ---
+            Source pin: linux@{self.linux_rev}
+
+            The control register is at 0x10. [src: drivers/drv.c:2 (WIDGET_CTRL)]
+            """)
+        rc, report = self.run_json(s, "--repo", self.linux)
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([p["name"] for p in report["pin_list"]["source"]], ["linux"])
+
+
 if __name__ == "__main__":
     unittest.main()

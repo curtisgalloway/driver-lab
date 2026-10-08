@@ -354,7 +354,7 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 One script and its tests, an existing pattern. Low to medium uncertainty (install paths).
 
 ### Evidence and findings
-Status: complete at the checkpoint (`cleanroom-skills` commits `199059a` and `35ff17e` on `license-split/ls11`; the orchestrator opens the pull requests). Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
+Status: complete at the checkpoint (`cleanroom-skills` commits `199059a` and `35ff17e` on `license-split/ls11`; the orchestrator opens the pull requests). A second review-swarm over `35ff17e` (2026-10-07) led to `cleanroom-skills` `5310aac`. Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
 
 ## LS12 — Consumers updated
 

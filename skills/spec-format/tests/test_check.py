@@ -51,6 +51,20 @@ def errors(result, path=None):
             and (path is None or f["path"].endswith(str(path)))]
 
 
+def need(found):
+    """The findings, asserting there is at least one (a removed guard fails, never crashes)."""
+    if not found:
+        raise AssertionError("expected a finding, found none")
+    return found
+
+
+def only(found):
+    """The one finding, asserting there is exactly one."""
+    if len(found) != 1:
+        raise AssertionError(f"expected one finding, found {len(found)}: {found}")
+    return found[0]
+
+
 def warnings(result):
     return [f for f in result["findings"] if f["level"] == "warning"]
 
@@ -190,7 +204,7 @@ class BoardOverlays(TempRoots):
                 code, result = self.run_pair(root, "src", flags=flags)
                 self.assertEqual(code, want, (root, flags, result["findings"]))
                 if want:
-                    [f] = errors(result)
+                    f = only(errors(result))
                     self.assertIn("fact 'stub-magic': an anchor names repos entry 'tools': "
                                   "BSD-3-Clause is not accepted by root hardware-specs-docs",
                                   f["message"])
@@ -202,7 +216,7 @@ class BoardOverlays(TempRoots):
                               board / "widgetchip-bsd-overlay.spec.yaml")
         code, result = check(perm, "--require-license")
         self.assertEqual(code, 1)
-        self.assertIn("overlays 'widgetchip' resolves to no spec", errors(result)[0]["message"])
+        self.assertIn("overlays 'widgetchip' resolves to no spec", need(errors(result))[0]["message"])
         self.assertEqual(check(docs, perm, "--require-license")[0], 0)
         self.assertEqual(check(perm, "--context-root", docs, "--require-license")[0], 0)
 
@@ -220,7 +234,7 @@ class References(TempRoots):
     def test_docs_inference_on_a_gpl_fact_fails_the_transitive_gate(self):
         code, result = self.case("docs-cites-gpl", "docs", "gpl")
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertTrue(f["path"].endswith("docs/widgetchip.spec.yaml"))
         self.assertIn("fact 'mode': reference 'widgetchip@ref-gpl#tree-ranges' reaches repos "
                       "entry 'linux'", f["message"])
@@ -230,7 +244,7 @@ class References(TempRoots):
     def test_unqualified_cross_root_reference_fails(self):
         code, result = self.case("unqualified", "docs", "gpl")
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertIn("fact 'low-mode': reference 'widgetchip#addressing' resolves to nothing",
                       f["message"])
         self.assertIn("widgetchip@ref-docs#addressing", f["message"])
@@ -250,7 +264,7 @@ class References(TempRoots):
     def test_reference_into_a_later_layer_fails(self):
         code, result = self.case("later-layer", "docs", "vendor")
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertIn("fact 'mode': 'widgetchip@ref-vendor#errata' names a fact in layer "
                       "product", f["message"])
 
@@ -269,7 +283,7 @@ class References(TempRoots):
         code, result = check(REFS / "docs-cites-gpl" / "docs", "--context-root",
                              REFS / "docs-cites-gpl" / "gpl")
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertTrue(f["path"].endswith("docs/widgetchip.spec.yaml"))
         self.assertNotIn("context root", f["message"])
 
@@ -277,7 +291,7 @@ class References(TempRoots):
         code, result = check(REFS / "docs-cites-gpl" / "gpl", "--context-root",
                              REFS / "docs-cites-gpl" / "docs")
         self.assertEqual(code, 0)
-        [w] = warnings(result)
+        w = only(warnings(result))
         self.assertTrue(w["message"].startswith("context root: fact 'mode'"))
 
     def test_gate_follows_chains_relates_and_observations(self):
@@ -303,12 +317,35 @@ class References(TempRoots):
         hop2 = [f["message"] for f in errors(result) if f["message"].startswith("fact 'hop2'")]
         self.assertIn("through widgetchip@g#tree", hop2[0])
 
+    def test_reach_into_an_anchor_naming_no_repos_entry(self):
+        ctx = self.root("ctx", {
+            "board-specs.yaml": marker("k", accepts="[GPL-2.0-only]", lic="GPL-2.0-only"),
+            "widgetchip.spec.yaml": chip(facts=src_fact("t", name="ghost"))})
+        docs = self.root("docs", {"board-specs.yaml": marker("d"),
+                                  "other.spec.yaml": chip("other", facts=inference(
+                                      "a", "widgetchip@k#t"))})
+        code, result = check(docs, "--context-root", ctx)
+        self.assertEqual(code, 1)
+        f = only(errors(result))
+        self.assertTrue(f["path"].endswith("docs/other.spec.yaml"))
+        self.assertIn("reaches an anchor of widgetchip@k#t naming repos entry 'ghost', which "
+                      "its file does not list (its license is unknown)", f["message"])
+
+    def test_same_file_duplicate_id_is_ambiguous(self):
+        facts = fact("a") + fact("a").replace("C a.", "Another a.") + inference("b", "#a")
+        root = self.root("r", {"board-specs.yaml": marker(),
+                               "widgetchip.spec.yaml": chip(facts=facts)})
+        code, result = check(root)
+        self.assertEqual(code, 1)
+        self.assertTrue(any("reference '#a' is ambiguous: this file declares fact 'a' twice"
+                            in f["message"] for f in errors(result)), result["findings"])
+
     def test_self_premise_is_a_cycle(self):
         root = self.root("r", {"board-specs.yaml": marker(),
                                "widgetchip.spec.yaml": chip(facts=inference("loop", "#loop"))})
         code, result = check(root)
         self.assertEqual(code, 1)
-        self.assertIn("its inference premises form a cycle", errors(result)[0]["message"])
+        self.assertIn("its inference premises form a cycle", need(errors(result))[0]["message"])
 
     def test_three_reference_forms_resolve(self):
         facts = (fact("a") + inference("b", "#a", "widgetchip#a", "widgetchip@r#a")
@@ -331,7 +368,7 @@ class References(TempRoots):
         code, result = check(root)
         # the overlay's fact cites trm, which only the base lists: the name rule is per file
         self.assertIn("document 'trm' is not in this file's resources.documents",
-                      errors(result)[0]["message"])
+                      need(errors(result))[0]["message"])
         self.assertEqual(len(errors(result)), 1)
 
     def test_reference_into_an_invalid_root_dangles(self):
@@ -343,7 +380,7 @@ class References(TempRoots):
         code, result = check(good, "--context-root", bad)
         self.assertEqual(code, 1)
         self.assertIn("reference 'widgetchip@b#reset' cannot be resolved: root b was not "
-                      "read in full (its marker is invalid", errors(result, "other.spec.yaml")[0]["message"])
+                      "read in full (its marker is invalid", need(errors(result, "other.spec.yaml"))[0]["message"])
         self.assertTrue(warnings(result))  # the context root's marker finding
 
 
@@ -361,7 +398,7 @@ class FailClosed(unittest.TestCase):
         return check(*args)
 
     def assert_closed(self, result, text):
-        [f] = errors(result, "docs/dchip.spec.yaml")
+        f = only(errors(result, "docs/dchip.spec.yaml"))
         self.assertEqual((f["line"], f["column"]), (20, 19))
         self.assertIn("fact 'a': reference 'pchip@fc-perm#p' reaches pchip@fc-perm#p, whose "
                       "reference 'gchip@fc-gpl#gfact'", f["message"])
@@ -371,7 +408,7 @@ class FailClosed(unittest.TestCase):
     def test_the_gpl_chain_fails_the_gate(self):
         code, result = self.chain("gpl")
         self.assertEqual(code, 1)
-        self.assertIn("GPL-2.0-only is not accepted by root fc-docs", errors(result)[0]["message"])
+        self.assertIn("GPL-2.0-only is not accepted by root fc-docs", need(errors(result))[0]["message"])
 
     def test_target_root_not_given(self):
         code, result = self.chain()
@@ -411,7 +448,7 @@ class FailClosed(unittest.TestCase):
         code, result = check(FAIL / "perm", "--context-root", FAIL / "gpl-schema-failed")
         self.assertEqual(code, 1)
         self.assertIn("reference 'gchip@fc-gpl#gfact' cannot be resolved",
-                      errors(result)[0]["message"])
+                      need(errors(result))[0]["message"])
 
     @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root reads any directory")
     def test_a_directory_that_cannot_be_listed(self):
@@ -456,17 +493,17 @@ class Roots(TempRoots):
         ]
         for argv, text in cases:
             code, result = check(*argv)
-            self.assertEqual((code, result["error"]), (2, "usage"), argv)
+            self.assertEqual((code, result.get("error")), (2, "usage"), argv)
             self.assertIn(text, result["findings"][0]["message"])
         code, result = check(a, b)  # separate roots run; a holds inner's marker, a finding
         self.assertEqual(code, 1)
-        self.assertIn("nested board-specs.yaml", errors(result)[0]["message"])
+        self.assertIn("nested board-specs.yaml", need(errors(result))[0]["message"])
 
     def test_root_without_marker_is_exit_3(self):
         d = self.tmp / "empty"
         d.mkdir()
         code, result = check(d)
-        self.assertEqual((code, result["error"]), (3, "precondition"))
+        self.assertEqual((code, result.get("error")), (3, "precondition"))
         self.assertEqual(set(result), {"ok", "error", "roots", "specs", "stubs", "findings"})
 
     def test_symbolic_links(self):
@@ -474,7 +511,7 @@ class Roots(TempRoots):
         (a / "link.spec.yaml").symlink_to(a / "x.spec.yaml")
         code, result = check(a)
         self.assertEqual(code, 1)
-        self.assertIn("symbolic link in a spec root", errors(result)[0]["message"])
+        self.assertIn("symbolic link in a spec root", need(errors(result))[0]["message"])
         b = self.root("b", {"board-specs.yaml": marker("b")})
         code, result = check(b, "--context-root", a)
         self.assertEqual(code, 2)
@@ -482,7 +519,7 @@ class Roots(TempRoots):
         via.symlink_to(b)
         code, result = check(via)
         self.assertEqual(code, 1)
-        self.assertIn("reached through, a symbolic link", errors(result)[0]["message"])
+        self.assertIn("reached through, a symbolic link", need(errors(result))[0]["message"])
         c = self.root("c", {"board-specs.yaml": marker("c")})
         self.assertEqual(check(c, "--context-root", via)[0], 2)
 
@@ -493,8 +530,8 @@ class Roots(TempRoots):
         code, result = check(a, "--context-root", b)
         self.assertEqual(code, 1)
         self.assertEqual(len(errors(result)), 2)  # never downgraded: it decides resolution
-        self.assertIn("root name 'same' is also the name of", errors(result)[0]["message"])
-        self.assertEqual(errors(result)[0]["line"], 5)  # at the name
+        self.assertIn("root name 'same' is also the name of", need(errors(result))[0]["message"])
+        self.assertEqual(need(errors(result))[0]["line"], 5)  # at the name
         code, result = check(c, "--context-root", a, "--context-root", b)  # both context
         self.assertEqual((code, len(errors(result))), (1, 2))
 
@@ -512,7 +549,8 @@ class Roots(TempRoots):
             self.assertEqual(code, 1, accepts)
             self.assertTrue(any(text in f["message"] for f in errors(result)), (accepts, result))
         r = self.root("lic", {"board-specs.yaml": marker(lic="mainline")})
-        self.assertIn("license: unknown SPDX", errors(check(r)[1])[0]["message"])
+        self.assertEqual([f["message"][:22] for f in errors(check(r)[1])],
+                         ["license: unknown SPDX "])
         r = self.root("dupspell", {"board-specs.yaml": marker(accepts="[GPL-2.0-only, GPL-2.0]")})
         self.assertEqual(len(errors(check(r)[1])), 2)  # the second spelling, and the repeat
 
@@ -622,7 +660,7 @@ class BoardFixtures(unittest.TestCase):
         got = {(pathlib.Path(f["path"]).name, f["message"].split(":")[0]) for f in errors(result)}
         self.assertEqual({n for n, _ in got}, {"broken.spec.yaml", "colon.spec.yaml",
                                               "refers.spec.yaml"})
-        [f] = errors(result, "refers.spec.yaml")
+        f = only(errors(result, "refers.spec.yaml"))
         self.assertIn("reference 'broken#anything' cannot be resolved", f["message"])
         self.assertIn("failed to load or validate and may declare spec 'broken'", f["message"])
         msgs = {pathlib.Path(f["path"]).name: f["message"] for f in errors(result)}
@@ -643,7 +681,7 @@ class BoardFixtures(unittest.TestCase):
         self.assertEqual((code, result["findings"], result["specs"]), (0, [], 3))
         code, result = check(good)
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertIn("via 'skill:widget-board-tools' is not a public skill", f["message"])
 
     def test_vendor_root(self):
@@ -651,7 +689,7 @@ class BoardFixtures(unittest.TestCase):
         code, result = check(vendor, "--context-root", good, "--public-skill",
                              "widget-board-tools")
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertIn("overlays 'nosuchboard' resolves to no spec", f["message"])
         self.assertEqual(len(warnings(result)), 2)
         for w in warnings(result):
@@ -681,7 +719,7 @@ class BoardFixtures(unittest.TestCase):
         self.assertEqual(code, 3)
         code, result = check(CHECK / "good_root", "--public-skill", "widget-board-tools",
                              "--stub", CHECK / "missing.md")
-        self.assertIn("stub file not found", errors(result)[0]["message"])
+        self.assertIn("stub file not found", need(errors(result))[0]["message"])
 
 
 class Rules(TempRoots):
@@ -704,7 +742,7 @@ class Rules(TempRoots):
         for what, text in flagged.items():
             code, result = self.one({"x.spec.yaml": text})
             self.assertEqual(code, 1, what)
-            self.assertIn("unsubstituted template placeholder", errors(result)[0]["message"])
+            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
         clean = chip(repos=repo(), facts=src_fact("a").replace("symbol: S", "symbol: Foo<T>")
                      + fact("b").replace("claim: C b.", "claim: \"`<type number flags>`, "
                                                         "<https://example.invalid/x>, a <0 0 0>\"")
@@ -726,7 +764,7 @@ class Rules(TempRoots):
         for text in flagged:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual(code, 1, text)
-            self.assertIn("unsubstituted template placeholder", errors(result)[0]["message"])
+            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
         for text in clean:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual((code, result["findings"]), (0, []), text)
@@ -738,7 +776,7 @@ class Rules(TempRoots):
                         "\nCode `<Board name>` and then <Board name>.\n\nGive it `spec: x`.\n",
                         encoding="utf-8")
         code, result = self.one({"x.spec.yaml": chip("x")}, "--stub", stub)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertIn("'<Board name>'", f["message"])
         self.assertEqual((f["line"], f["column"]), (8, 30))
 
@@ -762,7 +800,7 @@ class Rules(TempRoots):
                                         "y.spec.yaml": chip("y", head="aliases: [x]\n")})
         code, result = check(checked, "--context-root", context)
         self.assertEqual(code, 1)
-        [f] = errors(result)
+        f = only(errors(result))
         self.assertTrue(f["path"].endswith("checked/x.spec.yaml"))
         self.assertIn("spec id 'x' is also an alias in k:y.spec.yaml", f["message"])
 
@@ -875,14 +913,14 @@ class Rules(TempRoots):
         uncitable = chip(docs='    - {name: trm, class: doc, title: T, '
                               'url: "https://example.invalid/t", cite: false}\n', facts=rtl)
         code, result = self.one({"x.spec.yaml": uncitable})
-        self.assertIn("cite: false", errors(result)[0]["message"])
+        self.assertIn("cite: false", need(errors(result))[0]["message"])
 
     def test_ids_per_spec_id_per_root(self):
         base = chip(facts=fact("a"))
         over = overlay(facts=fact("a").replace("doc: trm", "doc: trm"), head="resources:\n  documents:\n"
                        '    - {name: trm, class: databook, title: TRM, url: "https://example.invalid/t"}\n')
         code, result = self.one({"w.spec.yaml": base, "o.spec.yaml": over})
-        self.assertIn("fact id 'a' is also used by", errors(result)[0]["message"])
+        self.assertIn("fact id 'a' is also used by", need(errors(result))[0]["message"])
         # the same id in an instance row and a fact of one file: one record namespace
         same = chip(head="instances:\n  - id: a\n    name: a\n    ip: ipx\n    reg: null\n"
                          "    irq: null\n    clocks: []\n    todo: {check: document, text: t.}\n",
@@ -891,25 +929,25 @@ class Rules(TempRoots):
                "  documents:\n    - {name: t, class: doc, title: T, url: \"https://example.invalid/t\"}\n"
                "facts: []\n")
         code, result = self.one({"w.spec.yaml": same, "ipx.spec.yaml": ipx})
-        self.assertIn("fact id 'a' is used twice in this file", errors(result)[0]["message"])
+        self.assertIn("fact id 'a' is used twice in this file", need(errors(result))[0]["message"])
 
     def test_assumption_rules(self):
         reg = "assumptions:\n  - {id: s, text: t}\n  - {id: s, text: u}\n"
         code, result = self.one({"x.spec.yaml": chip(head=reg)})
-        self.assertIn("assumption id 's' is used twice", errors(result)[0]["message"])
+        self.assertIn("assumption id 's' is used twice", need(errors(result))[0]["message"])
         premise = ("  - id: i\n    section: quick-facts\n    title: I\n    claim: I.\n"
                    "    support:\n      - class: inference\n        premises:\n"
                    "          - assumption: nope\n        derivation: so\n"
                    "    todo: {check: hardware, text: check.}\n")
         code, result = self.one({"x.spec.yaml": chip(facts=premise)})
-        self.assertIn("assumption 'nope' is not in this file", errors(result)[0]["message"])
+        self.assertIn("assumption 'nope' is not in this file", need(errors(result))[0]["message"])
 
     def test_composition_rules(self):
         board = (HDR + "format: 2\nkind: board\nid: b\nname: B\ntriggers: [b]\nparts: [b]\n"
                  "cache: c1\nresources:\n  documents:\n    - {name: trm, class: databook, "
                  "title: T, url: \"https://example.invalid/t\"}\nfacts: []\n")
         code, result = self.one({"b.spec.yaml": board})
-        self.assertIn("parts form a cycle: b -> b", errors(result)[0]["message"])
+        self.assertIn("parts form a cycle: b -> b", need(errors(result))[0]["message"])
         variant = board.replace("parts: [b]", "parts: [x]\nvariant_of: b").replace("id: b", "id: v")
         code, result = self.one({"b.spec.yaml": board.replace("parts: [b]", "parts: [x]"),
                                  "v.spec.yaml": variant,
@@ -919,12 +957,12 @@ class Rules(TempRoots):
         self.assertEqual(sum("names cache 'c2'" in m for m in msgs), 2)  # warnings, both boards
         selfv = board.replace("parts: [b]", "parts: [x]\nvariant_of: b")
         code, result = self.one({"b.spec.yaml": selfv, "x.spec.yaml": chip("x")})
-        self.assertIn("variant_of names the spec itself", errors(result)[0]["message"])
+        self.assertIn("variant_of names the spec itself", need(errors(result))[0]["message"])
         alias = chip("y", head="aliases: [shared]\n")
         code, result = self.one({"y.spec.yaml": alias,
                                  "z.spec.yaml": chip("z", head="aliases: [shared]\n")})
         self.assertEqual(len(errors(result)), 2)
-        self.assertIn("also an alias of another spec", errors(result)[0]["message"])
+        self.assertIn("also an alias of another spec", need(errors(result))[0]["message"])
 
     def test_overlay_layer_order(self):
         vendor = self.root("vendor", {"board-specs.yaml": marker("v", layer="product"),
@@ -933,7 +971,7 @@ class Rules(TempRoots):
                                       "o.spec.yaml": overlay()})
         code, result = check(public, vendor)
         self.assertEqual(code, 1)
-        self.assertIn("an overlay merges after its target", errors(result)[0]["message"])
+        self.assertIn("an overlay merges after its target", need(errors(result))[0]["message"])
         code, result = check(vendor, public.parent / "public")  # same layer order either way
         self.assertEqual(code, 1)
 

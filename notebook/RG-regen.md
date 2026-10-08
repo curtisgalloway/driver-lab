@@ -171,3 +171,28 @@ scanner.
 Lesson: when review rounds keep finding bypasses in the same layer, count the parsers. Here there
 were at least three views of one Markdown file (two fence regexes and a line scanner), and every
 disagreement between them was a hole.
+
+### 2026-10-08 — RG1: independent Codex review after three verification rounds
+
+Codex reviewed the three specs as of the end of round 2 (docs `a13c5d4`, permissive `74382a2`, GPL
+`de2c811`) with network access and without the verifier records. It covered all 57 bullets and
+found no wrong value, but 20 findings: 5 overstated, 11 missing, 3 source, 1 consistency.
+Only two overlap the Claude verifiers (the firmware clock-ID wording, which round 3 also failed;
+and part of the build-identity critique). The highest: the GPL overlay's 3 GB PCIe DMA limit is
+the unmodified tree's default, not a universal limit (the same-commit driver handles
+firmware-edited mappings on later revisions); and the A72's `CPUECTLR_EL1.SMPEN` prerequisite,
+which the stub performs but no spec states.
+
+| Kind | Rows | Verifiers also caught |
+|---|---|---|
+| overstated | 1, 3, 4, 5, 6 | 5 partly (round 3 build identity) |
+| missing | 2, 7–16 | none |
+| source | 17, 18, 19 | 18 (round 3 GPL QF9) |
+| consistency | 20 | none |
+
+Reading: three Claude verification rounds converged on citation and definiteness; they checked
+each claim against its citation and stopped there. Codex, reading the same sources without the
+records, asked what a bring-up needs and what the source says beyond the cited line, and found a
+qualification the cited DT line hides (row 1) by reading the driver beside it. The verifier skill
+asks "does the source say what the claim says"; nothing in it asks "does anything nearby say
+otherwise", or "what is missing".

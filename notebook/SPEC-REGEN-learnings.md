@@ -33,6 +33,8 @@ request, not inside a unit.
 | `spec-verifier` | A `[src]` bullet stating where hardware is (an address map) needs a document class too; say so in the class rule | RG1 V8 | verifier | proposed |
 | tool design | Parse a format once and derive every check from that parse; two scanners of one file disagree, and each disagreement is a bypass | RG-T1 rounds 3–5 | Codex | in RG-T1 round 6 |
 | review practice | When a fix round opens new holes in the same layer, stop patching and redesign; set the stop rule before the next round | RG-T1 rounds 3–5 | orchestrator | applied |
+| `spec-verifier` | Add a "contrary evidence" step: for each claim, look beside the cited line (the driver that consumes a DT value, the next table, the errata) for anything that qualifies it | RG1 Codex r2 row 1 | Codex | proposed |
+| `spec-verifier` or a new reviewer role | A coverage review is a different job from claim verification; run it separately, without the records, after verification converges | RG1 Codex r2 (18 of 20 not found by three verifier rounds) | Codex | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison
@@ -43,4 +45,5 @@ Per unit: findings accepted from each reviewer, and how many each caught that th
 |---|---|---|---|---|---|
 | RG-T1 (tooling; Claude column is the code reviewer) | 6 | 8 | 4 (T2, T9, T10, T11) | 6 (T1, T4–T8) | 2 (T3, T12) |
 | RG-T1 round 2 (Claude column is the code reviewer) | 9 | 8 | 4 (R3, R10, R11, R12) | 3 (R5, R7, R9) | 5 (R1, R2, R4, R6, R8) |
+| RG1 independent (Codex without records) | — | 20 | — | 18 | 2 |
 | RG1 | 4 | 20 | 2 (V1, V4) | 18 | 2 (V3/C5, V2/C13 partly) |

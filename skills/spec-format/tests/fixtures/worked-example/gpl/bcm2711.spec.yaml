@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: overlay
+overlays: bcm2711
+resources:
+  repos:
+    - name: linux
+      url: https://github.com/torvalds/linux
+      commit: 8d3ae59288f1e7d58d76558a6ee96d533bc5019f
+      license: GPL-2.0-only
+      role: source
+      status: merged
+      files:
+        - {path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, license_from: spdx-line}
+        - {path: arch/arm/boot/dts/broadcom/bcm283x.dtsi, license_from: license-file}
+      verified: 2026-10-07
+      fetch: ok
+      fetch_via: git
+      note: "Linux v7.2. bcm283x.dtsi carries no SPDX line and falls under the tree's GPL-2.0 COPYING."
+facts:
+  # Split from v1 Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
+  - id: address-translation-in-the-tree
+    section: quick-facts
+    title: Address translation in the tree
+    critical: true
+    claim: >-
+      The root uses two address cells and one size cell. The `soc` bus maps legacy `0x7E00_0000`
+      (24 MB) to `0xFE00_0000`, `0x7C00_0000` (32 MB) to `0xFC00_0000`, and the ARM Local block,
+      which the tree addresses as `0x4000_0000`, to `0xFF80_0000` (8 MB). Its `dma-ranges` maps
+      bus `0xC000_0000` to physical `0x0` for 1 GB.
+    support:
+      - class: DT
+        anchors:
+          - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, lines: [10, 11]}
+          - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, lines: [34, 45], node: soc}
+
+  # ... and the cross-spec inference, which now references the docs fact by id.
+  - id: tree-describes-low-peripheral-mode
+    section: quick-facts
+    title: The tree describes Low Peripheral mode
+    claim: The tree describes Low Peripheral mode.
+    support:
+      - class: inference
+        premises:
+          - fact: "#address-translation-in-the-tree"
+            uses: the tree's physical targets
+          - fact: "bcm2711@hardware-specs-docs#addressing-model"
+            uses: >-
+              Low Peripheral mode places Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and
+              ARM Local at `0x0_FF80_0000`
+        derivation: >-
+          the targets fall in those ranges, not in the full-map ranges at `0x4_7C00_0000` and
+          `0x4_C000_0000`
+    todo:
+      check: hardware
+      text: compare the live tree on a board booted with arm_peri_high=1.
+
+  - id: gic-node
+    section: quick-facts
+    title: GIC node
+    critical: true
+    claim: >-
+      `arm,gic-400`, `#interrupt-cells = <3>`, with distributor `0x4004_1000` (4 KB), CPU
+      interface `0x4004_2000` (8 KB), virtual interface control `0x4004_4000` and virtual CPU
+      interface `0x4004_6000` in the `soc` bus's ARM Local range, so `0xFF84_1000` and
+      `0xFF84_2000` for the first two; its maintenance interrupt is PPI 9 (ID 25), encoded with
+      the `IRQ_TYPE_LEVEL_HIGH` flag on all four CPUs.
+    support:
+      - class: DT
+        anchors:
+          - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm2711.dtsi, lines: [56, 66]}
+
+  - id: reserved-stub-page
+    section: quick-facts
+    title: Reserved stub page
+    claim: >-
+      A `/memreserve/` covers physical `0x0`-`0xFFF`, commented as where the firmware's startup
+      stubs live and the secondary CPUs spin.
+    support:
+      - class: DT
+        anchors:
+          - {repo: linux, path: arch/arm/boot/dts/broadcom/bcm283x.dtsi, lines: [8, 11]}

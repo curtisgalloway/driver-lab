@@ -1,0 +1,207 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: CC-BY-4.0
+format: 2
+kind: soc
+id: bcm2711
+name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
+triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
+not_triggers: [bcm2712]
+cache: rpi4-resources
+instances: []
+resources:
+  documents:
+    - name: bcm2711-peripherals
+      class: databook
+      title: BCM2711 ARM Peripherals
+      revision: release 4 (2022-01-18), Raspberry Pi document RP-008248-DS
+      url: https://datasheets.raspberrypi.com/bcm2711/bcm2711-peripherals.pdf
+      retrieval:
+        - url: https://pip.raspberrypi.com/documents/RP-008248-DS
+      sha256: d6e16ea089a1716e80621f99a26e130a2379f0a81d945dc22e4f80dc49dcdc78
+      pages: 166
+      page_numbering: printed
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+      note: "Page numbers in this spec are the printed page numbers (the PDF page is one higher)."
+    - name: rpi-docs-legacy-boot
+      class: doc
+      title: Raspberry Pi documentation, legacy config.txt boot options (legacy_config_txt/boot.adoc)
+      url: https://github.com/raspberrypi/documentation/blob/42deaefbc8b4edfe342b0d759ec16cda3be5e7d8/documentation/asciidoc/computers/legacy_config_txt/boot.adoc
+      commit: 42deaefbc8b4edfe342b0d759ec16cda3be5e7d8
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+    - name: rpi-docs-uarts
+      class: doc
+      title: Raspberry Pi documentation, UARTs (configuration/interfaces.adoc)
+      url: https://github.com/raspberrypi/documentation/blob/42deaefbc8b4edfe342b0d759ec16cda3be5e7d8/documentation/asciidoc/computers/configuration/interfaces.adoc
+      commit: 42deaefbc8b4edfe342b0d759ec16cda3be5e7d8
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+    - name: rpi-docs-bcm2712
+      class: doc
+      title: Raspberry Pi documentation, BCM2712 processor page (processors/bcm2712.adoc)
+      url: https://github.com/raspberrypi/documentation/blob/42deaefbc8b4edfe342b0d759ec16cda3be5e7d8/documentation/asciidoc/computers/processors/bcm2712.adoc
+      commit: 42deaefbc8b4edfe342b0d759ec16cda3be5e7d8
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+    - name: rpi-wiki-property-interface
+      class: doc
+      title: Raspberry Pi firmware wiki, Mailbox property interface
+      url: https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface
+      commit: c9e615a74d377a7e94ac2140336d1352941ef9a2
+      retrieval:
+        - url: https://github.com/raspberrypi/firmware.wiki.git
+          via: git clone
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+      note: "covers every Raspberry Pi, not only BCM2711"
+    - name: linux-booting
+      class: standard
+      title: Linux arm64 boot protocol (Documentation/arch/arm64/booting.rst), Linux v7.2
+      url: https://github.com/torvalds/linux/blob/8d3ae59288f1e7d58d76558a6ee96d533bc5019f/Documentation/arch/arm64/booting.rst
+      commit: 8d3ae59288f1e7d58d76558a6ee96d533bc5019f
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+orientation: >-
+  The BCM2711 is the SoC of the Raspberry Pi 4 Model B, the Raspberry Pi 400 and Compute Modules
+  4 and 4S: four 64-bit Cortex-A72 cores beside a VideoCore VI GPU. (The rest of the published
+  Orientation text follows unchanged.)
+facts:
+  - id: addressing-model
+    section: quick-facts
+    title: Addressing model
+    critical: true
+    claim: >-
+      The chip has a full 35-bit address map, seen by the Arm cores and by "large address"
+      masters such as the DMA4 engines, and a 32-bit "legacy master" view seen by the other DMA
+      masters. The datasheet gives peripheral addresses in the legacy view, except the Arm-only
+      GIC-400 and ARM_LOCAL blocks. In the full map, Main peripherals are
+      `0x4_7C00_0000`–`0x4_7FFF_FFFF` and ARM Local peripherals `0x4_C000_0000`–`0x4_FFFF_FFFF`.
+      When the VideoCore enables Low Peripheral mode, the Arm cores alone see Main peripherals at
+      `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000`–`0x0_FFFF_FFFF`.
+      Translation: legacy `0x7Enn_nnnn` is full-map `0x4_7Enn_nnnn` and Low Peripheral
+      `0x0_FEnn_nnnn`, so UART0 at legacy `0x7E20_1000` is `0x0_FE20_1000` in Low Peripheral
+      mode.
+    support:
+      - class: databook
+        doc: bcm2711-peripherals
+        at:
+          - {section: "1.2.1–1.2.4", pages: ["4", "6"]}
+          - {section: "6.5.1–6.5.2", page: "92"}
+          - {section: "11.5", pages: ["146", "147"]}
+
+  # Split from v1 Quick-facts/2 "Peripheral mode selection" (D3): the read part ...
+  - id: peripheral-mode-selection
+    section: quick-facts
+    title: Peripheral mode selection
+    claim: >-
+      `arm_peri_high=1` in `config.txt` selects high peripheral mode, and the firmware also
+      selects it on its own when it loads a device tree that suits it. Turning it on without a
+      matching device tree stops the board booting, and the stub the firmware supplies does not
+      support it, so an `armstub` of your own is needed.
+    support:
+      - class: doc
+        doc: rpi-docs-legacy-boot
+        at: [{heading: arm_peri_high}]
+
+  # ... and the concluded part.
+  - id: high-peripheral-mode-is-full-map
+    section: quick-facts
+    title: High peripheral mode is likely the full map
+    claim: High peripheral mode is likely the one in which the Arm cores use the full-map addresses.
+    support:
+      - class: inference
+        premises:
+          - states: the documentation names high peripheral mode as the alternative to the default
+            support:
+              - {class: doc, doc: rpi-docs-legacy-boot, at: [{heading: arm_peri_high}]}
+          - states: the datasheet gives the Arm cores only two views, the full 35-bit map and Low Peripheral mode
+            support:
+              - class: databook
+                doc: bcm2711-peripherals
+                at: [{section: "1.2.1", page: "4"}, {section: "1.2.3", page: "6"}]
+        derivation: >-
+          if high peripheral mode is not Low Peripheral mode, it is the full map; neither source
+          uses both names
+    todo:
+      check: hardware
+      text: with arm_peri_high=1, read the GIC distributor's ID registers at the full-map address.
+
+  - id: secondary-core-release
+    section: quick-facts
+    title: Secondary-core release (Linux's protocol)
+    claim: >-
+      The live device tree names each CPU's enable method. For `spin-table`, the CPU's
+      `cpu-release-addr` is a naturally aligned, zero-initialized 64-bit word that must lie in a
+      region reserved with `/memreserve/`, and the CPU should spin in reserved memory outside the
+      kernel; the kernel writes its entry address there little-endian and issues `sev`, and the
+      CPU enters with `x0`–`x3` = 0. For `psci`, the CPU stays outside the kernel's memory, the
+      tree should carry a `psci` node, and the kernel brings it in with PSCI `CPU_ON` calls.
+    support:
+      - class: standard
+        doc: linux-booting
+        at:
+          - {heading: CPU enable methods}
+          - {heading: Secondary CPU general-purpose register settings}
+    todo:
+      check: hardware
+      text: >-
+        which method the stock firmware's device tree names; the permissive and GPL overlays
+        cover the stub's spin-table and the tree's release addresses.
+
+  - id: mailbox-buffers-below-4gb
+    section: quick-facts
+    title: Mailbox buffers below 4 GB
+    claim: A property-channel buffer must start below 4 GB.
+    support:
+      - class: inference
+        premises:
+          - states: >-
+              a mailbox word is 32 bits, carrying the buffer address in its upper 28 bits with the
+              low 4 bits holding the channel, and the buffer is 16-byte aligned
+            support:
+              - {class: doc, doc: rpi-wiki-property-interface, at: [{heading: opening sections}]}
+        derivation: >-
+          28 bits of address above a 4-bit alignment reach only the first 4 GB; the firmware may
+          impose tighter limits that no document states
+    todo:
+      check: hardware
+      text: on an 8 GB board, send a request from a buffer above 1 GB and above 3 GB and check the response.
+
+  - id: gic-arm-local-not-legacy
+    section: gotchas
+    title: The GIC and ARM_LOCAL bases are not legacy addresses.
+    claim: >-
+      Every other peripheral address in the datasheet is a legacy master address to translate;
+      these two are Arm-only and translate differently (`0x4_C004_0000` or `0xFF84_0000` for the
+      GIC).
+    support:
+      - class: databook
+        doc: bcm2711-peripherals
+        at: [{section: "6.5.1 and 6.5.2", page: "92"}]
+
+  - id: mini-uart-baud-follows-core-clock
+    section: gotchas
+    title: The mini UART's baud rate follows the core clock.
+    claim: Use UART0 (PL011) for a console that must survive frequency changes, or fix the core clock.
+    support:
+      - class: doc
+        doc: rpi-docs-uarts
+        at: [{heading: Mini UART and core frequency}]
+
+  - id: not-the-pi-5-chip
+    section: gotchas
+    title: Not the Pi 5 chip.
+    claim: >-
+      The Raspberry Pi 5 family uses the BCM2712, its successor; do not assume any address,
+      interrupt number or boot detail here holds for it, and use a `bcm2712` spec instead.
+    support:
+      - class: doc
+        doc: rpi-docs-bcm2712
+        at: [{heading: BCM2712}]

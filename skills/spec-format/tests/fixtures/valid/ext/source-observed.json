@@ -1,0 +1,9 @@
+{
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. A test fragment for the source-observed extension class (D15).",
+  "type": "object",
+  "required": ["observer", "observed"],
+  "properties": {
+    "observer": {"type": "string", "pattern": "\\S"},
+    "observed": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(?![\\s\\S])"}
+  }
+}

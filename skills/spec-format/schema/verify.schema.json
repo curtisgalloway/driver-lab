@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/verify.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness and second readers are the checker's (SF2-3).",
+  "title": "Spec format 2: verification record",
+  "type": "object",
+  "required": ["format", "spec", "spec_file", "spec_sha256", "canonical", "sources", "summary", "verdicts"],
+  "properties": {
+    "format": {"const": 2},
+    "spec": {"$ref": "spec.schema.json#/$defs/specId"},
+    "spec_file": {
+      "$comment": "A path relative to the root, under the shared path rules, ending .spec.yaml.",
+      "type": "string",
+      "allOf": [{"$ref": "spec.schema.json#/$defs/filePath"}, {"pattern": "\\.spec\\.yaml(?![\\s\\S])"}]
+    },
+    "spec_sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
+    "canonical": {"const": "fact-v1"},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "summary": {
+      "type": "object",
+      "required": ["pass", "fail", "unverifiable", "gap", "adjudicate"],
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "unverifiable": {"type": "integer", "minimum": 0},
+        "gap": {"type": "integer", "minimum": 0},
+        "adjudicate": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "verdicts": {
+      "type": "object",
+      "propertyNames": {
+        "$comment": "A bare fact id, or <fact id>.<sub-id> for a field or step with its own support (D16).",
+        "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)?(?![\\s\\S])"
+      },
+      "additionalProperties": {"$ref": "#/$defs/verdict"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "verdictValue": {"enum": ["PASS", "FAIL", "UNVERIFIABLE", "GAP", "ADJUDICATE"]},
+    "source": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"$ref": "spec.schema.json#/$defs/name"},
+        "commit": {"$ref": "spec.schema.json#/$defs/commit"},
+        "url": {"$ref": "spec.schema.json#/$defs/httpsUrl"},
+        "sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
+        "fetch": {"$ref": "spec.schema.json#/$defs/fetch"},
+        "note": {"$ref": "spec.schema.json#/$defs/text"}
+      },
+      "anyOf": [{"required": ["commit"]}, {"required": ["sha256"]}],
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["basis", "verdict", "date", "verifier"],
+      "properties": {
+        "basis": {"$ref": "spec.schema.json#/$defs/sha256"},
+        "verdict": {"$ref": "#/$defs/verdictValue"},
+        "date": {"$ref": "spec.schema.json#/$defs/date"},
+        "verifier": {"$ref": "spec.schema.json#/$defs/line"},
+        "note": {"$ref": "spec.schema.json#/$defs/text"},
+        "contrary_evidence": {"enum": ["none-found", "found", "not-checked"]},
+        "citation_precision": {"enum": ["exact", "imprecise"]},
+        "readers": {
+          "$comment": "Absent until a second reader runs; never empty.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["verifier", "verdict"],
+            "properties": {
+              "verifier": {"$ref": "spec.schema.json#/$defs/line"},
+              "verdict": {"$ref": "#/$defs/verdictValue"},
+              "date": {"$ref": "spec.schema.json#/$defs/date"},
+              "note": {"$ref": "spec.schema.json#/$defs/text"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "correction": {"$ref": "spec.schema.json#/$defs/text"},
+        "readings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["verifier", "verdict", "reasoning"],
+            "properties": {
+              "verifier": {"$ref": "spec.schema.json#/$defs/line"},
+              "verdict": {"$ref": "#/$defs/verdictValue"},
+              "reasoning": {"$ref": "spec.schema.json#/$defs/text"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "adjudication": {
+          "type": "object",
+          "required": ["decision", "by", "date", "rule"],
+          "properties": {
+            "decision": {"$ref": "spec.schema.json#/$defs/text"},
+            "by": {"$ref": "spec.schema.json#/$defs/line"},
+            "date": {"$ref": "spec.schema.json#/$defs/date"},
+            "rule": {"$ref": "spec.schema.json#/$defs/text"}
+          },
+          "additionalProperties": false
+        },
+        "carried_from": {
+          "type": "object",
+          "required": ["repo", "commit", "path", "key", "format"],
+          "properties": {
+            "repo": {"$ref": "spec.schema.json#/$defs/name"},
+            "commit": {"$ref": "spec.schema.json#/$defs/commit"},
+            "path": {"$ref": "spec.schema.json#/$defs/path"},
+            "key": {"$ref": "spec.schema.json#/$defs/line"},
+            "format": {"enum": [1, 2]}
+          },
+          "additionalProperties": false
+        }
+      },
+      "allOf": [
+        {
+          "if": {"not": {"required": ["carried_from"]}},
+          "then": {
+            "required": ["contrary_evidence", "citation_precision"],
+            "$comment": "message: a verdict reached under format 2 states contrary_evidence and citation_precision"
+          }
+        },
+        {
+          "if": {"required": ["verdict"], "properties": {"verdict": {"const": "FAIL"}}},
+          "then": {"required": ["correction"], "$comment": "message: a FAIL carries a correction"},
+          "else": {"not": {"required": ["correction"]}, "$comment": "message: only a FAIL carries a correction"}
+        },
+        {
+          "if": {"required": ["verdict"], "properties": {"verdict": {"const": "ADJUDICATE"}}},
+          "then": {
+            "required": ["readings"],
+            "not": {"required": ["adjudication"]},
+            "$comment": "message: an ADJUDICATE verdict carries readings and no adjudication until settled"
+          }
+        },
+        {
+          "if": {"required": ["adjudication"]},
+          "then": {
+            "required": ["readings"],
+            "properties": {"verdict": {"enum": ["PASS", "FAIL"],
+                                       "$comment": "message: a settled adjudication has the verdict PASS or FAIL"}},
+            "$comment": "message: a settled adjudication keeps its readings"
+          }
+        },
+        {
+          "if": {"required": ["readings"]},
+          "then": {
+            "anyOf": [
+              {"required": ["adjudication"]},
+              {"properties": {"verdict": {"const": "ADJUDICATE"}}}
+            ],
+            "$comment": "message: readings belong to an ADJUDICATE verdict or a settled adjudication"
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

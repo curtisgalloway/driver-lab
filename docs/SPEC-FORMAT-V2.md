@@ -138,15 +138,15 @@ id: bcm2711               # normalized: [a-z0-9-], unique across every root read
 name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
 not_triggers: [bcm2712]
-aliases: []
+aliases: [...]            # optional lists: absent or non-empty, never []
 cache: rpi4-resources
-instances: []             # soc and chip only; see Instances
-resources: {}             # documents, repos, series, tools; see Resources
-assumptions: []           # named assumptions facts rest on; see Assumptions
+instances: []             # soc and chip only, required for soc (may be empty); see Instances
+resources: {...}          # documents, repos, series, tools; absent or non-empty; see Resources
+assumptions: [...]        # named assumptions facts rest on; see Assumptions
 orientation: >-           # prose, not facts; see Prose that is not a fact
   The BCM2711 is the SoC of ...
 facts: []                 # the fact records, in reading order
-notices: []               # source notices a license asks the spec to carry
+notices: [...]            # source notices a license asks the spec to carry
 ```
 
 The SPDX header stays as YAML comment lines at the top of the file, where REUSE tooling reads
@@ -311,9 +311,11 @@ A locator is a mapping with at least one of `section`, `page`, `pages`, `table`,
 `clause`, `heading`; all values are strings, so "92", "D24-9638" and "4-91" all fit. `pages` is a
 two-item list. When the document entry gives `pages` (a count) and a locator's page is a plain
 number, the checker requires it within the count; the entry's `page_numbering` says whether the
-numbers are printed or PDF page numbers. A `databook` or `standard` locator must carry `section`,
-`page`, `pages`, `table`, `figure` or `clause`; a `doc` locator may be a `heading` alone (most
-project documentation has no page numbers). This is the citation-precision rule RG1 asked for (V2)
+numbers are printed or PDF page numbers. A `databook` locator must carry `section`, `page`,
+`pages`, `table`, `figure` or `clause`; so must a `standard` locator when its document entry gives
+`pages` (a paged document; the checker enforces it), while an unpaged standard such as Linux's
+`booting.rst` may be cited by `heading` (amended 2026-10-08 by the orchestrator's SF2-1 decision);
+a `doc` locator may be a `heading` alone (most project documentation has no page numbers). This is the citation-precision rule RG1 asked for (V2)
 in its mechanical part; whether a locator is the *right* one stays the verifier's.
 
 ### Anchors (`src`, `DT`, `rtl`)
@@ -329,7 +331,12 @@ anchors:
   its root's). The entry must carry a full `commit` and a `license`.
 - `lines` is `[first, last]`, 1-based and inclusive; a single line is `[n, n]`. `symbol` is
   required for `src` (line numbers drift; symbols survive) and optional for `DT`, which may give
-  `node` instead.
+  `node` instead. A symbol is written as the source spells it, C++ and assembler names included
+  (`~Foo`, `operator<<`, `ns::Class::method`, `$label`, `struct gic_chip_data`): one line, no
+  leading `-` (orchestrator decision, 2026-10-08).
+- Symbols, nodes, refs and paths reach a command line (`spec.py resolve`, SF2-6) only as
+  separate arguments after `--`, never through a shell, so the schema refuses option-like values
+  and white space but not shell characters.
 - `comment: true` says the cited lines are a comment and the claim attributes it ("the tree
   comments that…"), so a reader and the verifier can tell a comment's statement from the code's
   behavior (the learning behind GPL Quick-facts/6 and /7: comments attributed).
@@ -439,8 +446,8 @@ resources:
       verified: 2026-10-07
       fetch: ok
       fetch_via: git
-  series: []                                # unchanged; never cited
-  tools: []                                 # unchanged; declarative, `via:` a skill
+  series: [...]                             # unchanged; never cited
+  tools: [...]                              # unchanged; declarative, `via:` a skill
 ```
 
 What changes from today:
@@ -453,7 +460,8 @@ What changes from today:
 - **Canonical and retrieval URLs are separate fields** (RG1 C6, C17, C19): `url` is the citation
   form (`developer.arm.com/documentation/<id>/latest` for Arm), `retrieval` lists the URLs that
   work for a fetcher. Documentation kept in git (the Raspberry Pi documentation, wikis) records
-  its `commit`.
+  its `commit`. A retrieval entry's `via` and a repos entry's `fetch_via` are prose for a reader,
+  never executed by any tool (orchestrator decision, 2026-10-08).
 - **Repos carry `commit`, not `ref`, when cited.** A repos entry that any anchor names must carry
   a full commit. A map-only entry may keep a branch in `ref`. `url` must be `https://`: the
   schema rejects anything else before any tool runs (RG-T1 R1, where a URL reached `git fetch` as
@@ -472,7 +480,9 @@ The rules of [SPEC-FORMAT.md](../skills/board-expert/SPEC-FORMAT.md) ("Roots and
 the license split carry over. Restated for format 2:
 
 - **Root marker.** `board-specs.yaml` keeps its name and fields (`layer`, `name`, `roots`,
-  `license`, `accepts`) and gains `format: 2`. `name` becomes required, because root-qualified
+  `license`, `accepts`) and gains `format: 2`. `accepts` becomes required, and `accepts: []`
+  means documents only (orchestrator decision, 2026-10-08; format 1 read an absent `accepts` as
+  undeclared, with a warning). `name` becomes required, because root-qualified
   references name it (D1): the three repositories' markers already declare
   `hardware-specs-docs`, `hardware-specs-permissive` and `hardware-specs-gpl`. Two roots read
   together with the same name are an error.
@@ -529,7 +539,7 @@ verdicts:
     note: "what was compared against what"
     contrary_evidence: none-found   # none-found | found | not-checked
     citation_precision: exact       # exact | imprecise
-    readers: []                     # a second reader's {verifier, verdict, note}, when it ran
+    readers: [...]                  # a second reader's {verifier, verdict, note}; absent until one runs
     carried_from: {...}             # present when the verdict was carried forward, not re-read
 ```
 
@@ -1067,7 +1077,7 @@ specs build on the same data later; this design covers the first static version 
 | `skills/hardware-investigator/examples/` | expected facts files | rewritten as `kind: facts` |
 | `skills/board-spec-scaffold/templates/` | 6 spec templates and the root marker | rewritten as YAML templates |
 | `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2`; keeps its `name` |
-| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name` (already present) is now required, because references use it |
+| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name` and `accepts` (both already present) are now required; references use `name` |
 | The three spec repositories' CI | `scripts/checks.sh`, one workflow | `checks.sh` on format 2, plus a publish workflow for the Pages site (D5); nothing generated is committed |
 
 ### Converting a spec
@@ -1166,7 +1176,6 @@ id: bcm2711
 name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
 not_triggers: [bcm2712]
-aliases: []
 cache: rpi4-resources
 instances: []
 resources:
@@ -1663,7 +1672,6 @@ verdicts:
       0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to
       0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and
       IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86
@@ -1679,7 +1687,6 @@ verdicts:
       bcm283x.dtsi line 11 reserves 0x0 for 0x1000; the comment on lines 8-10 is attributed as a
       comment and matches (firmware startup stubs, secondary CPUs spinning). bcm2711.dtsi
       includes bcm283x.dtsi (line 2).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86
@@ -1690,6 +1697,7 @@ verdicts:
 
 The carried verdicts leave out `contrary_evidence` and `citation_precision`: the format 1 record
 did not state them per bullet, and a carried verdict records only what the earlier record said.
+They also have no `readers`: an optional list is absent rather than empty (SF2-1, 2026-10-08).
 What `spec.py status` reports for this slice: `gic-node` and `reserved-stub-page`
 current (carried); `address-translation-in-the-tree` and
 `tree-describes-low-peripheral-mode` unverified, because the split changed the first claim's

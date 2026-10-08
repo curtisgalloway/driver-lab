@@ -1,0 +1,74 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: board
+id: widgetboard
+name: Widget Board
+triggers: [widget board, widgetboard]
+not_triggers: [widget board 2]
+aliases: [wb1]
+parts: [widget-soc, widget-pmic]
+cache: widgetboard-resources
+variants:
+  - id: widgetboard-lite
+    name: Widget Board Lite
+    triggers: [widget board lite]
+    shares: [soc, console]
+    differs: half the DRAM
+    support:
+      - {class: doc, doc: widget-product-page, at: [{heading: Models}]}
+  - id: widgetboard-pro
+    name: Widget Board Pro
+    triggers: [widget board pro]
+    shares: [soc]
+    differs: a faster clock, reported only by press
+    support:
+      - {class: press, title: Widget Board Pro announced, url: "https://example.invalid/news/pro", date: 2026-01-02}
+    todo: {check: document, text: find a vendor page naming the Pro model.}
+resources:
+  documents:
+    - name: widget-product-page
+      class: doc
+      title: Widget Board product page
+      url: https://example.invalid/widgetboard
+      access: public
+      verified: 2026-10-01
+      fetch: ok
+  repos:
+    - name: widget-linux
+      url: https://example.invalid/widget-linux
+      ref: main
+      license: GPL-2.0-only
+      note: a map, never cited
+  series:
+    - title: Add Widget SoC
+      url: https://example.invalid/lists/widget-soc
+      message_id: <20260101.widget@example.invalid>
+      target: widget-linux
+      status: unmerged
+      files: [arch/arm64/boot/dts/widget/widget-soc.dtsi]
+  tools:
+    - {kind: bench, name: widget-bench-1, via: "skill:widget-board-tools"}
+orientation: >-
+  A synthetic board for the format 2 tests. **Nothing here describes real hardware.**
+facts:
+  - id: debug-console
+    section: quick-facts
+    title: Debug console
+    critical: true
+    claim: The debug console is UART0 on the 3-pin header.
+    support:
+      - {class: doc, doc: widget-product-page, at: [{heading: Debug header}]}
+      - class: hardware
+        board: Widget Board rev B
+        method: typed at the console and read the echo
+        date: 2026-09-30
+        revision: rev B
+        firmware: "2026.09"
+        conditions: room temperature
+        runs: [run-0001]
+  - id: power-input
+    section: gotchas
+    title: Power input
+    claim: The board browns out on a supply below 5 V.
+    todo: {check: hardware, text: measure the brown-out threshold, method: a bench supply stepped down by 0.1 V}

@@ -183,6 +183,10 @@ every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" s
   loop. The checker reads the record's frontmatter: unverified and stale are warnings, a
   recorded `FAIL` is an error, and `--require-verified` makes the warnings errors too.
 
+- **`spec-format`** (reference, being built): spec format 2, facts as YAML records validated
+  by JSON Schemas ([design](docs/SPEC-FORMAT-V2.md), [plan](docs/SPEC-FORMAT-V2-PLAN.md)). So far
+  its strict loader, schemas and `spec.py validate`; the skills above still read format 1.
+
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
 off to these by name.

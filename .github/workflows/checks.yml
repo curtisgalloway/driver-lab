@@ -46,6 +46,17 @@ jobs:
       - name: hardware-investigator tests
         run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/hardware-investigator/tests -v'
 
+      # Spec format 2 (SF2-1 onward): PyYAML, jsonschema and markdown-it-py, installed by hash.
+      # spec.py exits 3 without them at the pinned versions; there is no fallback parser.
+      - name: Spec format 2 dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sf2"
+          "$RUNNER_TEMP/sf2/bin/python" -m pip install --require-hashes \
+            -r skills/spec-format/requirements.txt
+
+      - name: spec-format tests
+        run: '"$RUNNER_TEMP/sf2/bin/python" -m unittest discover -s skills/spec-format/tests -v'
+
       - name: board specs
         run: |
           "$RUNNER_TEMP/md/bin/python" skills/board-expert/scripts/spec_check.py \

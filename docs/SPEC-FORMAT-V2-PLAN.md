@@ -35,8 +35,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **Milestone IDs** `SF2-1`–`SF2-12` and the gate `SF2-G`. The design's outline had seven units;
   this plan splits them for session size ([outline mapping](#outline-mapping)).
 - **Branches.** One topic branch per milestone, cut from a freshly fetched `origin/main`:
-  `format-v2/sf2-<n>` (`format-v2/sf2-g` for the gate). A milestone that changes a spec
-  repository gets a branch of the same name there. Worktrees under `.claude/worktrees/<name>`.
+  `sf2/sf2-<n>` (`sf2/sf2-g` for the gate), the name the orchestrator uses from SF2-1 on (the
+  plan first said `format-v2/sf2-<n>`). A milestone that changes a spec repository gets a branch
+  of the same name there. Worktrees under `.claude/worktrees/<name>`.
 - **Checkpoint commit:** `driver-porting: SF2-<n> — <title>`, ending with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and
   `Claude-Session: https://claude.ai/code/session_01GCyuTJU8apag5WEVZdyEny`. Author email: the
@@ -47,7 +48,8 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
   orchestrator pushes the milestone branch, opens the pull request, waits for green CI and merges
   with a merge commit (the spec repositories pin driver-lab commits). Never push `main`.
   Deleting the merged branch, local and remote, is part of merging (`git cherry` first).
-  Anything outside those four repositories, and enabling GitHub Pages (SF2-11), needs its own go.
+  Anything outside those four repositories needs its own go. Enabling GitHub Pages on the three
+  spec repositories in SF2-11 is approved (decision 5).
 - **Records:** evidence in `evidence/SF2-<n>.md`, one notebook chapter `notebook/SF2-<n>.md`
   with a row in the [notebook index](../notebook/index.md), process-log entries in
   `PROCESS-NOTES.md`. Agent runs (verifiers, Codex) record their transcripts' paths and logs in
@@ -100,7 +102,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| SF2-1 | Strict loader, pinned dependencies, core schemas | — | pending |
+| SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | pending |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
@@ -110,7 +112,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-5, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
-| SF2-11 | The three spec repositories cut over, published | SF2-10; user's go for Pages | pending |
+| SF2-11 | The three spec repositories cut over, published | SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
 
@@ -245,69 +247,12 @@ decision](#needs-a-user-decision)).
 
 ## SF2-1 — Strict loader, pinned dependencies, core schemas
 
-**Outcome:** `skills/spec-format/` exists as a reference skill (D7) with `load_strict` and the
-JSON Schemas for the root marker, the verification record, and specs of kinds `board`, `soc`,
-`chip`, `ip`, `overlay` and `facts`. Before: no format 2 code. After: `spec.py validate <file>`
-(proposed name) loads a file, rejects every YAML pitfall in the design's table with a line and
-column, and validates it against the schema for its kind.
-**Design coverage:** R1 (board kinds), R3, D3 (schema part), D6, D7, D8, D9 (loader), D12
-(schema), D14 (field), D15 (fragment mechanism), D17, D18 (schema); § The fact record, Conflict
-entries, Assumptions, Instances and variants, Prose, Provenance classes, Locators, Anchors
-(shapes), Inference, Resources (shapes), YAML loader, Dependencies.
-**Dependencies:** none.
-**In scope:** loader; three schemas; the `support` classes with per-class fields; the
-`source-observed` fragment hook; `dep-quality` and pins; the `spec.py` command skeleton
-(subcommand dispatch, `--json`, exit codes 0/1/2/3).
-**Out of scope:** cross-file checks (SF2-2); typed `data` payloads for peripheral specs and
-reviews (SF2-7); records' semantic checks (SF2-3).
-
-### Implementation steps
-1. Run `dep-quality` on `jsonschema`, `jschon`, PyYAML and markdown-it-py; record the scores in
-   the evidence; pin the chosen versions with hashes in `skills/spec-format/requirements.txt`
-   (proposed). If `dep-quality` argues against `jsonschema`, stop and ask (D8 was "subject to the
-   score").
-2. `skills/spec-format/SKILL.md` (proposed): reference skill, not user-invocable; one paragraph
-   pointing at the design until SF2-8 writes the contract.
-3. `skills/spec-format/scripts/specload.py` (proposed): `load_strict(path)` per the design's
-   loader table (resolver for `true`/`false`/`null`/decimal integers only; anchors, aliases,
-   merge keys, explicit tags, several documents, duplicate keys, non-string keys, control and
-   invisible characters, non-NFC strings, BOM and non-UTF-8 all errors with line and column).
-4. `skills/spec-format/schema/spec.schema.json`, `root.schema.json`, `verify.schema.json`
-   (proposed): closed records (`unevaluatedProperties: false`), kind conditionals, per-class
-   support entries, locators, anchors, inference premises, fact and reference patterns, `todo`,
-   `scope`, `critical`, `relates`, `conflicts`, `assumptions`, `instances`, `variants`,
-   `resources` (documents, repos with `role`, `files`, `https` URLs; series; tools), `notices`.
-5. `spec.py` skeleton with `validate`; the `source-observed` fragment named in a root marker is
-   loaded and composed into the schema (D15), with a test fragment under `tests/fixtures`.
-6. Fixtures: one valid file per kind; one invalid file per schema rule and per loader pitfall;
-   the design's worked example slices (copied into fixtures) must validate.
-7. CI step and AGENTS.md line.
-
-### Acceptance criteria
-- [ ] Every row of the design's loader table has a fixture that fails with the expected message
-  and line.
-- [ ] The design's worked-example YAML (docs, permissive and GPL slices, the record) validates.
-- [ ] Each support class rejects a missing required field and an unknown field; `inference` with
-  a sibling support entry, `emulated` alone, `press` without `todo` all fail.
-- [ ] A `repos` entry with a non-`https` URL fails validation.
-- [ ] Exit codes: 0 valid, 1 invalid, 2 usage, 3 a pinned dependency missing (no fallback parser).
-
-### Testing and review
-- Tests: `skills/spec-format/tests/test_load.py`, `test_schema.py` (proposed).
-- Verify with: the SF2-1 lines under [Checks added by this plan](#checks-added-by-this-plan);
-  the full AGENTS.md list still passes.
-- Review focus: equivalent spellings the loader or schema still admits (a second way to write
-  the same thing is the format 1 failure); closed records really closed under every `if/then`.
-- Review method: code unit (conventions).
-
-### Session sizing
-Needs the design's sections from "The spec file" to "Inference" and "Validation", plus
-`campaign-review/scripts/index_check.py`'s `UniqueLoader`. Uncertainty: `unevaluatedProperties`
-with nested conditionals. Split point: the record and root schemas can move to SF2-3 if the spec
-schema takes the session.
-
-### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-1.md`. Notebook: `notebook/SF2-1.md`.
+**Outcome:** `skills/spec-format/` with `load_strict`, the spec, root-marker and record schemas,
+`spec.py validate` and hash-pinned dependencies (jsonschema 4.26.0, PyYAML 6.0.3, markdown-it-py
+4.2.0). **Dependencies:** none. **Status:** complete. **Evidence:** [SF2-1](../evidence/SF2-1.md)
+(acceptance table, design coverage, scores, three review rounds). **Open limitations:** `lines`
+order, fact-id uniqueness and the paged-`standard` locator rule are SF2-2's; peripheral and review
+kinds are SF2-7's.
 
 ---
 
@@ -730,7 +675,8 @@ merges a pull request that bumps its driver-lab pin to a commit with format 2, r
 updates README and AGENTS.md citation rules. Each repository's Pages site shows its specs.
 **Design coverage:** D5, D11, D19 (workflows); § Effects (spec repositories), Migration
 (transition).
-**Dependencies:** SF2-10; the user's go to enable GitHub Pages on the three public repositories.
+**Dependencies:** SF2-10. Enabling GitHub Pages on the three public repositories is approved
+(decision 5).
 **In scope:** the three repositories' changes; a scratch pull request per repository proving
 the gate fit/misfit and the D19 modes in published CI (as LS5 and LS-G did).
 **Out of scope:** driver-lab's v1 removal (SF2-12).
@@ -823,11 +769,38 @@ No RG unit starts while a format 2 milestone is open.
 3. **Coverage findings in SF2-10** that would add new facts go to the RG backlog; the migration
    stays a conversion.
 4. **Stop rules** as set in the conventions are confirmed.
+5. **GitHub Pages** (later the same day): approved for the three spec repositories; SF2-11 may
+   enable it.
+6. **Models unchanged** (later the same day): Opus 5.5 for SF2-1 to SF2-7, SF2-G and every
+   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12.
+
+Orchestrator decisions during SF2-1's review (2026-10-08), within the design's scope:
+
+- **Locator precision for `standard`:** a `databook` locator always carries a section, page,
+  pages, table, figure or clause; a `standard` locator does only when its document entry has
+  `pages` (a paged document), which SF2-2's checker enforces. The design's Locators paragraph is
+  amended to match; its worked example cites an unpaged standard (`booting.rst`) by heading.
+- **No empty optional lists:** an optional list is absent or non-empty (`readers: []` and an
+  absent `readers` were two spellings). Required lists that may hold nothing (`instances` of a
+  soc, `clocks`, `facts`, `sources`, `accepts`) keep `[]`. The design's worked example drops its
+  `aliases: []` and `readers: []` lines.
+
+Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
+
+- **`symbol`** cites C++ and assembler names as spelled (`~Foo`, `operator<<`, `Foo<T>`,
+  `$label`, `struct gic_chip_data`): single-line, no leading `-`. SF2-6 passes symbols, nodes,
+  refs and paths to a command only as separate arguments after `--`, never through a shell.
+- **`accepts`** is required in a format 2 root marker; `[]` means documents only.
+- **`resources`** is absent or non-empty (`{}` was a second spelling).
+- **`fetch_via` and retrieval `via`** are prose, never executed.
+- **Exit code 100** is `spec.py`'s internal error, apart from 1 (a file is invalid): the tool-specific
+  band of the house exit-code contract. (First set to 4, reversed the same day: 4 is reserved
+  there for "target unreachable".)
+- **Requirements markers:** only `python_version` and `python_full_version` comparisons, as
+  padded three-part versions; anything else is exit 3.
 
 ## Needs a user decision (later)
 
-- **GitHub Pages** on the three public spec repositories, before SF2-11: outward-facing, needs
-  an explicit go.
 - **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07
   authorization).
 
@@ -840,7 +813,8 @@ No RG unit starts while a format 2 milestone is open.
 
 ## Next session
 
-- Current milestone and status: none started; plan approved by the user on 2026-10-08.
-- Resume action: begin SF2-1 (implementer: Opus 5.5).
-- Read first: the design, this plan's conventions and SF2-1, the
-  [SF2-design](../notebook/SF2-design.md) chapter.
+- Current milestone and status: SF2-1 complete ([evidence](../evidence/SF2-1.md)); SF2-2 next.
+- Resume action: begin SF2-2 (implementer: Opus 5.5) once SF2-1 is merged.
+- Read first: the design, this plan's conventions and SF2-2, the [SF2-1](../notebook/SF2-1.md)
+  chapter's decisions (the checker inherits the paged-`standard` rule, `lines` order and fact-id
+  uniqueness).

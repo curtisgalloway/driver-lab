@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: overlay
+overlays: widget-soc
+instances:
+  - id: uart1
+    name: uart1
+    ip: widget-uart
+    reg: "0x7e201400"
+    irq: null
+    clocks: [uartclk]
+    support:
+      - class: DT
+        anchors: [{repo: widget-linux, path: arch/arm64/boot/dts/widget/widget-soc.dtsi, lines: [50, 55]}]
+    todo: {check: source, text: find the interrupt line.}
+resources:
+  repos:
+    - name: widget-linux
+      url: https://example.invalid/widget-linux
+      commit: 1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d
+      license: GPL-2.0-only
+      files:
+        - {path: arch/arm64/boot/dts/widget/widget-soc.dtsi, license_from: spdx-line}
+facts:
+  - id: addressing
+    section: quick-facts
+    title: Addressing in the tree
+    claim: The tree maps the peripherals at `0xfe00_0000`.
+    support:
+      - class: DT
+        anchors: [{repo: widget-linux, path: arch/arm64/boot/dts/widget/widget-soc.dtsi, lines: [34, 45], node: soc}]
+  - id: uart-programming
+    section: programming-model
+    title: UART programming
+    claim: The tree's UART uses the 16550 layout.
+    support:
+      - class: inference
+        premises:
+          - fact: "widget-uart#standard-compliance"
+          - fact: "widget-soc@widget-root#addressing"
+            uses: the base
+        derivation: the block is the widget UART at that base
+    todo: {check: hardware, text: read the scratch register.}

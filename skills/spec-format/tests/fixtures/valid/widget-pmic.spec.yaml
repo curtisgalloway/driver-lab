@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: widget-pmic
+name: Widget PMIC
+triggers: [widget pmic]
+parts: [widget-regulator]
+cache: widget-pmic-resources
+resources:
+  documents:
+    - {name: pmic-datasheet, class: databook, title: Widget PMIC datasheet, url: "https://example.invalid/pmic.pdf", pages: 40, page_numbering: pdf}
+facts:
+  - id: i2c-address
+    section: quick-facts
+    title: I2C address
+    claim: The PMIC answers at 7-bit address `0x2d`.
+    support:
+      - {class: databook, doc: pmic-datasheet, at: [{section: "7.1", page: "12"}]}

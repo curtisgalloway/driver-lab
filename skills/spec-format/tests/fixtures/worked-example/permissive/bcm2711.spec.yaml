@@ -1,0 +1,166 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: overlay
+overlays: bcm2711
+resources:
+  repos:
+    - name: rpi-tools
+      url: https://github.com/raspberrypi/tools
+      commit: 439b6198a9b340de5998dd14a26a0d9d38a6bcac
+      license: BSD-3-Clause
+      role: source
+      files:
+        - {path: armstubs/armstub8.S, license_from: notice}
+        - {path: armstubs/, license_from: notice, note: "searched for which sources are AArch64; armstub.S and armstub7.S carry BSD notices; the Makefile carries none and is not read for any claim"}
+      verified: 2026-10-07
+      fetch: ok
+      fetch_via: git
+  documents:
+    - name: rpi-docs-config-boot
+      class: doc
+      title: Raspberry Pi documentation, config.txt boot options (config_txt/boot.adoc)
+      url: https://github.com/raspberrypi/documentation/blob/42deaefbc8b4edfe342b0d759ec16cda3be5e7d8/documentation/asciidoc/computers/config_txt/boot.adoc
+      commit: 42deaefbc8b4edfe342b0d759ec16cda3be5e7d8
+      access: public
+      verified: 2026-10-07
+      fetch: ok
+    - name: arm-arm
+      class: standard
+      title: Arm Architecture Reference Manual for A-profile architecture (DDI 0487)
+      revision: issue M.d, published 2026-09-29
+      url: https://developer.arm.com/documentation/ddi0487/latest
+      retrieval:
+        - url: https://documentation-service.arm.com/static/6abbec2a6db85c5e6614a4a1
+          via: documentation-service
+      sha256: 80d589a4645feba6bdb9d77edfaf04d4394d5d5444a4c41f97cf4fdd20eee3d5
+      pages: 17150
+      access: public
+      fetch: ok
+    # (also rpi-docs-legacy-boot, tfa-rpi4, bcm2711-peripherals and gic400-trm, as in the base)
+assumptions:
+  - id: stub-build-identity
+    text: >-
+      the firmware's built-in 64-bit stubs are built from `armstubs/armstub8.S`, which no
+      document states
+    todo:
+      check: hardware
+      text: compare the stub image the firmware loads with this build (see #which-build-ships)
+facts:
+  - id: which-build-ships
+    section: quick-facts
+    title: Which build ships
+    claim: >-
+      For a 64-bit boot on the boards the `enable_gic` page names (it says Raspberry Pi 4B; this
+      spec takes its wording to cover every BCM2711 board), the stub the firmware runs by default
+      in Low Peripheral mode is most likely `armstub8.S` built with `BCM2711` and `GIC` defined;
+      this is a candidate build, held with limited confidence, not an identified shipped
+      revision.
+    scope:
+      modes: [Low Peripheral mode]
+      configurations: [64-bit boot]
+    support:
+      - class: inference
+        premises:
+          - states: the default stub is built into the firmware and chosen by model and settings
+            support: [{class: doc, doc: rpi-docs-config-boot, at: [{heading: armstub}]}]
+          - states: >-
+              `arm_64bit` defaults to 1 on Raspberry Pi 4, 400 and Compute Module 4 and 4S, so the
+              default stub is an AArch64 one
+            support: [{class: doc, doc: rpi-docs-config-boot, at: [{heading: arm_64bit}]}]
+          - states: the GIC-400 is the default interrupt controller
+            support: [{class: doc, doc: rpi-docs-legacy-boot, at: [{heading: enable_gic}]}]
+          - states: >-
+              in `armstubs/` at the pin, `armstub8.S` is the only AArch64 source, as `armstub.S`
+              and `armstub7.S` are 32-bit
+            support:
+              - class: src
+                anchors: [{repo: rpi-tools, path: armstubs/, search: "armstub8.S is the only AArch64 source; armstub.S and armstub7.S are 32-bit"}]
+          - assumption: stub-build-identity
+          - states: >-
+              the firmware finds a magic value in the stub and writes the kernel and device-tree
+              load addresses into it
+            support: [{class: doc, doc: tfa-rpi4, at: [{heading: TF-A port design}]}]
+          - fact: "#patch-words"
+            uses: this source carries the magic word and those two words
+          - states: its comment says the firmware clears the magic slot for reuse as a release slot
+            support:
+              - class: src
+                anchors: [{repo: rpi-tools, path: armstubs/armstub8.S, lines: [190, 192], symbol: spin_cpu3, comment: true}]
+          - states: >-
+              its non-`HIGH_PERI` ARM Local base and GIC distributor and CPU-interface addresses
+              are the datasheet's Low Peripheral ones
+            support: [{class: databook, doc: bcm2711-peripherals, at: [{section: "6.5.1–6.5.2", page: "92"}]}]
+          - states: with the distributor at `+0x1000` and the CPU interface at `+0x2000` from the GIC base
+            support: [{class: databook, doc: gic400-trm, at: [{section: "3.2", table: "3-1", page: "3-3"}]}]
+        derivation: >-
+          `BCM2711`, `GIC` and `HIGH_PERI` are the only conditionals in `armstub8.S`, so if the
+          assumption holds the default is the `BCM2711` and `GIC` build
+    todo:
+      check: hardware
+      text: >-
+        on a recorded board, configuration and firmware release, capture the whole stub image
+        the firmware loads (through `setup_gic` past `0x100` and the trailing literals), and
+        compare it with this build, excluding the words the firmware patches at
+        `0xF0`–`0xFF`; or boot this build with `armstub=` and scope observations to it.
+
+  - id: generic-timer-frequency
+    section: quick-facts
+    title: Generic timer frequency
+    claim: The BCM2711 build writes 54000000 (54 MHz) to `CNTFRQ_EL0` and 0 to `CNTVOFF_EL2`.
+    support:
+      - class: src
+        anchors:
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [53, 57], symbol: OSC_FREQ}
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [110, 112], symbol: OSC_FREQ}
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [114, 115], symbol: CNTVOFF_EL2}
+
+  - id: scr-el3-bits
+    section: quick-facts
+    title: SCR_EL3 bits
+    claim: >-
+      The stub's `SCR_EL3` value sets RW (bit 10), HCE (bit 8), SMD (bit 7), bits 5 and 4, and NS
+      (bit 0), and writes it to `SCR_EL3`. By the architecture's field definitions, EL2 then runs
+      in AArch64 and non-secure, HVC is enabled, and SMC is undefined at EL2; at EL1 it is
+      undefined unless EL2 traps it first through `HCR_EL2.TSC`, which takes priority.
+    support:
+      - class: src
+        anchors:
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [59, 66], symbol: SCR_VAL}
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [121, 123], symbol: SCR_VAL}
+      - class: standard
+        doc: arm-arm
+        at:
+          - {section: "D24.2.168", heading: "SCR_EL3 RW", page: "D24-9638"}
+          - {section: "D24.2.168", heading: "SCR_EL3 HCE and SMD", pages: ["D24-9639", "D24-9640"]}
+          - {section: "D24.2.168", heading: "SCR_EL3 NS", page: "D24-9641"}
+
+  - id: scr-el3-value
+    section: quick-facts
+    title: SCR_EL3 value
+    claim: The value the stub writes is `0x5B1`.
+    support:
+      - class: inference
+        premises:
+          - fact: "#scr-el3-bits"
+            uses: the six bits its anchors show, which the source names by bit position and never sums
+        derivation: 0x400 + 0x100 + 0x80 + 0x20 + 0x10 + 0x1 = 0x5B1
+    todo:
+      check: hardware
+      text: the register is EL3-only, so read it with a debugger that can access EL3 state.
+
+  - id: smpen-at-el3
+    section: quick-facts
+    title: SMPEN at EL3
+    claim: Before dropping to EL2 the stub writes `CPUECTLR_EL1` with only bit 6, SMPEN, set.
+    support:
+      - class: src
+        anchors:
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [71, 72], symbol: CPUECTLR_EL1_SMPEN}
+          - {repo: rpi-tools, path: armstubs/armstub8.S, lines: [129, 131], symbol: CPUECTLR_EL1_SMPEN}
+notices:
+  - repo: rpi-tools
+    path: armstubs/armstub8.S
+    text: |
+      Copyright (c) 2016-2019 Raspberry Pi (Trading) Ltd.
+      (the second copyright line and the BSD-3-Clause text follow unchanged)

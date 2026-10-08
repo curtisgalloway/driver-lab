@@ -9,3 +9,6 @@ __pycache__/
 
 # Agent worktrees (see AGENTS.md)
 .claude/worktrees/
+
+# Spec format 2 check environment (AGENTS.md, Checks)
+.venv-sf2/

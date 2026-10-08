@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
 overlays: widgetchip
 resources:
   repos:
@@ -7,11 +9,6 @@ resources:
       ref: 439b6198a9b340de5998dd14a26a0d9d38a6bcac
       license: BSD-3-Clause
 ---
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Widget chip: a fact read from BSD-3-Clause source (synthetic license-gate fixture)
 
 An overlay with a `[src]` fact anchored to a BSD-3-Clause repository pinned to a commit: it fits

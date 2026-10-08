@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
 docs:
   - name: trm
     title: Widget TRM v1.0
@@ -6,11 +8,6 @@ docs:
     sha256: 1218036a6a0562504adedd37088e5136036a3099cf8581832e0c7353d7256cbd
     pages: 120
 ---
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Datasheet only, named document anchors (synthetic license-gate fixture)
 
 The shape `hardware-specs-docs` requires: no pins, and every document listed under `docs:` and

@@ -52,11 +52,13 @@ chain bullet.
 - **Reuse before writing.** If an SoC or chip spec already resolves in any root the user can see,
   reference it in `parts` rather than writing another. Two boards on the same SoC share one SoC spec.
 - **Agent-neutral prose.** Refer to "the agent", not to any one product's name.
-- **License header: match the target repo's convention.** In this repo every spec, stub, and
-  SKILL.md carries exactly `SPDX-FileCopyrightText: 2026 contributors` and
-  `SPDX-License-Identifier: Apache-2.0` in an HTML comment immediately *after* the frontmatter,
-  never above it — a comment before the frontmatter stops it parsing. A source tree carries whatever
-  header its neighbors do.
+- **License header: match the target repo's convention.** In this repo every spec carries
+  exactly `# SPDX-FileCopyrightText: 2026 contributors` and
+  `# SPDX-License-Identifier: Apache-2.0` as YAML comment lines *inside* its frontmatter, right
+  after the opening `---`: the spec Markdown profile allows no HTML in a spec's body (SPEC-FORMAT,
+  "The spec Markdown profile"). A stub or other SKILL.md carries the same two lines in an HTML
+  comment immediately *after* its frontmatter, never above it — a comment before the frontmatter
+  stops it parsing. A source tree carries whatever header its neighbors do.
 - **Cache convention.** A board spec names `cache: <board-id>-resources` (`rpi5-resources`); the
   expert clones under `~/src/<board-id>-resources/`. SoC, chip, and IP parts inherit the board's
   cache unless they name their own; a generic IP spec names `<ip-id>-resources`.

@@ -1894,42 +1894,80 @@ class Round7Profile(BodyCheck, unittest.TestCase):
                 self.assert_error("## Quick-facts\n\n" + body, want)
 
 
-class Round8Exceptions(BodyCheck, unittest.TestCase):
-    """RG-T1 round 8 (user decision 2026-10-08): the profile's two positional exceptions, the
-    leading SPDX comment and block quotes under ## Source notices, both read as code."""
+class Round9NoExceptions(BodyCheck, unittest.TestCase):
+    """RG-T1 round 9 (user decision 2026-10-08): no profile exceptions. HTML blocks and block
+    quotes fail everywhere; the SPDX header is YAML comments in the frontmatter; a source
+    notice goes in a fenced text block. Codex round 7's findings each have a test."""
 
-    HEADER = "<!--\nSPDX-FileCopyrightText: 2026 contributors\nSPDX-License-Identifier: CC-BY-4.0\n-->\n\n"
-    NOTICE = ("## Source notices\n\nThe source carries this notice:\n\n"
-              "> Copyright (c) 2016 Example Ltd.\n> All rights reserved.\n")
-
-    def test_the_allowed_forms_pass(self):
-        self.assert_clean(self.HEADER + "## Quick-facts\n\n- A fact. `[DT]` (x)\n\n" + self.NOTICE)
-
-    def test_misplaced_html_comments_and_quotes_fail(self):
+    def test_html_blocks_and_quotes_fail_everywhere(self):
         cases = {
-            "comment in a fact section": "## Quick-facts\n\n<!-- note -->\n\n- A fact. `[DT]` (x)\n",
-            "second leading comment": "<!-- more -->\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
-            "a non-comment HTML block": "<div>\nx\n</div>\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
+            "leading SPDX comment": "<!--\nSPDX-License-Identifier: CC-BY-4.0\n-->\n\n## Quick-facts\n\n- A. `[DT]` (x)\n",
+            "comment in a fact section": "## Quick-facts\n\n<!-- note -->\n\n- A. `[DT]` (x)\n",
+            "codex1 bang-closed comment": ("<!-- SPDX-License-Identifier: CC-BY-4.0\n--!>\n"
+                                           "Magic is 0x1234. [src] ([src:gpl: a.c:1])\n<!-- -->\n"),
         }
         for name, body in cases.items():
             with self.subTest(name=name):
-                self.assert_error(self.HEADER + body, "raw HTML is outside the spec Markdown profile")
-        self.assert_error("<div>x</div>\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
-                          "raw HTML is outside the spec Markdown profile")
-        self.assert_error(self.HEADER + "## Quick-facts\n\n> - A fact. `[DT]` (x)\n",
-                          "a block quote is outside the spec Markdown profile")
-        self.assert_error(self.HEADER + "## Source notices\n\n- Item.\n  > quoted in an item\n",
-                          "a block quote is outside the spec Markdown profile")
+                self.assert_error(body, "raw HTML is outside the spec Markdown profile")
+        for body in ("## Source notices\n\n> Copyright (c) 2016 Example Ltd.\n",
+                     "## Source notices\n\n> <!--\n> Copyright Example.\n\n## Quick-facts\n\n"
+                     "- Clock is 54 MHz. [DT] (board.dtsi)\n"):
+            with self.subTest(body=body):
+                self.assert_error(body, "a block quote is outside the spec Markdown profile")
 
-    def test_tags_and_anchors_inside_allowed_forms_do_not_count(self):
-        # Each would be an error outside: a case-variant tag, a malformed and an unaccepted
-        # anchor. Inside the header comment or a source notice they are code.
-        header = "<!--\nSPDX [Src] [src:gpl: a.c:1] [src:fw: unterminated\n-->\n\n"
-        notice = ("## Source notices\n\n> Copyright [Src] Example.\n> [src:gpl: a.c:1] "
-                  "[src:fw: unterminated\n")
-        # gpl is no repos entry of SPEC6, so a counted anchor would fail; so would [Src].
-        self.assert_clean(header + "## Quick-facts\n\n- A fact. `[DT]` (x)\n\n" + notice)
+    def test_the_documented_forms_pass(self):
+        import tempfile
 
+        spec = SPEC6.replace("---\nkind: chip", "---\n# SPDX-FileCopyrightText: 2026 contributors\n"
+                             "# SPDX-License-Identifier: CC-BY-4.0\nkind: chip", 1)
+        body = ("## Quick-facts\n\n- A fact. `[DT]` (x)\n\n## Source notices\n\n"
+                "The source carries this notice:\n\n```text\nCopyright (c) 2016 Example Ltd.\n"
+                "[src:gpl: a.c:1] [Src]\n```\n")
+        for flags in PARSER_FLAGS:
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as tmp:
+                root = write_root(tmp, PERMISSIVE, {"t.spec.md": spec + body})
+                code, data, err = run(root, flags=list(flags))
+                self.assertEqual(code, 0, err + json.dumps(data))
+                self.assertEqual([f for f in data["findings"] if f["level"] == "error"], [])
+
+    def test_codex3_character_references_fail(self):
+        for body in ("- Magic is 0x1234. [DT] (x.dtsi; &#91;src:gpl: a.c:1&#93;)\n",
+                     "- Magic. [DT] (x; &lsqb;src&rsqb; (y))\n", "- A &amp; B. `[DT]` (x)\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "character reference")
+
+    def test_backslash_escapes_of_syntax_fail(self):
+        self.assert_error("## Quick-facts\n\n- Magic. [DT] (x; \\[src\\] (y))\n", "backslash escape")
+
+    def test_codex4_a_higher_heading_ends_the_section(self):
+        self.assert_error("## Orientation\n\nText.\n\n# Device behavior\n\n## Quick-facts\n\n"
+                          "- Untagged fact.\n", "fact bullet has no provenance tag")
+        code, errors, _ = self.check("## Quick-facts\n\n- A. `[DT]` (x)\n\n# Device behavior\n\n"
+                                     "- Not in a fact section.\n")
+        self.assertEqual((code, errors), (0, []))
+
+    def test_a_heading_inside_a_list_item_fails(self):
+        self.assert_error("## Quick-facts\n\n- ## Orientation\n", "a heading inside a list item")
+
+    def test_codex5_provenance_only_from_link_text(self):
+        for body in ('- Magic is 0x1234. [src] ([manual](https://example.com "[src:fw: a.c:1]"))\n',
+                     "- Magic is 0x1234. [src] ([manual](<https://e.com/[src:fw: a.c:1]>))\n"):
+            with self.subTest(body=body):
+                self.assert_error("## Quick-facts\n\n" + body, "provenance is read only from link text")
+                self.assert_error("## Quick-facts\n\n" + body, "[src] parenthetical cites no anchor")
+        self.assert_clean("## Quick-facts\n\n- A fact. `[doc]` ([the manual](https://e.com/m \"x\"))\n")
+
+    def test_reference_definitions_fail_and_do_not_count(self):
+        body = "## Quick-facts\n\n- A. `[DT]` (x)\n\n[src:gpl: a.c:1]: https://e.com\n"
+        self.assert_error(body, "link reference definition")
+        _, errors, _ = self.check(body)
+        self.assertFalse(any("gpl" in e for e in errors), errors)  # never read as an anchor
+
+    def test_codex6_code_span_line_numbers(self):
+        code, errors, data = self.check("## Quick-facts\n\n- Fact\n  with a broken `code`word. [DT] (x)\n")
+        where = [f["path"] for f in data["findings"] if "inside a word" in f["message"]]
+        self.assertEqual(len(where), 1)
+        self.assertTrue(where[0].endswith(":17"), where)  # 13 lines before the body, then 4
 
 if __name__ == "__main__":
     unittest.main()

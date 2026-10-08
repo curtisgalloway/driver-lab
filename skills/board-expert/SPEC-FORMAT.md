@@ -200,6 +200,8 @@ and "RK3588S" is `rk3588s`. The marketing name is the id; every codename is an a
 
 ```yaml
 ---
+# SPDX-FileCopyrightText: 2026 contributors   # the SPDX header: YAML comments
+# SPDX-License-Identifier: CC-BY-4.0
 kind: board                   # board | soc | chip | ip
 id: rpi5                      # normalized (see Ids); unique across every root the reader sees
 name: Raspberry Pi 5 / Compute Module 5
@@ -412,12 +414,16 @@ How the checkers read a bullet (one CommonMark parse, shared by `spec_check.py` 
 
 A spec is written in a restricted subset of CommonMark, so the checkers never have to decide
 what an unusual construct means. Both checkers (`spec_check.py`, and `anchor_check.py` on any
-spec it reads) report each of these as an error at its file line:
+spec it reads) report each of these as an error at its file line, wherever it stands:
 
-- an image (`![...](...)`), or raw HTML, inline (`<b>`, `<span>`) or as a block (see the
-  first exception below);
-- a block quote (see the second exception below);
-- a setext heading (a title underlined with `===` or `---`): write `## Title`;
+- raw HTML, as a block or inline (`<!-- -->`, `<b>`); an image (`![...](...)`);
+- a block quote;
+- a character reference (`&#91;`, `&lsqb;`, `&amp;`) or a backslash escape of `[`, `]`, `(`,
+  `)`, `` ` ``, `&` or `\`: write the character itself, or put literal syntax in a code span;
+- a link reference definition (`[x]: https://...`), or a link whose destination or title holds
+  a bracket or a character reference: provenance is read only from a link's rendered text;
+- a setext heading (a title underlined with `===` or `---`): write `## Title`; a heading inside
+  a list item;
 - a code span that starts or ends inside a word (``[data`book`]``, ``[sr`c`:fw: a.c:1]``):
   bound every code span by whitespace or punctuation;
 - a nested list item inside a fact section: each fact is its own top-level bullet (nested
@@ -425,14 +431,14 @@ spec it reads) report each of these as an error at its file line:
 - a code fence that never closes, as the parser decides it (a "closer" indented four spaces is
   content, not a closer).
 
-Two exceptions, both positional, and both read as code (no tag or anchor inside them counts):
+A section runs from its `##` heading to the next heading of level 1 or 2. Two things that
+other Markdown writes as HTML or quotes have a place of their own:
 
-- **The SPDX header.** Exactly one HTML comment, as the first block after the frontmatter
-  (`<!-- SPDX-FileCopyrightText: ... SPDX-License-Identifier: ... -->`). A second HTML comment,
-  one anywhere else, or any other HTML block is an error.
-- **Source notices.** Block quotes under a top-level `## Source notices` heading, where a spec
-  quotes the notice its source license asks it to carry (*Facts read from source*). A block
-  quote anywhere else, a fact section or a list item included, is an error.
+- **The SPDX header** is YAML comment lines inside the frontmatter, right after the opening
+  `---`: `# SPDX-FileCopyrightText: <year> <holder>` and `# SPDX-License-Identifier: <id>`.
+  Both YAML parsers the checker uses read them as comments.
+- **A source notice** the license asks a spec to carry goes in a fenced ```` ```text ```` block
+  under a top-level `## Source notices` heading. As code, nothing in it is a tag or an anchor.
 
 ### Facts read from source: `[src]`
 
@@ -497,8 +503,8 @@ resources:
   § Board specs). A `--drift <rev> --rewrite` run updates the entry's `ref:` to the new commit.
 - **Names and values, not excerpts.** A `[src]` fact may name symbols and constants from the
   code; it never reproduces the code. When the license asks that its notice travel with
-  material taken from the source, the spec carries the notice, quoted under a top-level
-  `## Source notices` heading, as the permissive repository's overlays do.
+  material taken from the source, the spec carries the notice in a fenced ```` ```text ````
+  block under a top-level `## Source notices` heading (*The spec Markdown profile*).
 
 ### Peripheral specs in a licensed root
 
@@ -731,8 +737,10 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
   by spaces inside `[src:`, or with no `]` before the end of its list item or paragraph. The
   anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
   beside this one when a spec uses them;
-- a construct outside *The spec Markdown profile* (an image, inline HTML, a setext heading, a
-  code span inside a word, a nested list item in a fact section, a fence that never closes);
+- a construct outside *The spec Markdown profile* (raw HTML, an image, a block quote, a
+  character reference or syntax escape, a link reference definition or link metadata holding
+  brackets, a setext heading or a heading in a list item, a code span inside a word, a nested
+  list item in a fact section, a fence that never closes);
 - a `resources.repos` entry whose `url` is not an `https://` URL;
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;

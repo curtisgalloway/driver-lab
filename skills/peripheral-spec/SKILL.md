@@ -161,8 +161,11 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   (`scripts/mdtokens.py`, which board-expert's `spec_check.py` shares; run both with
   `uv run --with markdown-it-py==4.2.0`): an anchor in a fenced or indented code block, or inside
   a longer code span, is prose and is not checked; a code span holding exactly one anchor is that
-  anchor. Anchor kinds are lowercase (`[SRC:` is an error), and a fence that never closes is an
-  error. A wrapped list item is one claim; a nested item is its own.
+  anchor. Anchor kinds are lowercase (`[SRC:` is an error). The spec follows board-expert's
+  spec Markdown profile (`SPEC-FORMAT.md`, "The spec Markdown profile"): no HTML, block quotes,
+  images, character references or link reference definitions, and a fence must close. Its
+  SPDX header is YAML comment lines in a front matter block (`---` / `# SPDX-...` / `---`). A
+  wrapped list item is one claim; a nested item is its own.
 - **Block anchors**: a line containing *only* tags anchors the whole table or list that follows
   it (blank lines between are fine; a sentence between is not — it becomes the tag's claim and the
   table goes unanchored). Use it for a register table whose rows all come from one header region;

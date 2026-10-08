@@ -860,13 +860,17 @@ def entry_line(front: str, name, fallback: int) -> int:
 def read_front_matter(front: str | None, skip: int, report: Report, spec_check):
     """Decide whether a leading ``---`` block is front matter; return (meta, lines to skip).
 
-    It is front matter when it holds a ``docs:`` line, or else parses as a YAML mapping and
-    carries no anchor tag. Otherwise it is body text (between horizontal rules, as before
+    It is front matter when it holds only YAML comments (an SPDX header), when it holds a
+    ``docs:`` line, or else when it parses as a YAML mapping and carries no anchor tag. Otherwise it is body text (between horizontal rules, as before
     LS3) and is scanned like the rest. A block with a ``docs:`` line that cannot be read is
     an error.
     """
     if front is None:
         return None, 0
+    if all(not line.strip() or line.lstrip().startswith("#") for line in front.split("\n")):
+        # Only YAML comments, such as the SPDX header (SPEC-FORMAT: the spec Markdown
+        # profile keeps it out of the body): front matter with no keys.
+        return None, skip
     meant = any(line.startswith(("docs:",) + BOARD_KEYS) for line in front.split("\n"))
     if not meant and TAG_RE.search(front):
         return None, 0

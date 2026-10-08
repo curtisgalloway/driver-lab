@@ -51,11 +51,6 @@ TOKEN_SPAN_RE = re.compile(
 )
 _PROSE_CHAR_RE = re.compile(r"[^\w\s.\-]")
 WORD_CHAR_RE = re.compile(r"\w")
-# The profile's two positional exceptions (board-expert SPEC-FORMAT, "The spec Markdown
-# profile"): one HTML comment as the first block (the SPDX header), and block quotes under
-# a top-level "## Source notices" heading. Both are read as code.
-HTML_COMMENT_RE = re.compile(r"<!--(?:(?!-->).)*-->", re.S)
-NOTICES_SECTION = "Source notices"
 # The board-spec sections whose bullets are facts (board-expert SPEC-FORMAT, Tag rules).
 FACT_SECTIONS = frozenset({
     "Quick-facts", "Gotchas", "Standards and databook", "Programming model",
@@ -117,11 +112,20 @@ class Doc:
 _MD = []
 
 
+def _rule(ruler, name):
+    return next(r.fn for r in ruler.__rules__ if r.name == name)
+
+
 def _markdown():
     if not _MD:
         require()
         from markdown_it import MarkdownIt  # noqa: PLC0415
-        from markdown_it.rules_inline.backticks import backtick  # noqa: PLC0415
+        from markdown_it.helpers import parseLinkLabel  # noqa: PLC0415
+
+        md = MarkdownIt("commonmark")
+        backtick = _rule(md.inline.ruler, "backticks")
+        link = _rule(md.inline.ruler, "link")
+        reference = _rule(md.block.ruler, "reference")
 
         def recording_backtick(state, silent):
             start, before = state.pos, len(state.tokens)
@@ -132,58 +136,112 @@ def _markdown():
                         tok.meta = {**(tok.meta or {}), "span": (start, state.pos)}
             return ok
 
-        md = MarkdownIt("commonmark")
+        def recording_link(state, silent):
+            start, before = state.pos, len(state.tokens)
+            label_end = parseLinkLabel(state, start, True)
+            ok = link(state, silent)
+            if ok and not silent:
+                # Pending text is flushed into a token first, so look past it.
+                tok = next((t for t in state.tokens[before:] if t.type == "link_open"), None)
+                if tok is not None:
+                    tok.meta = {**(tok.meta or {}), "span": (start, state.pos),
+                                "label_end": label_end}
+            return ok
+
+        def recording_reference(state, start_line, end_line, silent):
+            ok = reference(state, start_line, end_line, silent)
+            if ok and not silent:
+                state.env.setdefault("mdtokens_references", []).append((start_line, state.line))
+            return ok
+
         md.inline.ruler.at("backticks", recording_backtick)
+        md.inline.ruler.at("link", recording_link)
+        md.block.ruler.at("reference", recording_reference)
+        # Keep entities and escapes as their own tokens (text_special), so the profile can see
+        # them; joining text tokens is cosmetic.
+        md.core.ruler.disable("text_join")
         _MD.append(md)
     return _MD[0]
 
 
-def _mask_inline(src: str, children) -> str:
-    """src (an inline token's content) with its code spans rewritten (see module doc)."""
-    out, pos = [], 0
+def _replacements(src: str, children) -> list[tuple[int, int, str]]:
+    """(start, end, text) rewrites of src: code spans (see module doc) and, for each inline
+    link, its brackets and its destination and title, which are never rendered as text."""
+    out = []
     for tok in children or ():
-        span = (tok.meta or {}).get("span") if tok.type == "code_inline" else None
-        if span is None:
-            continue
-        start, end = span
-        raw = src[start:end]
-        ticks = len(tok.markup)
-        inner = raw[ticks:len(raw) - ticks]
+        meta = tok.meta or {}
+        if tok.type == "code_inline" and "span" in meta:
+            start, end = meta["span"]
+            raw = src[start:end]
+            ticks = len(tok.markup)
+            inner = raw[ticks:len(raw) - ticks]
+            if TOKEN_SPAN_RE.fullmatch(tok.content.strip()):
+                out.append((start, end, inner.strip(" ")))
+            else:
+                # The span's edges stay visible as "_", so letters inside it never join the
+                # text around it into a tag or an anchor.
+                out.append((start, end, "_" + _PROSE_CHAR_RE.sub("_", inner) + "_"))
+        elif tok.type == "link_open" and "span" in meta and meta.get("label_end", -1) >= 0:
+            start, end = meta["span"]
+            label_end = meta["label_end"]
+            out.append((start, start + 1, "_"))
+            out.append((label_end, end, re.sub(r"[^\n]", "_", src[label_end:end])))
+    return sorted(out)
+
+
+def _mask_inline(src: str, children) -> str:
+    """src (an inline token's content) with its code spans and link metadata rewritten."""
+    out, pos = [], 0
+    for start, end, text in _replacements(src, children):
         out.append(src[pos:start])
-        if TOKEN_SPAN_RE.fullmatch(tok.content.strip()):
-            out.append(inner.strip(" "))
-        else:
-            # The span's edges stay visible as "_", so letters inside it never join the text
-            # around it into a tag or an anchor.
-            out.append("_" + _PROSE_CHAR_RE.sub("_", inner) + "_")
+        out.append(text)
         pos = end
     out.append(src[pos:])
     return "".join(out)
+
+
+ESCAPED_SYNTAX = set("[]()`&\\")
+_LINK_TAIL_BAD_RE = re.compile(r"[\[\]]|&(?:#\d+|#[xX][0-9A-Fa-f]+|[A-Za-z][A-Za-z0-9]*);")
 
 
 def _inline_profile(tok, doc: "Doc") -> None:
     """Profile violations among an inline token's children, at their file lines."""
     line = tok.map[0]
     src = tok.content
+
+    def add(kind, message, offset=None):
+        at = line if offset is None else tok.map[0] + src.count("\n", 0, offset)
+        doc.violations.append((at, kind, message))
+
     for child in tok.children or ():
+        meta = child.meta or {}
         if child.type in ("softbreak", "hardbreak"):
             line += 1
         elif child.type == "html_inline":
-            doc.violations.append((line, "html_inline", "raw HTML is outside the spec Markdown profile"))
+            add("html_inline", "raw HTML is outside the spec Markdown profile")
         elif child.type == "image":
-            doc.violations.append((line, "image", "an image is outside the spec Markdown profile"))
-        elif child.type == "code_inline":
-            span = (child.meta or {}).get("span")
-            if span is None:
-                continue
-            start, end = span
+            add("image", "an image is outside the spec Markdown profile")
+        elif child.type == "text_special" and child.info == "entity":
+            add("entity", f"the character reference {child.markup!r} is outside the spec "
+                "Markdown profile; write the character itself")
+        elif child.type == "text_special" and child.info == "escape" \
+                and child.content in ESCAPED_SYNTAX:
+            add("escape", f"the backslash escape {child.markup!r} is outside the spec Markdown "
+                "profile; put literal syntax characters in a code span")
+        elif child.type == "link_open" and "span" in meta:
+            start, end = meta["span"]
+            label_end = meta.get("label_end", -1)
+            if label_end >= 0 and _LINK_TAIL_BAD_RE.search(src[label_end + 1:end]):
+                add("link_meta", "a link destination or title holds a bracket or a character "
+                    "reference: provenance is read only from link text (spec Markdown "
+                    "profile)", start)
+        elif child.type == "code_inline" and "span" in meta:
+            start, end = meta["span"]
             before = src[start - 1] if start > 0 else " "
             after = src[end] if end < len(src) else " "
             if WORD_CHAR_RE.match(before) or WORD_CHAR_RE.match(after):
-                doc.violations.append(
-                    (line + src.count("\n", 0, start), "code_span_in_word", "a code span starts or ends inside a "
-                     "word; bound it by whitespace or punctuation (spec Markdown profile)")
-                )
+                add("code_span_in_word", "a code span starts or ends inside a word; bound it "
+                    "by whitespace or punctuation (spec Markdown profile)", start)
 
 
 def _place(raw: str, content: str, masked: str) -> str:
@@ -212,30 +270,14 @@ def _fence_closed(tok) -> bool:
     return tok.map[1] - tok.map[0] - 1 - n == 1
 
 
-def _as_code(doc: "Doc", span) -> None:
-    for n in range(span[0], span[1]):
-        doc.code_lines.add(n)
-        doc.masked[n] = ""
-
-
 def parse(text: str) -> Doc:
     """Parse text once; see the module docstring for what the Doc holds."""
     md = _markdown()
     lines = text.split("\n")
     doc = Doc(lines=lines, masked=list(lines))
     stack: list[int] = []  # open list items, innermost last
-    first_block = True  # no top-level block seen yet: the SPDX header's place
-    quote_depth = 0  # >0 while inside an allowed Source notices block quote, read as code
-    for tok in md.parse(text):
-        if quote_depth:
-            if tok.type == "blockquote_open":
-                quote_depth += 1
-            elif tok.type == "blockquote_close":
-                quote_depth -= 1
-            continue
-        leading = first_block and tok.level == 0 and not tok.type.endswith("_close")
-        if leading:
-            first_block = False
+    env: dict = {}
+    for tok in md.parse(text, env):
         if tok.type in ("fence", "code_block") and tok.map:
             for n in range(tok.map[0], tok.map[1]):
                 doc.code_lines.add(n)
@@ -250,21 +292,12 @@ def parse(text: str) -> Doc:
         elif tok.type == "list_item_close":
             stack.pop()
         elif tok.type == "blockquote_open":
-            if tok.level == 0 and section_of(doc, tok.map[0]) == NOTICES_SECTION:
-                # A source notice: allowed, and read as code (no tag or anchor in it counts).
-                _as_code(doc, tok.map)
-                quote_depth = 1
-            else:
-                doc.violations.append((tok.map[0], "blockquote", "a block quote is outside the "
-                                       f"spec Markdown profile (allowed only under ## "
-                                       f"{NOTICES_SECTION})"))
+            doc.violations.append((tok.map[0], "blockquote", "a block quote is outside the "
+                                   "spec Markdown profile"))
         elif tok.type == "html_block":
-            if leading and HTML_COMMENT_RE.fullmatch(tok.content.strip()):
-                _as_code(doc, tok.map)  # the SPDX header: read as code
-            else:
-                doc.violations.append((tok.map[0], "html_block", "raw HTML is outside the spec "
-                                       "Markdown profile (one HTML comment is allowed, as the "
-                                       "first block: the SPDX header)"))
+            doc.violations.append((tok.map[0], "html_block", "raw HTML is outside the spec "
+                                   "Markdown profile (the SPDX header goes in the frontmatter "
+                                   "as YAML comments)"))
         elif tok.type in ("paragraph_open", "heading_open") and tok.map:
             if not stack:
                 doc.units.append((tok.map[0], tok.map[1]))
@@ -274,6 +307,9 @@ def parse(text: str) -> Doc:
                                            "outside the spec Markdown profile; write ## Title"))
                 if tok.level == 0:  # a section boundary only at the top of the document
                     doc.headings.append([tok.map[0], int(tok.tag[1:]), ""])
+                else:
+                    doc.violations.append((tok.map[0], "nested_heading", "a heading inside a "
+                                           "list item is outside the spec Markdown profile"))
         elif tok.type == "inline" and tok.map:
             if doc.headings and doc.headings[-1][0] == tok.map[0] and not doc.headings[-1][2]:
                 doc.headings[-1][2] = tok.content.strip()
@@ -287,17 +323,28 @@ def parse(text: str) -> Doc:
                 n = tok.map[0] + k
                 if n < len(lines):
                     doc.masked[n] = _place(lines[n], c_line, m_line)
+    for start, end in env.get("mdtokens_references", []):
+        doc.violations.append((start, "reference", "a link reference definition is outside the "
+                               "spec Markdown profile; write the link inline"))
+        for n in range(start, min(end, len(lines))):
+            doc.masked[n] = ""  # never rendered: nothing in it is provenance
     doc.headings = [tuple(h) for h in doc.headings]
     doc.units.sort()
     return doc
 
 
 def section_of(doc: "Doc", line: int, level: int = 2) -> str | None:
-    """The text of the last top-level heading of ``level`` above 0-based ``line``."""
+    """The section 0-based ``line`` is in: the text of the last top-level heading of
+    ``level`` above it, unless a heading of a higher level (fewer #) came after that one and
+    ended it."""
     section = None
     for n, lvl, text in doc.headings:
-        if lvl == level and n < line:
+        if n >= line:
+            break
+        if lvl == level:
             section = text
+        elif lvl < level:
+            section = None
     return section
 
 

@@ -105,6 +105,11 @@ the source's license line and its `LICENSE` or `COPYING` file is not reading it 
 ## The facts file
 
 ```
+---
+# SPDX-FileCopyrightText: <year> <holder>
+# SPDX-License-Identifier: <the target root's license>
+---
+
 # <short title> (facts for peripheral-spec)
 
 Source pin: <name>@<full commit> <SPDX>
@@ -117,7 +122,9 @@ Source pin: <name>@<full commit> <SPDX>
 
 One `Source pin:` line per tree, each name distinct; the license on the pin is the one you
 settled at step 3. Facts only: no register-map tables copied from the source, no sections of a
-spec, no claims without an anchor or a document citation.
+spec, no claims without an anchor or a document citation. The SPDX header goes in the front
+matter as YAML comments: `anchor_check.py` holds the file to board-expert's spec Markdown
+profile, which allows no HTML.
 
 ## Refusing
 

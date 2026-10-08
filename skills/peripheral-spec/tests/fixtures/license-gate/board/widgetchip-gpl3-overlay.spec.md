@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
 overlays: widgetchip
 resources:
   repos:
@@ -7,11 +9,6 @@ resources:
       ref: 3333333
       license: GPL-3.0-only
 ---
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Widget chip: a GPL-3.0-only source (synthetic license-gate fixture)
 
 An overlay whose `resources.repos` entry is licensed GPL-3.0-only: under

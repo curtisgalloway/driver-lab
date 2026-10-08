@@ -670,7 +670,9 @@ class TestDocTagCharacterization(CheckerCase):
 
     def test_unnamed_forms_count_and_warn_as_before(self):
         s = self.spec("""\
-            <!-- SPDX-License-Identifier: CC-BY-4.0 -->
+            ---
+            # SPDX-License-Identifier: CC-BY-4.0
+            ---
 
             # Widget
 
@@ -737,8 +739,8 @@ docs:
     url: https://example.invalid/widget-ds.pdf
     sha256: "{DS_SHA.upper()}"
     file: sheets/widget-ds.pdf
+# SPDX-License-Identifier: CC-BY-4.0
 ---
-<!-- SPDX-License-Identifier: CC-BY-4.0 -->
 
 """
 
@@ -1538,23 +1540,38 @@ class TestSharedAnchorShape(CheckerCase):
         self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
 
 
-class TestProfileExceptions(CheckerCase):
-    """RG-T1 round 8: anchor_check reads the leading SPDX comment and Source notices quotes as
-    code, and fails the same misplaced forms spec_check does."""
+class TestNoProfileExceptions(CheckerCase):
+    """RG-T1 round 9 (user decision 2026-10-08): no HTML block or block quote anywhere; the
+    SPDX header is YAML comments in the front matter."""
 
-    def test_anchors_in_the_allowed_forms_are_not_read(self):
-        rc, report = self.run_json(self.spec(
-            "<!-- [src: drivers/nope.c:1] -->\n\n## Source notices\n\n> [src: drivers/nope.c:2]\n"))
-        self.assertEqual((rc, report["anchors"]), (0, 0), self.messages(report))
-
-    def test_misplaced_forms_fail(self):
-        for body in ("Text.\n\n<!-- late -->\n", "> quoted [src: drivers/drv.c:2]\n"):
+    def test_html_and_quotes_fail_anywhere(self):
+        for body in ("<!-- SPDX-License-Identifier: CC-BY-4.0 -->\n\nText.\n",
+                     "## Source notices\n\n> Copyright Example.\n"):
             with self.subTest(body=body):
                 rc, report = self.run_json(self.spec(body))
                 self.assertEqual(rc, 1)
                 self.assertTrue(any("outside the spec Markdown profile" in m
                                     for m in self.messages(report, "error")))
 
+    def test_a_comment_only_front_matter_is_front_matter(self):
+        rc, report = self.run_json(self.spec(
+            "---\n# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: "
+            "CC-BY-4.0\n---\n\n# Widget\n\n- Resets. [doc: Widget TRM §4.2]\n"))
+        self.assertEqual((rc, report["findings"]), (0, []))
+        # The block is front matter, not body: a comment in it is never read as an anchor.
+        rc, report = self.run_json(self.spec(
+            "---\n# SPDX-License-Identifier: CC-BY-4.0 [src: drivers/nope.c:1]\n---\n\nText.\n"))
+        self.assertEqual((rc, report["anchors"]), (0, 0), self.messages(report))
+
+    def test_entities_and_link_metadata(self):
+        for body, want in (("- Fact. &#91;src: drivers/drv.c:2&#93;\n", "character reference"),
+                           ('- Fact. ([m](https://e.com "[src: drivers/drv.c:2]"))\n',
+                            "provenance is read only from link text")):
+            with self.subTest(body=body):
+                rc, report = self.run_json(self.spec(body))
+                self.assertEqual(rc, 1)
+                self.assertEqual(report["anchors"], 0)
+                self.assertTrue(any(want in m for m in self.messages(report, "error")))
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
 overlays: widgetchip
 resources:
   repos:
@@ -7,11 +9,6 @@ resources:
       ref: 439b6198a9b340de5998dd14a26a0d9d38a6bcac
       license: BSD-3-Clause
 ---
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Widget chip: an anchor resolved against a real pinned repository (synthetic fixture)
 
 Used by the spec repositories' self-test when `RESOLVE_SRC=1`: `fetch_src_pins.py` fetches the

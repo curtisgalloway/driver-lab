@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: <year> contributors
+# SPDX-License-Identifier: Apache-2.0
 kind: ip
 id: <ip-id>
 name: <IP vendor and block name>
@@ -26,11 +28,6 @@ resources:
       cite: true
   tools: []
 ---
-
-<!--
-SPDX-FileCopyrightText: <year> contributors
-SPDX-License-Identifier: Apache-2.0
--->
 
 # <IP display name>
 

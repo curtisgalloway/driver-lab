@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
 kind: chip
 id: widgetchip
 name: Widget chip (synthetic license-gate fixture)
@@ -10,11 +12,6 @@ resources:
       cite: true
       access: public
 ---
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Widget chip
 
 A board spec built from a document only: it fits every repository-shaped root, and the two

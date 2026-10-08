@@ -207,6 +207,10 @@ _DEFAULT_EXTENSION = {
 }
 
 _FRAGMENT_KEYS = {"$comment", "title", "description", "type", "properties", "required"}
+# Field names that carry a citation in the core format. An extension may not declare them at any
+# depth: the license gate reads citations only from core fields, so an extension entry naming a
+# repository or a path would cite gated content no gate sees (orchestrator decision, SF2-2 review).
+_CITATION_FIELDS = {"repo", "path", "doc", "anchors", "lines", "symbol", "node", "url"}
 _FRAGMENT_PROPERTY = re.compile(r"[a-z][a-z0-9_]*")  # used with fullmatch
 # Draft 2020-12's keywords. A fragment may use no other: a keyword the validator does not know
 # (draft-07's `dependencies`, a typo) would be a silently ignored constraint.
@@ -353,6 +357,12 @@ def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
                     if _pattern_problem(name):
                         problems.append(f"{where}: pattern {name!r} at {at} "
                                         f"{_pattern_problem(name)}")
+            if key == "properties" and isinstance(value, dict):
+                for name in value:
+                    if name in _CITATION_FIELDS:
+                        problems.append(f"{where}: field name {name!r} at {at} carries a "
+                                        f"citation in the core format; an extension may not "
+                                        f"declare it (the license gate would not see it)")
             if key in _SCHEMA_ONE:
                 walk(value, trail + (key,))
             elif key in _SCHEMA_MAP and isinstance(value, dict):

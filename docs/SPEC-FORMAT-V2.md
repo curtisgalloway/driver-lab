@@ -303,7 +303,7 @@ one `if`/`then` per class (an excerpt is in [Validation](#validation-schema-and-
 | `emulated` | `model`, `version`, and `runs` or `observation` (a fact id holding a numbered observation) | `note` | yes | no | never the only class of a fact; phrased as an observation from outside the model |
 | `press` | `title`, `url` | `date`, `note` | yes | no | third-party reporting; a lead |
 | `inference` | `premises`, `derivation` | `confidence` (`high`, `medium`, `low`) | yes | through its premises | concluded rather than read; stands alone in `support` |
-| `source-observed` | defined by the extension that uses it | | yes | per the extension | kept as the one extension class in use (D15) |
+| `source-observed` | defined by the extension that uses it; never the citation fields `repo`, `path`, `doc`, `anchors`, `lines`, `symbol`, `node`, `url`, at any depth (SF2-2 review: the gate reads citations only from core fields) | | yes | per the extension | kept as the one extension class in use (D15) |
 
 ### Locators (`at`)
 
@@ -786,7 +786,7 @@ copies its records into the spec unchanged, ids included.
 | License gate (SPDX expression logic), direct and transitive | | yes | |
 | `parts`, `overlays`, `variant_of`, `instances[].ip` resolve; stubs resolve | | yes | |
 | Public-layer privacy (`access: internal`, `via:` to a private skill) | | yes | |
-| Template placeholders left in | | yes | |
+| Template placeholders left in: `<`, a letter, then letters, digits, spaces, `-` or `_`, then `>`, outside code (`<linux/of.h>`, `<a@b>` and URLs are not placeholders; SF2-2 review) | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |
 | Markdown view and viewer build, every claim self-contained (publish step, D5) | | yes (`render`) | |
 | Anchors resolve at the pin: path, line range, symbol near the range | | | yes |

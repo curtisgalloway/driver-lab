@@ -58,7 +58,6 @@ DOC_CLASS = {"databook": "databook", "standard": "standard", "doc": "doc"}  # ci
 PRECISE = ("section", "page", "pages", "table", "figure", "clause")
 IRQ_OFFSET = {"SPI": 32, "PPI": 16}
 REF = re.compile(r"(?:([a-z0-9][a-z0-9-]*)(?:@([a-z0-9][a-z0-9._-]*))?)?#([a-z0-9][a-z0-9-]*)")
-PLACEHOLDER = re.compile(r"<(?!https?://|mailto:)[A-Za-z][^>@\n]*>")
 DIGITS = re.compile(r"[0-9]+")
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 STUB = re.compile(r"`spec:\s*([a-z0-9][a-z0-9\-]*)`")
@@ -521,16 +520,19 @@ class Checker:
             if "pages" in loc:
                 numbers += [(p, lpath + ("pages", k)) for k, p in enumerate(loc["pages"])]
             for value, vpath in numbers:
-                if DIGITS.fullmatch(value) and value != str(int(value)):
-                    self.add(f, vpath, f"{what}: page {value!r}: write {str(int(value))!r} "
-                                       f"(no leading zeros)")
-                if count is not None and DIGITS.fullmatch(value) and not 1 <= int(value) <= count:
-                    self.add(f, vpath, f"{what}: page {value} is outside the {count} pages of "
-                                       f"document {name!r}")
+                if not DIGITS.fullmatch(value):
+                    continue
+                if len(value) > 1 and value[0] == "0":
+                    self.add(f, vpath, f"{what}: page {_short(value)}: write "
+                                       f"{_short(value.lstrip('0') or '0')} (no leading zeros)")
+                if count is not None and not (_number(value) >= _number("1")
+                                              and _number(value) <= _number(str(count))):
+                    self.add(f, vpath, f"{what}: page {_short(value)} is outside the {count} "
+                                       f"pages of document {name!r}")
             if "pages" in loc and all(DIGITS.fullmatch(p) for p in loc["pages"]):
-                first, last = (int(p) for p in loc["pages"])
+                first, last = (_number(p) for p in loc["pages"])
                 if first > last:
-                    self.add(f, lpath + ("pages",), f"{what}: pages {loc['pages']} run "
+                    self.add(f, lpath + ("pages",), f"{what}: pages [{_short(loc['pages'][0])}, {_short(loc['pages'][1])}] run "
                                                     f"backwards; write [first, last]")
 
     def check_public(self, f: SpecFile):
@@ -559,10 +561,10 @@ class Checker:
                 for i, v in enumerate(node):
                     walk(v, path + (i,))
             elif isinstance(node, str) and "<" in node:
-                found = PLACEHOLDER.search(specmd.outside_code(node))
+                found = specmd.placeholders(node)
                 if found:
                     self.add(f, path, f"{_where(path)}: unsubstituted template placeholder "
-                                      f"{found.group(0)!r}")
+                                      f"{found[0][2]!r}")
 
         walk(f.data, ())
 
@@ -812,6 +814,9 @@ class Checker:
             if alias in base:
                 for f, path in uses:
                     self.add(f, path, f"alias {alias!r} is the id of another spec")
+                for g in base[alias]:  # the declaration is in conflict too, wherever it sits
+                    others = ", ".join(_rel(f) for f, _ in uses)
+                    self.add(g, ("id",), f"spec id {alias!r} is also an alias in {others}")
             elif len(uses) > 1:
                 for f, path in uses:
                     self.add(f, path, f"alias {alias!r} is also an alias of another spec")
@@ -946,10 +951,9 @@ class Checker:
                 column = index - (text.rfind("\n", 0, index) + 1) + 1
                 self.findings.append(Finding(str(path), line, column, message))
 
-            found = PLACEHOLDER.search(specmd.outside_code(text))
-            if found:
-                at(max(text.find(found.group(0)), 0),
-                   f"unsubstituted template placeholder {found.group(0)!r}")
+            for line, column, found in specmd.placeholders(text)[:1]:
+                self.findings.append(Finding(str(path), line, column, f"unsubstituted template "
+                                                                      f"placeholder {found!r}"))
             names = list(STUB.finditer(text))
             if not names:
                 at(0, "stub names no `spec: <id>`")
@@ -967,6 +971,17 @@ class Checker:
             self.check_file(f)
         self.check_composition()
         self.check_references()
+
+
+def _number(digits: str) -> tuple:
+    """A decimal string as an orderable key, without int(): Python refuses to convert a very
+    long one, and a page number is only ever compared."""
+    digits = digits.lstrip("0") or "0"
+    return (len(digits), digits)
+
+
+def _short(value: str) -> str:
+    return repr(value) if len(value) <= 24 else repr(value[:12] + "..." + value[-6:])
 
 
 def _label(rec: Record) -> str:

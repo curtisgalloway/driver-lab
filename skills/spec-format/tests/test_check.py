@@ -553,6 +553,8 @@ class BoardFixtures(unittest.TestCase):
 
     BAD = {
         "alias-clash.spec.yaml": ["alias 'fineip' is the id of another spec"],
+        # the declaration the alias collides with is in conflict too (round 1, item 6)
+        "fineip.spec.yaml": ["spec id 'fineip' is also an alias in bad:alias-clash.spec.yaml"],
         "assumption-unresolved.spec.yaml": ["assumption 'same-silicon' is not in this file"],
         "cyc-a.spec.yaml": ["parts form a cycle: cyc-a -> cyc-b -> cyc-a"],
         "cyc-b.spec.yaml": ["parts form a cycle: cyc-a -> cyc-b -> cyc-a"],
@@ -580,7 +582,7 @@ class BoardFixtures(unittest.TestCase):
                                         "no instances"],
         "overlay-section.spec.yaml": ["section 'quick-facts' is not a section of the target, "
                                       "kind ip"],
-        "page-bounds.spec.yaml": ["page 92 is outside the 80 pages of document 'widget-trm'"],
+        "page-bounds.spec.yaml": ["page '92' is outside the 80 pages of document 'widget-trm'"],
         "page-zeros.spec.yaml": ["page '040': write '40'"],
         "paged-standard.spec.yaml": ["document 'arm-arm' is paged, so a standard locator needs"],
         "pages-backwards.spec.yaml": ["pages ['9', '4'] run backwards"],
@@ -612,8 +614,7 @@ class BoardFixtures(unittest.TestCase):
             for text in wanted:
                 self.assertTrue(any(text in m for m in got[name]), (name, text, got[name]))
         present = {p.name for p in (CHECK / "bad_root").iterdir()} - {"board-specs.yaml"}
-        self.assertEqual(present - set(self.BAD), {"fineip.spec.yaml", "finechip.spec.yaml",
-                                                   "fineboard.spec.yaml"})
+        self.assertEqual(present - set(self.BAD), {"finechip.spec.yaml", "fineboard.spec.yaml"})
 
     def test_load_failures_block_references_into_their_root(self):
         code, result = check(CHECK / "bad_load_root")
@@ -711,6 +712,59 @@ class Rules(TempRoots):
                        "\"Copyright <Some Author>\"}\n")
         code, result = self.one({"x.spec.yaml": clean})
         self.assertEqual((code, result["findings"]), (0, []))
+
+    def test_placeholder_shapes(self):
+        def claim(text):
+            return chip(facts=fact("a").replace("claim: C a.", "claim: " + json.dumps(text)))
+
+        flagged = ["Use <board *name*>.", "Use ![<board name>](https://example.invalid/x).",
+                   "Over <soc-id> and more.", "A <SPDX identifier> here.",
+                   "Over [the <bus>](https://example.invalid/b)."]
+        clean = ["Include <linux/of.h> first.", "Mail <a@b.example>.",
+                 "See <https://example.invalid/x>.", "Code `<board name>`.",
+                 "Split <board `x` name>.", "A tuple <0 0 0>.", "```\n<board name>\n```"]
+        for text in flagged:
+            code, result = self.one({"x.spec.yaml": claim(text)})
+            self.assertEqual(code, 1, text)
+            self.assertIn("unsubstituted template placeholder", errors(result)[0]["message"])
+        for text in clean:
+            code, result = self.one({"x.spec.yaml": claim(text)})
+            self.assertEqual((code, result["findings"]), (0, []), text)
+
+    def test_stub_placeholder_position(self):
+        stub = self.tmp / "stub" / "SKILL.md"
+        stub.parent.mkdir()
+        stub.write_text("---\nname: s\ndescription: A stub over x.\n---\n\nNot `<Board name>`.\n"
+                        "\nCode `<Board name>` and then <Board name>.\n\nGive it `spec: x`.\n",
+                        encoding="utf-8")
+        code, result = self.one({"x.spec.yaml": chip("x")}, "--stub", stub)
+        [f] = errors(result)
+        self.assertIn("'<Board name>'", f["message"])
+        self.assertEqual((f["line"], f["column"]), (8, 30))
+
+    def test_long_page_numbers(self):
+        long = "9" * 4400
+        cases = [('{page: "%s"}' % long, "is outside the 80 pages"),
+                 ('{page: "0%s"}' % long, "(no leading zeros)"),
+                 ('{pages: ["%s", "1"]}' % long, "run backwards")]
+        for at, want in cases:
+            text = chip(facts="  - id: c\n    section: quick-facts\n    title: C\n    claim: C.\n"
+                              f"    support: [{{class: databook, doc: trm, at: [{at}]}}]\n")
+            code, result = self.one({"x.spec.yaml": text})
+            self.assertEqual(code, 1, want)
+            self.assertTrue(any(want in f["message"] for f in errors(result)), result)
+            self.assertTrue(all(len(f["message"]) < 400 for f in result["findings"]))
+
+    def test_context_alias_colliding_with_a_checked_id(self):
+        checked = self.root("checked", {"board-specs.yaml": marker("c"),
+                                        "x.spec.yaml": chip("x")})
+        context = self.root("context", {"board-specs.yaml": marker("k"),
+                                        "y.spec.yaml": chip("y", head="aliases: [x]\n")})
+        code, result = check(checked, "--context-root", context)
+        self.assertEqual(code, 1)
+        [f] = errors(result)
+        self.assertTrue(f["path"].endswith("checked/x.spec.yaml"))
+        self.assertIn("spec id 'x' is also an alias in k:y.spec.yaml", f["message"])
 
     def test_anchor_rules(self):
         cases = {

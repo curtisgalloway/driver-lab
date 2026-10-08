@@ -659,6 +659,14 @@ class SourceObserved(Validator):
              "field name 'anchors' is a core field"),
             ("a core field: url", dict(FRAGMENT, properties={"url": {"type": "string"}}),
              "field name 'url' is a core field"),
+            ("a citation field: repo", dict(FRAGMENT, properties={"repo": {"type": "string"}}),
+             "field name 'repo' at properties carries a citation"),
+            ("a citation field: path, nested", dict(FRAGMENT, properties={"where": {
+                "type": "object", "properties": {"path": {"type": "string"}}}}),
+             "field name 'path' at properties/where/properties carries a citation"),
+            ("a citation field: lines, in items", dict(FRAGMENT, properties={"spots": {
+                "type": "array", "items": {"type": "object", "properties": {"lines": {}}}}}),
+             "field name 'lines' at properties/spots/items/properties carries a citation"),
             ("required not strings", dict(FRAGMENT, required=[{}]), "required lists only"),
             ("no type", apply(FRAGMENT, {"type": DROP}), 'declares "type": "object"'),
             ("no properties", apply(FRAGMENT, {"properties": DROP, "required": DROP}),

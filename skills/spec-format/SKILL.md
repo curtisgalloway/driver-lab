@@ -40,7 +40,11 @@ What exists so far (SF2-1, SF2-2):
   checks names, ids, composition, overlays, the three reference forms with layer order and no
   premise cycles, and the license gate direct and through references (D1, D12, D13). Findings in
   a `--context-root`'s own files are warnings. Exit 0 no error, 1 an error, 2 usage, 3 a missing
-  marker or dependency, 100 internal.
+  marker or dependency, 100 internal. The license gate fails closed: a reference it cannot
+  establish (dangling, ambiguous, or into a root or file that could not be read in full) is an
+  error on the citing file. A template placeholder is `<`, a letter, then letters, digits,
+  spaces, `-` or `_`, then `>`, outside code; an extension fragment may not declare the citation
+  fields `repo`, `path`, `doc`, `anchors`, `lines`, `symbol`, `node`, `url`.
 - `scripts/specmd.py`: the one CommonMark parse (markdown-it-py), used so far only to find text
   outside code for the placeholder check; SF2-4 adds the D20–D22 checks there.
 - `requirements.txt`: PyYAML, jsonschema and markdown-it-py with their dependencies, pinned by

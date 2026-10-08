@@ -1302,6 +1302,45 @@ class TestRound2Fixes(CheckerCase):
         self.assertNotIn(rev, text)
 
 
+class TestRound3Fixes(CheckerCase):
+    """RG-T1 round-3 review findings: each test fails without its fix."""
+
+    LAYOUTS = {
+        "comment after repos": "  repos: # pinned firmware\n    - name: fw\n      url: https://example.invalid/fw\n      ref: {rev}\n      license: BSD-3-Clause\n",
+        "dash at the repos indent": "  repos:\n  - name: fw\n    url: https://example.invalid/fw\n    ref: {rev}  # the pin\n    license: BSD-3-Clause\n",
+    }
+
+    def test_drift_rewrite_finds_the_entry_in_valid_layouts(self):
+        for label, block in self.LAYOUTS.items():
+            with self.subTest(layout=label):
+                repo, rev = make_repo(self.tmp, f"fw-l{len(label)}", {"stub.c": FW_C})
+                new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+                f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+                f.write("---\noverlays: widgetchip\nresources:\n" + block.format(rev=rev) +
+                        "---\n\n## Quick-facts\n\n- **Magic.** 0x5afe570b. `[src]` "
+                        "([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+                f.close()
+                rc, out = self.run_check(f.name, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+                text = pathlib.Path(f.name).read_text()
+                self.assertIn(new_rev, text, out)
+                self.assertNotIn(rev, text)
+                self.assertIn("[src:fw: stub.c:3 (STUB_MAGIC)]", text)
+
+    def test_drift_rewrite_writes_nothing_when_the_ref_cannot_be_set(self):
+        repo, rev = make_repo(self.tmp, "fw-flow", {"stub.c": FW_C})
+        commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write("---\noverlays: widgetchip\nresources:\n  repos:\n"
+                f"    - {{name: fw, url: https://example.invalid/fw, ref: {rev}, license: BSD-3-Clause}}\n"
+                "---\n\n## Quick-facts\n\n- **Magic.** 0x5afe570b. `[src]` "
+                "([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+        f.close()
+        before = pathlib.Path(f.name).read_text()
+        rc, out = self.run_check(f.name, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        self.assertEqual(pathlib.Path(f.name).read_text(), before, out)
+        self.assertIn("nothing was written", out)
+
+
 FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"
 
 

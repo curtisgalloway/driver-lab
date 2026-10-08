@@ -646,10 +646,14 @@ def rewrite_repos_ref(lines: list[str], name_line: int, new_full: str) -> bool:
 
 
 def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
-                 pin: dict | None, new_full: str | None = None) -> int:
+                 pin: dict | None, new_full: str | None = None, spec_check=None) -> int:
     """Apply moves, stale markers and the new revision of the drifted Source pin to the
     spec file. Returns edits made. A pin read from a board spec's resources.repos entry gets
-    its ``ref:`` set to ``new_full``, the full commit id, since a board spec pins commits."""
+    its ``ref:`` set to ``new_full``, the full commit id, since a board spec pins commits.
+
+    All or nothing: when the repos entry's ``ref:`` cannot be rewritten, or the rewritten
+    front matter does not parse to that entry at the new commit, the file is left untouched
+    and the run reports an error."""
     lines = text.split("\n")
     edits = 0
     for spec_line, old_raw, new_raw in report.moves:
@@ -674,12 +678,24 @@ def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
             lines[idx] = f"{m.group(1)} pin: {m['name']}@{body_rev}{license_}"
             edits += 1
         if "repos_line" in pin:
-            if rewrite_repos_ref(lines, pin["repos_line"], new_full or new_rev):
-                edits += 1
-            else:
-                report.add("error", pin["repos_line"], f"--rewrite could not find the ref: of "
-                                                       f"resources.repos entry {pin['name']!r}; "
-                                                       "set it by hand")
+            target = new_full or new_rev
+            ok = pin["repos_line"] > 1 and rewrite_repos_ref(lines, pin["repos_line"], target)
+            if ok and spec_check is not None:
+                front, _ = split_front_matter("\n".join(lines))
+                try:
+                    meta = spec_check.load_yaml(front or "", spec_check.pyyaml_available())
+                    repos = (meta.get("resources") or {}).get("repos") or []
+                    ok = any(isinstance(e, dict) and e.get("name") == pin["name"]
+                             and str(e.get("ref")) == target for e in repos)
+                except Exception:  # noqa: BLE001
+                    ok = False
+            if not ok:
+                report.add("error", pin["repos_line"], f"--rewrite could not set the ref: of "
+                                                       f"resources.repos entry {pin['name']!r} "
+                                                       f"to {target}; nothing was written. Set "
+                                                       "the ref and line numbers by hand")
+                return 0
+            edits += 1
     Path(spec_path).write_text("\n".join(lines), encoding="utf-8")
     return edits
 
@@ -931,20 +947,40 @@ def read_docs_registry(front: str | None, meta: dict | None, report: Report) -> 
     return registry
 
 
+def strip_yaml_comment(line: str) -> str:
+    """line without a trailing YAML comment (a # after a space, outside quotes)."""
+    quote = None
+    for i, ch in enumerate(line):
+        if quote:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#" and (i == 0 or line[i - 1] in " \t"):
+            return line[:i].rstrip()
+    return line.rstrip()
+
+
 def repos_entry_line(front: str | None, name: str) -> int:
     """The spec line of ``name: <name>`` inside ``resources.repos`` (front matter starts at
-    line 2), not a same-named entry under ``docs`` or ``series``; 1 when not found."""
+    line 2), not a same-named entry under ``docs`` or ``series``; 1 when not found.
+
+    The block is ``repos:`` (a comment after it allowed) and every following line indented
+    deeper, or at the same indent when it is a sequence item (``- ``), as YAML allows.
+    """
     lines = (front or "").split("\n")
-    pat = re.compile(r"^\s*(?:-\s*)?name:\s*['\"]?" + re.escape(name) + r"['\"]?\s*$")
+    pat = re.compile(r"^\s*(?:-\s*)?name:\s*['\"]?" + re.escape(name) + r"['\"]?$")
     repos_indent = None
-    for n, line in enumerate(lines):
+    for n, raw in enumerate(lines):
+        line = strip_yaml_comment(raw)
         stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
+        if not stripped:
             continue
         indent = len(line) - len(line.lstrip())
-        if repos_indent is not None and indent <= repos_indent:
+        if repos_indent is not None and (indent < repos_indent or
+                                         indent == repos_indent and not stripped.startswith("- ")):
             repos_indent = None
-        if re.match(r"^repos:\s*$", stripped):
+        if re.match(r"^repos:$", stripped):
             repos_indent = indent
             continue
         if repos_indent is not None and pat.match(line):
@@ -1266,7 +1302,8 @@ def main(argv=None) -> int:
     check_hex_consistency(anchors, cited_by_anchor, report)
 
     if args.rewrite:
-        n = rewrite_spec(args.spec, text, report, args.drift, drift_pin, drift_repo.full_rev)
+        n = rewrite_spec(args.spec, text, report, args.drift, drift_pin, drift_repo.full_rev,
+                         tools[1] if tools else None)
         report.add("warn", 0, f"made {n} edits in {args.spec}: pin is now {args.drift}; "
                               f"{len(report.stale)} anchors marked [stale:] for re-verification")
 

@@ -347,7 +347,10 @@ exact list; in short:
 `Standards and databook`, `Programming model`, `Known variants and quirks`) ends with its **tag
 clause**: one or more tags, each optionally followed by a parenthetical citation, then at most one
 closing sentence that starts with `TODO (verify on hardware)`. Put the facts first and the tags
-last. **Only the tail clause is a tag clause**: a tag name mentioned in the prose ("every address
+last. **Only the tail clause is a tag clause**, and only the tags outside its parentheticals are the
+fact's tags: inside a parenthetical, a tag token followed by its own parenthetical is a nested
+clause (an `[inference]` premise's `[src]` (...), checked like any `[src]`), and one without
+is prose that names a tag ("the previous bullet's `[src]` anchors"), ignored. Likewise a tag name mentioned in the prose ("every address
 here is a decompiled-blob `[DT]` fact") is not a tag, the checker ignores it, and the bullet still
 needs a real tag clause at its end. The closing TODO sentence may not contain square brackets; a
 tag token inside it would be read as a tag.
@@ -431,7 +434,10 @@ resources:
   found is an error; a claim whose hex literals appear in none of the lines its anchors cite is
   a warning. The claim is the whole bullet and the lines are those of every anchor in it, so a
   value that a sibling anchor in the same bullet cites satisfies the check even when the anchor
-  next to it cites something else; the verifier, not this heuristic, judges each anchor. A spec repository's CI runs it on every board spec carrying a `[src:]` anchor and
+  next to it cites something else; the verifier, not this heuristic, judges each anchor. A value
+  an `[inference]` derives (a sum of bits, a computed address) appears in none of its premises'
+  lines, so its anchors warn by design; the warning is expected there and the derivation in
+  the parenthetical is what the verifier checks. A spec repository's CI runs it on every board spec carrying a `[src:]` anchor and
   fetches the pinned repositories to resolve against
   (`board-expert/scripts/fetch_src_pins.py`: one shallow, blob-less commit per entry, `https://`
   only; skipped with a note when the transfer times out or the fetched objects exceed the size
@@ -593,7 +599,7 @@ runs again on demand). This section fixes only what the format and the checker r
   verification status from the record's **frontmatter only**.
 - **Frontmatter.** `spec` (the id; for an overlay, the id it overlays), `spec_file` (the spec
   file's path relative to the root, which must name the file the record sits beside, or the
-  record is malformed), `spec_sha256` (the spec
+  record is malformed; a spec file that is a link to a file outside its root is an error), `spec_sha256` (the spec
   file's SHA-256 when the record was written), `verified` (ISO date), `verifier` (free text: which
   agent and harness), `sources` (a list of `{name, commit | url, fetch}` for every repository,
   series, and document actually consulted), and `summary` (`{pass, fail, unverifiable, gap}`,

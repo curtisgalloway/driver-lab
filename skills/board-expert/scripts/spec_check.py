@@ -123,6 +123,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from dataclasses import asdict, dataclass
@@ -191,14 +192,29 @@ SPLIT_HEAD_RE = re.compile(r"\[(?:s(?:rc?)?)?$")
 
 
 def is_split_anchor(lines: list[str], idx: int) -> bool:
-    """Whether lines[idx] ends in a [src:] anchor that continues on the next line."""
+    """Whether lines[idx] ends in a [src:] anchor that continues on a following line.
+
+    Either the line ends inside an anchor ("[src:fw: a.c"), or it ends in a fragment of
+    "[src:" ("[", "[s", "[sr", "[src") that the next non-blank lines complete, one or more
+    characters at a time ("[s" / "r" / "c:fw: ...").
+    """
     line = lines[idx].rstrip()
     if SPLIT_SRC_RE.search(line):
         return True
     head = SPLIT_HEAD_RE.search(line)
-    if head is None or idx + 1 >= len(lines):
+    if head is None:
         return False
-    return (head.group(0) + lines[idx + 1].lstrip()).startswith("[src:")
+    acc = head.group(0)
+    for nxt in lines[idx + 1:]:
+        part = nxt.strip()
+        if not part:
+            return False
+        acc += part
+        if acc.startswith("[src:"):
+            return True
+        if not "[src:".startswith(acc):
+            return False
+    return False
 # Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
 # [src:] and [tgt:]/[ref:] cite a target-OS tree, none of which a board spec pins.
 OTHER_ANCHOR_KINDS = ("impl", "tgt", "ref")
@@ -553,7 +569,19 @@ def load_specs(
         accepts = check_root_license(
             marker, str(root / "board-specs.yaml"), require_license, findings
         )
+        real_root = root.resolve()
         for path in sorted(root.rglob("*.spec.md")):
+            real = path.resolve()
+            if real != real_root and real_root not in real.parents:
+                findings.append(
+                    Finding(
+                        "error",
+                        str(path),
+                        f"spec file is a link to {real}, outside its root; a root's specs must "
+                        "live in it",
+                    )
+                )
+                continue
             text = path.read_text()
             m = FRONTMATTER_RE.match(text)
             if not m:
@@ -970,7 +998,12 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
             continue
         # Only the tail clause is examined from here on: prose may mention tag names freely.
         tail = tail_match.group(0)
-        tags = TAG_RE.findall(tail)
+        # The tail's own tags are those outside every parenthetical. A tag token inside one is
+        # either a nested clause with its own parenthetical (a premise's `[src]` (...), judged
+        # below) or prose naming a tag ("the previous bullet's `[src]` anchors"), and is not one
+        # of the fact's tags.
+        top = top_level(tail)
+        tags = TAG_RE.findall(top)
         has_todo = bool(TODO_RE.search(tail))
         for needs_todo in TODO_TAGS:
             if needs_todo in tags and not has_todo:
@@ -978,7 +1011,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     Finding("error", where, f"[{needs_todo}] fact without 'TODO (verify on hardware)'")
                 )
         for tag, unnamed_re in UNNAMED_RES.items():
-            if unnamed_re.search(tail):
+            if unnamed_re.search(top):
                 what = {
                     "doc": "its source",
                     "DT": "the file (and its origin, for a blob)",
@@ -1012,6 +1045,18 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     "it, or make the observation a premise of an [inference]",
                 )
             )
+
+
+def top_level(text: str) -> str:
+    """text with everything inside parentheses blanked, the parentheses kept."""
+    out, depth = [], 0
+    for ch in text:
+        if ch == ")" and depth:
+            depth -= 1
+        out.append(ch if depth == 0 or ch in "()" else " ")
+        if ch == "(":
+            depth += 1
+    return "".join(out)
 
 
 _ANCHOR_CHECK: list = []  # [module or None], loaded once
@@ -1190,10 +1235,13 @@ def record_path(spec: Spec) -> Path:
     return spec.root / "resources" / (spec.path.name[: -len(".spec.md")] + ".verify.md")
 
 
-def check_orphan_records(specs: list[Spec], findings: list[Finding]) -> None:
-    """Warn on a record no spec file in its root owns (such as one under an overlaid id's name)."""
+def check_orphan_records(
+    roots: list[Path], specs: list[Spec], findings: list[Finding]
+) -> None:
+    """Warn on a record no spec file in its root owns (such as one under an overlaid id's
+    name, or left after its spec was deleted). Every given root, spec files or not."""
     owned = {record_path(s) for s in specs}
-    for root in sorted({s.root for s in specs}):
+    for root in roots:
         for rec in sorted((root / "resources").glob("*.verify.md")):
             if rec not in owned:
                 findings.append(
@@ -1447,7 +1495,7 @@ def main(argv: list[str] | None = None) -> int:
             verification[status] = verification.get(status, 0) + 1
     check_references(specs, findings)
     check_record_collisions(specs, findings)
-    check_orphan_records(specs, findings)
+    check_orphan_records(list(args.roots) + list(args.context_root), specs, findings)
     ids = {s.id for s in specs if not s.is_overlay and isinstance(s.id, str)}
     stubs = list(args.stub)
     for skills_dir in args.stubs_from:
@@ -1458,9 +1506,11 @@ def main(argv: list[str] | None = None) -> int:
     for stub in stubs:
         check_stub(stub, ids, findings)
 
-    context = [r.resolve() for r in args.context_root]
+    # Classify a finding by the root it was read through, compared lexically (no symlink
+    # resolution): a file in a checked root that links into a context root stays checked.
+    context = [Path(os.path.abspath(r)) for r in args.context_root]
     for f in findings:
-        where = Path(re.sub(r":\d+$", "", f.path)).resolve()
+        where = Path(os.path.abspath(re.sub(r":\d+$", "", f.path)))
         if any(where == r or r in where.parents for r in context):
             f.level = "warning"
             f.message = f"context root: {f.message}"

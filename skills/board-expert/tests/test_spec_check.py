@@ -1523,5 +1523,65 @@ class Round2Fixes(unittest.TestCase):
             self.assertTrue(orphans[0]["path"].endswith("vfail.verify.md"))
 
 
+
+class Round3Fixes(unittest.TestCase):
+    """RG-T1 round-3 review findings: each test fails without its fix."""
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_a_linked_spec_keeps_the_root_it_was_read_through(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx = write_root(tmp, "layer: public\n", {"a.spec.md": OVERLAY_BASE})
+            checked = pathlib.Path(tmp) / "checked"
+            checked.mkdir()
+            (checked / "board-specs.yaml").write_text("layer: public\n")
+            os.symlink(ctx / "a.spec.md", checked / "a.spec.md")
+            code, data, _ = run(checked, "--context-root", ctx, "--require-verified",
+                                flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            errors = [f for f in data["findings"] if f["level"] == "error"]
+            self.assertTrue(any(f["path"] == str(checked / "a.spec.md") and "outside its root"
+                                in f["message"] for f in errors), data["findings"])
+
+    def test_an_anchor_split_over_three_lines_fails(self):
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [s\n  r\n  c:stub: armstubs/armstub8.S:53-57])")
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, PERMISSIVE, {"c.spec.md": spec})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_an_orphan_record_in_a_root_without_specs_warns(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, "layer: public\n", {})
+            (root / "resources").mkdir()
+            (root / "resources" / "deleted.verify.md").write_text("---\nspec: deleted\n---\n")
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertIn("verification record belongs to no spec file", "\n".join(messages(data)))
+
+    def test_a_tag_named_in_prose_inside_a_parenthetical_is_not_a_tag(self):
+        extra = ("- **Derived.** A conclusion. `[inference]` (premises: the previous bullet's "
+                 "`[src]` anchors and `[DT]` values; derivation: x) `TODO (verify on hardware)`: y.\n"
+                 "- **Doc.** A fact. `[doc]` (vendor page, unlike the `[press]` report)\n")
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, PERMISSIVE, {"c.spec.md": SRC_CHIP.format(
+                ref=COMMIT, lic="BSD-3-Clause", extra=extra)})
+            code, data, err = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 0, err + json.dumps(data))
+        self.assertEqual(substantive(data), [])
+
+
 if __name__ == "__main__":
     unittest.main()

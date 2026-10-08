@@ -1153,5 +1153,167 @@ class TestBoardSpecPins(CheckerCase):
         self.assertEqual([p["name"] for p in report["pin_list"]["source"]], ["linux"])
 
 
+
+class TestBoardSpecReviewFixes(CheckerCase):
+    """RG-T1 review findings (2026-10-07): each test fails without its fix."""
+
+    def board(self, body, note=""):
+        return self._write(body, note)
+
+    def _write(self, body, note):
+        head = textwrap.dedent(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {self.fw_rev}
+                  license: BSD-3-Clause{note}
+            ---
+
+            ## Quick-facts
+
+            """)
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write(head + textwrap.dedent(body))
+        f.close()
+        return f.name
+
+    def test_wrapped_bullet_keeps_its_claim_for_the_hex_check(self):
+        body = """\
+            - **Magic.** The stub's magic word is 0xdeadbeef and nothing else, as written here.
+              `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertTrue(any("none of the claim's hex literals (0xdeadbeef)" in m
+                            for m in self.messages(report, "warn")), self.messages(report))
+
+    def test_a_sibling_anchor_holding_the_value_satisfies_the_hex_check(self):
+        body = """\
+            - **Magic.** The stub's magic word is 0x5afe570b, and the entry point follows it.
+              `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)];
+              [src:fw: stub.c:3 (stub_entry)])
+            """
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual(self.messages(report, "warn"), [])
+
+    def test_untagged_fact_heuristic_is_off_for_board_specs(self):
+        body = """\
+            - **Offset.** The register at offset 0x10 resets to zero. `[doc]` (Widget TRM §4)
+            """
+        rc, report = self.run_json(self.board(body))
+        self.assertFalse(any("carries no" in m for m in self.messages(report)), self.messages(report))
+
+    def test_unnamed_anchor_fails_in_a_board_spec(self):
+        body = "- **Magic.** Value 0x5afe570b. `[src]` ([src: stub.c:2])\n"
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("in a board spec write [src:<repo>: stub.c:2]" in m
+                            for m in self.messages(report, "error")), self.messages(report))
+
+    def test_empty_anchor_fails(self):
+        for tag in ("[src:]", "[src: ; ]"):
+            with self.subTest(tag=tag):
+                rc, report = self.run_json(self.board(f"- **Empty.** A fact. `[src]` ({tag})\n"))
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("empty [src:] anchor" in m for m in self.messages(report, "error")))
+
+    def test_anchor_in_a_front_matter_note_keeps_the_pins(self):
+        note = "\n" + " " * 18 + 'note: "the stub, cited as [src:fw: stub.c:2] below"'
+        rc, report = self.run_json(self.board("- **Magic.** Value. `[src]` ([src:fw: stub.c:2])\n", note),
+                                   "--repo", f"fw={self.fw}")
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertEqual([p["name"] for p in report["pin_list"]["source"]], ["fw"])
+
+    def test_drift_rewrite_moves_the_repos_ref(self):
+        repo, rev = make_repo(self.tmp, "fw-drift", {"stub.c": FW_C})
+        new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        path = self.spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: https://example.invalid/fw
+                  ref: {rev}
+                  license: BSD-3-Clause
+            ---
+
+            ## Quick-facts
+
+            - **Magic.** 0x5afe570b. `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+        rc, out = self.run_check(path, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        text = pathlib.Path(path).read_text()
+        self.assertIn(f"ref: {new_rev}", text, out)
+        self.assertNotIn(rev, text)
+        self.assertIn("[src:fw: stub.c:3 (STUB_MAGIC)]", text)
+        rc, report = self.run_json(path, "--repo", f"fw={repo}")
+        self.assertEqual(rc, 0, self.messages(report))
+
+
+FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"
+
+
+class TestFetchSrcPins(CheckerCase):
+    """board-expert's fetch_src_pins.py: the CI path that resolves board-spec anchors."""
+
+    def spec_for(self, url, ref):
+        return self._spec(f"""\
+            ---
+            overlays: widgetchip
+            resources:
+              repos:
+                - name: fw
+                  url: {url}
+                  ref: {ref}
+                  license: BSD-3-Clause
+            ---
+
+            ## Quick-facts
+
+            - **Magic.** 0x5afe570b. `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
+            """)
+
+    def _spec(self, body):
+        f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
+        f.write(textwrap.dedent(body))
+        f.close()
+        return f.name
+
+    def fetch(self, spec, *args):
+        cache = tempfile.mkdtemp(dir=self.tmp)
+        proc = subprocess.run([sys.executable, str(FETCH), spec, cache, *args],
+                              capture_output=True, text=True)
+        return proc.returncode, proc.stdout.split(), proc.stderr
+
+    def test_fetches_the_pin_and_anchors_resolve(self):
+        git(self.fw, "config", "uploadpack.allowFilter", "true")
+        git(self.fw, "config", "uploadpack.allowAnySHA1InWant", "true")
+        spec = self.spec_for(f"file://{self.fw}", self.fw_rev)
+        rc, repos, err = self.fetch(spec)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(len(repos), 1, err)
+        self.assertTrue(repos[0].startswith("fw="))
+        rc, report = self.run_json(spec, "--repo", repos[0])
+        self.assertEqual(rc, 0, self.messages(report))
+        self.assertNotIn("anchors not resolved", "\n".join(self.messages(report)))
+
+    def test_over_the_limit_is_skipped_with_a_note(self):
+        git(self.fw, "config", "uploadpack.allowFilter", "true")
+        git(self.fw, "config", "uploadpack.allowAnySHA1InWant", "true")
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev), "--limit-mb", "0")
+        self.assertEqual(rc, 0)
+        self.assertEqual(repos, [])
+        self.assertIn("over the 0 MB limit", err)
+
+    def test_branch_ref_is_not_fetched(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "main"))
+        self.assertEqual((rc, repos), (0, []))
+        self.assertIn("no url or full commit ref", err)
+
+
 if __name__ == "__main__":
     unittest.main()

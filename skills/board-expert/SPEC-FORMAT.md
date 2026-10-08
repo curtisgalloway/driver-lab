@@ -114,8 +114,9 @@ stated here; the skills point at this file instead of restating it.
 - **Variant** — a model of a board that shares the SoC and most facts with a base model (a "Pro"
   phone, a board revision). Listed under `variants:` on the base spec, or a spec of its own with
   `variant_of:` when its board facts differ materially.
-- **Verification record** — `<root>/resources/<id>.verify.md`, where `<root>` is the directory
-  holding the root marker `board-specs.yaml` (not the repository top): the verdicts a fresh verifier
+- **Verification record** — `<root>/resources/<name>.verify.md`, where `<root>` is the directory
+  holding the root marker `board-specs.yaml` (not the repository top) and `<name>` the spec file's
+  name without `.spec.md`: the verdicts a fresh verifier
   reached when it re-derived every fact bullet from the authority it cites, kept outside the spec so
   no reader spends context on it. Written by `spec-verifier` as the scaffold's last step and on
   demand; the checker reads only its frontmatter. See *Verification*.
@@ -400,7 +401,9 @@ resources:
 ```
 
 - **The pin is the repos entry.** Each anchor names a `resources.repos` entry of the same spec
-  file (`[src:<name>: path:L1-L2 (symbol)]`; the unnamed form `[src: path:L]` is an error). That
+  file (`[src:<name>: path:L1-L2 (symbol)]`; both checkers reject the unnamed form `[src: path:L]`
+  and an empty `[src:]`). A board spec cites source only this way: `[impl:]`, `[tgt:]` and `[ref:]`
+  (the peripheral-spec and review forms) are errors in a board spec. That
   entry is the pin: its `ref` is a full commit id (40 lowercase hex digits, or 64 for a SHA-256
   repository), never a branch or tag, and its `license:` is the SPDX expression of the files
   cited through it. An overlay's anchors name the overlay's own entries, since the license gate
@@ -414,13 +417,22 @@ resources:
   no `accepts:` or `accepts: []` (the documents-only root), with or without `--require-license`.
   A fact whose only source the root does not accept moves to an overlay in a root that does.
 - **One anchor per line.** `anchor_check.py` reads a line at a time, so an anchor broken across
-  lines is never resolved; the checker fails it. Break the line between anchors instead.
+  lines is never resolved; the checker fails it. Break the line between anchors instead. A
+  wrapped bullet may carry its anchors on a later line: `anchor_check.py` takes the whole bullet
+  as the claim of every anchor in it.
+- **Inside an `[inference]`.** A premise read from code is written either as the bare anchor
+  (`[src:<repo>: path:L]`) or as a `[src]` clause (`` `[src]` ([src:<repo>: path:L (symbol)]) ``)
+  inside the inference's parenthetical; both are checked the same way.
 - **What the anchors are checked for.** `spec_check.py` checks what the spec alone shows: the
   anchor's shape, the entry it names, the commit, the license. `anchor_check.py <spec> --root
   <root> --require-license` applies the same gate, and with `--repo <name>=<checkout>` per entry it
-  resolves every anchor at the pin (path, line range, symbol, hex literals). A spec repository's
-  CI runs it on every board spec carrying a `[src:]` anchor; whether the lines support the claim
-  is the verifier's (`spec-verifier` § Board specs).
+  resolves every anchor at the pin: a missing path, a line range out of bounds or a symbol not
+  found is an error; a claim whose hex literals appear in none of the lines its anchors cite is
+  a warning. A spec repository's CI runs it on every board spec carrying a `[src:]` anchor and
+  fetches the pinned repositories to resolve against
+  (`board-expert/scripts/fetch_src_pins.py`: one shallow, blob-less commit per entry, skipped
+  above a size limit); whether the lines support the claim is the verifier's (`spec-verifier`
+  § Board specs). A `--drift <rev> --rewrite` run updates the entry's `ref:` to the new commit.
 - **Names and values, not excerpts.** A `[src]` fact may name symbols and constants from the
   code; it never reproduces the code. When the license asks that its notice travel with
   material taken from the source, the spec carries the notice, as the permissive repository's
@@ -488,8 +500,12 @@ Pointers to roots come from exactly four places. The reader unions them and neve
 Any marker may list further roots under `roots:`; those are added the same way.
 
 Merge order is by layer, never by skill load order: `public` < `ip-vendor` < `soc-vendor` < `product`
-< `local`. Within one layer, roots merge in pointer order (1 to 4 above). Two overlays for the same id
-in the same layer is a checker warning.
+< `local`. Within one layer, roots merge in pointer order (1 to 4 above, and a marker's `roots:` in
+the order listed), and so do their overlays: one overlay per id per root, applied in root order.
+The spec repositories are read in the order `hardware-specs-docs`, `hardware-specs-permissive`,
+`hardware-specs-gpl`, so a GPL overlay of a docs spec applies after a permissive overlay of the same
+spec. Two overlays for the same id in the same root have no order between them: a checker
+warning.
 
 Merge rules:
 
@@ -537,11 +553,16 @@ block per `QUESTIONS.md`, and the orchestrator asks.
 - Out-of-tree material is a URL plus, for repositories, the `cache` it is cloned under.
 - Nothing in a spec points into a cache by absolute path; caches are per machine.
 - Arm documents are cited by id (`DDI 0183`, `IHI 0069`, `DEN 0022`); the document id is the
-  citation. `developer.arm.com/documentation/<id>/latest` is the citation form to write, **without
-  fetching it**: it redirects to `support.arm.com/documentation/<id>/latest`, a portal that
-  automated fetchers cannot read. Such an entry carries `fetch: blocked` and no `verified` date, or
-  the date the redirect was observed with `fetch_via: redirect`. The rule that every URL in a spec
-  was fetched or copied verbatim from a fetched page has this one exception.
+  citation. `developer.arm.com/documentation/<id>/latest` is the citation form to write. Do not
+  fetch that page: it redirects to `support.arm.com/documentation/<id>/latest`, a portal that
+  automated fetchers cannot read. Fetch the document through Arm's documentation service instead
+  (checked 2026-10-07): `https://documentation-service.arm.com/documentation/<id>/latest` (the id
+  in lower case, `ddi0183`) returns JSON naming the current version and revision, and its
+  `_links.resources` entry whose `extension` is `pdf` gives the PDF's file name and a
+  `https://documentation-service.arm.com/static/<resource id>` URL that downloads it. Record that
+  in the `docs` entry: `url` stays the `developer.arm.com` form, `fetch: ok`, `fetch_via:
+  documentation-service`, and the `note` names the PDF file (which carries the revision, such as
+  `DDI0183G_uart_pl011_r1p5_trm.pdf`).
 - Mailing-list series are cited by their canonical `lore.kernel.org/<list>/<message-id>/` URL, whose
   HTML form is bot-challenged. Record that URL with `fetch: blocked` and a `note` naming the form
   that does work: the `/raw` suffix for one message, `/t.mbox.gz` for the whole thread, fetched
@@ -556,14 +577,18 @@ that never saw the author's reasoning, and records the result **outside the spec
 `spec-verifier` § Board specs (the one statement of it; the scaffold runs it as its last step and it
 runs again on demand). This section fixes only what the format and the checker rely on.
 
-- **Location.** `<root>/resources/<id>.verify.md`, where `<root>` is the directory holding the
-  root marker `board-specs.yaml` (in the spec repositories, `specs/`, so the record is
-  `specs/resources/<id>.verify.md`), one file per spec. An overlay has its own record under its
-  own root, named for the id it overlays (`<id>` is the `overlays:` value), and the checker
-  treats it like any other record. It is not a spec: the reader
+- **Location.** `<root>/resources/<name>.verify.md`, where `<root>` is the directory holding the
+  root marker `board-specs.yaml` (in the spec repositories, `specs/`) and `<name>` is the spec
+  file's name without `.spec.md`, so the usual `<id>.spec.md` has `<id>.verify.md`. One record per
+  spec file, overlays included: a record is named for its file, not its id, so a base spec and its
+  overlay, or two overlays of one id, in one root each have their own. Two spec files in one root
+  whose names would share a record (the same file name in two subdirectories) are a checker
+  error. It is not a spec: the reader
   globs `*.spec.md` only and loads nothing from `resources/`. `board-expert` reports a spec's
   verification status from the record's **frontmatter only**.
-- **Frontmatter.** `spec` (the id), `spec_file` (relative to the root), `spec_sha256` (the spec
+- **Frontmatter.** `spec` (the id; for an overlay, the id it overlays), `spec_file` (the spec
+  file's path relative to the root, which must name the file the record sits beside, or the
+  record is malformed), `spec_sha256` (the spec
   file's SHA-256 when the record was written), `verified` (ISO date), `verifier` (free text: which
   agent and harness), `sources` (a list of `{name, commit | url, fetch}` for every repository,
   series, and document actually consulted), and `summary` (`{pass, fail, unverifiable, gap}`,
@@ -575,12 +600,14 @@ runs again on demand). This section fixes only what the format and the checker r
 - **Staleness.** Any edit to the spec file changes its hash, so the record is stale until the phase
   runs again. Stale is a fact about the record, not a judgment of the edit.
 - **What the checker does with it.** No record: warning `unverified`. Record whose `spec_sha256`
-  differs from the file: warning `verification stale`. Record whose `summary.fail` is not zero:
-  error, whether or not the record is also stale. A record with a malformed frontmatter: error.
+  differs from the file: warning `verification stale`, whatever its counts, since its verdicts
+  (FAILs included) were about another version of the file and the fix may already be in. Record
+  that is current and whose `summary.fail` is not zero: error. A record with a malformed
+  frontmatter: error.
   `--require-verified` turns the two warnings into errors, for a root whose policy is that nothing
   unverified lands. CI keeps the default so a new spec can merge before its first verification. A
-  record reporting failures therefore never merges; a stale one merges with a warning unless the
-  root runs the checker with `--require-verified`.
+  current record reporting failures therefore never merges; a stale one merges with a warning
+  unless the root runs the checker with `--require-verified`.
 
 ## Tools
 
@@ -608,7 +635,7 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
 ## What the checker enforces
 
 `board-expert/scripts/spec_check.py <root>... [--stubs-from <skills dir>] [--stub SKILL.md]
-[--public-skill NAME] [--require-verified] [--require-license]` fails on:
+[--public-skill NAME] [--require-verified] [--require-license] [--context-root DIR]` fails on:
 
 - frontmatter missing a key its kind requires, an unknown `kind` or `layer`, or a duplicate `id`;
   an `id`, alias, part, `variant_of`, or `overlays` value that is not a normalized id; a `triggers`
@@ -636,18 +663,23 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
 - anywhere in a spec's body, a `[src:]` anchor that is malformed, names no repo, names one the
   spec's `resources.repos` does not list, names one whose `ref` is not a full commit id or that
   has no `license:`, or whose license the root's `accepts:` does not accept (always; a root
-  without `accepts:` or with `accepts: []` accepts none); or one broken across lines. The
+  without `accepts:` or with `accepts: []` accepts none); an empty `[src:]`; an `[impl:]`,
+  `[tgt:]` or `[ref:]` anchor; or one broken across lines. The
   anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
   beside this one when a spec uses them;
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;
 - a stub whose `spec: <id>` does not resolve. `--stubs-from` finds every `*/SKILL.md` under a
   skills directory whose frontmatter says "stub over", so CI cannot forget one;
-- a verification record (`<root>/resources/<id>.verify.md`, an overlay's included) whose
-  frontmatter is malformed or whose `summary.fail` is not zero; with `--require-verified`, also a
-  spec or overlay with no record or with a stale one.
+- a verification record (`<root>/resources/<name>.verify.md`, an overlay's included) whose
+  frontmatter is malformed, whose `spec_file` is not the spec it belongs to, or which is current
+  and whose `summary.fail` is not zero; two spec files in one root that would share a record;
+  with `--require-verified`, also a spec or overlay with no record or with a stale one.
 
-It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one layer, on a part whose `cache`
+A root given with `--context-root` is read so that overlays and parts resolve, and its own
+findings are reported as warnings: it fails in its own repository's checks, not in another's.
+
+It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one root, on a part whose `cache`
 differs from its board's, on a spec or overlay with no verification record (`unverified`), and on a record
 whose `spec_sha256` no longer matches the spec (`verification stale`). It is stdlib-only: PyYAML when available, otherwise its own parser for the
 format's YAML subset, and its last line says which one ran (`parser: pyyaml` or `parser: subset`).

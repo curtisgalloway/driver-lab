@@ -155,6 +155,12 @@ DOC_LOCATOR_RE = re.compile(r"^(?:p\.(?P<page>\d+)|pp\.(?P<p1>\d+)-(?P<p2>\d+)|"
 DOC_FORMS = "[doc:<name> p.N], [doc:<name> pp.N-M] or [doc:<name> §x.y]"
 SHA256_RE = re.compile(r"^[0-9A-Fa-f]{64}$")
 DOC_KEYS = ("name", "title", "url", "sha256", "pages", "file")
+# Top-level front-matter keys that mark a board spec (board-expert/SPEC-FORMAT.md).
+BOARD_KEYS = ("kind:", "overlays:", "resources:")
+
+
+def is_board_spec(meta: dict | None) -> bool:
+    return isinstance(meta, dict) and any(k[:-1] in meta for k in BOARD_KEYS)
 
 
 def hex_set(text: str) -> set[str]:
@@ -178,6 +184,7 @@ class Anchor:
     claim: str
     raw: str  # the anchor as written, including any "pin: " prefix
     pin: str | None = None  # the named pin, when the anchor names one
+    group: int = 0  # the list item (its first line) the anchor sits in, else its own line
 
 
 @dataclass
@@ -350,10 +357,19 @@ def parse_doc_body(body: str, spec_line: int, report: Report) -> None:
         report.doc_anchors.append(anchor)
 
 
-def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[Anchor]:
-    """Parse the spec body; the first ``skip`` lines (its front matter) are not read."""
+def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
+               board: bool = False) -> list[Anchor]:
+    """Parse the spec body; the first ``skip`` lines (its front matter) are not read.
+
+    An anchor inside a list item, on its first line or on an indented continuation line,
+    takes the whole item as its claim, so a wrapped bullet whose anchors sit on a later line
+    keeps the values it states. ``board`` (a board spec, whose facts carry board-spec tags
+    that ``spec_check.py`` checks) turns off the untagged-fact heuristic.
+    """
     anchors: list[Anchor] = []
     lines = text.split("\n")
+    item_start = 0  # first line of the list item being read, 0 outside one
+    items: dict[int, list[str]] = {}  # item first line -> its lines, tags removed
     # A tags-only line "arms" a block anchor; it covers the next contiguous block
     # (table or list), which may be separated from it by blank lines.
     block_state = None  # None | "armed" | "covering"
@@ -384,6 +400,14 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[A
             continue
         if PIN_START_RE.match(stripped):
             report.unread_pins.append((i, stripped))
+        if LIST_RE.match(line) and not line.startswith((" ", "\t")):
+            item_start = i
+            items[i] = []
+        elif item_start and not (stripped and line.startswith((" ", "\t"))
+                                 and not LIST_RE.match(line)):
+            item_start = 0
+        if item_start:
+            items[item_start].append(TAG_RE.sub("", stripped).strip(" -*"))
         tags = TAG_RE.findall(line)
         claim = TAG_RE.sub("", line).strip(" |-*")
         if tags and len(claim) < 40 and not stripped.startswith(("|", "-", "*")) \
@@ -396,6 +420,9 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[A
             if kind == "stale":
                 report.add("error", i, f"anchor marked stale ({body.strip()}): re-verify the "
                                        "claim against the pin and remove the marker")
+                continue
+            if kind != "doc" and not any(item.strip() for item in body.split(";")):
+                report.add("error", i, f"empty [{kind}:] anchor: give a path and lines")
                 continue
             if kind == "doc":
                 report.doc_tags += 1
@@ -410,6 +437,8 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[A
                                               f"{body.strip()[:60]!r}")
                 continue
             new_anchors.extend(parse_tag_body(kind, body, i, claim, report))
+        for a in new_anchors:
+            a.group = item_start or i
         anchors.extend(new_anchors)
         if HW_REQUIRED_RE.search(line) and not any(k == "doc" for k, _ in tags):
             report.add("warn", i, "[hw-required] with no [doc:] on the line — if no document "
@@ -419,7 +448,8 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[A
                 block_state = None
                 block_anchors = []
             continue
-        tags_only = bool(tags) and not claim
+        # A tags-only continuation line of a list item belongs to the item, not to a block.
+        tags_only = bool(tags) and not claim and not (item_start and item_start != i)
         if tags_only:
             block_state = "armed"
             block_anchors = new_anchors
@@ -441,10 +471,16 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0) -> list[A
         header_row = is_row and i < len(lines) and TABLE_SEP_RE.match(lines[i].strip() or "x")
         if header_row:
             continue
+        if board:
+            continue
         if strict or FACT_HINT_RE.search(stripped):
             report.add("warn" if not strict else "error", i,
                        "fact-bearing line carries no [src:]/[tgt:]/[doc:] tag: "
                        + stripped[:80])
+    for a in anchors:
+        text = " ".join(t for t in items.get(a.group, []) if t)
+        if text:
+            a.claim = text[-300:]
     report.anchors = len(anchors)
     return anchors
 
@@ -496,12 +532,13 @@ def resolve(anchor: Anchor, repo: Repo, report: Report) -> list[str] | None:
 
 
 def check_hex_consistency(anchors: list[Anchor], cited_by_anchor: dict[int, list[str]], report: Report):
-    """Per spec line: at least one hex literal in the claim must appear in the union of
-    all lines cited by that spec line's anchors (a line may carry several anchors)."""
+    """Per claim: at least one hex literal in the claim must appear in the union of all lines
+    cited by that claim's anchors. A claim is a list item (every anchor in it, on any of its
+    lines) or, outside a list, one spec line."""
     by_line: dict[int, list[int]] = {}
     for idx, a in enumerate(anchors):
         if idx in cited_by_anchor:
-            by_line.setdefault(a.spec_line, []).append(idx)
+            by_line.setdefault(a.group or a.spec_line, []).append(idx)
     for spec_line, idxs in by_line.items():
         claim_hex = hex_set(anchors[idxs[0]].claim)
         if not claim_hex:
@@ -512,7 +549,7 @@ def check_hex_consistency(anchors: list[Anchor], cited_by_anchor: dict[int, list
         if not (claim_hex & cited_hex):
             shown = ", ".join("0x" + h for h in sorted(claim_hex)[:4])
             where = "; ".join(anchors[idx].raw for idx in idxs)
-            report.add("warn", spec_line,
+            report.add("warn", anchors[idxs[0]].spec_line,
                        f"none of the claim's hex literals ({shown}) appear in the lines cited by "
                        f"this line ({where}) — wrong value, or cite the offset definition too?")
 
@@ -583,10 +620,34 @@ def render_show(anchors: list[Anchor], repos: dict, keys: dict, out):
         print(file=out)
 
 
+def rewrite_repos_ref(lines: list[str], name_line: int, new_full: str) -> bool:
+    """Set the ``ref:`` of the resources.repos entry whose ``name:`` is on name_line (1-based).
+
+    The entry runs from its ``- `` line to the next line indented no deeper than that dash.
+    """
+    def indent(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    first = name_line - 1
+    while first > 0 and not lines[first].lstrip().startswith("- "):
+        first -= 1
+    dash = indent(lines[first])
+    for j in range(first, len(lines)):
+        line = lines[j]
+        if j > first and line.strip() and indent(line) <= dash:
+            break
+        m = re.match(r"^(\s*(?:-\s+)?ref:\s*)(['\"]?)[^'\"#\s]+\2(.*)$", line)
+        if m:
+            lines[j] = f"{m.group(1)}{new_full}{m.group(3)}"
+            return True
+    return False
+
+
 def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
-                 pin: dict | None) -> int:
+                 pin: dict | None, new_full: str | None = None) -> int:
     """Apply moves, stale markers and the new revision of the drifted Source pin to the
-    spec file. Returns edits made."""
+    spec file. Returns edits made. A pin read from a board spec's resources.repos entry gets
+    its ``ref:`` set to ``new_full``, the full commit id, since a board spec pins commits."""
     lines = text.split("\n")
     edits = 0
     for spec_line, old_raw, new_raw in report.moves:
@@ -607,8 +668,16 @@ def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
         m = PIN_RE.match(lines[idx].strip())
         if m and m["name"] == pin["name"]:
             license_ = f" {m['license']}" if m["license"] else ""
-            lines[idx] = f"{m.group(1)} pin: {m['name']}@{new_rev}{license_}"
+            body_rev = new_full if "repos_line" in pin and new_full else new_rev
+            lines[idx] = f"{m.group(1)} pin: {m['name']}@{body_rev}{license_}"
             edits += 1
+        if "repos_line" in pin:
+            if rewrite_repos_ref(lines, pin["repos_line"], new_full or new_rev):
+                edits += 1
+            else:
+                report.add("error", pin["repos_line"], f"--rewrite could not find the ref: of "
+                                                       f"resources.repos entry {pin['name']!r}; "
+                                                       "set it by hand")
     Path(spec_path).write_text("\n".join(lines), encoding="utf-8")
     return edits
 
@@ -766,7 +835,7 @@ def read_front_matter(front: str | None, skip: int, report: Report, spec_check):
     """
     if front is None:
         return None, 0
-    meant = any(line.startswith("docs:") for line in front.split("\n"))
+    meant = any(line.startswith(("docs:",) + BOARD_KEYS) for line in front.split("\n"))
     if not meant and TAG_RE.search(front):
         return None, 0
     if spec_check is None:
@@ -886,13 +955,15 @@ def read_repos_pins(front: str | None, meta: dict | None, report: Report) -> Non
         line = entry_line(front, name, 1)
         stated = next((p for p in same if p["name"] == name), None)
         if stated is not None:
+            stated["repos_line"] = line
             if stated["rev"] != ref or (stated["license"] or None) != lic:
                 report.add("error", stated["line"],
                            f"Source pin {name!r} ({stated['rev']} {stated['license'] or 'no license'}) "
                            f"disagrees with resources.repos entry {name!r} ({ref} "
                            f"{lic or 'no license'}); state the pin once, in resources.repos")
             continue
-        entry_pin = {"name": name, "rev": ref, "license": lic, "line": line}
+        entry_pin = {"name": name, "rev": ref, "license": lic, "line": line,
+                     "url": entry.get("url"), "repos_line": line}
         same.append(entry_pin)
         report.pins.setdefault("source", entry_pin)
     if not same:
@@ -998,7 +1069,7 @@ def bind_repos(values: list[str], kind: str, pins: list[dict], flag: str) -> dic
     return repos
 
 
-def anchor_keys(anchors: list[Anchor], report: Report) -> dict[int, tuple]:
+def anchor_keys(anchors: list[Anchor], report: Report, board: bool = False) -> dict[int, tuple]:
     """Map each anchor index to its (kind, pin name or None) key; report anchors that
     name an unknown pin, or name none on a side with several pins."""
     keys = {}
@@ -1012,6 +1083,10 @@ def anchor_keys(anchors: list[Anchor], report: Report) -> dict[int, tuple]:
                                                  f"{side} pins are: {have}", a.raw)
                 continue
             keys[idx] = (a.kind, a.pin)
+        elif board and pins and all("repos_line" in p for p in pins):
+            report.add("error", a.spec_line, f"anchor names no pin: in a board spec write "
+                                             f"[{a.kind}:<repo>: {a.raw}] with the name of a "
+                                             "resources.repos entry", a.raw)
         elif len(pins) > 1:
             report.add("error", a.spec_line, f"anchor names no pin, but the spec has {len(pins)} "
                                              f"{side} pins: write [{a.kind}:<pin>: {a.raw}]",
@@ -1073,7 +1148,8 @@ def main(argv=None) -> int:
     tools = load_license_tools()
     front, skip = split_front_matter(text)
     meta, skip = read_front_matter(front, skip, report, tools[1] if tools else None)
-    anchors = parse_spec(text, report, args.strict, skip)
+    board = is_board_spec(meta)
+    anchors = parse_spec(text, report, args.strict, skip, board)
     read_repos_pins(front, meta, report)
     registry = read_docs_registry(front, meta, report)
     check_doc_anchors(report, registry)
@@ -1144,7 +1220,7 @@ def main(argv=None) -> int:
             report.add("warn", 0, f"{SIDE[kind]} pin {name} in spec is {pin['rev']} but "
                                   f"checking at {repo.rev} ({repo.full_rev[:12]})")
 
-    keys = anchor_keys(anchors, report)
+    keys = anchor_keys(anchors, report, board)
     if accepts is not None:
         apply_license_gate(anchors, keys, report, args.root, accepts, tools[0])
     unresolved: dict[str, int] = {}
@@ -1167,7 +1243,7 @@ def main(argv=None) -> int:
     check_hex_consistency(anchors, cited_by_anchor, report)
 
     if args.rewrite:
-        n = rewrite_spec(args.spec, text, report, args.drift, drift_pin)
+        n = rewrite_spec(args.spec, text, report, args.drift, drift_pin, drift_repo.full_rev)
         report.add("warn", 0, f"made {n} edits in {args.spec}: pin is now {args.drift}; "
                               f"{len(report.stale)} anchors marked [stale:] for re-verification")
 

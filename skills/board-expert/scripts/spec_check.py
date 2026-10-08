@@ -72,6 +72,8 @@ What fails (exit 1):
   * an unsubstituted template placeholder (``<...>`` starting with a letter,
     outside backtick code spans, not a URL or a message id) in a spec's
     frontmatter or body, or in a stub
+  * (a finding in a ``--context-root`` is reported as a warning instead: such a
+    root is read so that overlays and parts resolve, and fails in its own checks)
   * a stub (``--stub PATH``, or every stub found by ``--stubs-from DIR``: a
     ``*/SKILL.md`` whose frontmatter says "stub over") whose ``spec: <id>``
     does not resolve
@@ -151,8 +153,13 @@ TAG_NAMES = "databook|standard|rtl|DT|src|source-observed|doc|hardware|press|inf
 TAG_CLASSES = tuple(t for t in TAG_NAMES.split("|") if t != "src")
 TAG_RE = re.compile(rf"\[({TAG_NAMES})\]")
 TODO_RE = re.compile(r"TODO \(verify on hardware\)")
-# One tag with an optional parenthetical citation (one level of nesting allowed).
-_TAG_CLAUSE = rf"`?\[(?:{TAG_NAMES})\]`?(?:\s*\((?:[^()]|\([^()]*\))*\))?"
+# A parenthetical with up to two levels of nesting inside it, so an [inference]'s premises may
+# hold a `[src]` (`[src:x: f.c:1 (sym)]`) clause.
+_PAREN0 = r"\([^()]*\)"
+_PAREN1 = rf"\((?:[^()]|{_PAREN0})*\)"
+_PAREN2 = rf"\((?:[^()]|{_PAREN1})*\)"
+# One tag with an optional parenthetical citation.
+_TAG_CLAUSE = rf"`?\[(?:{TAG_NAMES})\]`?(?:\s*{_PAREN2})?"
 # The tail a fact bullet must end with: tag clauses, then at most one TODO sentence.
 TAIL_RE = re.compile(
     rf"(?:{_TAG_CLAUSE})(?:\s*[,;]?\s*{_TAG_CLAUSE})*\.?"
@@ -168,10 +175,13 @@ UNNAMED_RES = {
 }
 DOC_UNNAMED_RE = UNNAMED_RES["doc"]
 # A [src] tag in a tail clause and the parenthetical that must follow it.
-SRC_CLAUSE_RE = re.compile(r"`?\[src\]`?\s*(\((?:[^()]|\([^()]*\))*\))?")
+SRC_CLAUSE_RE = re.compile(rf"`?\[src\]`?\s*({_PAREN1})?")
 # A [src:] anchor whose closing bracket is not on the same line: anchor_check.py reads one
 # line at a time, so it would never see the anchor.
-SPLIT_SRC_RE = re.compile(r"\[src:[^\]]*$")
+SPLIT_SRC_RE = re.compile(r"\[(?:s(?:r(?:c(?::[^\]]*)?)?)?)?$")
+# Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
+# [src:] and [tgt:]/[ref:] cite a target-OS tree, none of which a board spec pins.
+OTHER_ANCHOR_KINDS = ("impl", "tgt", "ref")
 # A [src] pin: a full commit id (SHA-1, or SHA-256 for a repository in that object format).
 COMMIT_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.S)
@@ -558,6 +568,7 @@ def check_frontmatter(spec: Spec, findings: list[Finding]) -> None:
         for key in ("kind", "id", "parts"):
             if key in spec.meta:
                 findings.append(Finding("error", p, f"an overlay may not carry {key!r}"))
+        check_variants(spec, findings)
         return
     kind = spec.meta.get("kind")
     if kind not in KINDS:
@@ -572,6 +583,15 @@ def check_frontmatter(spec: Spec, findings: list[Finding]) -> None:
             findings.append(Finding("error", p, "ip spec has no docs entry with cite: true"))
     for row in spec.meta.get("instances") or []:
         check_instance_shape(p, row, findings)
+    check_variants(spec, findings)
+    if "variant_of" in spec.meta and kind != "board":
+        findings.append(Finding("error", p, "variant_of is only valid on a board spec"))
+    check_ids_and_triggers(spec, findings)
+
+
+def check_variants(spec: Spec, findings: list[Finding]) -> None:
+    """variants: rows name a variant and, optionally, a provenance class (never src)."""
+    p = str(spec.path)
     for variant in spec.meta.get("variants") or []:
         if not isinstance(variant, dict) or not variant.get("name"):
             findings.append(Finding("error", p, "variants: entry without a name"))
@@ -590,9 +610,6 @@ def check_frontmatter(spec: Spec, findings: list[Finding]) -> None:
             findings.append(
                 Finding("error", p, f"variants: entry {variant['name']!r}: source must be a string")
             )
-    if "variant_of" in spec.meta and kind != "board":
-        findings.append(Finding("error", p, "variant_of is only valid on a board spec"))
-    check_ids_and_triggers(spec, findings)
 
 
 def check_ids_and_triggers(spec: Spec, findings: list[Finding]) -> None:
@@ -814,14 +831,17 @@ def check_references(specs: list[Spec], findings: list[Finding]) -> None:
                 findings.append(
                     Finding("error", str(owner.path), f"duplicate id {sid!r} ({len(owners)} specs)")
                 )
-    overlays_seen: dict[tuple[str, str], list[Spec]] = {}
+    # One overlay per id per root: overlays of one id in different roots of one layer merge in
+    # the order the roots are given (SPEC-FORMAT, Roots and layers); two in one root have no
+    # order between them.
+    overlays_seen: dict[tuple[str, str, str], list[Spec]] = {}
     for spec in specs:
         p = str(spec.path)
         if spec.is_overlay:
             target = spec.meta.get("overlays")
             if target not in by_id:
                 findings.append(Finding("error", p, f"overlays {target!r} resolves to nothing"))
-            overlays_seen.setdefault((str(target), spec.layer), []).append(spec)
+            overlays_seen.setdefault((str(target), spec.layer, str(spec.root)), []).append(spec)
             continue
         base = spec.meta.get("variant_of")
         if base is not None:
@@ -854,14 +874,15 @@ def check_references(specs: list[Spec], findings: list[Finding]) -> None:
                 findings.append(
                     Finding("error", p, f"instance {row.get('name')!r}: {ip!r} is not an ip spec")
                 )
-    for (target, layer), owners in overlays_seen.items():
+    for (target, layer, root), owners in overlays_seen.items():
         if len(owners) > 1:
             for owner in owners:
                 findings.append(
                     Finding(
                         "warning",
                         str(owner.path),
-                        f"{len(owners)} overlays for {target!r} in layer {layer!r}; merge order undefined",
+                        f"{len(owners)} overlays for {target!r} in layer {layer!r} in one root "
+                        f"({root}); merge order undefined",
                     )
                 )
 
@@ -941,7 +962,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                 )
         # A [src] fact's parenthetical carries its anchors; check_src_anchors judges each one.
         for m in SRC_CLAUSE_RE.finditer(tail):
-            if m.group(1) is not None and "[src:" not in m.group(1):
+            if m.group(1) is not None and count_src_anchors(m.group(1)) == 0:
                 findings.append(
                     Finding(
                         "error",
@@ -964,6 +985,22 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
 
 
 _ANCHOR_CHECK: list = []  # [module or None], loaded once
+
+
+def count_src_anchors(text: str) -> int:
+    """How many well-formed [src:] anchors anchor_check.py parses out of text.
+
+    Without anchor_check.py, a non-empty [src:] body counts; check_src_anchors reports the
+    missing module.
+    """
+    ac = load_anchor_check()
+    n = 0
+    for m in re.finditer(r"\[src:([^\]]*)\]", text):
+        if ac is None:
+            n += any(item.strip() for item in m.group(1).split(";"))
+        else:
+            n += len(ac.parse_tag_body("src", m.group(1), 0, "", ac.Report(spec="")))
+    return n
 
 
 def load_anchor_check():
@@ -995,7 +1032,7 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     """
     p = str(spec.path)
     lines = spec.body.splitlines()
-    if not any("[src:" in line for line in lines):
+    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS):
         return
     ac = load_anchor_check()
     if ac is None:
@@ -1065,7 +1102,22 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
         report = ac.Report(spec=p)
         anchors = []
         for kind, body in ac.TAG_RE.findall(line):
-            if kind == "src":
+            if kind in OTHER_ANCHOR_KINDS:
+                findings.append(
+                    Finding(
+                        "error",
+                        where,
+                        f"[{kind}:{body}] is not a board-spec anchor: a board spec cites source "
+                        "only as [src:<repo>: path:L] ([impl:], [tgt:] and [ref:] belong to "
+                        "peripheral specs and reviews)",
+                    )
+                )
+            elif kind == "src":
+                if not any(item.strip() for item in body.split(";")):
+                    findings.append(
+                        Finding("error", where, f"empty [src:{body}] anchor: name a repo, a path and lines")
+                    )
+                    continue
                 anchors += ac.parse_tag_body(kind, body, n, "", report)
         for f in report.findings:
             if f.level == "error":
@@ -1099,7 +1151,31 @@ OPTIONAL_SUMMARY_KEYS = ("adjudicate",)
 
 
 def record_path(spec: Spec) -> Path:
-    return spec.root / "resources" / f"{spec.id}.verify.md"
+    """<root>/resources/<spec file name, .spec.md replaced by .verify.md>.
+
+    Named for the file, not the id, so a base spec and its overlay, or two overlays of one id,
+    in one root each have their own record. For the usual <id>.spec.md it is <id>.verify.md.
+    """
+    return spec.root / "resources" / (spec.path.name[: -len(".spec.md")] + ".verify.md")
+
+
+def check_record_collisions(specs: list[Spec], findings: list[Finding]) -> None:
+    """Two spec files in one root whose names would share one verification record."""
+    owners: dict[Path, list[Spec]] = {}
+    for spec in specs:
+        owners.setdefault(record_path(spec), []).append(spec)
+    for rec, same in owners.items():
+        if len(same) > 1:
+            names = ", ".join(str(s.path.relative_to(s.root)) for s in same)
+            for spec in same:
+                findings.append(
+                    Finding(
+                        "error",
+                        str(spec.path),
+                        f"{len(same)} spec files in one root ({names}) would share the "
+                        f"verification record {rec.relative_to(spec.root)}; rename one",
+                    )
+                )
 
 
 def check_verification(
@@ -1138,6 +1214,17 @@ def check_verification(
     if meta.get("spec") is not None and meta.get("spec") != spec.id:
         findings.append(
             Finding("error", rp, f"verification record: spec {meta.get('spec')!r} is not {spec.id!r}")
+        )
+        malformed = True
+    rel = spec.path.relative_to(spec.root).as_posix()
+    if meta.get("spec_file") is not None and str(meta.get("spec_file")) != rel:
+        findings.append(
+            Finding(
+                "error",
+                rp,
+                f"verification record: spec_file {meta.get('spec_file')!r} is not {rel!r}, the "
+                "file this record belongs to",
+            )
         )
         malformed = True
     verified = meta.get("verified")
@@ -1185,15 +1272,20 @@ def check_verification(
     digest = hashlib.sha256(spec.path.read_bytes()).hexdigest()
     stale = str(meta.get("spec_sha256")).lower() != digest
     if stale:
+        # Its verdicts, FAILs included, are about another version of the file: the fix may
+        # already be in. Report it stale and let the next verification judge.
+        old = summary.get("fail", 0)
+        note = f" (its {old} FAIL verdict(s) were for that version)" if old else ""
         findings.append(
-            Finding(level, p, f"verification stale: {rec.relative_to(spec.root)} was written for another version of this file")
+            Finding(level, p, f"verification stale: {rec.relative_to(spec.root)} was written for another version of this file{note}")
         )
+        return "stale"
     if summary.get("fail", 0) > 0:
         findings.append(
             Finding("error", p, f"verification record reports {summary['fail']} FAIL verdict(s); see {rec.relative_to(spec.root)}")
         )
-        return "stale" if stale else "failing"
-    return "stale" if stale else "verified"
+        return "failing"
+    return "verified"
 
 
 STUB_RE = re.compile(r"`spec:\s*([a-z0-9][a-z0-9\-]*)`")
@@ -1232,6 +1324,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("roots", nargs="+", type=Path, help="spec root directories")
     parser.add_argument(
+        "--context-root",
+        action="append",
+        default=[],
+        type=Path,
+        help="a further root read for resolution only (overlay targets, parts): its specs are "
+        "checked, but its findings are reported as warnings, since they fail in its own "
+        "repository's checks",
+    )
+    parser.add_argument(
         "--stub", action="append", default=[], type=Path, help="a stub SKILL.md to check"
     )
     parser.add_argument(
@@ -1265,7 +1366,9 @@ def main(argv: list[str] | None = None) -> int:
     findings: list[Finding] = []
     use_pyyaml = not args.no_pyyaml
     parser_used = parser_name(use_pyyaml)
-    specs, preconditions = load_specs(args.roots, use_pyyaml, findings, args.require_license)
+    specs, preconditions = load_specs(
+        list(args.roots) + list(args.context_root), use_pyyaml, findings, args.require_license
+    )
     if preconditions:
         for msg in preconditions:
             print(f"missing precondition: {msg}", file=sys.stderr)
@@ -1284,6 +1387,7 @@ def main(argv: list[str] | None = None) -> int:
             status = check_verification(spec, use_pyyaml, args.require_verified, findings)
             verification[status] = verification.get(status, 0) + 1
     check_references(specs, findings)
+    check_record_collisions(specs, findings)
     ids = {s.id for s in specs if not s.is_overlay and isinstance(s.id, str)}
     stubs = list(args.stub)
     for skills_dir in args.stubs_from:
@@ -1294,6 +1398,12 @@ def main(argv: list[str] | None = None) -> int:
     for stub in stubs:
         check_stub(stub, ids, findings)
 
+    for f in findings:
+        for root in args.context_root:
+            if f.path == str(root) or f.path.startswith(str(root) + "/"):
+                f.level = "warning"
+                f.message = f"context root: {f.message}"
+                break
     errors = [f for f in findings if f.level == "error"]
     warnings = [f for f in findings if f.level == "warning"]
     if args.json:

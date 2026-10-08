@@ -164,7 +164,9 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   three steps. (1) **The anchors resolve at the pin**: run `peripheral-spec/scripts/anchor_check.py
   <spec> --root <root> --require-license --repo <name>=<checkout>` with one `--repo` per `repos`
   entry the anchors name, each checkout able to reach the entry's `ref` (the checker reads each
-  entry with a `ref` as a Source pin; no `Source pin:` line is needed). An unresolved path, line
+  entry with a `ref` as a Source pin; no `Source pin:` line is needed;
+  `board-expert/scripts/fetch_src_pins.py <spec> <dir>` makes such checkouts and prints the
+  `--repo` values). An unresolved path, line
   range or symbol is a `FAIL` for that claim, and so is a warning that an anchor's repository was
   not given, until it is given. (2) **The claim matches the anchored lines**: render them with
   `anchor_check.py --show` and judge, as for a peripheral spec, whether the lines support the
@@ -182,14 +184,17 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   bullet of the board.
 - **Mechanical check**: `board-expert/scripts/spec_check.py <root>... --stubs-from <skills dir>`
   before and after (with the roots an overlay's target lives in, so it resolves). The checker
-  accepts a record only when its `summary.fail` is zero: a record with any `FAIL` is an error
-  whatever else is true, and is the expected result until the spec is fixed and verified again.
+  accepts a record only when its `summary.fail` is zero: a current record with any `FAIL` is an
+  error, the expected result until the spec is fixed and verified again. Once the spec is edited
+  the record is stale and reports only that, so a fix can be checked before the next pass.
   Once `FAIL` is zero, the checker must accept the record with no error and no `verification
   stale` warning (`--require-verified` makes a missing or stale record an error).
-- **Record location**: `<root>/resources/<id>.verify.md`, where `<root>` is the directory holding
-  the root marker `board-specs.yaml` (`specs/` in the spec repositories); `spec_file` is relative
-  to that directory. An overlay's record is under the overlay's own root and named for the id it
-  overlays.
+- **Record location**: `<root>/resources/<name>.verify.md`, where `<root>` is the directory
+  holding the root marker `board-specs.yaml` (`specs/` in the spec repositories) and `<name>` is
+  the spec file's name without `.spec.md` (one record per spec file, so an overlay and its base,
+  or two overlays of one id, in one root never share one). `spec` is the id (an overlay's: the id
+  it overlays); `spec_file` is the file's path relative to `<root>`, and the checker rejects a
+  record whose `spec_file` names another file.
 
 ## Peripheral specs and reviews
 

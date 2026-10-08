@@ -928,7 +928,9 @@ class Verification(unittest.TestCase):
                     any(k.startswith("verification stale") and v == "warning" for k, v in by_level.items())
                 )
 
-    def test_stale_record_with_fail_verdicts_is_an_error(self):
+    def test_stale_record_with_fail_verdicts_reports_stale_not_its_old_fails(self):
+        """A stale record's FAILs were for another version of the file (RG1 friction,
+        2026-10-07): the fix may already be in, so the record is stale, not failing."""
         import shutil, tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -942,14 +944,13 @@ class Verification(unittest.TestCase):
                     with self.subTest(flags=flags, require=require):
                         args = ["--require-verified"] if require else []
                         code, data, err = run(root, *args, flags=flags)
-                        self.assertEqual(code, 1, err + json.dumps(data))
+                        self.assertEqual(code, 1 if require else 0, err + json.dumps(data))
                         self.assertEqual(data["verification"], {"stale": 1})
                         by_level = {f["message"]: f["level"] for f in without_license_absent(data)}
                         self.assertEqual(by_level, {
-                            "verification stale: resources/vstalefail.verify.md was written for another version of this file":
+                            "verification stale: resources/vstalefail.verify.md was written for "
+                            "another version of this file (its 1 FAIL verdict(s) were for that version)":
                                 "error" if require else "warning",
-                            "verification record reports 1 FAIL verdict(s); see resources/vstalefail.verify.md":
-                                "error",
                         })
 
     def test_require_verified_upgrades_the_warnings(self):
@@ -1211,7 +1212,7 @@ class OverlayVerification(unittest.TestCase):
         if record is not None:
             digest = hashlib.sha256(spec.read_bytes()).hexdigest()
             (over / "resources").mkdir()
-            (over / "resources" / "ochip.verify.md").write_text(record.format(digest=digest))
+            (over / "resources" / "ochip-extra.verify.md").write_text(record.format(digest=digest))
         return base, over
 
     RECORD = (
@@ -1244,7 +1245,7 @@ class OverlayVerification(unittest.TestCase):
                 self.assertEqual(data["verification"], {status: 1, "unverified": 1})
                 if fail != "0":
                     self.assertIn(
-                        "verification record reports 1 FAIL verdict(s); see resources/ochip.verify.md",
+                        "verification record reports 1 FAIL verdict(s); see resources/ochip-extra.verify.md",
                         "\n".join(messages(data)),
                     )
 
@@ -1256,6 +1257,187 @@ class OverlayVerification(unittest.TestCase):
             code, data, _ = run(over, base, flags=["--no-pyyaml"])
             self.assertEqual(code, 1)
             self.assertIn("verification record: spec 'other' is not 'ochip'", "\n".join(messages(data)))
+
+
+
+class ReviewFixes(unittest.TestCase):
+    """RG-T1 review findings (2026-10-07): each test fails without its fix."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def chip(self, extra):
+        return {"c.spec.md": SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra=extra)}
+
+    def test_empty_src_anchors_fail(self):
+        for bullet in ("- **Empty.** A fact. `[src]` ([src:])\n",
+                       "- **Blank.** A fact. `[src]` ([src: ; ])\n"):
+            for marker in (PERMISSIVE, DOCS_ONLY):
+                with self.subTest(bullet=bullet, marker=marker):
+                    code, data, _ = self.check(marker, self.chip(bullet))
+                    self.assertEqual(code, 1)
+                    errors = "\n".join(self.errors(data))
+                    self.assertIn("[src] parenthetical cites no anchor", errors)
+                    self.assertIn("empty [src:", errors)
+
+    def test_other_anchor_kinds_are_rejected_in_a_board_spec(self):
+        for kind in ("impl", "tgt", "ref"):
+            with self.subTest(kind=kind):
+                extra = (f"- **Alias.** A conclusion. `[inference]` (premises: [{kind}:stub: "
+                         "armstubs/armstub8.S:1-2]) `TODO (verify on hardware)`: read it.\n")
+                code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+                self.assertEqual(code, 1)
+                self.assertIn(f"[{kind}:stub: armstubs/armstub8.S:1-2] is not a board-spec anchor",
+                              "\n".join(self.errors(data)))
+
+    def test_src_clause_nested_in_an_inference_passes(self):
+        extra = ("- **Derived.** A conclusion. `[inference]` (premises: the stub writes it `[src]` "
+                 "([src:stub: armstubs/armstub8.S:1-2 (OSC_FREQ)]); derivation: x) "
+                 "`TODO (verify on hardware)`: read it.\n")
+        code, data, err = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 0, err + json.dumps(data))
+        self.assertEqual(substantive(data), [])
+
+    def test_anchor_broken_before_its_colon_fails(self):
+        extra = "- **Split.** A fact. `[inference]` (premises: [src\n  :stub: a.S:1]) `TODO (verify on hardware)`: x.\n"
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_tag_findings_cite_file_line_numbers(self):
+        extra = "- **Untagged.** A fact with no tag.\n"
+        code, data, _ = self.check(PERMISSIVE, self.chip(extra))
+        self.assertEqual(code, 1)
+        untagged = [f for f in data["findings"] if f["message"] == "fact bullet has no provenance tag"]
+        self.assertEqual(len(untagged), 1, data["findings"])
+        self.assertTrue(untagged[0]["path"].endswith("c.spec.md:18"), untagged[0]["path"])
+
+    def test_overlay_variants_are_checked(self):
+        overlay = "---\noverlays: ochip\nvariants:\n  - {name: v2, tag: src}\n---\n\n## Quick-facts\n\n- A fact. `[doc]` (TRM)\n"
+        code, data, _ = self.check("layer: public\n", {"o.spec.md": OVERLAY_BASE, "x.spec.md": overlay})
+        self.assertEqual(code, 1)
+        self.assertIn("variants: entry 'v2': tag must be a provenance class, not 'src'",
+                      "\n".join(self.errors(data)))
+
+
+class RecordsPerFile(unittest.TestCase):
+    """A record is named for its spec file; spec_file must name that file."""
+
+    def record(self, spec_id, spec_file, digest, fail=0):
+        return (f"---\nspec: {spec_id}\nspec_file: {spec_file}\nspec_sha256: {digest}\n"
+                "verified: 2026-10-07\nverifier: synthetic\nsources: []\n"
+                f"summary: {{pass: 1, fail: {fail}, unverifiable: 0, gap: 0}}\n---\n")
+
+    def root(self, tmp, files, records):
+        import hashlib
+
+        root = pathlib.Path(tmp) / "root"
+        (root / "resources").mkdir(parents=True)
+        (root / "board-specs.yaml").write_text("layer: public\n")
+        for name, text in files.items():
+            (root / name).parent.mkdir(parents=True, exist_ok=True)
+            (root / name).write_text(text)
+        for rec, (sid, spec_file) in records.items():
+            digest = hashlib.sha256((root / spec_file).read_bytes()).hexdigest()
+            (root / "resources" / rec).write_text(self.record(sid, spec_file, digest))
+        return root
+
+    def test_base_and_overlay_in_one_root_each_have_a_record(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"ochip.spec.md": OVERLAY_BASE, "ochip-extra.spec.md": OVERLAY_SPEC},
+                             {"ochip.verify.md": ("ochip", "ochip.spec.md"),
+                              "ochip-extra.verify.md": ("ochip", "ochip-extra.spec.md")})
+            code, data, err = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            self.assertEqual(data["verification"], {"verified": 2})
+
+    def test_spec_file_must_name_the_file(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"ochip.spec.md": OVERLAY_BASE}, {})
+            import hashlib
+            digest = hashlib.sha256((root / "ochip.spec.md").read_bytes()).hexdigest()
+            (root / "resources" / "ochip.verify.md").write_text(
+                self.record("ochip", "nonexistent.spec.md", digest))
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec_file 'nonexistent.spec.md' is not 'ochip.spec.md'",
+                          "\n".join(messages(data)))
+
+    def test_two_files_sharing_a_record_name_fail(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root(tmp, {"a/ochip.spec.md": OVERLAY_BASE, "b/ochip.spec.md": OVERLAY_SPEC}, {})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("would share the verification record resources/ochip.verify.md",
+                          "\n".join(messages(data)))
+
+
+class OverlayMergeAndContext(unittest.TestCase):
+    """User decisions B and C (2026-10-07)."""
+
+    def roots(self, tmp, *layouts):
+        out = []
+        for name, files in layouts:
+            root = pathlib.Path(tmp) / name
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+            for fname, text in files.items():
+                (root / fname).write_text(text)
+            out.append(root)
+        return out
+
+    def test_overlays_of_one_id_in_different_roots_of_one_layer_do_not_warn(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, perm, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": OVERLAY_BASE}),
+                                         ("perm", {"ochip.spec.md": OVERLAY_SPEC}),
+                                         ("gpl", {"ochip.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, perm, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertNotIn("overlays for 'ochip'", "\n".join(messages(data)))
+
+    def test_two_overlays_of_one_id_in_one_root_warn(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": OVERLAY_BASE}),
+                                   ("gpl", {"a.spec.md": OVERLAY_SPEC, "b.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            self.assertIn("2 overlays for 'ochip' in layer 'public' in one root", "\n".join(messages(data)))
+
+    def test_context_root_findings_are_warnings(self):
+        import tempfile
+
+        bad = OVERLAY_BASE.replace("`[doc]` (Widget TRM 1.0)", "no tag here")
+        with tempfile.TemporaryDirectory() as tmp:
+            docs, gpl = self.roots(tmp, ("docs", {"ochip.spec.md": bad}),
+                                   ("gpl", {"ochip.spec.md": OVERLAY_SPEC}))
+            code, data, _ = run(gpl, docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            code, data, err = run(gpl, "--context-root", docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            ctx = [f for f in data["findings"] if f["message"].startswith("context root: ")]
+            self.assertTrue(any("no provenance tag" in f["message"] and f["level"] == "warning" for f in ctx), ctx)
+            # Its own errors still fail, and the context root still resolves overlay targets.
+            (gpl / "ochip.spec.md").write_text(OVERLAY_SPEC.replace("`[doc]` (Widget TRM 2.0)", "untagged"))
+            code, data, _ = run(gpl, "--context-root", docs, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertNotIn("resolves to nothing", "\n".join(messages(data)))
 
 
 if __name__ == "__main__":

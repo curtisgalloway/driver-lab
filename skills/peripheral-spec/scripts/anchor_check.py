@@ -646,9 +646,9 @@ def rewrite_repos_ref(lines: list[str], name_line: int, new_full: str) -> bool:
 
 
 def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
-                 pin: dict | None, new_full: str | None = None, spec_check=None) -> int:
+                 pin: dict | None, new_full: str | None = None, spec_check=None) -> int | None:
     """Apply moves, stale markers and the new revision of the drifted Source pin to the
-    spec file. Returns edits made. A pin read from a board spec's resources.repos entry gets
+    spec file. Returns edits made, or None when nothing was written. A pin read from a board spec's resources.repos entry gets
     its ``ref:`` set to ``new_full``, the full commit id, since a board spec pins commits.
 
     All or nothing: when the repos entry's ``ref:`` cannot be rewritten, or the rewritten
@@ -694,7 +694,7 @@ def rewrite_spec(spec_path: str, text: str, report: Report, new_rev: str,
                                                        f"resources.repos entry {pin['name']!r} "
                                                        f"to {target}; nothing was written. Set "
                                                        "the ref and line numbers by hand")
-                return 0
+                return None
             edits += 1
     Path(spec_path).write_text("\n".join(lines), encoding="utf-8")
     return edits
@@ -1304,8 +1304,9 @@ def main(argv=None) -> int:
     if args.rewrite:
         n = rewrite_spec(args.spec, text, report, args.drift, drift_pin, drift_repo.full_rev,
                          tools[1] if tools else None)
-        report.add("warn", 0, f"made {n} edits in {args.spec}: pin is now {args.drift}; "
-                              f"{len(report.stale)} anchors marked [stale:] for re-verification")
+        if n is not None:
+            report.add("warn", 0, f"made {n} edits in {args.spec}: pin is now {args.drift}; "
+                                  f"{len(report.stale)} anchors marked [stale:] for re-verification")
 
     out = open(args.output, "w", encoding="utf-8") if args.output else sys.stdout
     try:

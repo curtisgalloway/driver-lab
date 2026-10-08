@@ -1530,22 +1530,6 @@ class Round3Fixes(unittest.TestCase):
     def errors(self, data):
         return [f["message"] for f in data["findings"] if f["level"] == "error"]
 
-    def test_a_linked_spec_keeps_the_root_it_was_read_through(self):
-        import os, tempfile
-
-        with tempfile.TemporaryDirectory() as tmp:
-            ctx = write_root(tmp, "layer: public\n", {"a.spec.md": OVERLAY_BASE})
-            checked = pathlib.Path(tmp) / "checked"
-            checked.mkdir()
-            (checked / "board-specs.yaml").write_text("layer: public\n")
-            os.symlink(ctx / "a.spec.md", checked / "a.spec.md")
-            code, data, _ = run(checked, "--context-root", ctx, "--require-verified",
-                                flags=["--no-pyyaml"])
-            self.assertEqual(code, 1)
-            errors = [f for f in data["findings"] if f["level"] == "error"]
-            self.assertTrue(any(f["path"] == str(checked / "a.spec.md") and "outside its root"
-                                in f["message"] for f in errors), data["findings"])
-
     def test_an_anchor_split_over_three_lines_fails(self):
         spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
             "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
@@ -1581,6 +1565,102 @@ class Round3Fixes(unittest.TestCase):
             code, data, err = run(root, flags=["--no-pyyaml"])
         self.assertEqual(code, 0, err + json.dumps(data))
         self.assertEqual(substantive(data), [])
+
+
+
+class Round4Simplify(unittest.TestCase):
+    """RG-T1 round 4 (user decision 2026-10-08: simplify): each test fails without its change."""
+
+    def errors(self, data):
+        return [f for f in data["findings"] if f["level"] == "error"]
+
+    def two_roots(self, tmp):
+        ctx = pathlib.Path(tmp) / "context"
+        checked = pathlib.Path(tmp) / "checked"
+        for root in (ctx, checked):
+            root.mkdir()
+            (root / "board-specs.yaml").write_text("layer: public\n")
+        (ctx / "a.spec.md").write_text(OVERLAY_BASE)
+        return ctx, checked
+
+    def test_a_file_link_in_a_checked_root_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx, checked = self.two_roots(tmp)
+            os.symlink(ctx / "a.spec.md", checked / "a.spec.md")
+            code, data, _ = run(checked, "--context-root", ctx, "--require-verified",
+                                flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertTrue(any(f["path"] == str(checked / "a.spec.md") and "symbolic link"
+                                in f["message"] for f in self.errors(data)), data["findings"])
+
+    def test_a_directory_link_in_a_checked_root_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ext = pathlib.Path(tmp) / "external"
+            ext.mkdir()
+            (ext / "chip.spec.md").write_text("no frontmatter\n")
+            root = write_root(tmp, "layer: public\n", {})
+            os.symlink(ext, root / "imported")
+            code, data, _ = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertTrue(any(f["path"] == str(root / "imported") for f in self.errors(data)),
+                            data["findings"])
+
+    def test_a_link_in_a_context_root_refuses_to_run(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx, checked = self.two_roots(tmp)
+            sep = write_root(tmp, "layer: public\n", {"b.spec.md": "no frontmatter\n"})
+            os.symlink(sep, ctx / "linked")
+            code, _, err = run(checked, "--context-root", ctx, flags=["--no-pyyaml"])
+            self.assertEqual(code, 2, err)
+            self.assertIn("a context root may hold no links", err)
+            # The review's case: a checked root reached through a link under the context root.
+            code, _, err = run(ctx / "linked", "--context-root", ctx, flags=["--no-pyyaml"])
+            self.assertEqual(code, 2, err)
+
+    def test_a_checked_root_reached_through_a_link_is_an_error(self):
+        import os, tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            real = write_root(tmp, "layer: public\n", {"b.spec.md": "no frontmatter\n"})
+            link = pathlib.Path(tmp) / "alias"
+            os.symlink(real, link)
+            code, data, _ = run(link, flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("reached through, a symbolic link", "\n".join(f["message"] for f in self.errors(data)))
+
+    def test_a_split_anchor_across_a_blank_line_fails(self):
+        import tempfile
+
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [s\n\n  r\n  c:stub: armstubs/armstub8.S:53-57])")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, DOCS_ONLY, {"c.spec.md": spec})
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(f["message"] for f in self.errors(data)))
+
+    def test_unbackticked_nested_tags_count(self):
+        import tempfile
+
+        cases = {
+            "- **A.** Magic is 0x1234. `[doc]` ([src] GPL driver, foo.c:42)\n": "[src] must be followed",
+            "- **B.** A fact. `[doc]` ([press] (launch article))\n": "[press] fact without",
+            "- **C.** A fact. `[doc]` ([emulated] (QEMU v9, run 1))\n": "[emulated] fact without",
+        }
+        for bullet, want in cases.items():
+            with self.subTest(bullet=bullet), tempfile.TemporaryDirectory() as tmp:
+                root = write_root(tmp, DOCS_ONLY, {"c.spec.md": OVERLAY_BASE.replace(
+                    "- A fact. `[doc]` (Widget TRM 1.0)\n", bullet)})
+                code, data, _ = run(root, "--require-license", flags=["--no-pyyaml"])
+                self.assertEqual(code, 1)
+                self.assertIn(want, "\n".join(f["message"] for f in self.errors(data)))
 
 
 if __name__ == "__main__":

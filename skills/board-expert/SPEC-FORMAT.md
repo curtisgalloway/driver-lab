@@ -183,6 +183,10 @@ spec goes".
 A root is found only through a pointer (see *Roots and layers*). The reader never searches a tree for
 markers.
 
+A root holds its files itself: a symbolic link anywhere inside a root (file or directory), or a
+root that is or is reached through one, is a checker error, and a context root (`--context-root`)
+with one stops the run (exit 2). Each finding therefore belongs to the root it was found under.
+
 ### `<id>.spec.md` — a spec
 
 Found by globbing `**/*.spec.md` below a root. Placement under the root is free: next to the driver the
@@ -347,10 +351,11 @@ exact list; in short:
 `Standards and databook`, `Programming model`, `Known variants and quirks`) ends with its **tag
 clause**: one or more tags, each optionally followed by a parenthetical citation, then at most one
 closing sentence that starts with `TODO (verify on hardware)`. Put the facts first and the tags
-last. **Only the tail clause is a tag clause**, and only the tags outside its parentheticals are the
-fact's tags: inside a parenthetical, a tag token followed by its own parenthetical is a nested
-clause (an `[inference]` premise's `[src]` (...), checked like any `[src]`), and one without
-is prose that names a tag ("the previous bullet's `[src]` anchors"), ignored. Likewise a tag name mentioned in the prose ("every address
+last. **Only the tail clause is a tag clause.** Every tag token in it counts, nested ones inside a
+parenthetical included (a nested `[press]` or `[emulated]` needs its TODO, a nested `[src]` its
+anchors), with one exception: a tag token in backticks *inside a parenthetical* is prose naming a
+tag ("the previous bullet's `` `[src]` `` anchors"). Write a nested clause without backticks.
+Likewise a tag name mentioned in the prose ("every address
 here is a decompiled-blob `[DT]` fact") is not a tag, the checker ignores it, and the bullet still
 needs a real tag clause at its end. The closing TODO sentence may not contain square brackets; a
 tag token inside it would be read as a tag.
@@ -421,12 +426,13 @@ resources:
   no `accepts:` or `accepts: []` (the documents-only root), with or without `--require-license`.
   A fact whose only source the root does not accept moves to an overlay in a root that does.
 - **One anchor per line.** `anchor_check.py` reads a line at a time, so an anchor broken across
-  lines is never resolved; the checker fails it. Break the line between anchors instead. A
+  lines (blank lines included) or by spaces inside `[src:` is never resolved; the checker fails
+  it. Break the line between anchors instead. A
   wrapped bullet may carry its anchors on a later line: `anchor_check.py` takes the whole bullet
   as the claim of every anchor in it.
 - **Inside an `[inference]`.** A premise read from code is written either as the bare anchor
-  (`[src:<repo>: path:L]`) or as a `[src]` clause (`` `[src]` ([src:<repo>: path:L (symbol)]) ``)
-  inside the inference's parenthetical; both are checked the same way.
+  (`[src:<repo>: path:L]`) or as a nested `[src] ([src:<repo>: path:L (symbol)])` clause, without
+  backticks, inside the inference's parenthetical; the anchors are checked the same way.
 - **What the anchors are checked for.** `spec_check.py` checks what the spec alone shows: the
   anchor's shape, the entry it names, the commit, the license. `anchor_check.py <spec> --root
   <root> --require-license` applies the same gate, and with `--repo <name>=<checkout>` per entry it

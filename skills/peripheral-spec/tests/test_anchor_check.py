@@ -1339,6 +1339,7 @@ class TestRound3Fixes(CheckerCase):
         rc, out = self.run_check(f.name, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
         self.assertEqual(pathlib.Path(f.name).read_text(), before, out)
         self.assertIn("nothing was written", out)
+        self.assertNotIn("pin is now", out)
 
 
 FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"

@@ -85,8 +85,10 @@ What fails (exit 1):
     stale, whatever its counts); two spec files in one root that would share a
     record; with ``--require-verified``, also a spec with no record or a record
     whose ``spec_sha256`` no longer matches
-  * a ``--context-root`` that is, contains, or sits inside a checked root
-    (usage error, exit 2)
+  * a ``--context-root`` that is, contains, or sits inside a checked root, or
+    that holds or is reached through a symbolic link (usage error, exit 2); in
+    a checked root, any symbolic link (file or directory), or the root being or
+    being reached through one
 
 What warns (reported, exit stays 0):
 
@@ -183,38 +185,22 @@ UNNAMED_RES = {
 DOC_UNNAMED_RE = UNNAMED_RES["doc"]
 # A [src] tag in a tail clause and the parenthetical that must follow it.
 SRC_CLAUSE_RE = re.compile(rf"`?\[src\]`?\s*({_PAREN1})?")
-# A [src:] anchor whose closing bracket is not on the same line: anchor_check.py reads one
-# line at a time, so it would never see the anchor.
-SPLIT_SRC_RE = re.compile(r"\[src:[^\]]*$")
-# The start of an anchor cut before its colon ("[", "[s", "[sr", "[src" at the end of a line);
-# it is a split only when the next line's text completes "[src:".
-SPLIT_HEAD_RE = re.compile(r"\[(?:s(?:rc?)?)?$")
+# "[src:" with whitespace inside it, or an anchor whose text crosses a line break (blank lines
+# included): anchor_check.py reads one line at a time and would never see it.
+BROKEN_SRC_RE = re.compile(r"\[\s*s\s*r\s*c\s*:[^\]]*")
+FENCE_RE = re.compile(r"^```.*?^```", re.S | re.M)
 
 
-def is_split_anchor(lines: list[str], idx: int) -> bool:
-    """Whether lines[idx] ends in a [src:] anchor that continues on a following line.
+def broken_anchor_lines(body: str) -> list[int]:
+    """1-based body lines where a [src:] anchor starts that is broken by whitespace."""
+    text = FENCE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), body)
+    return [
+        text.count("\n", 0, m.start()) + 1
+        for m in BROKEN_SRC_RE.finditer(text)
+        if "\n" in m.group(0) or not m.group(0).startswith("[src:")
+    ]
 
-    Either the line ends inside an anchor ("[src:fw: a.c"), or it ends in a fragment of
-    "[src:" ("[", "[s", "[sr", "[src") that the next non-blank lines complete, one or more
-    characters at a time ("[s" / "r" / "c:fw: ...").
-    """
-    line = lines[idx].rstrip()
-    if SPLIT_SRC_RE.search(line):
-        return True
-    head = SPLIT_HEAD_RE.search(line)
-    if head is None:
-        return False
-    acc = head.group(0)
-    for nxt in lines[idx + 1:]:
-        part = nxt.strip()
-        if not part:
-            return False
-        acc += part
-        if acc.startswith("[src:"):
-            return True
-        if not "[src:".startswith(acc):
-            return False
-    return False
+
 # Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
 # [src:] and [tgt:]/[ref:] cite a target-OS tree, none of which a board spec pins.
 OTHER_ANCHOR_KINDS = ("impl", "tgt", "ref")
@@ -550,12 +536,53 @@ def check_root_license(
     return tuple(accepts)
 
 
+class LinkInContextRoot(Exception):
+    """A context root holds a symbolic link, or is reached through one: refuse to run."""
+
+
+def walk_root(root: Path, context: bool, findings: list[Finding]) -> list[Path]:
+    """Every file under root, found without following links. A link (file or directory) is
+    an error in a checked root and stops the run (LinkInContextRoot) in a context root."""
+    files = []
+    for top, dirs, names in os.walk(root, followlinks=False):
+        for name in sorted(dirs) + sorted(names):
+            path = Path(top) / name
+            if path.is_symlink():
+                if context:
+                    raise LinkInContextRoot(f"{path} is a symbolic link")
+                findings.append(
+                    Finding("error", str(path), "symbolic link in a spec root: a root holds its "
+                            "files itself, never through links")
+                )
+            elif name in names:
+                files.append(path)
+        dirs[:] = sorted(d for d in dirs if not (Path(top) / d).is_symlink())
+    return files
+
+
 def load_specs(
-    roots: list[Path], use_pyyaml: bool, findings: list[Finding], require_license: bool = False
+    roots: list[Path],
+    use_pyyaml: bool,
+    findings: list[Finding],
+    require_license: bool = False,
+    context_roots: tuple = (),
+    origin: dict | None = None,
 ) -> tuple[list[Spec], list[str]]:
+    """Load every root's specs. origin, when given, maps every file path found to whether it
+    was found under a context root, so each finding keeps the root it was read through."""
     specs: list[Spec] = []
     preconditions: list[str] = []
+    origin = {} if origin is None else origin
     for root in roots:
+        context = root in context_roots
+        if Path(os.path.abspath(root)).resolve() != Path(os.path.abspath(root)):
+            if context:
+                raise LinkInContextRoot(f"{root} is, or is reached through, a symbolic link")
+            findings.append(
+                Finding("error", str(root), "spec root is, or is reached through, a symbolic "
+                        "link: give its real path")
+            )
+            continue
         marker, err = read_root(root, use_pyyaml)
         if err:
             preconditions.append(err)
@@ -569,19 +596,10 @@ def load_specs(
         accepts = check_root_license(
             marker, str(root / "board-specs.yaml"), require_license, findings
         )
-        real_root = root.resolve()
-        for path in sorted(root.rglob("*.spec.md")):
-            real = path.resolve()
-            if real != real_root and real_root not in real.parents:
-                findings.append(
-                    Finding(
-                        "error",
-                        str(path),
-                        f"spec file is a link to {real}, outside its root; a root's specs must "
-                        "live in it",
-                    )
-                )
-                continue
+        files = walk_root(root, context, findings)
+        origin.update({str(f): context for f in files})
+        origin[str(root)] = context
+        for path in sorted(f for f in files if f.name.endswith(".spec.md")):
             text = path.read_text()
             m = FRONTMATTER_RE.match(text)
             if not m:
@@ -998,11 +1016,9 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
             continue
         # Only the tail clause is examined from here on: prose may mention tag names freely.
         tail = tail_match.group(0)
-        # The tail's own tags are those outside every parenthetical. A tag token inside one is
-        # either a nested clause with its own parenthetical (a premise's `[src]` (...), judged
-        # below) or prose naming a tag ("the previous bullet's `[src]` anchors"), and is not one
-        # of the fact's tags.
-        top = top_level(tail)
+        # Every tag token counts, nested ones included, except a backticked one inside a
+        # parenthetical: that is prose naming a tag ("the previous bullet's `[src]` anchors").
+        top = blank_prose_tags(tail)
         tags = TAG_RE.findall(top)
         has_todo = bool(TODO_RE.search(tail))
         for needs_todo in TODO_TAGS:
@@ -1024,7 +1040,7 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                     Finding("error", where, f"[{tag}] must be followed by a parenthetical naming {what}")
                 )
         # A [src] fact's parenthetical carries its anchors; check_src_anchors judges each one.
-        for m in SRC_CLAUSE_RE.finditer(tail):
+        for m in SRC_CLAUSE_RE.finditer(top):
             if m.group(1) is not None and count_src_anchors(m.group(1)) == 0:
                 findings.append(
                     Finding(
@@ -1047,15 +1063,12 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
             )
 
 
-def top_level(text: str) -> str:
-    """text with everything inside parentheses blanked, the parentheses kept."""
-    out, depth = [], 0
-    for ch in text:
-        if ch == ")" and depth:
-            depth -= 1
-        out.append(ch if depth == 0 or ch in "()" else " ")
-        if ch == "(":
-            depth += 1
+def blank_prose_tags(text: str) -> str:
+    """text with each backticked tag token inside a parenthetical (`[src]`) blanked."""
+    out = list(text)
+    for m in re.finditer(rf"`\[(?:{TAG_NAMES})\]`", text):
+        if text.count("(", 0, m.start()) > text.count(")", 0, m.start()):
+            out[m.start():m.end()] = " " * (m.end() - m.start())
     return "".join(out)
 
 
@@ -1107,8 +1120,16 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     """
     p = str(spec.path)
     lines = spec.body.splitlines()
-    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS) \
-            and not any(is_split_anchor(lines, i) for i in range(len(lines))):
+    for n in broken_anchor_lines(spec.body):
+        findings.append(
+            Finding(
+                "error",
+                f"{p}:{n + spec.body_offset}",
+                "a [src:] anchor is broken across lines or by spaces; keep each anchor whole on "
+                "one line (anchor_check.py reads one line at a time)",
+            )
+        )
+    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS):
         return
     ac = load_anchor_check()
     if ac is None:
@@ -1166,15 +1187,6 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
         if in_code:
             continue
         where = f"{p}:{n + spec.body_offset}"
-        if is_split_anchor(lines, n - 1):
-            findings.append(
-                Finding(
-                    "error",
-                    where,
-                    "a [src:] anchor is broken across lines; keep each anchor on one line "
-                    "(anchor_check.py reads one line at a time)",
-                )
-            )
         report = ac.Report(spec=p)
         anchors = []
         for kind, body in ac.TAG_RE.findall(line):
@@ -1473,9 +1485,16 @@ def main(argv: list[str] | None = None) -> int:
     findings: list[Finding] = []
     use_pyyaml = not args.no_pyyaml
     parser_used = parser_name(use_pyyaml)
-    specs, preconditions = load_specs(
-        list(args.roots) + list(args.context_root), use_pyyaml, findings, args.require_license
-    )
+    origin: dict[str, bool] = {}
+    try:
+        specs, preconditions = load_specs(
+            list(args.roots) + list(args.context_root), use_pyyaml, findings,
+            args.require_license, tuple(args.context_root), origin,
+        )
+    except LinkInContextRoot as exc:
+        print(f"usage error: --context-root: {exc}; a context root may hold no links",
+              file=sys.stderr)
+        return 2
     if preconditions:
         for msg in preconditions:
             print(f"missing precondition: {msg}", file=sys.stderr)
@@ -1506,12 +1525,10 @@ def main(argv: list[str] | None = None) -> int:
     for stub in stubs:
         check_stub(stub, ids, findings)
 
-    # Classify a finding by the root it was read through, compared lexically (no symlink
-    # resolution): a file in a checked root that links into a context root stays checked.
-    context = [Path(os.path.abspath(r)) for r in args.context_root]
+    # A finding keeps the root it was read through: every path a check reports is one the
+    # walk found (roots hold no links), looked up exactly, never matched by prefix.
     for f in findings:
-        where = Path(os.path.abspath(re.sub(r":\d+$", "", f.path)))
-        if any(where == r or r in where.parents for r in context):
+        if origin.get(re.sub(r":\d+$", "", f.path)):
             f.level = "warning"
             f.message = f"context root: {f.message}"
     errors = [f for f in findings if f.level == "error"]

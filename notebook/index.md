@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T12:09-07:00
+Updated: 2026-10-08T12:41-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,13 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-1 — Strict loader, pinned dependencies, core schemas](SF2-1.md)
+Entries: 2026-10-08T12:17-07:00 through 2026-10-08T12:41-07:00
+Outcome: open, stopped before review. Pins jsonschema 4.26.0, PyYAML 6.0.3, markdown-it-py
+4.2.0 (jschon archived). `uv run --with-requirements` ignores hashes; pip `--require-hashes` used.
+Closed records under `if`/`then` report cascaded unknown keys (filtered in `spec.py`). The
+design's worked example cites a `standard` by heading, against its own locator rule (open).
 
 ### [SF2-design — Spec format 2: design decisions and the plan](SF2-design.md)
 Entries: 2026-10-08T12:09-07:00 through 2026-10-08T12:09-07:00 (written after the design session)

@@ -543,3 +543,14 @@ Prevention: a design brief from the orchestrator should name the notebook chapte
 milestone briefs do.
 Fix belongs in: the orchestrator's brief template (`orchestrate-milestones`) or the project-plan
 skill's design phase.
+
+### 2026-10-08T12:41-07:00 — `uv run --with-requirements` installed a file with wrong hashes
+Chapter: [SF2-1](notebook/SF2-1.md)
+What happened: the plan's check lines could have used `uv run --with-requirements` on the
+hash-pinned requirements file, as the other checks use `uv run --with`. A tamper test (every
+hash of one package replaced) showed uv installing and running anyway, while
+`pip install --require-hashes` refused. The lines were switched to a pip venv before use.
+Cost: one extra check; nothing shipped unverified.
+Prevention: when a check line claims hash pinning, tamper one package's hashes and confirm the
+installer refuses before relying on it.
+Fix belongs in: the `dep-quality` skill (pinning step) or driver-lab AGENTS.md, if it recurs.

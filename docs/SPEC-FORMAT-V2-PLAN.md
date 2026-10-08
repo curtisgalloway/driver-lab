@@ -100,7 +100,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| SF2-1 | Strict loader, pinned dependencies, core schemas | — | pending |
+| SF2-1 | Strict loader, pinned dependencies, core schemas | — | in_progress (review) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | pending |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
@@ -307,7 +307,8 @@ with nested conditionals. Split point: the record and root schemas can move to S
 schema takes the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-1.md`. Notebook: `notebook/SF2-1.md`.
+Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-1.md` (written after
+review). Notebook: [SF2-1](../notebook/SF2-1.md).
 
 ---
 

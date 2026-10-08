@@ -10,7 +10,7 @@ direction (one YAML format for every spec, validated by a JSON Schema, with Mark
 view) was approved by the user on 2026-10-08 ([RG-regen](../notebook/RG-regen.md), "RG-T1 rounds
 6–8, merge, and the format decision"). The user settled the design's open choices the same day;
 they are recorded under [Decisions (2026-10-08)](#decisions-2026-10-08), and the body below
-follows them. Where the body depends on one, it names it (D1–D19).
+follows them. Where the body depends on one, it names it (D1–D22).
 
 ## Terms
 
@@ -768,7 +768,7 @@ copies its records into the spec unchanged, ids included.
 | Patterns: fact ids, fact references, commits, sha256, `https://` URLs, hex values, dates | yes | | |
 | Unique fact ids within a file | | yes (`uniqueItems` compares whole items, not a key) | |
 | Fact ids unique per spec id per root; root names present and unique; references into another root qualified by root | | yes | |
-| No raw HTML in claim, prose and note fields (lexical rule below) | | yes | |
+| No raw HTML in claim, prose and note fields; each field self-contained: no heading, no unclosed fence (CommonMark parse, below; D20, D22) | | yes | |
 | Every `repo`, `doc`, `assumption` name resolves in the file's `resources` | | yes | |
 | Citation `class` matches the document's `class`; numeric pages within `pages` | | yes | |
 | Fact references resolve; no cycles; layer order respected | | yes | |
@@ -787,15 +787,32 @@ Everything in the schema column is declarative and can be read by people and oth
 checker column is a small amount of Python over already-parsed data. Neither ever reads prose
 for meaning.
 
-**No raw HTML** (D4, a decision, not a default). The checker rejects, in every claim, title,
-prose and `note` string, any `<` immediately followed by a letter, `/`, `!` or `?`: the start of
-every HTML tag, comment, declaration and processing instruction CommonMark recognizes. The rule is
-lexical and applies inside code spans and to autolinks too, so it needs no Markdown parse and
-cannot disagree with one; the cost is that an angle-bracketed name such as a C header in angle
-brackets is written without the brackets, and a URL as a `[text](url)` link. Values such as
-`<0 0 0>` and `<&gic>` pass, and no claim in the three bcm2711 specs trips the rule (checked
-2026-10-08). `notices` are exempt: they are rendered only as fenced text. The viewer also renders
-with HTML disabled, so the check is a guard, not the only defense.
+**One CommonMark parse, for safety and layout only** (D4, D20, D22). The checker parses every
+claim, title, prose and `note` string with one pinned CommonMark library (markdown-it-py is the
+candidate; [Dependencies](#dependencies)) and fails, naming the fact and field:
+
+- **raw HTML**: any token CommonMark itself classifies as raw HTML, block or inline (a tag, a
+  comment, a declaration, a processing instruction, CDATA). Text inside code spans and fenced or
+  indented code is not HTML and passes, so `` `<linux/of.h>` `` is fine; values such as `<0 0 0>`
+  and `<&gic>` are not HTML to CommonMark either. "No raw HTML" is a decision (D4), not a
+  default a root can turn off;
+- **autolinks** (`<https://example.com>`) are links, not HTML, and are **allowed**: the viewer
+  applies the same link-scheme rule to them as to `[text](url)` links (D21), and the checker fails
+  an autolink or link whose scheme that rule would drop, so the author learns at check time, not
+  from a missing link in the viewer;
+- **a heading** of any level (ATX or setext) inside the field, and **a code fence that never
+  closes** (D22): either would split or swallow the blocks that follow in the Markdown view. The
+  publish step repeats the check.
+
+The parse never derives meaning. Its result is only "this field contains raw HTML, a disallowed
+link scheme, a heading or an unclosed fence, at this line"; no provenance, class, citation, id
+or value is ever read from it. Provenance comes only from the structured fields. This is
+deliberately not the v1 arrangement, where the parse *was* the source of provenance and every
+disagreement between it and the rendered text was a bypass: here a disagreement can at worst let
+a piece of layout through to a view, never change what a fact cites. The viewer also renders with
+HTML disabled, so the check is a guard, not the only defense. `notices` are exempt: they are
+rendered only as fenced text. No claim in the three bcm2711 specs contains raw HTML or a heading
+(checked 2026-10-08 for angle brackets; the parse itself is SF2-2's to run on the migrated files).
 
 A warning (not an error) flags text in claims and prose that spells a v1 tag (`[databook]`,
 `[src:`): harmless to tools, misleading in the Markdown view.
@@ -917,14 +934,20 @@ names the file line, which keeps the format writable by agents and people alike.
   draft 2020-12.
 - **Step before pinning**: score the candidates with the `dep-quality` skill, as the house rule
   requires before any new dependency is pinned. Not run for this design.
-- **CommonMark library for the publish step** (D4, D5): the Markdown view's containment check
-  and the viewer's HTML both need a CommonMark implementation with raw HTML disabled.
-  markdown-it-py (already pinned here at 4.2.0) is the incumbent; it moves from the checkers to
-  the publish step, and is scored with `dep-quality` with the other new pins.
-- **Retired from the checking path**: `mdtokens.py` and every Markdown parse in `spec_check.py`
-  and `anchor_check.py`, once v1 is gone (D11). The checker then needs only PyYAML and the
-  validator, pinned in CI with hashes; without them it exits 3, never falling back to a second
-  parser (the RG-T1 lesson: count the parsers). The checker never imports the CommonMark library.
+- **CommonMark library, in the checker and the publish step** (D20, D22): the checker's
+  raw-HTML, link-scheme and containment checks, the publish step's repeat of them, and the
+  viewer's HTML all use one CommonMark implementation, with raw HTML disabled when rendering.
+  markdown-it-py, already pinned here at 4.2.0, is the obvious candidate; it still goes through
+  `dep-quality` in SF2-1, like the validator, before it is pinned for format 2. The consequence
+  is stated plainly: **the checker imports a pinned CommonMark library**, used only to detect raw
+  HTML, disallowed link schemes, headings and unclosed fences in claim and prose fields, never to
+  derive meaning; provenance still comes only from structured fields.
+- **Retired from the checking path**: `mdtokens.py` and its profile rules, and every Markdown
+  parse of a spec body in `spec_check.py` and `anchor_check.py`, once v1 is gone (D11). The
+  format 2 checker needs PyYAML, the validator and the CommonMark library, pinned in CI with
+  hashes; without them it exits 3, never falling back to a second parser (the RG-T1 lesson: count
+  the parsers). There is one Markdown parse, in one module, shared by the checker and the publish
+  step.
 
 ## Rendering and the viewer
 
@@ -973,11 +996,11 @@ everything it generates:
    generated **provenance block**: a fixed label line followed by a list, one item per support
    entry (class, then the rendered citation), then premises and derivation for an inference, the
    TODO, the scope, and the fact's full reference as a code span.
-3. **Containment.** The publish step renders each claim and prose field on its own with the
-   CommonMark library and fails the build, naming the fact, when the field does not stand alone:
-   an unclosed code fence, or a heading (either would swallow or split the blocks that follow).
-   This parse checks layout only; it decides nothing about the fact, and it runs in the publish
-   step, never in the checker.
+3. **Containment** (D22). A claim or prose field must stand alone: no heading and no unclosed
+   code fence (either would split or swallow the blocks that follow). The checker fails such a
+   field ([Validation](#validation-schema-and-checker)), and the publish step checks again with
+   the same parse before it renders, so a view is never built from a field that slipped past.
+   The parse checks layout only; it decides nothing about the fact.
 
 What the Markdown view **cannot** do: an author can type anything the renderer emits. A claim or
 an orientation paragraph can contain a bold "Provenance" line and a list that looks like a
@@ -1007,8 +1030,9 @@ checker already rejects it), and a CommonMark renderer emits only its fixed set 
 with no `class` or `id` attributes. So no author text can produce an element carrying a badge
 class, and nothing author-written can appear outside its `claim` container (each field is
 rendered separately, so an unbalanced construct ends at the container's edge). Further rules:
-images in author text render as links, not `<img>` elements; link URLs are limited to `https:`,
-`http:`, `mailto:` and in-page anchors; prose sections render in a container labeled "Context
+images in author text render as links, not `<img>` elements; link URLs, autolinks included, are
+limited to `https:`, `http:`, `mailto:` and in-page anchors (D21; the checker rejects any other
+scheme); prose sections render in a container labeled "Context
 (not facts)" that never carries badges.
 
 Badges, all drawn from fields:
@@ -1101,9 +1125,9 @@ driver-lab ships format 2 alongside a read-only v1 checker; each spec repository
 pull request that bumps its driver-lab pin, converts the spec and the record, switches
 `scripts/checks.sh` and adds the publish workflow; the three migrate in sequence docs,
 permissive, gpl within one unit, so no mixed v1 and v2 composition has to be supported. When all
-three are on format 2, driver-lab removes the v1 code and `mdtokens.py` in one change, and
-markdown-it-py leaves the checking path (it stays only as the publish step's CommonMark library,
-if `dep-quality` keeps it there).
+three are on format 2, driver-lab removes the v1 code and `mdtokens.py` in one change.
+markdown-it-py is not removed: it stays, pinned, as the one CommonMark library the format 2
+checker and the publish step share (D20, D22), subject to its `dep-quality` score in SF2-1.
 
 ## Effects on the skills and the spec repositories
 
@@ -1119,9 +1143,9 @@ if `dep-quality` keeps it there).
 | `campaign-review` | `claims.yaml` `cites` spec section ids of the frozen e1000 spec | unchanged for the frozen campaign; a new campaign cites full fact references, and its sweep can use fact basis hashes as the basis identities of verdicts (DESIGN, continuous review C1 and C2) |
 | Spec repository `scripts/checks.sh` | `specs` (spec_check), `anchors` (anchor_check, fetch, resolve), `self-test` | `check` (`spec.py check specs --context-root ... --require-license`, plus `--require-verified` on pull requests), `resolve` (fetch pins, resolve `src` and `DT` anchors, per-file licenses), `render` (builds the Markdown view and the viewer, uploads them as an artifact on pull requests), `self-test` (the v2 fixtures; same fit/misfit pairs). On `main`, upstream-stale facts warn (D19) |
 | Spec repository publish workflow | none | builds both views on merges to `main` and weekly, deploys them to GitHub Pages (D5) |
-| Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | checks: PyYAML and the chosen validator, pinned; render and publish: also the CommonMark library |
+| Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | PyYAML, the chosen validator and the CommonMark library (markdown-it-py, subject to `dep-quality`), pinned, for checks, render and publish alike |
 | Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's page on the published site |
-| driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | `uv run --with pyyaml --with <validator> ...` |
+| driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | `uv run --with pyyaml --with <validator> --with markdown-it-py==<pin> ...` |
 | Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as v1 until it migrates |
 
 ## Worked example
@@ -1758,7 +1782,8 @@ line; that is the limit the viewer exists to close.
 ## Decisions (2026-10-08)
 
 The user settled each open choice of the first draft on 2026-10-08. The body above follows these;
-where the user chose other than the draft's recommendation, the entry says so.
+where the user chose other than the draft's recommendation, the entry says so. D20–D22 settle three calls the first revision
+left open, also decided by the user on 2026-10-08.
 
 | # | Question | Decision | Reason |
 | --- | --- | --- | --- |
@@ -1772,7 +1797,7 @@ where the user chose other than the draft's recommendation, the entry says so.
 | D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
 | D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces scalar spans found by node marks | one library, already used here; comments and the SPDX header survive |
 | D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
-| D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and take markdown-it-py off the checking path | no mixed v1 and v2 composition, and no second parser left behind |
+| D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no mixed v1 and v2 composition, and no second parser left behind |
 | D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed, checked by `resolve` | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
@@ -1781,23 +1806,28 @@ where the user chose other than the draft's recommendation, the entry says so.
 | D17 | File names | Every spec is `<name>.spec.yaml`; `kind` says what it is | one glob, one rule |
 | D18 | Conflict entries | The `conflicts` field now | DESIGN.md's proposal gets a home, and RG1's documentation-versus-source contradiction is recorded as one |
 | D19 | Cross-root staleness (raised from the draft's Risks table) | A fact staled through a reference into another root is a **warning on the dependent repository's `main`**; **any pull request to the dependent repository must re-verify** it (`--require-verified` treats it as an error there) | an upstream merge never turns another repository's `main` red, and stale facts cannot ride along on the next change there ([Freshness](#freshness-per-fact-basis-hashes-d2)) |
+| D20 | How "no raw HTML" is checked (raised by the first revision) | **Parse with CommonMark**: the checker rejects only what CommonMark treats as raw HTML, inline or block; code spans and code blocks are not HTML; autolinks (`<https://…>`) are allowed, under the link-scheme rule. Replaces the draft's lexical rule | no false rejections of angle brackets in code, at the cost of the checker importing a pinned CommonMark library, used only for this and D22, never for meaning |
+| D21 | Links and images in author text (raised by the first revision) | As drafted: images render as links, never `<img>`; link and autolink schemes limited to `https`, `http`, `mailto` and in-page anchors | no remote content loads from a spec page, and no script URL becomes a link |
+| D22 | Containment (raised by the first revision) | **In the checker too**: a heading inside a claim or prose field, or a code fence that never closes, fails the checker, and still the publish step | an author learns at check time, before review, not when the published view is built |
 
 ## Risks
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
 | Author Markdown imitates provenance (D4) | in the Markdown view, a claim or prose paragraph can look like a cited fact | stated as a limit of the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on v1 tag spellings in text; review reads the viewer, not the Markdown |
-| Author Markdown breaks layout (an unclosed fence, a heading in a claim) | later facts swallowed or split in the Markdown view | the publish step's containment check fails the build, naming the fact; each field is rendered separately in the viewer |
-| Raw HTML reaches a page | script or markup injected into the published site | the checker's lexical rule rejects it; the viewer renders with HTML disabled; image and link URL rules |
+| Author Markdown breaks layout (an unclosed fence, a heading in a claim) | later facts swallowed or split in the Markdown view | the checker's containment check fails it, naming the fact, and the publish step checks again (D22); each field is rendered separately in the viewer |
+| Raw HTML reaches a page | script or markup injected into the published site | the checker rejects what CommonMark parses as raw HTML (D20); the viewer renders with HTML disabled; image and link URL rules (D21) |
 | YAML authoring errors by agents (indentation, quoting long claims) | failed checks, retries | block scalars for long text; every error carries a line and column; templates per kind; `spec.py check` run before any review |
 | The canonical form changes | every verdict stale at once | versioned (`canonical: fact-v1`); a change ships with a re-hash command that re-keys verdicts only when the old and new forms agree on the data |
 | A verdict depends on something its fact does not cite | not staled when that changes | coverage review separate; `spec_sha256` kept; the verifier is told to record any extra dependency as a `relates` link |
 | Cross-root staleness | a docs edit stales facts in the GPL repository | decided (D19): a warning on that repository's `main`, an error on its next pull request; the status line names the upstream fact |
 | A root is renamed | every root-qualified reference into it dangles (D1) | root names are an interface: the checker reports each dangling reference, and a rename is a planned change across the repositories that cite it |
 | Published views are stale or the Pages deploy fails | readers see an older view than `main` | the banner names the commits the view was built from; the weekly scheduled build; the YAML on GitHub is always current |
-| Reviewers miss the rendered effect of a change, since nothing is committed | a layout or badge regression merges | pull requests upload both views as an artifact; the containment check fails the build |
+| Reviewers miss the rendered effect of a change, since nothing is committed | a layout or badge regression merges | pull requests upload both views as an artifact; the containment check fails the checker and the build |
 | Conversion error carried as PASS | a wrong citation keeps a verdict | fidelity check (D10); `resolve` runs on every anchor during migration |
-| New dependency risk (validator, compiled `rpds-py`, the publish step's CommonMark library) | supply-chain and build breakage in CI | `dep-quality` score before pinning; hash-pinned CI requirements; exit 3 without them; the checker never imports the CommonMark library |
+| New dependency risk (validator, compiled `rpds-py`, the CommonMark library) | supply-chain and build breakage in CI | `dep-quality` score before pinning; hash-pinned CI requirements; exit 3 without them |
+| The checker's CommonMark parse is used for more than safety and layout | provenance drifts back into text, the v1 failure | the parse lives in one module whose only outputs are raw-HTML, link-scheme, heading and unclosed-fence findings; review rejects any other use; provenance is read only from structured fields |
+| The CommonMark library changes what counts as HTML or a heading between versions | a field passes under one version and fails under another | one pinned version shared by checker and publish step; a version bump is its own reviewed change with the fixtures re-run |
 | The schema grows its own equivalent spellings (optional fields that mean the same) | the leak returns at the data level | closed records (`unevaluatedProperties: false`); one field per meaning; review asks "is there a second way to say this?" for every schema change |
 | Consumers outside driver-lab read `*.spec.md` | they break at the cutover | `board-expert` is the only reader of specs; bringup-kit reads through it; transition window (D11) |
 | The viewer grows past its first static version | scope creep | this design covers the static viewer with badges only; search and navigation are later work on the same data |
@@ -1808,23 +1838,26 @@ Session-sized units; the plan with acceptance criteria comes after this design i
 tooling unit is reviewed by an executing reviewer (break cases including degenerate inputs,
 mutation checks) and a diff reader, the pairing RG-T1 showed finds different holes.
 
-1. **SF2-1 Loader and schema.** `dep-quality` on the validator candidates and PyYAML, then pin;
+1. **SF2-1 Loader and schema.** `dep-quality` on the validator candidates, PyYAML and the
+   CommonMark library (markdown-it-py), then pin;
    `load_strict` with every pitfall in the loader table as a failing fixture; `spec.schema.json`,
    `verify.schema.json`, `root.schema.json`; schema fixtures (one good file per kind, one bad file
    per rule).
 2. **SF2-2 Checker.** `spec.py check`: id uniqueness per spec per root, root names, the three
    reference forms with root-qualified references across roots, cycles, layer order, license gate
    direct and transitive, records (keys, summary, basis hashes, upstream-stale, two readers),
-   `--require-verified` behavior on pull requests versus `main` (D19), the raw-HTML rule, privacy,
-   placeholders; the license-gate fixture matrix and the
+   `--require-verified` behavior on pull requests versus `main` (D19), the CommonMark checks
+   (raw HTML, link schemes, headings, unclosed fences; D20–D22) in one module with adversarial
+   fixtures (HTML in every CommonMark form, HTML-like text in code, autolinks, `javascript:`
+   links, setext headings, fences closed by an over-indented line), privacy, placeholders; the license-gate fixture matrix and the
    board-expert fixtures rewritten in format 2, with `expected.json` carried over.
 3. **SF2-3 Resolve and drift.** `spec.py resolve` (fetch pins, `src` and `DT` anchors, per-file
    licenses, document hashes), `show`, `drift --rewrite` on YAML, `inventory` on register records.
 4. **SF2-4 Render, viewer and status.** `spec.py render` for the Markdown view and the static
    viewer (single and merged, with status); escaping of generated text, the containment check and
    the viewer's badge and HTML rules, each with adversarial fixtures (claims that imitate
-   provenance, unclosed fences, headings, HTML, `javascript:` links); `status --stale`; the
-   `dep-quality` score for the CommonMark library.
+   provenance, unclosed fences, headings, HTML, `javascript:` links); the publish step's repeat
+   of the D22 check through the same module; `status --stale`.
 5. **SF2-5 Skills.** The contract document (D7), `spec-verifier`, `board-expert`,
    `board-spec-scaffold` templates, `hardware-investigator`, `peripheral-spec` and its subagent
    and verifier templates, `reference-driver-review`; glossary; grep every skill for v1 rules (the
@@ -1834,8 +1867,8 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
    (docs, permissive, gpl) with their `checks.sh` and CI on format 2, and each repository's
    publish workflow and Pages site.
 7. **SF2-7 Retire format 1.** Remove the v1 checker, `mdtokens.py` and `anchor_check.py`'s
-   Markdown mode; take markdown-it-py off the checking path (it remains only in the publish step);
-   update driver-lab's `AGENTS.md` check list and CI.
+   Markdown mode; markdown-it-py stays as the pinned CommonMark library (D20); update
+   driver-lab's `AGENTS.md` check list and CI.
 
 ## What this design does not cover
 

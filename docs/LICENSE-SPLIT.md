@@ -220,7 +220,7 @@ Settled by the user on 2026-10-06, during LS5 ([notebook](../notebook/LS5.md)):
 
 ### Decisions, 2026-10-07
 
-All four are user decisions, made after LS11:
+All six are user decisions, made after LS11:
 
 | Question | Decision |
 |---|---|
@@ -228,6 +228,8 @@ All four are user decisions, made after LS11:
 | `docs/STORY.md` in the open-side allowlist | Moved to `cleanroom-skills` (`docs/STORY.md`, source commit `33cb47c`) and removed from driver-lab and from the allowlist. `PROCESS-NOTES.md`, `TRANSITION.md` and the campaign-review fixture stay allowed |
 | L02 pending work (spec revision 10 and a candidate round) | Moves to `cleanroom-skills`, which tracks it in its README ("Pending work"); driver-lab's evaluations stay a frozen archive. The user confirmed this is intended |
 | Wording in `SPEC-FORMAT.md` for facts known only from driver code (cited by repository, commit, file and line; a spec uses one only as a cited premise of an `[inference]`) | Approved as written; no text change |
+| `bringup-kit`'s `evals/` captured sessions | Stay as historical records under their old names, as LS12 declared; not rewritten |
+| `cleanroom-skills` and `public-skills`' marketplace | `cleanroom-skills` stays out of it; it is opt-in through its own marketplace |
 
 Earlier: the 11 specs deleted, to be regenerated (2026-10-01); facts 2, 3 and 6 to a bcm2711
 permissive overlay (2026-09-30); `hardware-investigator` and `peripheral-spec` names (draft).

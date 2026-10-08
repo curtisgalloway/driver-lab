@@ -1894,5 +1894,42 @@ class Round7Profile(BodyCheck, unittest.TestCase):
                 self.assert_error("## Quick-facts\n\n" + body, want)
 
 
+class Round8Exceptions(BodyCheck, unittest.TestCase):
+    """RG-T1 round 8 (user decision 2026-10-08): the profile's two positional exceptions, the
+    leading SPDX comment and block quotes under ## Source notices, both read as code."""
+
+    HEADER = "<!--\nSPDX-FileCopyrightText: 2026 contributors\nSPDX-License-Identifier: CC-BY-4.0\n-->\n\n"
+    NOTICE = ("## Source notices\n\nThe source carries this notice:\n\n"
+              "> Copyright (c) 2016 Example Ltd.\n> All rights reserved.\n")
+
+    def test_the_allowed_forms_pass(self):
+        self.assert_clean(self.HEADER + "## Quick-facts\n\n- A fact. `[DT]` (x)\n\n" + self.NOTICE)
+
+    def test_misplaced_html_comments_and_quotes_fail(self):
+        cases = {
+            "comment in a fact section": "## Quick-facts\n\n<!-- note -->\n\n- A fact. `[DT]` (x)\n",
+            "second leading comment": "<!-- more -->\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
+            "a non-comment HTML block": "<div>\nx\n</div>\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
+        }
+        for name, body in cases.items():
+            with self.subTest(name=name):
+                self.assert_error(self.HEADER + body, "raw HTML is outside the spec Markdown profile")
+        self.assert_error("<div>x</div>\n\n## Quick-facts\n\n- A fact. `[DT]` (x)\n",
+                          "raw HTML is outside the spec Markdown profile")
+        self.assert_error(self.HEADER + "## Quick-facts\n\n> - A fact. `[DT]` (x)\n",
+                          "a block quote is outside the spec Markdown profile")
+        self.assert_error(self.HEADER + "## Source notices\n\n- Item.\n  > quoted in an item\n",
+                          "a block quote is outside the spec Markdown profile")
+
+    def test_tags_and_anchors_inside_allowed_forms_do_not_count(self):
+        # Each would be an error outside: a case-variant tag, a malformed and an unaccepted
+        # anchor. Inside the header comment or a source notice they are code.
+        header = "<!--\nSPDX [Src] [src:gpl: a.c:1] [src:fw: unterminated\n-->\n\n"
+        notice = ("## Source notices\n\n> Copyright [Src] Example.\n> [src:gpl: a.c:1] "
+                  "[src:fw: unterminated\n")
+        # gpl is no repos entry of SPEC6, so a counted anchor would fail; so would [Src].
+        self.assert_clean(header + "## Quick-facts\n\n- A fact. `[DT]` (x)\n\n" + notice)
+
+
 if __name__ == "__main__":
     unittest.main()

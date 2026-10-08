@@ -51,6 +51,11 @@ TOKEN_SPAN_RE = re.compile(
 )
 _PROSE_CHAR_RE = re.compile(r"[^\w\s.\-]")
 WORD_CHAR_RE = re.compile(r"\w")
+# The profile's two positional exceptions (board-expert SPEC-FORMAT, "The spec Markdown
+# profile"): one HTML comment as the first block (the SPDX header), and block quotes under
+# a top-level "## Source notices" heading. Both are read as code.
+HTML_COMMENT_RE = re.compile(r"<!--(?:(?!-->).)*-->", re.S)
+NOTICES_SECTION = "Source notices"
 # The board-spec sections whose bullets are facts (board-expert SPEC-FORMAT, Tag rules).
 FACT_SECTIONS = frozenset({
     "Quick-facts", "Gotchas", "Standards and databook", "Programming model",
@@ -207,13 +212,30 @@ def _fence_closed(tok) -> bool:
     return tok.map[1] - tok.map[0] - 1 - n == 1
 
 
+def _as_code(doc: "Doc", span) -> None:
+    for n in range(span[0], span[1]):
+        doc.code_lines.add(n)
+        doc.masked[n] = ""
+
+
 def parse(text: str) -> Doc:
     """Parse text once; see the module docstring for what the Doc holds."""
     md = _markdown()
     lines = text.split("\n")
     doc = Doc(lines=lines, masked=list(lines))
     stack: list[int] = []  # open list items, innermost last
+    first_block = True  # no top-level block seen yet: the SPDX header's place
+    quote_depth = 0  # >0 while inside an allowed Source notices block quote, read as code
     for tok in md.parse(text):
+        if quote_depth:
+            if tok.type == "blockquote_open":
+                quote_depth += 1
+            elif tok.type == "blockquote_close":
+                quote_depth -= 1
+            continue
+        leading = first_block and tok.level == 0 and not tok.type.endswith("_close")
+        if leading:
+            first_block = False
         if tok.type in ("fence", "code_block") and tok.map:
             for n in range(tok.map[0], tok.map[1]):
                 doc.code_lines.add(n)
@@ -228,11 +250,21 @@ def parse(text: str) -> Doc:
         elif tok.type == "list_item_close":
             stack.pop()
         elif tok.type == "blockquote_open":
-            doc.violations.append((tok.map[0], "blockquote", "a block quote is outside the spec Markdown "
-                                   "profile"))
+            if tok.level == 0 and section_of(doc, tok.map[0]) == NOTICES_SECTION:
+                # A source notice: allowed, and read as code (no tag or anchor in it counts).
+                _as_code(doc, tok.map)
+                quote_depth = 1
+            else:
+                doc.violations.append((tok.map[0], "blockquote", "a block quote is outside the "
+                                       f"spec Markdown profile (allowed only under ## "
+                                       f"{NOTICES_SECTION})"))
         elif tok.type == "html_block":
-            doc.violations.append((tok.map[0], "html_block", "raw HTML is outside the spec Markdown "
-                                   "profile"))
+            if leading and HTML_COMMENT_RE.fullmatch(tok.content.strip()):
+                _as_code(doc, tok.map)  # the SPDX header: read as code
+            else:
+                doc.violations.append((tok.map[0], "html_block", "raw HTML is outside the spec "
+                                       "Markdown profile (one HTML comment is allowed, as the "
+                                       "first block: the SPDX header)"))
         elif tok.type in ("paragraph_open", "heading_open") and tok.map:
             if not stack:
                 doc.units.append((tok.map[0], tok.map[1]))
@@ -269,16 +301,10 @@ def section_of(doc: "Doc", line: int, level: int = 2) -> str | None:
     return section
 
 
-# Profile rules detected but not yet enforced: every existing spec opens with an SPDX header
-# in an HTML comment, and a source notice is quoted as a block quote. Held for a user decision
-# (2026-10-08); see the RG-T1 round-7 report.
-HELD = frozenset({"html_block", "blockquote"})
-
-
 def profile_violations(doc: "Doc", fact_sections=FACT_SECTIONS) -> list[tuple[int, str]]:
     """(0-based line, message) for every construct outside the spec Markdown profile, a nested
-    list item in a fact section included; sorted by line. Kinds in HELD are left out."""
-    out = [(n, msg) for n, kind, msg in doc.violations if kind not in HELD]
+    list item in a fact section included; sorted by line."""
+    out = [(n, msg) for n, _kind, msg in doc.violations]
     for item in doc.items:
         if item.parent is None:
             continue

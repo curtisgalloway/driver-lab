@@ -1111,7 +1111,8 @@ def load_anchor_check():
 
 def check_markdown(spec: Spec, findings: list[Finding]) -> None:
     """Every construct outside the spec Markdown profile (mdtokens.profile_violations: an
-    image, inline HTML, a setext heading, a code span inside a word, a nested list item in a
+    image, raw HTML other than the leading SPDX comment, a block quote outside ## Source
+    notices, a setext heading, a code span inside a word, a nested list item in a
     fact section, a code fence that never closes), and a tag name not in its canonical case
     ([Src], [SRC], [dt]) anywhere outside code: tag names are case-sensitive."""
     p = str(spec.path)

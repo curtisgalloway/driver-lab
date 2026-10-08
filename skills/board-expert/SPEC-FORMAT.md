@@ -414,7 +414,9 @@ A spec is written in a restricted subset of CommonMark, so the checkers never ha
 what an unusual construct means. Both checkers (`spec_check.py`, and `anchor_check.py` on any
 spec it reads) report each of these as an error at its file line:
 
-- an image (`![...](...)`), or inline raw HTML (`<b>`, `<span>`);
+- an image (`![...](...)`), or raw HTML, inline (`<b>`, `<span>`) or as a block (see the
+  first exception below);
+- a block quote (see the second exception below);
 - a setext heading (a title underlined with `===` or `---`): write `## Title`;
 - a code span that starts or ends inside a word (``[data`book`]``, ``[sr`c`:fw: a.c:1]``):
   bound every code span by whitespace or punctuation;
@@ -423,9 +425,14 @@ spec it reads) report each of these as an error at its file line:
 - a code fence that never closes, as the parser decides it (a "closer" indented four spaces is
   content, not a closer).
 
-Raw HTML blocks and block quotes are outside the profile as well, but are not yet enforced:
-every spec opens with its SPDX header in an HTML comment, and a source notice the license asks
-a spec to carry is quoted as a block quote. How those two are written is pending a decision.
+Two exceptions, both positional, and both read as code (no tag or anchor inside them counts):
+
+- **The SPDX header.** Exactly one HTML comment, as the first block after the frontmatter
+  (`<!-- SPDX-FileCopyrightText: ... SPDX-License-Identifier: ... -->`). A second HTML comment,
+  one anywhere else, or any other HTML block is an error.
+- **Source notices.** Block quotes under a top-level `## Source notices` heading, where a spec
+  quotes the notice its source license asks it to carry (*Facts read from source*). A block
+  quote anywhere else, a fact section or a list item included, is an error.
 
 ### Facts read from source: `[src]`
 
@@ -490,8 +497,8 @@ resources:
   § Board specs). A `--drift <rev> --rewrite` run updates the entry's `ref:` to the new commit.
 - **Names and values, not excerpts.** A `[src]` fact may name symbols and constants from the
   code; it never reproduces the code. When the license asks that its notice travel with
-  material taken from the source, the spec carries the notice, as the permissive repository's
-  overlays do.
+  material taken from the source, the spec carries the notice, quoted under a top-level
+  `## Source notices` heading, as the permissive repository's overlays do.
 
 ### Peripheral specs in a licensed root
 

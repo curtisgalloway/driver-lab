@@ -1538,5 +1538,23 @@ class TestSharedAnchorShape(CheckerCase):
         self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
 
 
+class TestProfileExceptions(CheckerCase):
+    """RG-T1 round 8: anchor_check reads the leading SPDX comment and Source notices quotes as
+    code, and fails the same misplaced forms spec_check does."""
+
+    def test_anchors_in_the_allowed_forms_are_not_read(self):
+        rc, report = self.run_json(self.spec(
+            "<!-- [src: drivers/nope.c:1] -->\n\n## Source notices\n\n> [src: drivers/nope.c:2]\n"))
+        self.assertEqual((rc, report["anchors"]), (0, 0), self.messages(report))
+
+    def test_misplaced_forms_fail(self):
+        for body in ("Text.\n\n<!-- late -->\n", "> quoted [src: drivers/drv.c:2]\n"):
+            with self.subTest(body=body):
+                rc, report = self.run_json(self.spec(body))
+                self.assertEqual(rc, 1)
+                self.assertTrue(any("outside the spec Markdown profile" in m
+                                    for m in self.messages(report, "error")))
+
+
 if __name__ == "__main__":
     unittest.main()

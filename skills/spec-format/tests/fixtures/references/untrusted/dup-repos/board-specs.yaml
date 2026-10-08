@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# gfact cites linux, listed twice: MIT first, then GPL-2.0-only.
+format: 2
+layer: public
+name: fc-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, MIT]

@@ -118,11 +118,9 @@ class Root:
     extension: dict | None = None
     marker: object = None  # the marker's Loaded, for positions
     files: list = dataclasses.field(default_factory=list)
-    # What could not be read: reasons the root's set of specs is unknown (an invalid marker, a
-    # directory that could not be listed), and files that failed to load or validate with the
-    # spec ids they may declare (None: unknown). References into either fail closed.
-    incomplete: list = dataclasses.field(default_factory=list)
-    failed: list = dataclasses.field(default_factory=list)
+    # Every error-severity finding its own check produced, before context downgrading. A root
+    # with any is untrusted: no reference may rest on it (user decision, 2026-10-08).
+    untrusted: list = dataclasses.field(default_factory=list)
 
     @property
     def label(self) -> str:
@@ -228,7 +226,9 @@ class Checker:
         self.files: list[SpecFile] = []
         self.findings: list[Finding] = []
         self.stubs = 0
+        self.unreadable_markers: list = []  # markers whose root name is therefore unknown
         self._resolved: dict = {}
+        self._failed_refs: set = set()  # (file, path) of references already reported failing
         self._reach: dict = {}
 
     # --- findings ----------------------------------------------------------------------------
@@ -246,6 +246,8 @@ class Checker:
             file, root, loaded = where
         mark = loaded.mark(path, key=key) if loaded is not None else None
         line, column = (mark.line, mark.column) if mark else (1, 1)
+        if root is not None and level == "error":
+            root.untrusted.append(f"{file}:{line}:{column}: {message}")
         if root is not None and root.context and downgrade:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
@@ -253,6 +255,8 @@ class Checker:
     def _schema_findings(self, raw, root):
         for f in raw:
             level, message = "error", f.message
+            if root is not None:
+                root.untrusted.append(f"{f.path}:{f.line}:{f.column}: {message}")
             if root is not None and root.context:
                 level, message = "warning", f"context root: {message}"
             self.findings.append(Finding(f.path, f.line, f.column, message, level))
@@ -299,10 +303,7 @@ class Checker:
         ok, _, loaded = self.api.validate_file(marker, schemas, None, raw)
         self._schema_findings(raw, root)
         if not ok:
-            data = loaded.data if loaded is not None else None
-            name = data.get("name") if isinstance(data, dict) else None
-            root.name = name if isinstance(name, str) else None  # still blocks its name
-            root.incomplete.append("its marker is invalid, so its specs were not read")
+            self.unreadable_markers.append(marker)  # its root's name is unknown
             return
         data = loaded.data
         root.marker = loaded
@@ -358,9 +359,12 @@ class Checker:
                 elif lower.endswith(".spec.md"):
                     self.add((path, root, None), (), "a format 1 spec in a format 2 root: "
                                                      "convert it to <name>.spec.yaml")
-                elif lower.endswith((".spec.yaml", ".spec.yml", ".facts.yaml", ".facts.yml")):
+                elif ".spec." in lower or ".facts." in lower:
+                    # .spec.yml, a case variant, a backup (.bak, ~, .orig) or a facts file: a
+                    # file discovery passes over could hide a candidate, so it is an error
                     want = ("a facts file does not belong in a spec root"
-                            if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml)")
+                            if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml), "
+                            "or move it out of the root")
                     self.add((path, root, None), (), f"not read as a spec: {want}")
             dirs[:] = [d for d in dirs if not (Path(top) / d).is_symlink()]
         for exc in failures:
@@ -369,7 +373,6 @@ class Checker:
                                               f"({exc.strerror or exc}); the root's specs are "
                                               f"not all known, so the check cannot pass",
                      downgrade=False)
-            root.incomplete.append(f"{where} could not be listed")
         return found
 
     def load_spec(self, root: Root, path: Path, schemas):
@@ -377,13 +380,7 @@ class Checker:
         ok, _, loaded = self.api.validate_file(path, schemas, root.extension, raw)
         self._schema_findings(raw, root)
         if not ok:
-            data = loaded.data if loaded is not None else None
-            ids = None
-            if isinstance(data, dict):
-                ids = {v for v in (data.get("id"), data.get("overlays")) if isinstance(v, str)}
-                ids = ids or None
-            root.failed.append((path, ids))
-            return
+            return  # its schema findings make the root untrusted
         f = SpecFile(path, root, loaded, loaded.data)  # kind facts fails validation by its name
         root.files.append(f)
         self.files.append(f)
@@ -636,6 +633,10 @@ class Checker:
             rec = f.records.get(fact_id)
             return (rec, None) if rec else (None, f"resolves to nothing: no fact {fact_id!r} "
                                                   f"in this file")
+        if root_name is not None and self.unreadable_markers:
+            return None, (f"cannot be resolved: the marker {self.unreadable_markers[0]} could "
+                          f"not be read, so that root's name is unknown and could be "
+                          f"{root_name!r}; every root-qualified reference fails closed")
         roots = [f.root] if root_name is None else [r for r in self.roots if r.name == root_name]
         if not roots:
             return None, (f"resolves to nothing: no root named {root_name!r} among the roots "
@@ -644,13 +645,8 @@ class Checker:
             return None, (f"is ambiguous: {len(roots)} roots read are named {root_name!r} "
                           f"({', '.join(str(r.given) for r in roots)})")
         root = roots[0]
-        if root.incomplete:
-            return None, (f"cannot be resolved: root {root.label} was not read in full "
-                          f"({'; '.join(root.incomplete)})")
-        blocked = [p for p, ids in root.failed if ids is None or spec_id in ids]
-        if blocked:
-            return None, (f"cannot be resolved: {blocked[0]} failed to load or validate and "
-                          f"may declare spec {spec_id!r} in root {root.label}")
+        if root is not f.root and root.untrusted:
+            return None, f"cannot be resolved: {_untrusted(root)}"
         owners = [g for g in root.files if g.spec_id == spec_id]
         found = [g.records[fact_id] for g in owners if fact_id in g.records]
         if len(found) > 1 or any(fact_id in g.duplicated for g in owners):
@@ -681,6 +677,7 @@ class Checker:
                     target, why = self.resolve(f, ref)
                     if target is None:
                         self.add(f, path, f"{what}: reference {ref!r} {why}")
+                        self._failed_refs.add((f, path))
                         continue
                     if kind != "observation":
                         relation = None
@@ -717,6 +714,8 @@ class Checker:
             reason = self.gate(f.root, g.repos[name][0]["license"])
             if reason:
                 problems.append(f"repos entry {name!r} of {_rel(g)}{through}: {reason}")
+        if problems or unknown:
+            self._failed_refs.add((f, path))
         for problem in problems:
             self.add(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
                               f"D13)")
@@ -724,6 +723,49 @@ class Checker:
             self.add(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
                               f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
                               f"fails closed")
+
+    def reach_roots(self, rec: Record) -> dict:
+        """Every root a record rests on: its own and those of every fact it references,
+        transitively: {root: the first record reached there}."""
+        out, seen, queue = {}, {rec}, deque([rec])
+        while queue:
+            cur = queue.popleft()
+            out.setdefault(cur.file.root, cur)
+            for _, ref, _ in references(cur.data, cur.path):
+                target, _ = self.resolve(cur.file, ref)
+                if target is not None and target not in seen:
+                    seen.add(target)
+                    queue.append(target)
+        return out
+
+    def check_trust(self):
+        """A reference may only rest on a root that checks clean. Run after every other check,
+        and repeated until nothing changes: a finding here is an error that makes the citing
+        file's own root untrusted in turn."""
+        emitted = set()
+        while True:
+            changed = False
+            for f in self.files:
+                for rec in f.records.values():
+                    what = f"{_label(rec)} {rec.id!r}"
+                    for _, ref, path in references(rec.data, rec.path):
+                        target, _ = self.resolve(f, ref)
+                        if target is None or (f, path) in self._failed_refs:
+                            continue  # already an error at this reference
+                        for root, via in self.reach_roots(target).items():
+                            if root is f.root or not root.untrusted:
+                                continue
+                            if (f, path, root) in emitted:
+                                continue
+                            emitted.add((f, path, root))
+                            self._failed_refs.add((f, path))
+                            through = "" if via is target else f" through {via.full}"
+                            trusted = not f.root.untrusted
+                            self.add(f, path, f"{what}: reference {ref!r} rests on "
+                                              f"{_untrusted(root)}{through}")
+                            changed = changed or trusted
+            if not changed:
+                return
 
     def check_cycles(self, edges: dict):
         """Inference premises form a directed acyclic graph: report every fact on a cycle."""
@@ -971,6 +1013,16 @@ class Checker:
             self.check_file(f)
         self.check_composition()
         self.check_references()
+        self.check_trust()
+
+
+def _untrusted(root: Root) -> str:
+    first = root.untrusted[0]
+    if len(first) > 200:
+        first = first[:197] + "..."
+    return (f"root {root.label}, which is untrusted: its own check found "
+            f"{len(root.untrusted)} error(s) (first: {first}); a reference may only rest on a "
+            f"root that checks clean")
 
 
 def _number(digits: str) -> tuple:

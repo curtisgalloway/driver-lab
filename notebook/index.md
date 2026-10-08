@@ -22,8 +22,8 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
-Entries: 2026-10-08T14:58-07:00 through 2026-10-08T16:20-07:00
-Outcome: in progress (round 1 fixed; the gate fails closed). The license-gate matrix gives format 1's codes
+Entries: 2026-10-08T14:58-07:00 through 2026-10-08T16:52-07:00
+Outcome: in progress (round 2 hit the stop rule; user decision: a reference rests only on a root that checks clean). The license-gate matrix gives format 1's codes
 under `--require-license`; without it only the two uncited-entry rows differ, as the design says.
 Loading `spdx.py` by path needs `sys.modules` for its dataclasses.
 

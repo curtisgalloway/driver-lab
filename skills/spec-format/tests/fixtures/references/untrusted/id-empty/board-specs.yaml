@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A clean base, plus a schema-failed GPL file (id-empty).
+format: 2
+layer: public
+name: fc-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, MIT]

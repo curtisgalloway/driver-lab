@@ -318,18 +318,27 @@ class References(TempRoots):
         self.assertIn("through widgetchip@g#tree", hop2[0])
 
     def test_reach_into_an_anchor_naming_no_repos_entry(self):
-        ctx = self.root("ctx", {
-            "board-specs.yaml": marker("k", accepts="[GPL-2.0-only]", lic="GPL-2.0-only"),
-            "widgetchip.spec.yaml": chip(facts=src_fact("t", name="ghost"))})
+        # In another root the target's root is untrusted (below); within the citing root the
+        # gate itself must refuse an anchor whose repos entry is not listed.
+        root = self.root("r", {
+            "board-specs.yaml": marker("k"),
+            "widgetchip.spec.yaml": chip(facts=src_fact("t", name="ghost")),
+            "other.spec.yaml": chip("other", facts=inference("a", "widgetchip#t"))})
+        code, result = check(root)
+        self.assertEqual(code, 1)
+        f = only(errors(result, "other.spec.yaml"))
+        self.assertIn("reaches an anchor of widgetchip@k#t naming repos entry 'ghost', which "
+                      "its file does not list (its license is unknown)", f["message"])
+        ctx = self.root("ctx", {"board-specs.yaml": marker("c"),
+                                "widgetchip.spec.yaml": chip(facts=src_fact("t", name="ghost"))})
         docs = self.root("docs", {"board-specs.yaml": marker("d"),
                                   "other.spec.yaml": chip("other", facts=inference(
-                                      "a", "widgetchip@k#t"))})
+                                      "a", "widgetchip@c#t"))})
         code, result = check(docs, "--context-root", ctx)
         self.assertEqual(code, 1)
         f = only(errors(result))
-        self.assertTrue(f["path"].endswith("docs/other.spec.yaml"))
-        self.assertIn("reaches an anchor of widgetchip@k#t naming repos entry 'ghost', which "
-                      "its file does not list (its license is unknown)", f["message"])
+        self.assertIn("reference 'widgetchip@c#t' cannot be resolved: root c, which is "
+                      "untrusted", f["message"])
 
     def test_same_file_duplicate_id_is_ambiguous(self):
         facts = fact("a") + fact("a").replace("C a.", "Another a.") + inference("b", "#a")
@@ -379,8 +388,8 @@ class References(TempRoots):
                                       "x", "widgetchip@b#reset"))})
         code, result = check(good, "--context-root", bad)
         self.assertEqual(code, 1)
-        self.assertIn("reference 'widgetchip@b#reset' cannot be resolved: root b was not "
-                      "read in full (its marker is invalid", need(errors(result, "other.spec.yaml"))[0]["message"])
+        self.assertIn("reference 'widgetchip@b#reset' cannot be resolved: the marker",
+                      need(errors(result, "other.spec.yaml"))[0]["message"])
         self.assertTrue(warnings(result))  # the context root's marker finding
 
 
@@ -419,17 +428,24 @@ class FailClosed(unittest.TestCase):
     def test_target_spec_fails_the_schema(self):
         code, result = self.chain("gpl-schema-failed")
         self.assertEqual(code, 1)
-        self.assert_closed(result, "failed to load or validate and may declare spec 'gchip'")
+        self.assert_closed(result, "root fc-gpl, which is untrusted")
+        self.assert_closed(result, "unknown key 'bogus'")
 
     def test_target_marker_invalid(self):
         code, result = self.chain("gpl-bad-marker")
         self.assertEqual(code, 1)
-        self.assert_closed(result, "root fc-gpl was not read in full (its marker is invalid")
+        # An unreadable marker makes its root's name unknown: every root-qualified reference
+        # fails closed, the first hop included (user decision, round 2).
+        f = only(errors(result, "docs/dchip.spec.yaml"))
+        self.assertIn("reference 'pchip@fc-perm#p' cannot be resolved: the marker", f["message"])
+        self.assertIn("could not be read, so that root's name is unknown and could be "
+                      "'fc-perm'; every root-qualified reference fails closed", f["message"])
 
     def test_duplicate_fact_id_in_the_target_root(self):
         code, result = self.chain("gpl-dup-id")
         self.assertEqual(code, 1)
-        self.assert_closed(result, "is ambiguous: spec 'gchip' declares fact 'gfact' more than once")
+        self.assert_closed(result, "root fc-gpl, which is untrusted")
+        self.assert_closed(result, "fact id 'gfact' is also used by")
 
     def test_two_roots_with_one_name_either_order(self):
         for order in (("gpl-clean-twin", "gpl"), ("gpl", "gpl-clean-twin")):
@@ -468,13 +484,95 @@ class FailClosed(unittest.TestCase):
                 finally:
                     hidden.chmod(0o755)
                 self.assertEqual(code, 1, ctx)
-                listing = [f for f in errors(result) if "cannot list this directory" in f["message"]]
+                listing = [f for f in errors(result) if "cannot list this directory" in f["message"]
+                           and not f["path"].endswith("dchip.spec.yaml")]
                 self.assertEqual(len(listing), 1, (ctx, result["findings"]))
                 if ctx:
-                    self.assert_closed(result, "root fc-gpl was not read in full")
+                    self.assert_closed(result, "root fc-gpl, which is untrusted")
 
     def chain_with(self, gpl):
         return check(FAIL / "docs", "--context-root", FAIL / "perm", "--context-root", gpl)
+
+
+UNTRUSTED = REFS / "untrusted"
+
+
+class Untrusted(unittest.TestCase):
+    """User decision (round 2): a reference may only rest on a root that checks clean. Every
+    round-2 input from both reviewers, at the GPL end of the fail-closed chain (or as a second
+    root named fc-gpl beside the clean twin): each fails on the checked docs file alone."""
+
+    UNTRUSTED_ROOT = {  # case: text from the root's own first error, quoted in the message
+        "misnamed-yml": "not read as a spec", "misnamed-upper": "not read as a spec",
+        "misnamed-mixed": "not read as a spec", "backup-bak": "not read as a spec",
+        "backup-tilde": "not read as a spec", "format1-md": "a format 1 spec",
+        "overlays-newline": "b.spec.yaml", "overlays-case": "b.spec.yaml",
+        "id-only": "b.spec.yaml", "no-identity": "b.spec.yaml", "id-list": "b.spec.yaml",
+        "id-empty": "b.spec.yaml", "dup-repos": "listed twice",
+    }
+    UNREADABLE_MARKER = ["fragment", "second-unparseable", "second-name-int",
+                         "second-name-newline", "second-dup-name-key", "second-bogus-key"]
+
+    def run_case(self, case):
+        args = [FAIL / "docs", "--context-root", FAIL / "perm"]
+        if case.startswith("second-"):
+            args += ["--context-root", FAIL / "gpl-clean-twin"]
+        return check(*args, "--context-root", UNTRUSTED / case, "--require-license")
+
+    def test_every_case_is_a_fixture(self):
+        self.assertEqual({p.name for p in UNTRUSTED.iterdir()},
+                         set(self.UNTRUSTED_ROOT) | set(self.UNREADABLE_MARKER) | {"warning-only"})
+
+    def test_untrusted_roots(self):
+        for case, first in self.UNTRUSTED_ROOT.items():
+            with self.subTest(case):
+                code, result = self.run_case(case)
+                self.assertEqual(code, 1)
+                f = only(errors(result))
+                self.assertTrue(f["path"].endswith("docs/dchip.spec.yaml"), f)
+                self.assertIn("whose reference 'gchip@fc-gpl#gfact' cannot be resolved: root "
+                              "fc-gpl, which is untrusted", f["message"])
+                self.assertIn(first, f["message"])
+                self.assertIn("a reference may only rest on a root that checks clean",
+                              f["message"])
+
+    def test_unreadable_markers(self):
+        for case in self.UNREADABLE_MARKER:
+            with self.subTest(case):
+                code, result = self.run_case(case)
+                self.assertEqual(code, 1)
+                f = only(errors(result))
+                self.assertTrue(f["path"].endswith("docs/dchip.spec.yaml"), f)
+                self.assertIn(f"untrusted/{case}/board-specs.yaml could not be read, so that "
+                              f"root's name is unknown", f["message"])
+
+    def test_a_clean_context_root_resolves_normally(self):
+        code, result = self.run_case("warning-only")
+        self.assertEqual((code, errors(result)), (0, []))
+        self.assertEqual(len(warnings(result)), 2)  # the two overlays: a warning keeps trust
+        code, result = check(FAIL / "perm", "--context-root", FAIL / "gpl-clean-twin")
+        self.assertEqual((code, result["findings"]), (0, []))
+
+    def test_untrust_propagates_to_the_citing_root(self):
+        # perm rests on an untrusted root, so perm is untrusted in turn: docs' reference to a
+        # perm fact that itself reaches nothing untrusted still fails.
+        with tempfile.TemporaryDirectory() as tmp:
+            perm = pathlib.Path(tmp) / "perm"
+            shutil.copytree(FAIL / "perm", perm)
+            (perm / "qchip.spec.yaml").write_text(chip("qchip", facts=fact("q")).replace(
+                "trm", "trm"), encoding="utf-8")
+            docs = pathlib.Path(tmp) / "docs"
+            shutil.copytree(FAIL / "docs", docs)
+            (docs / "dchip.spec.yaml").write_text(chip("dchip", facts=inference(
+                "a", "qchip@fc-perm#q")), encoding="utf-8")
+            code, result = check(docs, "--context-root", perm, "--context-root",
+                                 UNTRUSTED / "dup-repos")
+            self.assertEqual(code, 1)
+            f = only(errors(result))
+            self.assertIn("reference 'qchip@fc-perm#q' rests on root fc-perm, which is "
+                          "untrusted", f["message"])
+            code, result = check(docs, "--context-root", perm, "--context-root", FAIL / "gpl")
+            self.assertEqual(code, 1)  # perm's own reference fails the gate: untrusted too
 
 
 class Roots(TempRoots):
@@ -661,8 +759,7 @@ class BoardFixtures(unittest.TestCase):
         self.assertEqual({n for n, _ in got}, {"broken.spec.yaml", "colon.spec.yaml",
                                               "refers.spec.yaml"})
         f = only(errors(result, "refers.spec.yaml"))
-        self.assertIn("reference 'broken#anything' cannot be resolved", f["message"])
-        self.assertIn("failed to load or validate and may declare spec 'broken'", f["message"])
+        self.assertIn("reference 'broken#anything' resolves to nothing", f["message"])
         msgs = {pathlib.Path(f["path"]).name: f["message"] for f in errors(result)}
         self.assertIn("expected ',' or ']'", msgs["broken.spec.yaml"])
         self.assertIn("mapping values are not allowed here", msgs["colon.spec.yaml"])

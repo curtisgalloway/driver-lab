@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Its extension fragment admits repo and path by pattern.
+format: 2
+layer: public
+name: fc-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, MIT]
+extensions:
+  - {class: source-observed, schema: ext.json}

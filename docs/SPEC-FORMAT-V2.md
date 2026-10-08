@@ -508,6 +508,18 @@ the license split carry over. Restated for format 2:
   structure: there is no second scanner, so there is no second reading to disagree with the
   first. What v1 gated only for `[src:]` anchors now covers `DT` too, which is what kept every
   BCM2711 device-tree fact out of the docs and permissive roots by hand during RG1.
+- **A reference may only rest on a root that checks clean** (user decision, 2026-10-08, during
+  SF2-2's review). The gate fails closed: what it cannot establish is an error on the checked
+  citing file. A root whose own check produced any error is *untrusted*, counting errors from
+  before a context root's findings are reported as warnings: a file that fails to load or
+  validate, a file named like a spec that discovery passes over (`.spec.yml`, a case variant,
+  a backup such as `.bak` or `~`, a format 1 `.spec.md`), a nested marker, a duplicate name, an
+  unlistable directory, a failing reference. Every reference into an untrusted root, direct or
+  reached through other facts, is an error, and that error makes the citing root untrusted in
+  turn. A reference that resolves to nothing, or to more than one fact, is an error too. A
+  marker that cannot be read leaves its root's name unknown, so while any given marker is
+  unreadable, every root-qualified reference fails. `parts` and `instances[].ip` into another
+  root are composition, not a fact resting on a source, and are not gated.
 
 ## Verification records
 

@@ -211,6 +211,17 @@ _FRAGMENT_KEYS = {"$comment", "title", "description", "type", "properties", "req
 # depth: the license gate reads citations only from core fields, so an extension entry naming a
 # repository or a path would cite gated content no gate sees (orchestrator decision, SF2-2 review).
 _CITATION_FIELDS = {"repo", "path", "doc", "anchors", "lines", "symbol", "node", "url"}
+# The keywords a fragment may use below its top (user decision 2026-10-08, SF2-2 review round 2):
+# plain properties and value constraints only. Anything that admits fields by pattern, by
+# condition or by combination (patternProperties, dependentSchemas, if/then/else, anyOf, ...),
+# or a schema-valued additionalProperties or unevaluatedProperties, could admit a field whose
+# name no check sees; with plain properties only, the citation-name ban holds by construction.
+_FRAGMENT_PLAIN = {
+    "$comment", "title", "description", "type", "properties", "required", "enum", "const",
+    "pattern", "format", "minLength", "maxLength", "minimum", "maximum", "exclusiveMinimum",
+    "exclusiveMaximum", "multipleOf", "minItems", "maxItems", "uniqueItems", "items",
+    "minProperties", "maxProperties", "additionalProperties", "unevaluatedProperties",
+}
 _FRAGMENT_PROPERTY = re.compile(r"[a-z][a-z0-9_]*")  # used with fullmatch
 # Draft 2020-12's keywords. A fragment may use no other: a keyword the validator does not know
 # (draft-07's `dependencies`, a typo) would be a silently ignored constraint.
@@ -350,6 +361,15 @@ def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
                 problems.append(f"{where}: {key} at {at} not allowed")
             elif key not in _KEYWORDS_2020_12:
                 problems.append(f"{where}: {key} at {at} is not a draft 2020-12 keyword")
+            elif key not in _FRAGMENT_PLAIN:
+                problems.append(f"{where}: {key} at {at} not allowed: a fragment uses plain "
+                                f"properties and value constraints only")
+            elif key in ("additionalProperties", "unevaluatedProperties") and not isinstance(
+                    value, bool):
+                problems.append(f"{where}: {key} at {at} not allowed with a schema value; "
+                                f"write true or false")
+            elif key == "items" and not isinstance(value, dict):
+                problems.append(f"{where}: items at {at} must be one schema")
             if key == "pattern" and isinstance(value, str) and _pattern_problem(value):
                 problems.append(f"{where}: pattern at {at} {_pattern_problem(value)}")
             if key == "patternProperties" and isinstance(value, dict):

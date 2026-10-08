@@ -44,9 +44,9 @@ description: Drive spec.py, the spec format 2 tool (validate a spec, facts file,
 
     python3 skills/spec-format/scripts/spec.py validate <file>... [--root <dir>] [--json]
 
-Run it in an environment holding skills/spec-format/requirements.txt (hash-pinned):
-`uv run --with-requirements skills/spec-format/requirements.txt python3 ...`, or a venv made
-with `pip install --require-hashes -r skills/spec-format/requirements.txt`.
+Run it in a venv made with
+`python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
+(pip checks the hashes; `uv run --with-requirements` was seen installing a file with wrong ones).
 
 The file name chooses the schema: `*.spec.yaml` and `*.facts.yaml` (spec.schema.json; a facts
 file holds `kind: facts` and a spec file any other kind), `*.verify.yaml` (verify.schema.json),
@@ -55,8 +55,10 @@ the `source-observed` schema fragment it names (D15); without it, a `source-obse
 entry is refused.
 
 Output: one `path:line:column: message` per finding, then a summary line. `--json` prints one
-object: `{"ok": bool, "files": [{"path", "schema", "valid"}], "findings": [{"path", "line",
-"column", "message"}]}`.
+object, always: `{"ok": bool, "files": [{"path", "schema", "valid"}], "findings": [{"path",
+"line", "column", "message"}]}`, plus `"error": "usage" | "precondition" | "internal"` when the
+run did not validate (then `files` is empty and each finding has path "" and line and column 0).
+A file that cannot be read is a finding on that file.
 
 Exit status: 0 all valid; 1 a file invalid; 2 usage; 3 a pinned dependency missing or at
 another version.
@@ -71,18 +73,35 @@ class Precondition(Exception):
     """A missing precondition: exit 3."""
 
 
+_MARKER = re.compile(r"^python_(full_)?version\s*(<=|>=|==|!=|<|>)\s*'([0-9.]+)'$")
+
+
+def _marker_applies(marker: str) -> bool:
+    """Evaluate the one marker form uv writes here (python_full_version < 'X'); any other
+    marker counts as applying, so its package is checked rather than skipped."""
+    m = _MARKER.match(marker.strip())
+    if not m:
+        return True
+    want = tuple(int(x) for x in m.group(3).split("."))
+    have = tuple(sys.version_info[:len(want)])
+    return {"<": have < want, "<=": have <= want, ">": have > want, ">=": have >= want,
+            "==": have == want, "!=": have != want}[m.group(2)]
+
+
 def pinned_versions() -> dict[str, str]:
-    """The `name==version` pins of requirements.txt, by normalized distribution name."""
+    """The `name==version` pins of requirements.txt that apply to this Python, by normalized
+    distribution name."""
     pins = {}
     for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines():
-        m = re.match(r"^([A-Za-z0-9_.-]+)==([^\s;\\]+)", line)
-        if m:
+        m = re.match(r"^([A-Za-z0-9_.-]+)==([^\s;\\]+)\s*(?:;([^\\]*))?", line)
+        if m and (m.group(3) is None or _marker_applies(m.group(3))):
             pins[re.sub(r"[-_.]+", "-", m.group(1)).lower()] = m.group(2)
     return pins
 
 
 def check_dependencies() -> list[str]:
-    """Problems with the pinned direct dependencies; empty when all are present at the pin."""
+    """Problems with the pinned dependencies; empty when every pin that applies is installed
+    at its version and the three direct ones import."""
     import importlib
     import importlib.metadata
 
@@ -108,6 +127,16 @@ def check_dependencies() -> list[str]:
             importlib.import_module(module)
         except ImportError as exc:
             problems.append(f"{dist} {have} does not import: {exc}")
+    for dist, want in sorted(pins.items()):
+        if dist in DIRECT:
+            continue
+        try:
+            have = importlib.metadata.version(dist)
+        except importlib.metadata.PackageNotFoundError:
+            problems.append(f"{dist} is not installed (pinned {want})")
+            continue
+        if have != want:
+            problems.append(f"{dist} is {have}, pinned {want}")
     return problems
 
 
@@ -120,7 +149,11 @@ def _strict_json(path: Path):
             out[k] = v
         return out
 
-    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=pairs)
+    def constant(name):
+        raise ValueError(f"{name} is not JSON")
+
+    return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=pairs,
+                      parse_constant=constant)
 
 
 class Finding:
@@ -176,19 +209,40 @@ def load_schemas() -> dict[str, dict]:
     return schemas
 
 
-def check_fragment(fragment, where: Path) -> list[str]:
+_SCHEMA_ONE = {"items", "contains", "not", "if", "then", "else", "propertyNames",
+               "additionalProperties", "unevaluatedProperties", "unevaluatedItems",
+               "additionalItems", "contentSchema"}
+_SCHEMA_MAP = {"properties", "patternProperties", "dependentSchemas", "$defs", "definitions"}
+_SCHEMA_LIST = {"allOf", "anyOf", "oneOf", "prefixItems"}
+
+
+def core_fields(schemas: dict[str, dict]) -> set[str]:
+    """Every field a core support class declares, and `class`."""
+    names = {"class"}
+    for branch in schemas["spec"]["$defs"]["support"]["allOf"]:
+        names.update(branch.get("then", {}).get("properties", {}))
+    return names
+
+
+def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
     """Problems with an extension's schema fragment; it may only add fields (D15).
 
     The fragment is composed into the support entry with the core schema's
-    unevaluatedProperties still in force, so it must not carry keywords that would mark every
-    property evaluated (additionalProperties, patternProperties, unevaluatedProperties) or
-    that reach outside it ($ref, $id, $defs, ...).
+    unevaluatedProperties still in force, so at its top it may declare only type, properties
+    and required: no keyword that would mark every property evaluated (additionalProperties,
+    patternProperties, unevaluatedProperties) or combine schemas. Anywhere in it, no keyword
+    that reaches outside it ($ref, $dynamicRef, $id, $anchor, $defs, ...). It may not declare a
+    field a core class declares (anchors, url, doc, ...), since tools read those by name.
     """
     import jsonschema
 
     if not isinstance(fragment, dict):
         return [f"{where}: a schema fragment is a JSON object"]
     problems = []
+    try:
+        jsonschema.Draft202012Validator.check_schema(fragment)
+    except jsonschema.SchemaError as exc:
+        problems.append(f"{where}: not a valid JSON Schema: {exc.message}")
     extra = sorted(set(fragment) - _FRAGMENT_KEYS)
     if extra:
         problems.append(f"{where}: keywords not allowed in a fragment: {', '.join(extra)}")
@@ -199,27 +253,36 @@ def check_fragment(fragment, where: Path) -> list[str]:
         problems.append(f"{where}: a fragment declares its fields in a non-empty properties")
         props = {}
     for name in props:
-        if name == "class" or not _FRAGMENT_PROPERTY.match(name):
-            problems.append(f"{where}: field name {name!r} not allowed (lowercase, not class)")
+        if name in reserved:
+            problems.append(f"{where}: field name {name!r} is a core field; choose another")
+        elif not _FRAGMENT_PROPERTY.match(name):
+            problems.append(f"{where}: field name {name!r} not allowed (lowercase letters, "
+                            f"digits and _)")
     required = fragment.get("required", [])
-    if not isinstance(required, list) or any(r not in props for r in required):
+    if (not isinstance(required, list) or not all(isinstance(r, str) for r in required)
+            or any(r not in props for r in required)):
         problems.append(f"{where}: required lists only fields the fragment declares")
 
-    def walk(node, trail):
-        if isinstance(node, dict):
-            for k, v in node.items():
-                if k.startswith("$") and k != "$comment" and trail[-1:] != ("properties",):
-                    problems.append(f"{where}: {k} at {'/'.join(trail) or 'top'} not allowed")
-                walk(v, trail + (k,))
-        elif isinstance(node, list):
-            for i, v in enumerate(node):
-                walk(v, trail + (str(i),))
+    def walk(schema, trail):
+        """Visit every subschema; keywords in schema position only, never data."""
+        if isinstance(schema, bool):
+            return
+        if not isinstance(schema, dict):
+            return  # check_schema reports it
+        for key, value in schema.items():
+            at = "/".join(trail + (key,))
+            if key.startswith("$") and key != "$comment":
+                problems.append(f"{where}: {key} at {at} not allowed")
+            if key in _SCHEMA_ONE:
+                walk(value, trail + (key,))
+            elif key in _SCHEMA_MAP and isinstance(value, dict):
+                for name, sub in value.items():
+                    walk(sub, trail + (key, name))
+            elif key in _SCHEMA_LIST and isinstance(value, list):
+                for i, sub in enumerate(value):
+                    walk(sub, trail + (key, str(i)))
 
     walk(fragment, ())
-    try:
-        jsonschema.Draft202012Validator.check_schema(fragment)
-    except jsonschema.SchemaError as exc:
-        problems.append(f"{where}: not a valid JSON Schema: {exc.message}")
     return problems
 
 
@@ -289,16 +352,23 @@ def schema_findings(validator, data, loaded, path: Path, declared: set) -> list[
     """
     from jsonschema.exceptions import best_match
 
+    unknown = ("unevaluatedProperties", "additionalProperties")
     errors = list(validator.iter_errors(data))
-    other_paths = [tuple(e.absolute_path) for e in errors
-                   if e.validator not in ("unevaluatedProperties", "additionalProperties")]
+    # Errors that can explain a cascade at path P: any other error at or below P, and an
+    # unknown-key error strictly below P (its own branch failed, and so did P's).
+    others = [(tuple(e.absolute_path), e.validator in unknown) for e in errors]
     out = []
     for error in errors:
         at = tuple(error.absolute_path)
-        if error.validator in ("unevaluatedProperties", "additionalProperties") and isinstance(
-            error.instance, dict
-        ):
-            shadowed = any(p[:len(at)] == at for p in other_paths)
+        if "propertyNames" in error.absolute_schema_path and isinstance(error.instance, str):
+            key = error.instance
+            m = loaded.mark(at + (key,), key=True)
+            out.append(Finding(path, m.line, m.column,
+                               f"{_where(at)}: key {key!r}: {_custom_message(error) or _short(error)}"))
+            continue
+        if error.validator in unknown and isinstance(error.instance, dict):
+            shadowed = any(p[:len(at)] == at and (len(p) > len(at) or not is_unknown)
+                           for p, is_unknown in others if (p, is_unknown) != (at, True))
             for key in error.instance:
                 if repr(key) not in error.message:
                     continue
@@ -344,7 +414,7 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     except (OSError, ValueError) as exc:
         findings.append(Finding(marker, 1, 1, f"extensions: {rel}: {exc}"))
         return None
-    problems = check_fragment(fragment, Path(rel))
+    problems = check_fragment(fragment, Path(rel), core_fields(load_schemas()))
     for p in problems:
         findings.append(Finding(marker, 1, 1, f"extensions: {p}"))
     return None if problems else fragment
@@ -361,6 +431,9 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]) -> tu
         loaded = specload.load_strict_marked(path)
     except specload.LoadError as exc:
         findings.append(Finding(path, exc.line, exc.column, exc.problem))
+        return False, kind
+    except OSError as exc:
+        findings.append(Finding(path, 1, 1, f"cannot read the file: {exc.strerror or exc}"))
         return False, kind
     if kind == "root":
         extension = None  # a marker is validated with its own fragment, below
@@ -439,52 +512,57 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _failure(kind: str, messages: list[str]) -> str:
+    """The --json object for a run that did not validate (usage, precondition, internal)."""
+    return json.dumps({"ok": False, "error": kind, "files": [],
+                       "findings": [{"path": "", "line": 0, "column": 0, "message": m}
+                                    for m in messages]}, sort_keys=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    want_json = "--json" in argv
+    want_json = any(a == "--json" or a.startswith("--json=") for a in argv)
     parser = build_parser()
 
-    def fail_usage(message: str) -> int:
+    def fail(kind: str, code: int, messages: list[str], hint: str = "") -> int:
         if want_json:
-            print(json.dumps({"ok": False, "error": "usage", "findings": [message]},
-                             sort_keys=True))
+            print(_failure(kind, messages))
         else:
-            print(f"usage error: {message}", file=sys.stderr)
-        return EXIT_USAGE
+            label = {"usage": "usage error", "precondition": "missing precondition"}.get(
+                kind, "internal error")
+            for m in messages:
+                print(f"{label}: {m}", file=sys.stderr)
+            if hint:
+                print(hint, file=sys.stderr)
+        return code
 
     try:
         args = parser.parse_args(argv)
     except Usage as exc:
-        return fail_usage(str(exc))
+        return fail("usage", EXIT_USAGE, [str(exc)])
     if args.skill:
         print(SKILL, end="")
         return EXIT_OK
     if args.command is None:
-        return fail_usage("name a subcommand: validate")
+        return fail("usage", EXIT_USAGE, ["name a subcommand: validate"])
 
     problems = check_dependencies()
     if problems:
-        if want_json:
-            print(json.dumps({"ok": False, "error": "precondition", "findings": problems},
-                             sort_keys=True))
-        else:
-            for p in problems:
-                print(f"missing precondition: {p}", file=sys.stderr)
-            print("install: pip install --require-hashes -r skills/spec-format/requirements.txt",
-                  file=sys.stderr)
-        return EXIT_PRECONDITION
+        return fail("precondition", EXIT_PRECONDITION, problems,
+                    "install: pip install --require-hashes -r skills/spec-format/requirements.txt")
     sys.path.insert(0, str(HERE))
     try:
         code, result = cmd_validate(args)
     except Usage as exc:
-        return fail_usage(str(exc))
+        return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
-        if want_json:
-            print(json.dumps({"ok": False, "error": "precondition", "findings": [str(exc)]},
-                             sort_keys=True))
-        else:
-            print(f"missing precondition: {exc}", file=sys.stderr)
-        return EXIT_PRECONDITION
+        return fail("precondition", EXIT_PRECONDITION, [str(exc)])
+    except Exception as exc:  # pylint: disable=broad-except
+        # A bug, not a verdict on the files: say so, in JSON when JSON was asked for.
+        import traceback
+
+        traceback.print_exc(file=sys.stderr)
+        return fail("internal", EXIT_INVALID, [f"{type(exc).__name__}: {exc}"])
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))

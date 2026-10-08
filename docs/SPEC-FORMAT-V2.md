@@ -138,15 +138,15 @@ id: bcm2711               # normalized: [a-z0-9-], unique across every root read
 name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
 not_triggers: [bcm2712]
-aliases: []
+aliases: [...]            # optional lists: absent or non-empty, never []
 cache: rpi4-resources
-instances: []             # soc and chip only; see Instances
+instances: []             # soc and chip only, required for soc (may be empty); see Instances
 resources: {}             # documents, repos, series, tools; see Resources
-assumptions: []           # named assumptions facts rest on; see Assumptions
+assumptions: [...]        # named assumptions facts rest on; see Assumptions
 orientation: >-           # prose, not facts; see Prose that is not a fact
   The BCM2711 is the SoC of ...
 facts: []                 # the fact records, in reading order
-notices: []               # source notices a license asks the spec to carry
+notices: [...]            # source notices a license asks the spec to carry
 ```
 
 The SPDX header stays as YAML comment lines at the top of the file, where REUSE tooling reads
@@ -311,9 +311,11 @@ A locator is a mapping with at least one of `section`, `page`, `pages`, `table`,
 `clause`, `heading`; all values are strings, so "92", "D24-9638" and "4-91" all fit. `pages` is a
 two-item list. When the document entry gives `pages` (a count) and a locator's page is a plain
 number, the checker requires it within the count; the entry's `page_numbering` says whether the
-numbers are printed or PDF page numbers. A `databook` or `standard` locator must carry `section`,
-`page`, `pages`, `table`, `figure` or `clause`; a `doc` locator may be a `heading` alone (most
-project documentation has no page numbers). This is the citation-precision rule RG1 asked for (V2)
+numbers are printed or PDF page numbers. A `databook` locator must carry `section`, `page`,
+`pages`, `table`, `figure` or `clause`; so must a `standard` locator when its document entry gives
+`pages` (a paged document; the checker enforces it), while an unpaged standard such as Linux's
+`booting.rst` may be cited by `heading` (amended 2026-10-08 by the orchestrator's SF2-1 decision);
+a `doc` locator may be a `heading` alone (most project documentation has no page numbers). This is the citation-precision rule RG1 asked for (V2)
 in its mechanical part; whether a locator is the *right* one stays the verifier's.
 
 ### Anchors (`src`, `DT`, `rtl`)
@@ -529,7 +531,7 @@ verdicts:
     note: "what was compared against what"
     contrary_evidence: none-found   # none-found | found | not-checked
     citation_precision: exact       # exact | imprecise
-    readers: []                     # a second reader's {verifier, verdict, note}, when it ran
+    readers: [...]                  # a second reader's {verifier, verdict, note}; absent until one runs
     carried_from: {...}             # present when the verdict was carried forward, not re-read
 ```
 
@@ -1166,7 +1168,6 @@ id: bcm2711
 name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
 not_triggers: [bcm2712]
-aliases: []
 cache: rpi4-resources
 instances: []
 resources:
@@ -1663,7 +1664,6 @@ verdicts:
       0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to
       0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and
       IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86
@@ -1679,7 +1679,6 @@ verdicts:
       bcm283x.dtsi line 11 reserves 0x0 for 0x1000; the comment on lines 8-10 is attributed as a
       comment and matches (firmware startup stubs, secondary CPUs spinning). bcm2711.dtsi
       includes bcm283x.dtsi (line 2).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86
@@ -1690,6 +1689,7 @@ verdicts:
 
 The carried verdicts leave out `contrary_evidence` and `citation_precision`: the format 1 record
 did not state them per bullet, and a carried verdict records only what the earlier record said.
+They also have no `readers`: an optional list is absent rather than empty (SF2-1, 2026-10-08).
 What `spec.py status` reports for this slice: `gic-node` and `reserved-stub-page`
 current (carried); `address-translation-in-the-tree` and
 `tree-describes-low-peripheral-mode` unverified, because the split changed the first claim's

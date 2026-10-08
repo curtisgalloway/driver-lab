@@ -61,7 +61,6 @@ verdicts:
     verdict: PASS
     date: 2026-10-08
     verifier: a model
-    readers: []
     carried_from: {repo: widget-specs, commit: cd911120663da72f4101161eef5a22dc13d0cc86, path: specs/resources/widget-soc.verify.md, key: 'Gotchas/2 "FIFO trigger level"', format: 1}
   observed-boot:
     basis: 0000000000000000000000000000000000000000000000000000000000000007

@@ -27,7 +27,7 @@ instances:
   - id: timer
     name: timer
     ip: widget-timer
-    reg: "0x00"
+    reg: "0x0"
     irq: {kind: PPI, number: 14}
     clocks: []
     support:

@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for spec.py's command line: exit codes 0/1/2/3, --json and --skill.
 
-Run in the pinned environment:
-  uv run --with-requirements skills/spec-format/requirements.txt \
-    python3 -m unittest discover -s skills/spec-format/tests -v
+Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
+  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
 """
 
 import contextlib
 import io
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -35,6 +35,16 @@ def run(argv):
 
 
 class ExitCodes(unittest.TestCase):
+    def assert_failure_object(self, out, kind):
+        """The documented --json shape for a run that did not validate."""
+        result = json.loads(out)
+        self.assertEqual(set(result), {"ok", "error", "files", "findings"})
+        self.assertEqual((result["ok"], result["error"], result["files"]), (False, kind, []))
+        self.assertTrue(result["findings"])
+        for f in result["findings"]:
+            self.assertEqual(set(f), {"path", "line", "column", "message"})
+            self.assertEqual((f["path"], f["line"], f["column"]), ("", 0, 0))
+
     def test_valid_is_0(self):
         code, out, _ = run(["validate", str(GOOD)])
         self.assertEqual(code, 0)
@@ -79,7 +89,7 @@ class ExitCodes(unittest.TestCase):
                     self.assertIn("usage error", err)
                     code, out, err = run(argv + ["--json"])
                     self.assertEqual(code, 2, err)
-                    self.assertEqual(json.loads(out)["error"], "usage")
+                    self.assert_failure_object(out, "usage")
 
     def test_missing_dependency_is_3(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -93,7 +103,7 @@ class ExitCodes(unittest.TestCase):
                 self.assertIn("jsonschema is 4.26.0, pinned 0.0.1", err)
                 code, out, err = run(["validate", "--json", str(GOOD)])
                 self.assertEqual(code, 3)
-                self.assertEqual(json.loads(out)["error"], "precondition")
+                self.assert_failure_object(out, "precondition")
         with mock.patch.dict(spec_cli.DIRECT, {"not-a-real-dist": "nope"}):
             with mock.patch.object(spec_cli, "pinned_versions",
                                    return_value=dict(spec_cli.pinned_versions(),
@@ -101,6 +111,57 @@ class ExitCodes(unittest.TestCase):
                 code, _, err = run(["validate", str(GOOD)])
                 self.assertEqual(code, 3)
                 self.assertIn("not-a-real-dist is not installed", err)
+
+    def test_transitive_pin_is_checked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            req = pathlib.Path(tmp) / "requirements.txt"
+            text = spec_cli.REQUIREMENTS.read_text(encoding="utf-8")
+            req.write_text(text.replace("referencing==0.37.0", "referencing==0.0.1"),
+                           encoding="utf-8")
+            with mock.patch.object(spec_cli, "REQUIREMENTS", req):
+                code, _, err = run(["validate", str(GOOD)])
+        self.assertEqual(code, 3)
+        self.assertIn("referencing is 0.37.0, pinned 0.0.1", err)
+
+    def test_markers(self):
+        here = ".".join(str(x) for x in sys.version_info[:3])
+        self.assertTrue(spec_cli._marker_applies(f"python_full_version == '{here}'"))
+        self.assertFalse(spec_cli._marker_applies(f"python_full_version != '{here}'"))
+        self.assertFalse(spec_cli._marker_applies("python_full_version < '3.0'"))
+        self.assertTrue(spec_cli._marker_applies("python_full_version >= '3.0'"))
+        self.assertTrue(spec_cli._marker_applies("sys_platform == 'win32'"))
+        pins = spec_cli.pinned_versions()
+        self.assertEqual("typing-extensions" in pins, sys.version_info < (3, 13))
+
+    def test_unreadable_file_is_a_finding(self):
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("root reads any file")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "x.spec.yaml"
+            path.write_text("format: 2\n", encoding="utf-8")
+            path.chmod(0)
+            try:
+                code, out, _ = run(["validate", "--json", str(path)])
+            finally:
+                path.chmod(0o600)
+        self.assertEqual(code, 1)
+        result = json.loads(out)
+        self.assertEqual(result["files"], [{"path": str(path), "schema": "spec",
+                                            "valid": False}])
+        self.assertIn("cannot read the file", result["findings"][0]["message"])
+
+    def test_internal_error_still_emits_json(self):
+        with mock.patch.object(spec_cli, "cmd_validate", side_effect=RuntimeError("boom")):
+            code, out, err = run(["validate", "--json", str(GOOD)])
+        self.assertEqual(code, 1)
+        self.assert_failure_object(out, "internal")
+        self.assertIn("RuntimeError: boom", out)
+        self.assertIn("Traceback", err)
+
+    def test_json_equals_form_is_json(self):
+        code, out, _ = run(["validate", "--json=1", str(GOOD)])
+        self.assertEqual(code, 2)
+        self.assert_failure_object(out, "usage")
 
     def test_no_site_packages_is_3(self):
         """With site-packages off (-S), nothing is importable: exit 3, no fallback."""
@@ -144,6 +205,8 @@ class Output(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(out.startswith("---\nname: "))
         self.assertIn("Exit status", out)
+        self.assertIn("--require-hashes", out)
+        self.assertNotIn("uv run --with-requirements skills", out)
 
     def test_runs_as_a_script(self):
         proc = subprocess.run([sys.executable, str(SCRIPT), "validate", str(GOOD)],

@@ -4,7 +4,6 @@
 format: 2
 layer: public
 name: widget-root
-roots: []
 license: Apache-2.0
 accepts: [Apache-2.0, BSD-3-Clause, GPL-2.0-only]
 extensions:

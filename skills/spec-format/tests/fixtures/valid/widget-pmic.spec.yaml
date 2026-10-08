@@ -6,7 +6,6 @@ id: widget-pmic
 name: Widget PMIC
 triggers: [widget pmic]
 parts: [widget-regulator]
-instances: []
 cache: widget-pmic-resources
 resources:
   documents:

@@ -10,7 +10,7 @@
     "spec": {"$ref": "spec.schema.json#/$defs/specId"},
     "spec_file": {
       "type": "string",
-      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|$))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*\\.spec\\.yaml$"
+      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|(?![\\s\\S])))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*\\.spec\\.yaml(?![\\s\\S])"
     },
     "spec_sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
     "canonical": {"const": "fact-v1"},
@@ -31,7 +31,7 @@
       "type": "object",
       "propertyNames": {
         "$comment": "A bare fact id, or <fact id>.<sub-id> for a field or step with its own support (D16).",
-        "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)?$"
+        "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)?(?![\\s\\S])"
       },
       "additionalProperties": {"$ref": "#/$defs/verdict"}
     }
@@ -60,17 +60,20 @@
         "basis": {"$ref": "spec.schema.json#/$defs/sha256"},
         "verdict": {"$ref": "#/$defs/verdictValue"},
         "date": {"$ref": "spec.schema.json#/$defs/date"},
-        "verifier": {"$ref": "spec.schema.json#/$defs/text"},
+        "verifier": {"$ref": "spec.schema.json#/$defs/line"},
         "note": {"$ref": "spec.schema.json#/$defs/text"},
         "contrary_evidence": {"enum": ["none-found", "found", "not-checked"]},
         "citation_precision": {"enum": ["exact", "imprecise"]},
         "readers": {
+          "$comment": "Absent until a second reader runs; never empty.",
           "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
           "items": {
             "type": "object",
             "required": ["verifier", "verdict"],
             "properties": {
-              "verifier": {"$ref": "spec.schema.json#/$defs/text"},
+              "verifier": {"$ref": "spec.schema.json#/$defs/line"},
               "verdict": {"$ref": "#/$defs/verdictValue"},
               "date": {"$ref": "spec.schema.json#/$defs/date"},
               "note": {"$ref": "spec.schema.json#/$defs/text"}
@@ -86,7 +89,7 @@
             "type": "object",
             "required": ["verifier", "verdict", "reasoning"],
             "properties": {
-              "verifier": {"$ref": "spec.schema.json#/$defs/text"},
+              "verifier": {"$ref": "spec.schema.json#/$defs/line"},
               "verdict": {"$ref": "#/$defs/verdictValue"},
               "reasoning": {"$ref": "spec.schema.json#/$defs/text"}
             },
@@ -98,7 +101,7 @@
           "required": ["decision", "by", "date", "rule"],
           "properties": {
             "decision": {"$ref": "spec.schema.json#/$defs/text"},
-            "by": {"$ref": "spec.schema.json#/$defs/text"},
+            "by": {"$ref": "spec.schema.json#/$defs/line"},
             "date": {"$ref": "spec.schema.json#/$defs/date"},
             "rule": {"$ref": "spec.schema.json#/$defs/text"}
           },
@@ -111,7 +114,7 @@
             "repo": {"$ref": "spec.schema.json#/$defs/name"},
             "commit": {"$ref": "spec.schema.json#/$defs/commit"},
             "path": {"$ref": "spec.schema.json#/$defs/path"},
-            "key": {"$ref": "spec.schema.json#/$defs/text"},
+            "key": {"$ref": "spec.schema.json#/$defs/line"},
             "format": {"enum": [1, 2]}
           },
           "additionalProperties": false

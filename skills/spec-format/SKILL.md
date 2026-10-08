@@ -24,8 +24,10 @@ contract is the approved design, [docs/SPEC-FORMAT-V2.md](../../docs/SPEC-FORMAT
 What exists so far (SF2-1):
 
 - `scripts/specload.py`: `load_strict(path)`, the one loader every format 2 tool uses (the
-  design's loader table: four plain-scalar types, no anchors, aliases, merge keys or tags, one
-  document, unique string keys, no invisible or control characters, NFC, UTF-8 without a BOM).
+  design's loader table: four plain-scalar types, integers within 64 bits, no anchors,
+  aliases, merge keys, tags or directives, one document, unique string keys, no invisible or
+  control characters anywhere in the file (a lone CR and NEL included; CRLF is fine), NFC,
+  UTF-8 without a BOM).
 - `schema/spec.schema.json` (kinds `board`, `soc`, `chip`, `ip`, `overlay`, `facts`),
   `schema/root.schema.json` (`board-specs.yaml` with `format: 2`) and
   `schema/verify.schema.json` (`resources/<name>.verify.yaml`).

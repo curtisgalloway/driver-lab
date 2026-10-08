@@ -19,7 +19,6 @@ verdicts:
       0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to
       0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and
       IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86
@@ -35,7 +34,6 @@ verdicts:
       bcm283x.dtsi line 11 reserves 0x0 for 0x1000; the comment on lines 8-10 is attributed as a
       comment and matches (firmware startup stubs, secondary CPUs spinning). bcm2711.dtsi
       includes bcm283x.dtsi (line 2).
-    readers: []
     carried_from:
       repo: hardware-specs-gpl
       commit: cd911120663da72f4101161eef5a22dc13d0cc86

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/spec.schema.json",
-  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. Spec format 2, kinds board, soc, chip, ip, overlay and facts (SF2-1); peripheral and review arrive in SF2-7. Design: docs/SPEC-FORMAT-V2.md.",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. Spec format 2, kinds board, soc, chip, ip, overlay and facts (SF2-1); peripheral and review arrive in SF2-7. Design: docs/SPEC-FORMAT-V2.md. Patterns end with (?![\\s\\S]) (nothing follows), never $: in Python's re, which the validator uses, $ also matches before a final newline, so an id \"w\\n\" would pass. The lookahead means end of string in Python and ECMA-262 alike. Optional lists are absent or non-empty: an empty list would be a second spelling of an absent key.",
   "title": "Spec format 2: a spec or an investigator's facts file",
   "type": "object",
   "required": ["format", "kind", "facts"],
@@ -10,9 +10,9 @@
     "kind": {"enum": ["board", "soc", "chip", "ip", "overlay", "facts"]},
     "facts": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
     "resources": {"$ref": "#/$defs/resources"},
-    "assumptions": {"type": "array", "items": {"$ref": "#/$defs/assumption"}},
+    "assumptions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/assumption"}},
     "orientation": {"$ref": "#/$defs/text"},
-    "notices": {"type": "array", "items": {"$ref": "#/$defs/notice"}}
+    "notices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/notice"}}
   },
   "allOf": [
     {
@@ -21,12 +21,12 @@
         "required": ["id", "name", "triggers", "parts", "cache"],
         "properties": {
           "id": {"$ref": "#/$defs/specId"},
-          "name": {"$ref": "#/$defs/text"},
+          "name": {"$ref": "#/$defs/line"},
           "triggers": {"$ref": "#/$defs/triggers"},
           "not_triggers": {"$ref": "#/$defs/wordList"},
           "aliases": {"$ref": "#/$defs/idList"},
           "parts": {"$ref": "#/$defs/parts"},
-          "variants": {"type": "array", "items": {"$ref": "#/$defs/variant"}},
+          "variants": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/variant"}},
           "variant_of": {"$ref": "#/$defs/specId"},
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections"}}
@@ -39,7 +39,7 @@
         "required": ["id", "name", "triggers", "instances"],
         "properties": {
           "id": {"$ref": "#/$defs/specId"},
-          "name": {"$ref": "#/$defs/text"},
+          "name": {"$ref": "#/$defs/line"},
           "triggers": {"$ref": "#/$defs/triggers"},
           "not_triggers": {"$ref": "#/$defs/wordList"},
           "aliases": {"$ref": "#/$defs/idList"},
@@ -55,12 +55,12 @@
         "required": ["id", "name", "triggers"],
         "properties": {
           "id": {"$ref": "#/$defs/specId"},
-          "name": {"$ref": "#/$defs/text"},
+          "name": {"$ref": "#/$defs/line"},
           "triggers": {"$ref": "#/$defs/triggers"},
           "not_triggers": {"$ref": "#/$defs/wordList"},
           "aliases": {"$ref": "#/$defs/idList"},
           "parts": {"$ref": "#/$defs/parts"},
-          "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
+          "instances": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/instance"}},
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections"}}
         }
@@ -72,7 +72,7 @@
         "required": ["id", "name", "triggers", "resources"],
         "properties": {
           "id": {"$ref": "#/$defs/specId"},
-          "name": {"$ref": "#/$defs/text"},
+          "name": {"$ref": "#/$defs/line"},
           "triggers": {"$ref": "#/$defs/triggers"},
           "not_triggers": {"$ref": "#/$defs/wordList"},
           "aliases": {"$ref": "#/$defs/idList"},
@@ -95,7 +95,7 @@
         "required": ["overlays"],
         "properties": {
           "overlays": {"$ref": "#/$defs/specId"},
-          "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
+          "instances": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/instance"}},
           "facts": {
             "items": {
               "required": ["title"],
@@ -115,7 +115,7 @@
         "required": ["resources"],
         "properties": {
           "id": {"$ref": "#/$defs/specId"},
-          "name": {"$ref": "#/$defs/text"},
+          "name": {"$ref": "#/$defs/line"},
           "facts": {"items": {"properties": {"section": {"const": "facts"}}}}
         }
       }
@@ -128,50 +128,79 @@
       "type": "string",
       "pattern": "\\S"
     },
-    "specId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
-    "factId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
-    "assumptionId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "line": {
+      "$comment": "Single-line text: words separated by single spaces; no leading, trailing or doubled space, no newline.",
+      "type": "string",
+      "pattern": "^\\S+( \\S+)*(?![\\s\\S])"
+    },
+    "specId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*(?![\\s\\S])"},
+    "factId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*(?![\\s\\S])"},
+    "assumptionId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*(?![\\s\\S])"},
     "factRef": {
       "$comment": "#<fact>, <spec>#<fact>, or <spec>@<root>#<fact> (design, References; D1).",
       "type": "string",
-      "pattern": "^([a-z0-9][a-z0-9-]*(@[a-z0-9][a-z0-9._-]*)?)?#[a-z0-9][a-z0-9-]*$"
+      "pattern": "^([a-z0-9][a-z0-9-]*(@[a-z0-9][a-z0-9._-]*)?)?#[a-z0-9][a-z0-9-]*(?![\\s\\S])"
     },
     "name": {
       "$comment": "A resources entry name (document or repository), also used for cache names.",
       "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      "pattern": "^[a-z0-9][a-z0-9._-]*(?![\\s\\S])"
     },
     "date": {
       "type": "string",
-      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+      "$comment": "A calendar date, YYYY-MM-DD; February 29 only in leap years.",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|(0[48]|[2468][048]|[13579][26])00)-02-29)(?![\\s\\S])"
     },
-    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "commit": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"},
-    "hex": {
-      "$comment": "One spelling for a hex value (D6): 0x, then lowercase digits, no separators.",
+    "gitRef": {
+      "$comment": "A git ref name for a map-only repos entry: no leading '-', no white space or shell metacharacters, none of git's forbidden forms (.., //, @{, a component starting with '.', a trailing '/' or '.', .lock).",
       "type": "string",
-      "pattern": "^0x[0-9a-f]+$"
+      "pattern": "^(?!-)(?!/)(?!.*\\.\\.)(?!.*//)(?!.*@\\{)(?!(.*/)?\\.)(?!.*\\.lock(/|(?![\\s\\S])))(?!.*[/.](?![\\s\\S]))[A-Za-z0-9._/+-]+(?![\\s\\S])"
+    },
+    "symbol": {
+      "$comment": "A symbol, macro, label or property name in source: no leading '-', no white space or shell metacharacters.",
+      "type": "string",
+      "pattern": "^(?!-)[A-Za-z0-9_.:@,/#+\\[\\]-]+(?![\\s\\S])"
+    },
+    "dtNode": {
+      "$comment": "A device-tree node name or path: no leading '-', no white space or shell metacharacters.",
+      "type": "string",
+      "pattern": "^(?!-)[A-Za-z0-9_.,@/:#+-]+(?![\\s\\S])"
+    },
+    "method": {
+      "$comment": "How something was fetched (via, fetch_via): single-line words, no leading '-', no shell metacharacters.",
+      "type": "string",
+      "pattern": "^(?!-)[^\\s;|&$`'\"\\\\<>(){}*?!]+( [^\\s;|&$`'\"\\\\<>(){}*?!]+)*(?![\\s\\S])"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
+    "commit": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})(?![\\s\\S])"},
+    "hex": {
+      "$comment": "One spelling for a hex value (D6): 0x, lowercase digits, no separators, no leading zeros (0x0 for zero). No type here, so a nullable field can use it.",
+      "pattern": "^0x(0|[1-9a-f][0-9a-f]*)(?![\\s\\S])"
     },
     "httpsUrl": {
-      "$comment": "https only, a host without user information, no white space; nothing else reaches a tool (RG-T1 R1).",
+      "$comment": "https only; a host of DNS labels (no user information, no empty or hyphen-edged label); no white space or backslash; nothing else reaches a tool (RG-T1 R1).",
       "type": "string",
-      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[^\\s]*)?$"
+      "pattern": "^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:[0-9]{1,5})?(/[^\\s\\\\]*)?(?![\\s\\S])"
     },
     "path": {
-      "$comment": "A path inside a repository: relative, no empty, '.' or '..' segment, no leading '-', a trailing '/' for a directory.",
+      "$comment": "A path inside a repository: relative, no empty, '.', '..' or '.git' segment, no leading '-', no '~', a trailing '/' for a directory.",
       "type": "string",
-      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|$))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*/?$"
+      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|(?![\\s\\S])))(?!(.*/)?\\.[gG][iI][tT](/|(?![\\s\\S])))[A-Za-z0-9._+@,=-]+(/[A-Za-z0-9._+@,=-]+)*/?(?![\\s\\S])"
+    },
+    "filePath": {
+      "$comment": "A path naming a file: a path without the trailing '/' of a directory.",
+      "allOf": [{"$ref": "#/$defs/path"}, {"pattern": "[^/](?![\\s\\S])"}]
     },
     "spdxExpression": {
       "$comment": "An SPDX expression; the checker parses it (board-expert/scripts/spdx.py).",
       "type": "string",
-      "pattern": "^(?=.*\\S)[A-Za-z0-9.+() -]+$"
+      "pattern": "^(?=.*\\S)[A-Za-z0-9.+() -]+(?![\\s\\S])"
     },
-    "triggers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
-    "wordList": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
-    "idList": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
+    "triggers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
+    "wordList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
+    "idList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
     "parts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
-    "textList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "textList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
     "boardSpecFactSections": {
       "required": ["title"],
       "properties": {"section": {"enum": ["quick-facts", "gotchas"]}}
@@ -183,7 +212,7 @@
       "properties": {
         "id": {"$ref": "#/$defs/factId"},
         "section": {"type": "string"},
-        "title": {"$ref": "#/$defs/text"},
+        "title": {"$ref": "#/$defs/line"},
         "claim": {"$ref": "#/$defs/text"},
         "support": {"$ref": "#/$defs/supportList"},
         "todo": {"$ref": "#/$defs/todo"},
@@ -215,7 +244,7 @@
         {
           "if": {
             "required": ["support"],
-            "properties": {"support": {"contains": {
+            "properties": {"support": {"type": "array", "contains": {
               "type": "object", "required": ["class"],
               "properties": {"class": {"enum": ["press", "inference", "emulated", "source-observed"]}}
             }}}
@@ -228,7 +257,7 @@
         {
           "if": {
             "required": ["support"],
-            "properties": {"support": {"contains": {
+            "properties": {"support": {"type": "array", "contains": {
               "type": "object", "required": ["class"],
               "properties": {"class": {"const": "inference"}}
             }}}
@@ -243,7 +272,7 @@
         {
           "if": {
             "required": ["support"],
-            "properties": {"support": {"contains": {
+            "properties": {"support": {"type": "array", "contains": {
               "type": "object", "required": ["class"],
               "properties": {"class": {"const": "emulated"}}
             }}}
@@ -300,13 +329,13 @@
       "required": ["reading", "support"],
       "properties": {
         "reading": {"$ref": "#/$defs/text"},
-        "support": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/readSupport"}},
+        "support": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/readSupport"}},
         "resolution": {"$ref": "#/$defs/text"},
         "assumption": {"$ref": "#/$defs/text"},
         "decided": {
           "type": "object",
           "required": ["by", "date"],
-          "properties": {"by": {"$ref": "#/$defs/text"}, "date": {"$ref": "#/$defs/date"}},
+          "properties": {"by": {"$ref": "#/$defs/line"}, "date": {"$ref": "#/$defs/date"}},
           "additionalProperties": false
         }
       },
@@ -335,12 +364,12 @@
       "required": ["id", "name", "ip", "reg", "irq", "clocks"],
       "properties": {
         "id": {"$ref": "#/$defs/factId"},
-        "name": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/line"},
         "ip": {"$ref": "#/$defs/specId"},
-        "reg": {"type": ["string", "null"], "pattern": "^0x[0-9a-f]+$"},
+        "reg": {"type": ["string", "null"], "$ref": "#/$defs/hex"},
         "irq": {"$ref": "#/$defs/irq"},
-        "clocks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
-        "role": {"$ref": "#/$defs/text"},
+        "clocks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
+        "role": {"$ref": "#/$defs/line"},
         "note": {"$ref": "#/$defs/text"},
         "support": {"$ref": "#/$defs/supportList"},
         "todo": {"$ref": "#/$defs/todo"}
@@ -366,8 +395,8 @@
         "kind": {"enum": ["SPI", "PPI", "extended"]},
         "number": {"type": "integer", "minimum": 0},
         "intid": {"type": "integer", "minimum": 0},
-        "trigger": {"$ref": "#/$defs/text"},
-        "parent": {"$ref": "#/$defs/text"},
+        "trigger": {"$ref": "#/$defs/line"},
+        "parent": {"$ref": "#/$defs/line"},
         "note": {"$ref": "#/$defs/text"}
       },
       "if": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "extended"}}},
@@ -381,10 +410,10 @@
       "required": ["id", "name", "triggers", "shares", "differs"],
       "properties": {
         "id": {"$ref": "#/$defs/factId"},
-        "name": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/line"},
         "triggers": {"$ref": "#/$defs/triggers"},
         "shares": {"$ref": "#/$defs/textList"},
-        "differs": {"$ref": "#/$defs/text"},
+        "differs": {"$ref": "#/$defs/line"},
         "support": {"$ref": "#/$defs/supportList"},
         "todo": {"$ref": "#/$defs/todo"}
       },
@@ -424,7 +453,7 @@
           }
         },
         {
-          "$comment": "standard: a heading alone is admitted for now, as the worked example cites booting.rst by heading; the design's Locators rule asks for more (open question, SF2-1 evidence).",
+          "$comment": "standard and doc: a heading alone is admitted here. Orchestrator decision 2026-10-08: a databook always needs a precise locator (preciseLocator); a standard needs one only when its document entry has pages (a paged document), which SF2-2's checker enforces, since the schema cannot see the document entry from the citation.",
           "if": {"required": ["class"], "properties": {"class": {"enum": ["standard", "doc"]}}},
           "then": {
             "required": ["doc", "at"],
@@ -442,9 +471,9 @@
             "anyOf": [{"required": ["doc"]}, {"required": ["anchors"]}],
             "dependentRequired": {"doc": ["at"], "at": ["doc"]},
             "properties": {
-              "design": {"$ref": "#/$defs/text"},
-              "revision": {"$ref": "#/$defs/text"},
-              "module": {"$ref": "#/$defs/text"},
+              "design": {"$ref": "#/$defs/line"},
+              "revision": {"$ref": "#/$defs/line"},
+              "module": {"$ref": "#/$defs/line"},
               "doc": {"$ref": "#/$defs/name"},
               "at": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/locator"}},
               "anchors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/rtlAnchor"}},
@@ -475,12 +504,12 @@
           "then": {
             "required": ["board", "method", "date"],
             "properties": {
-              "board": {"$ref": "#/$defs/text"},
+              "board": {"$ref": "#/$defs/line"},
               "method": {"$ref": "#/$defs/text"},
               "date": {"$ref": "#/$defs/date"},
-              "revision": {"$ref": "#/$defs/text"},
-              "firmware": {"$ref": "#/$defs/text"},
-              "conditions": {"$ref": "#/$defs/text"},
+              "revision": {"$ref": "#/$defs/line"},
+              "firmware": {"$ref": "#/$defs/line"},
+              "conditions": {"$ref": "#/$defs/line"},
               "runs": {"$ref": "#/$defs/textList"}
             }
           }
@@ -491,8 +520,8 @@
             "required": ["model", "version"],
             "anyOf": [{"required": ["runs"]}, {"required": ["observation"]}],
             "properties": {
-              "model": {"$ref": "#/$defs/text"},
-              "version": {"$ref": "#/$defs/text"},
+              "model": {"$ref": "#/$defs/line"},
+              "version": {"$ref": "#/$defs/line"},
               "runs": {"$ref": "#/$defs/textList"},
               "observation": {"$ref": "#/$defs/factRef"},
               "note": {"$ref": "#/$defs/text"}
@@ -504,7 +533,7 @@
           "then": {
             "required": ["title", "url"],
             "properties": {
-              "title": {"$ref": "#/$defs/text"},
+              "title": {"$ref": "#/$defs/line"},
               "url": {"$ref": "#/$defs/httpsUrl"},
               "date": {"$ref": "#/$defs/date"},
               "note": {"$ref": "#/$defs/text"}
@@ -551,7 +580,7 @@
         "fact": {"$ref": "#/$defs/factRef"},
         "uses": {"$ref": "#/$defs/text"},
         "states": {"$ref": "#/$defs/text"},
-        "support": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/readSupport"}},
+        "support": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/readSupport"}},
         "assumption": {"$ref": "#/$defs/assumptionId"}
       },
       "dependentRequired": {"uses": ["fact"], "states": ["support"], "support": ["states"]},
@@ -563,18 +592,19 @@
       "type": "object",
       "minProperties": 1,
       "properties": {
-        "section": {"$ref": "#/$defs/text"},
-        "page": {"$ref": "#/$defs/text"},
+        "section": {"$ref": "#/$defs/line"},
+        "page": {"$ref": "#/$defs/line"},
         "pages": {
           "type": "array",
-          "prefixItems": [{"$ref": "#/$defs/text"}, {"$ref": "#/$defs/text"}],
+          "uniqueItems": true,
+          "prefixItems": [{"$ref": "#/$defs/line"}, {"$ref": "#/$defs/line"}],
           "items": false,
           "minItems": 2
         },
-        "table": {"$ref": "#/$defs/text"},
-        "figure": {"$ref": "#/$defs/text"},
-        "clause": {"$ref": "#/$defs/text"},
-        "heading": {"$ref": "#/$defs/text"}
+        "table": {"$ref": "#/$defs/line"},
+        "figure": {"$ref": "#/$defs/line"},
+        "clause": {"$ref": "#/$defs/line"},
+        "heading": {"$ref": "#/$defs/line"}
       },
       "not": {"required": ["page", "pages"]},
       "additionalProperties": false
@@ -617,7 +647,7 @@
         "repo": {"$ref": "#/$defs/name"},
         "path": {"$ref": "#/$defs/path"},
         "lines": {"$ref": "#/$defs/lines"},
-        "symbol": {"$ref": "#/$defs/text"},
+        "symbol": {"$ref": "#/$defs/symbol"},
         "comment": {"const": true},
         "search": {"$ref": "#/$defs/text"},
         "stale": {"$ref": "#/$defs/stale"}
@@ -630,7 +660,7 @@
         ]},
         "$comment": "message: a search anchor carries no lines, symbol, comment or stale"
       },
-      "else": {"required": ["lines", "symbol"]},
+      "else": {"required": ["lines", "symbol"], "properties": {"path": {"$ref": "#/$defs/filePath"}}},
       "additionalProperties": false
     },
 
@@ -640,15 +670,15 @@
       "required": ["repo", "path"],
       "properties": {
         "repo": {"$ref": "#/$defs/name"},
-        "path": {"$ref": "#/$defs/path"},
+        "path": {"$ref": "#/$defs/filePath"},
         "lines": {"$ref": "#/$defs/lines"},
-        "node": {"$ref": "#/$defs/text"},
-        "symbol": {"$ref": "#/$defs/text"},
+        "node": {"$ref": "#/$defs/dtNode"},
+        "symbol": {"$ref": "#/$defs/symbol"},
         "comment": {"const": true},
         "stale": {"$ref": "#/$defs/stale"}
       },
       "anyOf": [{"required": ["lines"]}, {"required": ["node"]}],
-      "if": {"required": ["path"], "properties": {"path": {"pattern": "\\.dtsi?$"}}},
+      "if": {"required": ["path"], "properties": {"path": {"pattern": "\\.[dD][tT][sS][iI]?(?![\\s\\S])"}}},
       "then": {"required": ["lines"]},
       "additionalProperties": false
     },
@@ -658,9 +688,9 @@
       "required": ["repo", "path", "lines"],
       "properties": {
         "repo": {"$ref": "#/$defs/name"},
-        "path": {"$ref": "#/$defs/path"},
+        "path": {"$ref": "#/$defs/filePath"},
         "lines": {"$ref": "#/$defs/lines"},
-        "symbol": {"$ref": "#/$defs/text"},
+        "symbol": {"$ref": "#/$defs/symbol"},
         "comment": {"const": true},
         "stale": {"$ref": "#/$defs/stale"}
       },
@@ -670,10 +700,10 @@
     "resources": {
       "type": "object",
       "properties": {
-        "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
-        "repos": {"type": "array", "items": {"$ref": "#/$defs/repo"}},
-        "series": {"type": "array", "items": {"$ref": "#/$defs/series"}},
-        "tools": {"type": "array", "items": {"$ref": "#/$defs/tool"}}
+        "documents": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/document"}},
+        "repos": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/repo"}},
+        "series": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/series"}},
+        "tools": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/tool"}}
       },
       "additionalProperties": false
     },
@@ -686,8 +716,8 @@
       "properties": {
         "name": {"$ref": "#/$defs/name"},
         "class": {"enum": ["databook", "standard", "doc"]},
-        "title": {"$ref": "#/$defs/text"},
-        "revision": {"$ref": "#/$defs/text"},
+        "title": {"$ref": "#/$defs/line"},
+        "revision": {"$ref": "#/$defs/line"},
         "url": {"$ref": "#/$defs/httpsUrl"},
         "retrieval": {
           "type": "array",
@@ -695,7 +725,7 @@
           "items": {
             "type": "object",
             "required": ["url"],
-            "properties": {"url": {"$ref": "#/$defs/httpsUrl"}, "via": {"$ref": "#/$defs/text"}},
+            "properties": {"url": {"$ref": "#/$defs/httpsUrl"}, "via": {"$ref": "#/$defs/method"}},
             "additionalProperties": false
           }
         },
@@ -720,7 +750,7 @@
         "name": {"$ref": "#/$defs/name"},
         "url": {"$ref": "#/$defs/httpsUrl"},
         "commit": {"$ref": "#/$defs/commit"},
-        "ref": {"$ref": "#/$defs/text"},
+        "ref": {"$ref": "#/$defs/gitRef"},
         "license": {"$ref": "#/$defs/spdxExpression"},
         "role": {"enum": ["source", "target", "impl", "ref"]},
         "status": {"enum": ["unmerged", "merged"]},
@@ -741,7 +771,7 @@
         },
         "verified": {"$ref": "#/$defs/date"},
         "fetch": {"$ref": "#/$defs/fetch"},
-        "fetch_via": {"$ref": "#/$defs/text"},
+        "fetch_via": {"$ref": "#/$defs/method"},
         "note": {"$ref": "#/$defs/text"}
       },
       "oneOf": [{"required": ["commit"]}, {"required": ["ref"]}],
@@ -753,9 +783,9 @@
       "type": "object",
       "required": ["title", "url"],
       "properties": {
-        "title": {"$ref": "#/$defs/text"},
+        "title": {"$ref": "#/$defs/line"},
         "url": {"$ref": "#/$defs/httpsUrl"},
-        "message_id": {"$ref": "#/$defs/text"},
+        "message_id": {"$ref": "#/$defs/line"},
         "target": {"$ref": "#/$defs/name"},
         "status": {"enum": ["unmerged", "merged", "superseded"]},
         "files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/path"}},
@@ -769,9 +799,9 @@
       "type": "object",
       "required": ["kind", "name", "via"],
       "properties": {
-        "kind": {"$ref": "#/$defs/text"},
-        "name": {"$ref": "#/$defs/text"},
-        "via": {"$ref": "#/$defs/text"},
+        "kind": {"$ref": "#/$defs/line"},
+        "name": {"$ref": "#/$defs/line"},
+        "via": {"type": "string", "pattern": "^skill:[a-z0-9][a-z0-9-]*(?![\\s\\S])", "$comment": "the skill that drives the tool"},
         "note": {"$ref": "#/$defs/text"}
       },
       "additionalProperties": false

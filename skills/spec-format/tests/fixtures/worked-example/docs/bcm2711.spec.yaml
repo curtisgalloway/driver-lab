@@ -6,7 +6,6 @@ id: bcm2711
 name: Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
 triggers: [bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc]
 not_triggers: [bcm2712]
-aliases: []
 cache: rpi4-resources
 instances: []
 resources:

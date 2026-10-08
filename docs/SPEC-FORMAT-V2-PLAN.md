@@ -35,8 +35,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **Milestone IDs** `SF2-1`–`SF2-12` and the gate `SF2-G`. The design's outline had seven units;
   this plan splits them for session size ([outline mapping](#outline-mapping)).
 - **Branches.** One topic branch per milestone, cut from a freshly fetched `origin/main`:
-  `format-v2/sf2-<n>` (`format-v2/sf2-g` for the gate). A milestone that changes a spec
-  repository gets a branch of the same name there. Worktrees under `.claude/worktrees/<name>`.
+  `sf2/sf2-<n>` (`sf2/sf2-g` for the gate), the name the orchestrator uses from SF2-1 on (the
+  plan first said `format-v2/sf2-<n>`). A milestone that changes a spec repository gets a branch
+  of the same name there. Worktrees under `.claude/worktrees/<name>`.
 - **Checkpoint commit:** `driver-porting: SF2-<n> — <title>`, ending with
   `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` and
   `Claude-Session: https://claude.ai/code/session_01GCyuTJU8apag5WEVZdyEny`. Author email: the
@@ -47,7 +48,8 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
   orchestrator pushes the milestone branch, opens the pull request, waits for green CI and merges
   with a merge commit (the spec repositories pin driver-lab commits). Never push `main`.
   Deleting the merged branch, local and remote, is part of merging (`git cherry` first).
-  Anything outside those four repositories, and enabling GitHub Pages (SF2-11), needs its own go.
+  Anything outside those four repositories needs its own go. Enabling GitHub Pages on the three
+  spec repositories in SF2-11 is approved (decision 5).
 - **Records:** evidence in `evidence/SF2-<n>.md`, one notebook chapter `notebook/SF2-<n>.md`
   with a row in the [notebook index](../notebook/index.md), process-log entries in
   `PROCESS-NOTES.md`. Agent runs (verifiers, Codex) record their transcripts' paths and logs in
@@ -110,7 +112,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-5, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
-| SF2-11 | The three spec repositories cut over, published | SF2-10; user's go for Pages | pending |
+| SF2-11 | The three spec repositories cut over, published | SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
 
@@ -731,7 +733,8 @@ merges a pull request that bumps its driver-lab pin to a commit with format 2, r
 updates README and AGENTS.md citation rules. Each repository's Pages site shows its specs.
 **Design coverage:** D5, D11, D19 (workflows); § Effects (spec repositories), Migration
 (transition).
-**Dependencies:** SF2-10; the user's go to enable GitHub Pages on the three public repositories.
+**Dependencies:** SF2-10. Enabling GitHub Pages on the three public repositories is approved
+(decision 5).
 **In scope:** the three repositories' changes; a scratch pull request per repository proving
 the gate fit/misfit and the D19 modes in published CI (as LS5 and LS-G did).
 **Out of scope:** driver-lab's v1 removal (SF2-12).
@@ -824,11 +827,24 @@ No RG unit starts while a format 2 milestone is open.
 3. **Coverage findings in SF2-10** that would add new facts go to the RG backlog; the migration
    stays a conversion.
 4. **Stop rules** as set in the conventions are confirmed.
+5. **GitHub Pages** (later the same day): approved for the three spec repositories; SF2-11 may
+   enable it.
+6. **Models unchanged** (later the same day): Opus 5.5 for SF2-1 to SF2-7, SF2-G and every
+   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12.
+
+Orchestrator decisions during SF2-1's review (2026-10-08), within the design's scope:
+
+- **Locator precision for `standard`:** a `databook` locator always carries a section, page,
+  pages, table, figure or clause; a `standard` locator does only when its document entry has
+  `pages` (a paged document), which SF2-2's checker enforces. The design's Locators paragraph is
+  amended to match; its worked example cites an unpaged standard (`booting.rst`) by heading.
+- **No empty optional lists:** an optional list is absent or non-empty (`readers: []` and an
+  absent `readers` were two spellings). Required lists that may hold nothing (`instances` of a
+  soc, `clocks`, `facts`, `sources`, `accepts`) keep `[]`. The design's worked example drops its
+  `aliases: []` and `readers: []` lines.
 
 ## Needs a user decision (later)
 
-- **GitHub Pages** on the three public spec repositories, before SF2-11: outward-facing, needs
-  an explicit go.
 - **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07
   authorization).
 

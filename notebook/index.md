@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T12:41-07:00
+Updated: 2026-10-08T13:22-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,11 +22,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-1 — Strict loader, pinned dependencies, core schemas](SF2-1.md)
-Entries: 2026-10-08T12:17-07:00 through 2026-10-08T12:41-07:00
-Outcome: open, stopped before review. Pins jsonschema 4.26.0, PyYAML 6.0.3, markdown-it-py
-4.2.0 (jschon archived). `uv run --with-requirements` ignores hashes; pip `--require-hashes` used.
-Closed records under `if`/`then` report cascaded unknown keys (filtered in `spec.py`). The
-design's worked example cites a `standard` by heading, against its own locator rule (open).
+Entries: 2026-10-08T12:17-07:00 through 2026-10-08T13:22-07:00
+Outcome: open; round-1 review fixes made, awaiting round 2. Pins jsonschema 4.26.0, PyYAML 6.0.3,
+markdown-it-py 4.2.0. `$` in Python's `re` matches before a final newline: patterns end with
+`(?![\s\S])`. PyYAML rewrites a lone CR and NEL before values are seen: the loader scans the
+source first. `uv run --with-requirements` ignores hashes. Closed records under `if`/`then`
+report cascaded unknown keys (filtered). Standard locators precise only when paged (SF2-2).
 
 ### [SF2-design — Spec format 2: design decisions and the plan](SF2-design.md)
 Entries: 2026-10-08T12:09-07:00 through 2026-10-08T12:09-07:00 (written after the design session)

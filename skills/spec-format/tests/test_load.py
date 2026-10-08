@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Tests for scripts/specload.py: one failing input per row of the design's loader table.
 
-Run in the pinned environment:
-  uv run --with-requirements skills/spec-format/requirements.txt \
-    python3 -m unittest discover -s skills/spec-format/tests -v
+Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
+  python3 -m venv .venv-sf2
+  .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt
+  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
 
 Inputs are bytes written here with escapes, never raw control or invisible characters, so the
 test file itself stays plain text. Each case names the line and column the error must report.
@@ -84,10 +85,41 @@ FAILING = [
     ("invisible key", b"a\xe2\x80\x8b: 1\n", 1, 2, "U+200B"),
     ("not NFC", b'a: "e\xcc\x81"\n', 1, 4, "not in Unicode NFC"),
     ("not NFC key", b"e\xcc\x81: 1\n", 1, 1, "not in Unicode NFC"),
+    # Line breaks PyYAML would normalize before any value is seen: refused in the source.
+    ("lone CR in a quoted value", b'a: "x\ry"\n', 1, 6, "a lone CR"),
+    ("lone CR in a block scalar", b"a: |\n  x\ry\n", 2, 4, "a lone CR"),
+    ("CR line endings", b"a: x\rb: y\r", 1, 5, "a lone CR"),
+    ("NEL in a quoted value", b'a: "x\xc2\x85  y"\n', 1, 6, "U+0085"),
+    ("NEL in a block scalar", b"a: |\n  x\xc2\x85y\n", 2, 4, "U+0085"),
+    ("NEL as a line ending", b"a: x\xc2\x85b: y\n", 1, 5, "U+0085"),
+    # Default-ignorable code points that are not format characters, and the blank Braille cell.
+    ("combining grapheme joiner", b"a: OSC_FREQ\xcd\x8f\n", 1, 12, "U+034F"),
+    ("variation selector", b"a: x\xef\xb8\x8fy\n", 1, 5, "U+FE0F"),
+    ("Hangul filler", b"a: x\xe3\x85\xa4y\n", 1, 5, "U+3164"),
+    ("Hangul choseong filler", b"a: x\xe1\x85\x9fy\n", 1, 5, "U+115F"),
+    ("Mongolian selector", b"a: x\xe1\xa0\x8by\n", 1, 5, "U+180B"),
+    ("blank Braille pattern", b"a: x\xe2\xa0\x80y\n", 1, 5, "U+2800"),
+    ("tag character", b"a: x\xf3\xa0\x80\x81y\n", 1, 5, "U+E0001"),
+    ("escaped grapheme joiner", b'a: "x\\u034fy"\n', 1, 4, "U+034F"),
+    # Invisible characters in comments, too.
+    ("zero-width space in a comment", b"a: 1 # x\xe2\x80\x8by\n", 1, 9, "U+200B"),
+    ("bidi override in a comment", b"# \xe2\x80\xaeabc\na: 1\n", 1, 3, "U+202E"),
+    # Positions count characters and LF or CRLF lines.
+    ("CRLF, second line", b"a: x\r\nb: y\xe2\x80\x8bz\r\n", 2, 5, "U+200B"),
+    ("after a two-byte character", b"a: \xc3\xa9\xe2\x80\x8b\n", 1, 5, "U+200B"),
+    # Malformed scalars.
+    ("escape beyond Unicode", b'a: "\\U00110000"\n', 1, 7, "a malformed scalar"),
+    ("a huge integer", b"a: " + b"9" * 4400 + b"\n", 1, 4, "64-bit"),
+    ("a 20-digit integer", b"a: 12345678901234567890\n", 1, 4, "64-bit"),
+    ("just past 64 bits", b"a: 9223372036854775808\n", 1, 4, "64-bit"),
+    ("just below -64 bits", b"a: -9223372036854775809\n", 1, 4, "64-bit"),
+    # Any directive, reserved ones included.
+    ("reserved directive", b"%FOO bar\n---\na: 1\n", 1, 1, "a %FOO directive"),
     # Byte-order mark, non-UTF-8.
     ("UTF-8 BOM", b"\xef\xbb\xbfa: 1\n", 1, 1, "a byte-order mark"),
     ("UTF-16 BOM", b"\xff\xfea\x00:\x00 \x001\x00\n\x00", 1, 1, "a byte-order mark"),
     ("Latin-1 byte", b"a: 1\nb: caf\xe9\n", 2, 7, "not UTF-8"),
+    ("bad byte after a two-byte character", b'a: "\xc3\xa9\xff"\n', 1, 6, "not UTF-8"),
     ("truncated sequence", b"a: \xe2\x80\n", 1, 4, "not UTF-8"),
     ("overlong encoding", b"a: \xc0\xaf\n", 1, 4, "not UTF-8"),
     ("surrogate escape", b'a: "\\ud800"\n', 1, 4, "U+D800"),
@@ -132,7 +164,7 @@ class Resolution(unittest.TestCase):
             "a: [no, yes, on, off, y, n, True, FALSE, Null, NULL, ~]\n"
             "b: [012, 0o12, 0x7E20_1000, 1_000, +1, -0, 1e3, .inf, .nan, 1.10, 1:20]\n"
             "c: [2026-10-08, 2026-10-08T12:00:00Z]\n"
-            "d: [true, false, null, 0, 7, -7, 12345678901234567890]\n"
+            "d: [true, false, null, 0, 7, -7, 9223372036854775807, -9223372036854775808]\n"
             "e: ['true', \"null\", '7']\n"
             "f: |\n  7\n"
         )
@@ -141,11 +173,19 @@ class Resolution(unittest.TestCase):
         self.assertEqual(data["b"], ["012", "0o12", "0x7E20_1000", "1_000", "+1", "-0", "1e3",
                                      ".inf", ".nan", "1.10", "1:20"])
         self.assertEqual(data["c"], ["2026-10-08", "2026-10-08T12:00:00Z"])
-        self.assertEqual(data["d"], [True, False, None, 0, 7, -7, 12345678901234567890])
+        self.assertEqual(data["d"], [True, False, None, 0, 7, -7, 2**63 - 1, -(2**63)])
         self.assertEqual(data["e"], ["true", "null", "7"])
         self.assertEqual(data["f"], "7\n")
         for value in data["d"]:
             self.assertIn(type(value), (bool, type(None), int))
+
+    def test_block_scalars_stay_strings(self):
+        data = self.load("a: |-\n  true\nb: >-\n  7\nc: |-\n  null\n")
+        self.assertEqual(data, {"a": "true", "b": "7", "c": "null"})
+
+    def test_tab_and_crlf_are_allowed_outside_values(self):
+        data = self.load("a: 1 # a\ttab in a comment\r\nb: 2\r\n")
+        self.assertEqual(data, {"a": 1, "b": 2})
 
     def test_keys_that_look_typed_are_strings_when_plain_words(self):
         data = self.load("no: 1\non: 2\nyes: 3\n'1': 4\n")

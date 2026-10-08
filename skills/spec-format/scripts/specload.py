@@ -7,19 +7,27 @@ pure-Python parser (which gives a line and column for every node) and builds pla
 itself, so no PyYAML constructor or implicit resolver ever runs. The design's loader table
 (docs/SPEC-FORMAT-V2.md, "The YAML loader") is the contract:
 
-- plain scalars resolve only to `true`, `false`, `null` and decimal integers; every other
-  scalar, quoted or not, is a string (D6). An empty plain value (`key:`) is an error, since it
-  would be a second spelling of `null` or of `""`; `-0` is a string, not a second zero;
-- anchors, aliases, merge keys (`<<`) and explicit tags (`!!str`, `!x`) are errors, and so are
-  `%YAML`/`%TAG` directives;
+- plain scalars resolve only to `true`, `false`, `null` and decimal integers within the
+  signed 64-bit range; every other scalar, quoted or not, is a string (D6). An empty plain
+  value (`key:`) is an error, since it would be a second spelling of `null` or of `""`; `-0`
+  is a string, not a second zero;
+- anchors, aliases, merge keys (`<<`), explicit tags (`!!str`, `!x`) and directives (`%YAML`,
+  `%TAG`, any `%`) are errors;
 - exactly one document;
 - mapping keys are strings, unique within their mapping;
-- strings hold no control characters except newline, no format (invisible) characters, no line
-  or paragraph separators, no private-use or unassigned code points, no space other than
-  U+0020, and are NFC;
-- the file is UTF-8 without a byte-order mark.
+- the file is UTF-8 without a byte-order mark. Anywhere in it, comments included, it holds no
+  refused character (below) except a tab and a CR that ends a CRLF line ending: a lone CR or a
+  NEL would be turned into a line break by PyYAML before any value is seen;
+- every string, after escapes are decoded, holds no refused character but newline, and is NFC.
 
-Every error is a `LoadError` naming the file, a 1-based line and column, and the problem.
+Refused characters: controls (category Cc), format characters (Cf: zero-width, bidirectional
+controls, soft hyphen, BOM), surrogates, private-use and unassigned code points, line and
+paragraph separators, every space but U+0020, and the other default-ignorable code points that
+render as nothing (combining grapheme joiner, variation selectors, Hangul fillers) plus the
+blank Braille pattern.
+
+Every error is a `LoadError` naming the file, a 1-based line and column (counted in
+characters), and the problem.
 """
 
 from __future__ import annotations
@@ -32,17 +40,27 @@ from typing import Any
 
 import yaml
 from yaml.composer import Composer
-from yaml.events import AliasEvent, DocumentStartEvent
+from yaml.events import AliasEvent
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 from yaml.parser import Parser
 from yaml.reader import Reader, ReaderError
 from yaml.resolver import BaseResolver
 from yaml.scanner import Scanner
+from yaml.tokens import DirectiveToken
 
 # The only plain scalars that are not strings (D6). `-0` is left a string on purpose.
-_INT = re.compile(r"0|-?[1-9][0-9]*")
+_INT = re.compile(r"0|-?[1-9][0-9]{0,18}")
+_INT_MIN, _INT_MAX = -(2**63), 2**63 - 1
 _PLAIN = {"true": True, "false": False, "null": None}
 _BOMS = (b"\xef\xbb\xbf", b"\xff\xfe", b"\xfe\xff")
+_CATEGORIES = ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp", "Zs")
+# Default_Ignorable_Code_Point (Unicode DerivedCoreProperties) outside the categories above,
+# and U+2800, which renders blank.
+_INVISIBLE = (
+    (0x034F, 0x034F), (0x115F, 0x1160), (0x17B4, 0x17B5), (0x180B, 0x180F),
+    (0x2065, 0x2065), (0x2800, 0x2800), (0x3164, 0x3164), (0xFE00, 0xFE0F), (0xFFA0, 0xFFA0),
+    (0xFFF0, 0xFFF8), (0x1BCA0, 0x1BCA3), (0x1D173, 0x1D17A), (0xE0000, 0xE0FFF),
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -91,23 +109,50 @@ def _mark(m: yaml.Mark) -> Mark:
     return Mark(m.line + 1, m.column + 1)
 
 
+def _refused(ch: str) -> bool:
+    if unicodedata.category(ch) in _CATEGORIES:
+        return True
+    cp = ord(ch)
+    return any(lo <= cp <= hi for lo, hi in _INVISIBLE)
+
+
+def _describe(ch: str) -> str:
+    name = unicodedata.name(ch, "unnamed")
+    return f"U+{ord(ch):04X} ({name}, category {unicodedata.category(ch)})"
+
+
 def bad_character(text: str) -> str | None:
-    """Describe the first character `load_strict` refuses in a string, or None."""
+    """Describe the first character `load_strict` refuses in a string value, or None."""
     for ch in text:
-        if ch == "\n" or ch == " ":
-            continue
-        cat = unicodedata.category(ch)
-        if cat in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp", "Zs"):
-            name = unicodedata.name(ch, "unnamed")
-            return f"U+{ord(ch):04X} ({name}, category {cat})"
+        if ch != "\n" and ch != " " and _refused(ch):
+            return _describe(ch)
     return None
 
 
+def _position(source: str, at: int) -> Mark:
+    line = source.count("\n", 0, at) + 1
+    return Mark(line, at - (source.rfind("\n", 0, at) + 1) + 1)
+
+
+def _check_source(path: Path, source: str) -> None:
+    """Refuse a character anywhere in the file, before PyYAML normalizes line breaks."""
+    for at, ch in enumerate(source):
+        if ch == "\n" or ch == " " or ch == "\t":
+            continue
+        if ch == "\r" and source.startswith("\n", at + 1):
+            continue
+        if _refused(ch):
+            m = _position(source, at)
+            what = "a lone CR (use LF or CRLF line endings)" if ch == "\r" else _describe(ch)
+            raise LoadError(path, m.line, m.column, f"a refused character in the file: {what}")
+
+
 class _Loader(Reader, Scanner, Parser, Composer, BaseResolver):
-    """PyYAML's reader, scanner, parser and composer; refuses anchors, aliases and tags.
+    """PyYAML's reader, scanner, parser and composer; refuses anchors, aliases, tags and
+    directives.
 
     BaseResolver has no implicit resolvers, so the composer tags every plain scalar `str`;
-    the tags are never used: `_build` decides types from the node's style and text.
+    the tags are never used: `_Builder` decides types from the node's style and text.
     """
 
     def __init__(self, stream: str):
@@ -117,11 +162,11 @@ class _Loader(Reader, Scanner, Parser, Composer, BaseResolver):
         Composer.__init__(self)
         BaseResolver.__init__(self)
 
-    def compose_document(self):
-        event = self.peek_event()
-        if isinstance(event, DocumentStartEvent) and (event.version or event.tags):
-            raise _Refused(event.start_mark, "a %YAML or %TAG directive (write none)")
-        return super().compose_document()
+    def process_directives(self):
+        if self.check_token(DirectiveToken):
+            token = self.peek_token()
+            raise _Refused(token.start_mark, f"a %{token.name} directive (write none)")
+        return super().process_directives()
 
     def compose_node(self, parent, index):
         event = self.peek_event()
@@ -149,8 +194,15 @@ def _scalar(node: ScalarNode) -> Any:
         raise _Refused(node.start_mark, 'an empty value; write null or ""')
     if text in _PLAIN:
         return _PLAIN[text]
+    if re.fullmatch(r"-?[1-9][0-9]{19,}", text):
+        raise _Refused(node.start_mark, "an integer outside the signed 64-bit range; quote it "
+                                        "if it is a string")
     if _INT.fullmatch(text):
-        return int(text)
+        value = int(text)
+        if not _INT_MIN <= value <= _INT_MAX:
+            raise _Refused(node.start_mark, "an integer outside the signed 64-bit range; quote "
+                                            "it if it is a string")
+        return value
     return text
 
 
@@ -161,21 +213,19 @@ class _Builder:
         self.keys: dict[tuple, Mark] = {}
 
     def check_string(self, node: ScalarNode, text: str) -> None:
-        bad = bad_character(text)
-        if bad is not None:
-            raise _Refused(self._locate(node, bad), f"a string holding {bad}")
+        for ch in text:
+            if ch != "\n" and ch != " " and _refused(ch):
+                raise _Refused(self._locate(node, ch), f"a string holding {_describe(ch)}")
         if unicodedata.normalize("NFC", text) != text:
             raise _Refused(node.start_mark, "a string that is not in Unicode NFC form")
 
-    def _locate(self, node: ScalarNode, bad: str) -> yaml.Mark:
-        """The mark of the refused character where it appears literally in the source."""
-        ch = chr(int(bad[2:].split(" ", 1)[0], 16))
+    def _locate(self, node: ScalarNode, ch: str) -> yaml.Mark:
+        """Where `ch` appears literally in the scalar's source; its start if escaped."""
         at = self.source.find(ch, node.start_mark.index, node.end_mark.index)
-        if at < 0:  # written as an escape: point at the scalar
+        if at < 0:
             return node.start_mark
-        line = self.source.count("\n", 0, at)
-        column = at - (self.source.rfind("\n", 0, at) + 1)
-        return yaml.Mark("", at, line, column, None, None)
+        m = _position(self.source, at)
+        return yaml.Mark("", at, m.line - 1, m.column - 1, None, None)
 
     def build(self, node, path: tuple) -> Any:
         self.values[path] = _mark(node.start_mark)
@@ -214,15 +264,19 @@ def _decode(path: Path, raw: bytes) -> str:
     try:
         return raw.decode("utf-8")
     except UnicodeDecodeError as exc:
-        line = raw.count(b"\n", 0, exc.start) + 1
-        column = exc.start - (raw.rfind(b"\n", 0, exc.start) + 1) + 1
-        raise LoadError(path, line, column, f"bytes that are not UTF-8 ({exc.reason})") from None
+        good = raw[:exc.start].decode("utf-8")  # valid up to the first bad byte
+        m = _position(good, len(good))
+        raise LoadError(path, m.line, m.column, f"bytes that are not UTF-8 ({exc.reason})") from None
 
 
 def load_strict_marked(path: Path | str) -> Loaded:
-    """Load one YAML file under the format 2 rules, keeping every value's position."""
+    """Load one YAML file under the format 2 rules, keeping every value's position.
+
+    Raises `LoadError` for every refused input, and `OSError` when the file cannot be read.
+    """
     path = Path(path)
     source = _decode(path, path.read_bytes())
+    _check_source(path, source)
     loader = None
     try:
         loader = _Loader(source)
@@ -241,13 +295,13 @@ def load_strict_marked(path: Path | str) -> Loaded:
         if "expected a single document" in str(exc):
             problem = "more than one YAML document; a file holds exactly one"
         raise LoadError(path, line, column, problem) from None
-    except ReaderError as exc:  # PyYAML's own non-printable check, anywhere in the file
-        at = exc.position
-        line = source.count("\n", 0, at) + 1
-        column = at - (source.rfind("\n", 0, at) + 1) + 1
-        raise LoadError(
-            path, line, column, f"a control character U+{exc.character:04X} in the file"
-        ) from None
+    except ReaderError as exc:  # PyYAML's own check; _check_source normally refuses first
+        m = _position(source, exc.position)
+        raise LoadError(path, m.line, m.column,
+                        f"a control character U+{exc.character:04X} in the file") from None
+    except (ValueError, OverflowError) as exc:  # e.g. an escape naming no code point
+        m = _mark(loader.get_mark()) if loader is not None else Mark(1, 1)
+        raise LoadError(path, m.line, m.column, f"a malformed scalar ({exc})") from None
     except yaml.YAMLError as exc:
         raise LoadError(path, 1, 1, str(exc)) from None
     except RecursionError:

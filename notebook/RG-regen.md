@@ -153,3 +153,21 @@ wrong except in the GPL overlay; nearly every finding is a citation or a tag cla
 Two readings worth keeping: the second reader passed all of docs QF1/5/14, while the docs
 verifier's own second verifier failed them, so "two verifiers" varies with who reads; and V9 is a
 precision error introduced while fixing a Codex finding, which only the next verification caught.
+
+### 2026-10-08 — RG-T1 rounds 4–5: patching did not converge; decision: a real Markdown parser
+
+Round 4 (Codex) found three blockers, one of them created by round 3's own prose-tag relaxation.
+The user chose to simplify instead of patching (no symlinks in roots, one prose rule, one split
+regex). The simplification did not shrink the code (net +18 lines in the two scripts) and round 5
+(Codex) found two more blockers: a backticked tag with its own citation hid a real source clause,
+and two fence scanners disagreed about indented fences, blanking a fact between code blocks. Both
+come from scanning Markdown with regexes in more than one place.
+
+The orchestrator offered three paths: treat `spec_check` as a lint and rely on verification
+records and review as the gate; rewrite on a real Markdown tokenizer; keep patching. The user
+chose the tokenizer: one parse, shared by both checkers, chosen with `dep-quality`, no fallback
+scanner.
+
+Lesson: when review rounds keep finding bypasses in the same layer, count the parsers. Here there
+were at least three views of one Markdown file (two fence regexes and a line scanner), and every
+disagreement between them was a hole.

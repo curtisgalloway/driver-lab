@@ -31,6 +31,8 @@ request, not inside a unit.
 | `spec-verifier` | Say who spawns the second verifier when verification is delegated, and add a record field showing whether it ran | RG1 re-verification reports | verifiers | proposed |
 | `SPEC-FORMAT.md` | `summary` keys omit `adjudicate`; `sources` has no place for a document hash | RG1 re-verification reports | verifiers | proposed |
 | `spec-verifier` | A `[src]` bullet stating where hardware is (an address map) needs a document class too; say so in the class rule | RG1 V8 | verifier | proposed |
+| tool design | Parse a format once and derive every check from that parse; two scanners of one file disagree, and each disagreement is a bypass | RG-T1 rounds 3–5 | Codex | in RG-T1 round 6 |
+| review practice | When a fix round opens new holes in the same layer, stop patching and redesign; set the stop rule before the next round | RG-T1 rounds 3–5 | orchestrator | applied |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison

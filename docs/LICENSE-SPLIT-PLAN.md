@@ -62,10 +62,10 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 | LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
 | LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
-| LS10 | `hardware-investigator` skill | LS9 | complete ([evidence](../evidence/LS10.md)) |
-| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete at the checkpoint ([evidence](../evidence/LS11.md)) |
-| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete at the checkpoint ([evidence](../evidence/LS12.md)) |
-| LS-G | Whole-outcome acceptance | LS1–LS12 | pending |
+| LS10 | `hardware-investigator` skill | LS9 | complete; merged (driver-lab #54) ([evidence](../evidence/LS10.md)) |
+| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete; merged, with the re-review (driver-lab #55, #58) ([evidence](../evidence/LS11.md)) |
+| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete; merged (driver-lab #57) ([evidence](../evidence/LS12.md)) |
+| LS-G | Whole-outcome acceptance | LS1–LS12 | complete at the checkpoint; published-CI half of item 2 pending ([evidence](../evidence/LS-G.md)) |
 
 Ordering: tooling and spec repos first (the user's decision), so LS1–LS4 land under the current
 skill names and LS9 renames them. The split (LS6–LS11) follows. LS12 touches each consumer once,
@@ -73,28 +73,28 @@ after every name is final. LS3 may run in parallel with LS2.
 
 ## Design coverage
 
-| Requirement | Milestones | Verification |
-|---|---|---|
-| LS-R1 Root license | LS2 (code), LS4 (docs) | `spec_check.py` tests for both fields, warning and `--require-license` |
-| LS-R2 Resource license | LS2 | `check_resources` tests |
-| LS-R3 Several named pins | LS1 | `anchor_check.py` tests: named and legacy pins, overwrite bug |
-| LS-R4 License gate | LS2, proven in LS5 | gate tests incl. `OR`/`AND`; each repo's CI self-test |
-| LS-R5 Checkable doc anchors | LS3 | tests for registry, page range, hash mismatch |
-| LS-R6 Anchor-tool tests and CI | LS1 | new test suite runs in `checks.yml` |
-| LS-R7 Placement guidance | LS4, renamed in LS9 | reviewer traces the table to the design |
-| LS-R8 Provenance template | LS4, moves in LS6 | template present; `cleanroom-spec` refers to it |
-| LS-R9 Per-repo pins in verification | LS1 (`inventory_check.py`), LS4 (`spec-verifier` text) | tests; reviewer |
-| LS-R10 Why this exists | LS4 | README section present before LS6's public repo |
-| LS-R11 Three repos | LS5 | repos exist, CI green on `main` |
-| LS-R12 Gate proven per repo | LS5 | CI self-test fails the misfit fixture, passes the fit one |
-| LS-R13 Consumers point at the right repos | LS12 | bringup-kit roots; public-skills README |
-| LS-R14 `cleanroom-skills` | LS6, LS7 | repo public, history present, its CI green |
-| LS-R15 Neutral board-expert | LS7 | grep of the open skills; `spec_check.py` still accepts `[source-observed]` |
-| LS-R16 Renames | LS9 | no `anchored-peripheral-spec` outside the archive |
-| LS-R17 `hardware-investigator` | LS10 | skill review; a worked question on a fixture root |
-| LS-R18 Firewall by name | LS11 | hook tests for each blocked skill and GPL checkout |
-| LS-R19 Consumers renamed | LS12 | grep of each consumer finds no stale name |
-| LS-R20 Open side only | LS8 | mention check in CI with the archive allowlist |
+| Requirement | Milestones | Verification | Evidence |
+|---|---|---|---|
+| LS-R1 Root license | LS2 (code), LS4 (docs) | `spec_check.py` tests for both fields, warning and `--require-license` | [LS2](../evidence/LS2.md#acceptance), [LS4](../evidence/LS4.md#acceptance) |
+| LS-R2 Resource license | LS2 | `check_resources` tests | [LS2](../evidence/LS2.md#acceptance), gated in [LS5](../evidence/LS5.md#acceptance) |
+| LS-R3 Several named pins | LS1 | `anchor_check.py` tests: named and legacy pins, overwrite bug | [LS1](../evidence/LS1.md#acceptance) |
+| LS-R4 License gate | LS2, proven in LS5 | gate tests incl. `OR`/`AND`; each repo's CI self-test | [LS2](../evidence/LS2.md#acceptance), [LS5](../evidence/LS5.md#acceptance), [LS-G item 2](../evidence/LS-G.md#item-2-the-scratch-setup) |
+| LS-R5 Checkable doc anchors | LS3 | tests for registry, page range, hash mismatch | [LS3](../evidence/LS3.md#acceptance) (named anchors required where `accepts:` is empty, the docs repository's case) |
+| LS-R6 Anchor-tool tests and CI | LS1 | new test suite runs in `checks.yml` | [LS1](../evidence/LS1.md#acceptance) |
+| LS-R7 Placement guidance | LS4, renamed in LS9 | reviewer traces the table to the design | [LS4](../evidence/LS4.md#acceptance), [LS9](../evidence/LS9.md#acceptance) |
+| LS-R8 Provenance template | LS4, moves in LS6 | template present; `cleanroom-spec` refers to it | [LS4](../evidence/LS4.md#acceptance), [LS6](../evidence/LS6.md#acceptance) |
+| LS-R9 Per-repo pins in verification | LS1 (`inventory_check.py`), LS4 (`spec-verifier` text) | tests; reviewer | [LS1](../evidence/LS1.md#acceptance) (one named pin per `inventory_check.py` run), [LS4](../evidence/LS4.md#acceptance) |
+| LS-R10 Why this exists | LS4 | README section present before LS6's public repo | [LS4](../evidence/LS4.md#acceptance) |
+| LS-R11 Three repos | LS5 | repos exist, CI green on `main` | [LS5](../evidence/LS5.md#acceptance); accepts lists as of 2026-10-07 in [LS-G item 1](../evidence/LS-G.md#item-1-every-requirement-met-with-evidence-linked-from-the-plan) |
+| LS-R12 Gate proven per repo | LS5 | CI self-test fails the misfit fixture, passes the fit one | [LS5](../evidence/LS5.md#acceptance), [LS-G item 2](../evidence/LS-G.md#item-2-the-scratch-setup) |
+| LS-R13 Consumers point at the right repos | LS12 | bringup-kit roots; public-skills README | [LS12](../evidence/LS12.md#acceptance) |
+| LS-R14 `cleanroom-skills` | LS6, LS7 | repo public, history present, its CI green | [LS6](../evidence/LS6.md#acceptance), [LS7](../evidence/LS7.md#acceptance), [LS8](../evidence/LS8.md#acceptance), [LS-G item 3](../evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
+| LS-R15 Neutral board-expert | LS7 | grep of the open skills; `spec_check.py` still accepts `[source-observed]` | [LS7](../evidence/LS7.md#acceptance) |
+| LS-R16 Renames | LS9 | no `anchored-peripheral-spec` outside the archive | [LS9](../evidence/LS9.md#acceptance) |
+| LS-R17 `hardware-investigator` | LS10 | skill review; a worked question on a fixture root | [LS10](../evidence/LS10.md#acceptance) |
+| LS-R18 Firewall by name | LS11 | hook tests for each blocked skill and GPL checkout | [LS11](../evidence/LS11.md#acceptance), [LS-G item 3](../evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
+| LS-R19 Consumers renamed | LS12 | grep of each consumer finds no stale name | [LS12](../evidence/LS12.md#acceptance), [LS-G item 5](../evidence/LS-G.md#item-5-no-stale-skill-names-in-the-consumers) (the public-skills CI pin moved from driver-lab to `cleanroom-skills` in LS6/LS7 and still sits at `d63e3f1`, before LS12's links; the bump is open in `cleanroom-skills`, CI unaffected) |
+| LS-R20 Open side only | LS8 | mention check in CI with the archive allowlist | [LS8](../evidence/LS8.md#acceptance) (the allowlist's additions beyond the design are justified there), [LS-G item 4](../evidence/LS-G.md#item-4-driver-labs-checks) |
 
 ## Checks added by this plan
 
@@ -105,6 +105,7 @@ the same commit. Proposed, final names decided in the milestone:
 python3 -m unittest discover -s skills/peripheral-spec/tests              # LS1; renamed in LS9
 python3 utilities/check-open-side.py                                     # LS8
 python3 -m unittest discover -s utilities/tests                            # LS8
+python3 -m unittest discover -s skills/hardware-investigator/tests         # LS10
 ```
 
 ---
@@ -169,7 +170,8 @@ exists and what it is not for".
 **Dependencies:** LS2, LS3.
 **Status:** complete. Evidence: [LS4](../evidence/LS4.md). Notebook: [LS4](../notebook/LS4.md).
 Review: one reviewer subagent tracing each changed claim to code or design.
-**Open limitations:** the repositories the docs name do not exist until LS5; peripheral specs
+**Open limitations:** the repositories the docs name do not exist until LS5 (closed in LS5;
+`peripheral-spec`'s text saying so was corrected in LS-G); peripheral specs
 must be named `<device>-spec.md` because `spec_check.py` loads `*.spec.md` as board specs (LS5's
 layout); `cleanroom-spec`'s other landing text is reconciled with policy 1 when it moves (LS6,
 LS7).
@@ -264,7 +266,8 @@ the two campaigns' READMEs), `evidence/` (a new README) and the notebook index;
 Review: one docs reviewer subagent; seven should-fix items and 13 nits, all resolved but one
 nit (pinning links to `cleanroom-skills`, after its merge).
 **Open limitations:** the allowlist adds, beyond the design's list, three history records
-(`PROCESS-NOTES.md`, `TRANSITION.md`, `docs/STORY.md`), the whole of `IMPLEMENTATION-PLAN.md`
+(`PROCESS-NOTES.md`, `TRANSITION.md`, `docs/STORY.md`; the last moved to `cleanroom-skills` on
+2026-10-07 and left the allowlist), the whole of `IMPLEMENTATION-PLAN.md`
 and the checker itself, each justified in the evidence; links into `cleanroom-skills` at `main`
 resolve only once its LS8 pull request merges, and pinning them to that merge is left for later.
 
@@ -326,7 +329,7 @@ One new skill; uncertainty is in how much method to write. Split point: SKILL.md
 worked example before any helper script.
 
 ### Evidence and findings
-Status: complete at the checkpoint. Evidence: [LS10](../evidence/LS10.md). Notebook: [LS10](../notebook/LS10.md).
+Status: complete and merged (driver-lab #54). Evidence: [LS10](../evidence/LS10.md). Notebook: [LS10](../notebook/LS10.md).
 
 ## LS11 — Firewall by name
 
@@ -354,7 +357,7 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 One script and its tests, an existing pattern. Low to medium uncertainty (install paths).
 
 ### Evidence and findings
-Status: complete at the checkpoint (`cleanroom-skills` commits `199059a` and `35ff17e` on `license-split/ls11`; the orchestrator opens the pull requests). A second review-swarm over `35ff17e` (2026-10-07) led to `cleanroom-skills` `5310aac`. Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
+Status: complete and merged: `cleanroom-skills` #4 (`199059a`, `35ff17e`) and driver-lab #55; the second review-swarm over `35ff17e` (2026-10-07) led to `cleanroom-skills` `5310aac` and `89418fd`, merged as `cleanroom-skills` #6 and driver-lab #58. Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
 
 ## LS12 — Consumers updated
 
@@ -384,34 +387,45 @@ driver-lab's marketplace entry.
 Three repos, many small edits. Split point: one checkpoint per repo.
 
 ### Evidence and findings
-Status: complete at the checkpoint (branch `license-split/ls12` in `fuchsia-skills` `c09eac4`, `bringup-kit` `c20d7a3`, `public-skills` `10ab32b`, and driver-lab; the orchestrator opens the pull requests). Evidence: [LS12](../evidence/LS12.md). Notebook: [LS12](../notebook/LS12.md).
+Status: complete and merged: `fuchsia-skills` #7 (`c09eac4`), `bringup-kit` #17 (`c20d7a3`), `public-skills` #100 (`10ab32b`) and driver-lab #57. Evidence: [LS12](../evidence/LS12.md). Notebook: [LS12](../notebook/LS12.md).
 
 ## LS-G — Whole-outcome acceptance
 
 Checks the design's [acceptance](LICENSE-SPLIT.md#acceptance-for-the-whole-outcome) items 1–5
-together, from fresh clones of all six repositories (driver-lab, the three spec repos,
-`cleanroom-skills`, and the consumers): every LS-R row in the coverage table with its evidence
+together, from fresh clones of all eight repositories (driver-lab, the three spec repos,
+`cleanroom-skills`, and the three consumers): every LS-R row in the coverage table with its evidence
 link; the scratch setup of item 2 run end to end against the published CI; `cleanroom-skills`
 installed beside driver-lab (item 3); driver-lab's full list and the archive checks (item 4);
 the consumer greps (item 5). Review: `review-swarm` over the combined state, focused on
-cross-milestone interactions (pins, paths, names). Evidence: [LS-G](../evidence/LS-G.md).
+cross-milestone interactions (pins, paths, names).
+
+### Evidence and findings
+Status: complete at the checkpoint (branch `license-split/ls-g`). Items 1, 3, 4 and 5 met from
+fresh clones; item 2 met by running each spec repository's CI steps locally, with the nine
+scratch pull requests for the published CI listed for the orchestrator. Evidence:
+[LS-G](../evidence/LS-G.md). Notebook: [LS-G](../notebook/LS-G.md).
 
 ## Discovered work / backlog
 
 - **Spec regeneration** (non-goal here): regenerate the deleted specs into the three repos,
   starting with the bcm2711 docs spec and its permissive overlay (facts 2, 3, 6 of the design's
   audit), which also proves cross-repo overlays for real.
+- **`cleanroom-skills` public-skills pin** (LS-G, review findings F2/F6): bump `d63e3f1` to a
+  `main` commit at or after `10ab32b` and fix the comment that says driver-lab pins the same
+  commit; closes LS-R19's last clause.
+- **`bringup-kit` README** (LS-G item 1): add 0BSD to the permissive repository's source list.
 - **Stale branch** `origin/specs/source-observed-audit-fixes` (closed PR #41, two unique commits
   by `git cherry`): the user decides whether to delete it.
 
 ## Next session
 
-- Current milestone: LS12 complete (checkpoint commits on `license-split/ls12` in `fuchsia-skills`,
-  `bringup-kit`, `public-skills` and driver-lab; the orchestrator opens the pull requests and
-  confirms remote CI). LS-G (whole-outcome acceptance) is next.
-- Resume action: LS-G runs from fresh clones of all six repositories after the LS12 pull requests
-  merge; it needs the spec repositories' ISC and 0BSD change (decided 2026-10-07, applied
-  separately) landed first. Check each repository's visibility with `gh repo view` before any push.
-- Read first: the design's acceptance section, this plan's LS-G, the notebook index, and LS12's
-  evidence (its limitations: `bringup-kit` keeps historical records under the old names, by
-  declaration; `cleanroom-skills` has its own marketplace and is not in `public-skills`').
+- Current milestone: LS-G complete at the checkpoint (branch `license-split/ls-g`). LS1–LS12 and
+  the LS11 re-review are merged (driver-lab #57 and #58 are the last two). Acceptance items 1, 3,
+  4 and 5 are met from fresh clones; item 2 is met locally, and its published-CI half waits on
+  the nine scratch pull requests listed in [LS-G's evidence](../evidence/LS-G.md), which the
+  orchestrator opens as drafts, records, closes and deletes.
+- Resume action: record the nine scratch pull requests' CI verdicts in LS-G's evidence, then
+  merge LS-G. The two small fixes in other repositories under the backlog close the split; the next workstream is spec regeneration
+  (backlog below).
+- Read first: [LS-G's evidence](../evidence/LS-G.md) (its limitations and the findings left for
+  other repositories).

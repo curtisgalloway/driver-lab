@@ -54,10 +54,16 @@ driver-lab.)
 | `hardware-specs-permissive` | Apache-2.0, plus a NOTICE file for the BSD/ISC/MIT sources | `[src:]` into BSD, ISC, 0BSD, MIT or Apache trees (and `GPL-2.0 OR MIT` files), plus `[doc:]` | TF-A, rpi-tools, Zephyr, FreeBSD, dual-licensed device trees. First material: the bcm2711 overlay (facts 2, 3, 6 below) |
 
 (The table is the design's, verbatim; its "facts 2, 3, 6 below" are three boot-stub facts from
-BSD-licensed Raspberry Pi tools, in the design's audit of the deleted specs.) **These repositories do not exist yet**; they are created in
-milestone LS5 of the license-split plan. Until then, write the spec at a local path and check its
-placement against the fixture roots shaped like them,
-`tests/fixtures/license-gate/roots/{gpl,docs,permissive}` in this skill.
+BSD-licensed Raspberry Pi tools, in the design's audit of the deleted specs.) The three repositories
+are published:
+[`hardware-specs-gpl`](https://github.com/curtisgalloway/hardware-specs-gpl),
+[`hardware-specs-docs`](https://github.com/curtisgalloway/hardware-specs-docs) and
+[`hardware-specs-permissive`](https://github.com/curtisgalloway/hardware-specs-permissive); since
+2026-10-07 the GPL and permissive repositories also accept ISC and 0BSD sources. To check a
+placement offline, use the fixture roots shaped like them,
+`tests/fixtures/license-gate/roots/{gpl,docs,permissive}` in this skill; their GPL and permissive
+roots also accept `X11` and `Zlib`, which the published repositories do not, so a spec citing
+either passes the fixture check and fails the published one.
 
 To choose:
 

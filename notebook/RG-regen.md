@@ -106,3 +106,26 @@ cases and 8 mutations, and by Codex read-only from the diff. Neither found every
 
 User decisions recorded with these: CI resolves `[src:]` anchors only for pinned repos below a
 size limit; overlays of one id in one layer merge in root order; further roots are context only.
+
+### 2026-10-07 — RG-T1 round 2: both reviewers found the command injection
+
+The follow-up (fixes plus decisions A–C) was re-reviewed the same way. Both reviewers found the
+two blockers; each again found items the other did not.
+
+| # | Reviewer | Finding | Verdict | Other caught? | Would have prevented it |
+|---|---|---|---|---|---|
+| R1 | both | a spec's `url:` reaches `git fetch` as an option (`--upload-pack=<cmd>`), running a command; both reproduced | accepted, blocker | yes | treat every spec field passed to a subprocess as untrusted; `--` before positional args; scheme allow-list |
+| R2 | both | `--context-root` can name a checked root and downgrade its own errors | accepted, blocker | yes | a new flag that relaxes a gate needs a test that it cannot relax the gated input |
+| R3 | Claude | a definite fetch failure (unknown commit, missing repo) passes as "not resolved"; nothing proves resolution ran | accepted | no | a skip path needs a self-test proving the non-skip path fails on bad input |
+| R4 | both | a fetcher crash is swallowed by the shell's process substitution | accepted | yes | — |
+| R5 | Codex | fetch discovery misses accepted anchor forms | accepted | no | reuse the one parser (the brief asked for that; discovery added a second) |
+| R6 | both | a lone split anchor still passes | accepted | yes (Claude as a nit) | — |
+| R7 | Codex | drift rewrite can edit a same-named docs entry | accepted | no | — |
+| R8 | both | claim truncated to 300 characters drops values (regression) | accepted | yes | — |
+| R9 | Codex | `spec_file: null` passes the identity check | accepted | no | degenerate values again (as T1) |
+| R10 | Claude | stale record-naming text in five places | accepted | no | grep for the old rule (as T7) |
+| R11 | Claude | stale-FAIL loosening not covered by a user decision | user: warn locally, CI runs `--require-verified` | no | — |
+| R12 | Claude | line 0 accepted; record under the old name ignored | accepted (nits) | no | — |
+
+Pattern across both rounds: Codex is stronger at degenerate inputs and second parsers; the
+Claude reviewer is stronger at proving what tests can and cannot fail and at policy drift.

@@ -25,6 +25,8 @@ request, not inside a unit.
 | review practice | For a gate or checker, run both an executing reviewer (break cases, mutations) and a diff reader; in RG-T1 each found a bypass the other missed | RG-T1 T1, T2, T9 | both | proposed |
 | review practice | Break cases must include degenerate inputs (empty anchors, aliases of the tag under test) | RG-T1 T1, T2 | Codex, Claude | proposed |
 | review practice | When a format rule changes, grep every skill for the old rule | RG-T1 T7 | Codex | proposed |
+| review practice | Every spec field handed to a subprocess is untrusted input: `--` before positional args, scheme allow-list, no shell; reviewers probe it | RG-T1 R1 | both | proposed |
+| review practice | A flag or path that relaxes a gate (context roots, skip-on-error) needs a test proving it cannot relax the gated input itself | RG-T1 R2, R3 | both, Claude | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison
@@ -34,4 +36,5 @@ Per unit: findings accepted from each reviewer, and how many each caught that th
 | Unit | `spec-verifier` accepted | Codex accepted | Verifier only | Codex only | Both |
 |---|---|---|---|---|---|
 | RG-T1 (tooling; Claude column is the code reviewer) | 6 | 8 | 4 (T2, T9, T10, T11) | 6 (T1, T4–T8) | 2 (T3, T12) |
+| RG-T1 round 2 (Claude column is the code reviewer) | 9 | 8 | 4 (R3, R10, R11, R12) | 3 (R5, R7, R9) | 5 (R1, R2, R4, R6, R8) |
 | RG1 | 4 | 20 | 2 (V1, V4) | 18 | 2 (V3/C5, V2/C13 partly) |

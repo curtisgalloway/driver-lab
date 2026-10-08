@@ -32,6 +32,17 @@ class CodexReviewTest(unittest.TestCase):
     self.assertIn("'workspace-write'", r.stdout)
     self.assertIn("'sandbox_workspace_write.network_access=true'", r.stdout)
     self.assertIn(f"'--cd', '{self.tmp}'", r.stdout)
+    self.assertIn("'sandbox_workspace_write.exclude_slash_tmp=true'", r.stdout)
+    self.assertIn("'sandbox_workspace_write.exclude_tmpdir_env_var=true'", r.stdout)
+
+  def test_log_symlink_refused(self):
+    target = os.path.join(self.tmp, "target")
+    open(target, "w", encoding="utf-8").close()
+    os.symlink(target, self.log)
+    r = subprocess.run([sys.executable, SCRIPT, "net", self.tmp, self.brief, self.log],
+                       capture_output=True, text=True, check=False,
+                       env={**os.environ, "PATH": self.tmp})
+    self.assertEqual(r.returncode, 2, r.stderr)
 
   def test_ro_form(self):
     r = run("ro", REPO, self.brief, self.log)

@@ -12,7 +12,10 @@ Usage:
 ro   Read-only review of a git checkout: `codex exec --sandbox read-only --cd CHECKOUT`.
      BRIEF and LOG must lie under the system temp directory.
 net  Networked review in a throwaway directory: `codex exec --sandbox workspace-write` with
-     network access, `--skip-git-repo-check --cd REVIEW_DIR`. REVIEW_DIR must lie under the
+     network access, writes limited to REVIEW_DIR (not /tmp or $TMPDIR),
+     `--skip-git-repo-check --cd REVIEW_DIR`. Network plus a sandbox that can read the whole
+     filesystem means fetched content could steer Codex to send local files out; run net
+     reviews only where that is acceptable. REVIEW_DIR must lie under the
      system temp directory and outside any git work tree; BRIEF must lie inside REVIEW_DIR.
 
 The prompt is fixed ("read BRIEF and carry it out"); the caller passes no Codex flags and no
@@ -96,6 +99,8 @@ def build(mode, target, brief, log):
     flags = [
         "--sandbox", "workspace-write",
         "-c", "sandbox_workspace_write.network_access=true",
+        "-c", "sandbox_workspace_write.exclude_slash_tmp=true",
+        "-c", "sandbox_workspace_write.exclude_tmpdir_env_var=true",
         "--skip-git-repo-check",
     ]
   return ["codex", "exec", *flags, "--cd", target, PROMPT.format(brief=brief)], log
@@ -113,7 +118,11 @@ def main(argv):
   if shutil.which("codex") is None:
     print("codex-review: codex is not installed", file=sys.stderr)
     return 3
-  with open(log, "w", encoding="utf-8") as out:
+  try:
+    fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+  except OSError as exc:
+    fail(f"cannot open LOG without following links: {exc}")
+  with os.fdopen(fd, "w", encoding="utf-8") as out:
     proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
                           check=False)
   return 0 if proc.returncode == 0 else 1

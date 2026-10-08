@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/root.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 root marker, board-specs.yaml (design: Roots, layers, overlays and the license gate; D1, D15).",
+  "title": "Spec format 2: root marker (board-specs.yaml)",
+  "type": "object",
+  "required": ["format", "layer", "name"],
+  "properties": {
+    "format": {"const": 2},
+    "layer": {"enum": ["public", "ip-vendor", "soc-vendor", "product", "local"]},
+    "name": {
+      "$comment": "Required in format 2: root-qualified references name it (D1).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "roots": {
+      "$comment": "Further roots, relative to this file or absolute.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "spec.schema.json#/$defs/text"}
+    },
+    "license": {"$ref": "spec.schema.json#/$defs/spdxExpression"},
+    "accepts": {
+      "$comment": "Single SPDX identifiers, no expressions; [] accepts no source tree.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$"}
+    },
+    "extensions": {
+      "$comment": "D15: the schema fragment an extension supplies for its support class, a JSON file relative to this marker inside the root.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["class", "schema"],
+        "properties": {
+          "class": {"const": "source-observed"},
+          "schema": {
+            "type": "string",
+            "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|$))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*\\.json$"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

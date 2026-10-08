@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: ip
+id: widget-uart
+name: Widget UART
+triggers: [widget uart]
+cache: widget-uart-resources
+resources:
+  documents:
+    - {name: uart-databook, class: databook, title: Widget UART databook, url: "https://example.invalid/uart.pdf"}
+    - {name: uart-standard, class: standard, title: A serial standard, url: "https://example.invalid/serial", revision: "2.0"}
+facts:
+  - id: standard-compliance
+    section: standards
+    title: Standard
+    claim: The block implements the serial standard's 16550 register layout.
+    support:
+      - {class: standard, doc: uart-standard, at: [{clause: "4"}]}
+  - id: fifo-depth
+    section: programming-model
+    title: FIFO depth
+    claim: Both FIFOs hold 16 entries.
+    support:
+      - {class: databook, doc: uart-databook, at: [{section: "3.1"}]}
+  - id: revisions
+    section: variants-quirks
+    title: Revisions
+    claim: r1p1 fixes the break-detect erratum.
+    support:
+      - {class: databook, doc: uart-databook, at: [{section: "A"}]}
+  - id: break-detect
+    section: gotchas
+    title: Break detect
+    claim: r1p0 misses a break shorter than one frame.
+    support:
+      - {class: databook, doc: uart-databook, at: [{section: "A.2"}]}

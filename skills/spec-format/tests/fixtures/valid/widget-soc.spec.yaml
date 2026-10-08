@@ -1,0 +1,187 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: soc
+id: widget-soc
+name: Widget SoC
+triggers: [widget soc]
+cache: widget-soc-resources
+instances:
+  - id: uart0
+    name: uart0
+    ip: widget-uart
+    reg: "0x7e201000"
+    irq: {kind: SPI, number: 121, intid: 153, trigger: level-high, note: "shared, see the GIC"}
+    clocks: [uartclk, apb_pclk]
+    role: debug console
+    support:
+      - class: DT
+        anchors: [{repo: widget-linux, path: arch/arm64/boot/dts/widget/widget-soc.dtsi, lines: [40, 48], node: serial@7e201000}]
+  - id: gpio-ext
+    name: gpio_ext
+    ip: widget-gpio
+    reg: null
+    irq: {kind: extended, number: 4, parent: gia_lsio}
+    clocks: []
+    todo: {check: document, text: find the block's base address.}
+  - id: timer
+    name: timer
+    ip: widget-timer
+    reg: "0x00"
+    irq: {kind: PPI, number: 14}
+    clocks: []
+    support:
+      - class: src
+        anchors: [{repo: widget-linux, path: drivers/clocksource/widget-timer.c, lines: [10, 12], symbol: WIDGET_TIMER_BASE}]
+resources:
+  documents:
+    - name: widget-trm
+      class: databook
+      title: Widget SoC Technical Reference Manual
+      revision: "1.10"
+      url: https://example.invalid/widget-trm.pdf
+      retrieval:
+        - {url: "https://example.invalid/static/widget-trm.pdf", via: static mirror}
+      sha256: 1218036a6a0562504adedd37088e5136036a3099cf8581832e0c7353d7256cbd
+      pages: 120
+      page_numbering: printed
+      access: public
+      verified: 2026-10-01
+      fetch: ok
+    - name: armarm
+      class: standard
+      title: An architecture manual
+      url: https://example.invalid/armarm
+      cite: false
+  repos:
+    - name: widget-linux
+      url: https://example.invalid/widget-linux
+      commit: 1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d
+      license: GPL-2.0-only
+      role: source
+      status: merged
+      files:
+        - {path: arch/arm64/boot/dts/widget/widget-soc.dtsi, license_from: spdx-line}
+        - {path: drivers/clocksource/widget-timer.c, license_from: spdx-line}
+        - {path: drivers/clocksource/, license_from: license-file, note: searched}
+      verified: 2026-10-01
+      fetch: ok
+      fetch_via: git
+    - name: widget-rtl
+      url: https://example.invalid/widget-rtl
+      commit: 2a2b2c2d2e2f202122232425262728292a2b2c2d2e2f20212223242526272829
+      license: BSD-3-Clause
+      files:
+        - {path: rtl/uart.v, license_from: notice}
+assumptions:
+  - id: same-silicon
+    text: the rev B board carries the same silicon as the rev A manual describes
+    todo: {check: hardware, text: read the chip ID register on a rev B board.}
+facts:
+  - id: addressing
+    section: quick-facts
+    title: Addressing
+    critical: true
+    claim: |
+      Peripherals sit at `0x7e00_0000`.
+
+      | Block | Base |
+      | --- | --- |
+      | UART0 | `0x7e20_1000` |
+    support:
+      - class: databook
+        doc: widget-trm
+        at:
+          - {section: "1.2", pages: ["4", "6"]}
+          - {table: "3-1", page: "3-3"}
+          - {figure: "2"}
+          - {clause: "4.1.2"}
+    scope: {boards: [Widget Board], revisions: [rev B], modes: [low peripheral], builds: [release], configurations: [64-bit boot]}
+    assumes: [same-silicon]
+    relates: [{fact: "#timer-base", relation: qualifies}, {fact: "widget-uart#fifo-depth", relation: refines}, {fact: "widget-soc@other-root#addressing", relation: same-as}]
+    note: The rev A manual is the only one.
+  - id: timer-base
+    section: quick-facts
+    title: Timer base
+    claim: The timer block's base is the driver's `WIDGET_TIMER_BASE`.
+    support:
+      - class: src
+        anchors:
+          - {repo: widget-linux, path: drivers/clocksource/widget-timer.c, lines: [10, 12], symbol: WIDGET_TIMER_BASE}
+          - {repo: widget-linux, path: drivers/clocksource/widget-timer.c, lines: [20, 20], symbol: widget_timer_init, comment: true}
+          - {repo: widget-linux, path: drivers/clocksource/, search: no other file names the timer base}
+      - class: standard
+        doc: armarm
+        at: [{heading: Generic timer}]
+  - id: uart-fifo-rtl
+    section: quick-facts
+    title: UART FIFO in RTL
+    claim: The UART's receive FIFO holds 16 entries.
+    support:
+      - class: rtl
+        design: widget-uart
+        revision: r1p0
+        module: uart_rx_fifo
+        anchors: [{repo: widget-rtl, path: rtl/uart.v, lines: [100, 104], symbol: DEPTH}]
+      - class: rtl
+        design: widget-uart
+        revision: r1p0
+        module: uart_rx_fifo
+        doc: widget-trm
+        at: [{heading: UART receive FIFO}]
+        note: the manual's RTL appendix
+  - id: dt-gic
+    section: quick-facts
+    title: GIC node
+    claim: The tree's GIC is an `arm,gic-400`.
+    support:
+      - class: DT
+        anchors:
+          - {repo: widget-linux, path: arch/arm64/boot/dts/widget/widget-soc.dtsi, lines: [56, 66], symbol: gicv2, comment: true}
+          - {repo: widget-linux, path: firmware/widget-soc.dtb, node: /soc/interrupt-controller@40041000}
+  - id: uart-loopback-emulated
+    section: gotchas
+    title: UART loopback in the model
+    claim: The model echoes a byte written in loopback mode.
+    support:
+      - {class: emulated, model: widget-qemu, version: "9.1", runs: [run-0002]}
+      - {class: emulated, model: widget-qemu, version: "9.1", observation: "#uart-fifo-rtl", note: observation 3}
+      - {class: databook, doc: widget-trm, at: [{section: "5.4"}]}
+    todo: {check: hardware, text: repeat on a board.}
+  - id: fifo-trigger
+    section: gotchas
+    title: FIFO trigger level
+    claim: The receive interrupt fires at 8 entries, half the FIFO.
+    support:
+      - class: inference
+        confidence: medium
+        premises:
+          - fact: "#uart-fifo-rtl"
+            uses: the FIFO holds 16 entries
+          - states: the trigger is set to half full
+            support:
+              - {class: src, anchors: [{repo: widget-linux, path: drivers/clocksource/widget-timer.c, lines: [30, 31], symbol: RX_TRIGGER}]}
+              - {class: emulated, model: widget-qemu, version: "9.1", runs: [run-0003]}
+          - assumption: same-silicon
+        derivation: half of 16 is 8
+    todo: {check: hardware, text: count bytes at the first interrupt.}
+    conflicts:
+      - reading: the press says the FIFO holds 32 entries
+        support: [{class: press, title: Widget review, url: "https://example.invalid/review"}]
+        resolution: attributed to the press article; the RTL is authoritative
+        assumption: RTL over press
+        decided: {by: user, date: 2026-10-02}
+      - reading: an old manual revision says 64 entries
+        support: [{class: databook, doc: widget-trm, at: [{section: "A.1"}]}]
+  - id: observed-boot
+    section: gotchas
+    title: Observed boot order
+    claim: The boot ROM reads the SD card first.
+    support:
+      - {class: source-observed, observer: the extension, observed: 2026-10-03}
+    todo: {check: hardware, text: confirm with the boot pins strapped.}
+notices:
+  - repo: widget-rtl
+    path: rtl/uart.v
+    text: |
+      Copyright (c) 2026 Widget contributors

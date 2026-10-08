@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: facts
+resources:
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: 1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d
+      license: GPL-2.0-only
+      role: source
+      files: [{path: drivers/tty/serial/widget.c, license_from: spdx-line}]
+facts:
+  - id: ctrl-enable
+    section: facts
+    claim: Bit 0 of CTRL enables the block.
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [5, 5], symbol: WIDGET_CTRL_EN}]

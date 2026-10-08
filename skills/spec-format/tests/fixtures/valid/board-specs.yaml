@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A synthetic format 2 root for the schema tests; every name and URL is made up.
+format: 2
+layer: public
+name: widget-root
+roots: []
+license: Apache-2.0
+accepts: [Apache-2.0, BSD-3-Clause, GPL-2.0-only]
+extensions:
+  - class: source-observed
+    schema: ext/source-observed.json

@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+spec: widget-soc
+spec_file: widget-soc.spec.yaml
+spec_sha256: 1218036a6a0562504adedd37088e5136036a3099cf8581832e0c7353d7256cbd
+canonical: fact-v1
+sources:
+  - {name: widget-linux, commit: 1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d, fetch: ok}
+  - {name: widget-trm, url: "https://example.invalid/static/widget-trm.pdf", sha256: 1218036a6a0562504adedd37088e5136036a3099cf8581832e0c7353d7256cbd, fetch: ok, note: printed pages}
+summary: {pass: 3, fail: 1, unverifiable: 1, gap: 1, adjudicate: 1}
+verdicts:
+  addressing:
+    basis: 0000000000000000000000000000000000000000000000000000000000000001
+    verdict: PASS
+    date: 2026-10-08
+    verifier: "a model, a harness"
+    note: compared with the manual's section 1.2
+    contrary_evidence: none-found
+    citation_precision: exact
+    readers:
+      - {verifier: "a second model", verdict: PASS, date: 2026-10-08, note: agrees}
+  timer-base:
+    basis: 0000000000000000000000000000000000000000000000000000000000000002
+    verdict: FAIL
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: found
+    citation_precision: imprecise
+    correction: the base is set in the probe function, not the header
+  uart-fifo-rtl:
+    basis: 0000000000000000000000000000000000000000000000000000000000000003
+    verdict: ADJUDICATE
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: not-checked
+    citation_precision: exact
+    readings:
+      - {verifier: first, verdict: PASS, reasoning: the RTL says 16}
+      - {verifier: second, verdict: FAIL, reasoning: the parameter is overridden}
+  dt-gic:
+    basis: 0000000000000000000000000000000000000000000000000000000000000004
+    verdict: PASS
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: none-found
+    citation_precision: exact
+    readings:
+      - {verifier: first, verdict: PASS, reasoning: matches}
+      - {verifier: second, verdict: FAIL, reasoning: wrong node}
+    adjudication: {decision: PASS, by: user, date: 2026-10-08, rule: the node name is a label}
+  uart-loopback-emulated:
+    basis: 0000000000000000000000000000000000000000000000000000000000000005
+    verdict: UNVERIFIABLE
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: not-checked
+    citation_precision: exact
+  fifo-trigger:
+    basis: 0000000000000000000000000000000000000000000000000000000000000006
+    verdict: PASS
+    date: 2026-10-08
+    verifier: a model
+    readers: []
+    carried_from: {repo: widget-specs, commit: cd911120663da72f4101161eef5a22dc13d0cc86, path: specs/resources/widget-soc.verify.md, key: 'Gotchas/2 "FIFO trigger level"', format: 1}
+  observed-boot:
+    basis: 0000000000000000000000000000000000000000000000000000000000000007
+    verdict: GAP
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: not-checked
+    citation_precision: exact
+  reg-ctrl.en:
+    basis: 0000000000000000000000000000000000000000000000000000000000000008
+    verdict: PASS
+    date: 2026-10-08
+    verifier: a model
+    contrary_evidence: none-found
+    citation_precision: exact

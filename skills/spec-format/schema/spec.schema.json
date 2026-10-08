@@ -1,0 +1,780 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/spec.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. Spec format 2, kinds board, soc, chip, ip, overlay and facts (SF2-1); peripheral and review arrive in SF2-7. Design: docs/SPEC-FORMAT-V2.md.",
+  "title": "Spec format 2: a spec or an investigator's facts file",
+  "type": "object",
+  "required": ["format", "kind", "facts"],
+  "properties": {
+    "format": {"const": 2},
+    "kind": {"enum": ["board", "soc", "chip", "ip", "overlay", "facts"]},
+    "facts": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
+    "resources": {"$ref": "#/$defs/resources"},
+    "assumptions": {"type": "array", "items": {"$ref": "#/$defs/assumption"}},
+    "orientation": {"$ref": "#/$defs/text"},
+    "notices": {"type": "array", "items": {"$ref": "#/$defs/notice"}}
+  },
+  "allOf": [
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "board"}}},
+      "then": {
+        "required": ["id", "name", "triggers", "parts", "cache"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/text"},
+          "triggers": {"$ref": "#/$defs/triggers"},
+          "not_triggers": {"$ref": "#/$defs/wordList"},
+          "aliases": {"$ref": "#/$defs/idList"},
+          "parts": {"$ref": "#/$defs/parts"},
+          "variants": {"type": "array", "items": {"$ref": "#/$defs/variant"}},
+          "variant_of": {"$ref": "#/$defs/specId"},
+          "cache": {"$ref": "#/$defs/name"},
+          "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections"}}
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "soc"}}},
+      "then": {
+        "required": ["id", "name", "triggers", "instances"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/text"},
+          "triggers": {"$ref": "#/$defs/triggers"},
+          "not_triggers": {"$ref": "#/$defs/wordList"},
+          "aliases": {"$ref": "#/$defs/idList"},
+          "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
+          "cache": {"$ref": "#/$defs/name"},
+          "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections"}}
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "chip"}}},
+      "then": {
+        "required": ["id", "name", "triggers"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/text"},
+          "triggers": {"$ref": "#/$defs/triggers"},
+          "not_triggers": {"$ref": "#/$defs/wordList"},
+          "aliases": {"$ref": "#/$defs/idList"},
+          "parts": {"$ref": "#/$defs/parts"},
+          "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
+          "cache": {"$ref": "#/$defs/name"},
+          "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections"}}
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "ip"}}},
+      "then": {
+        "required": ["id", "name", "triggers", "resources"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/text"},
+          "triggers": {"$ref": "#/$defs/triggers"},
+          "not_triggers": {"$ref": "#/$defs/wordList"},
+          "aliases": {"$ref": "#/$defs/idList"},
+          "cache": {"$ref": "#/$defs/name"},
+          "facts": {
+            "items": {
+              "required": ["title"],
+              "properties": {
+                "section": {"enum": ["standards", "programming-model", "variants-quirks", "gotchas"]}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "overlay"}}},
+      "then": {
+        "$comment": "An overlay's sections are its target's; which target kind is the checker's to know (SF2-2), so the schema admits the union of the board-spec kinds' sections.",
+        "required": ["overlays"],
+        "properties": {
+          "overlays": {"$ref": "#/$defs/specId"},
+          "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
+          "facts": {
+            "items": {
+              "required": ["title"],
+              "properties": {
+                "section": {
+                  "enum": ["quick-facts", "gotchas", "standards", "programming-model", "variants-quirks"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "facts"}}},
+      "then": {
+        "required": ["resources"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/text"},
+          "facts": {"items": {"properties": {"section": {"const": "facts"}}}}
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "text": {
+      "$comment": "Free text: a string with at least one character that is not white space.",
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "specId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "factId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "assumptionId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "factRef": {
+      "$comment": "#<fact>, <spec>#<fact>, or <spec>@<root>#<fact> (design, References; D1).",
+      "type": "string",
+      "pattern": "^([a-z0-9][a-z0-9-]*(@[a-z0-9][a-z0-9._-]*)?)?#[a-z0-9][a-z0-9-]*$"
+    },
+    "name": {
+      "$comment": "A resources entry name (document or repository), also used for cache names.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"},
+    "hex": {
+      "$comment": "One spelling for a hex value (D6): 0x, then lowercase digits, no separators.",
+      "type": "string",
+      "pattern": "^0x[0-9a-f]+$"
+    },
+    "httpsUrl": {
+      "$comment": "https only, a host without user information, no white space; nothing else reaches a tool (RG-T1 R1).",
+      "type": "string",
+      "pattern": "^https://[A-Za-z0-9.-]+(:[0-9]+)?(/[^\\s]*)?$"
+    },
+    "path": {
+      "$comment": "A path inside a repository: relative, no empty, '.' or '..' segment, no leading '-', a trailing '/' for a directory.",
+      "type": "string",
+      "pattern": "^(?!-)(?!(.*/)?\\.\\.?(/|$))[A-Za-z0-9._+@,=~-]+(/[A-Za-z0-9._+@,=~-]+)*/?$"
+    },
+    "spdxExpression": {
+      "$comment": "An SPDX expression; the checker parses it (board-expert/scripts/spdx.py).",
+      "type": "string",
+      "pattern": "^(?=.*\\S)[A-Za-z0-9.+() -]+$"
+    },
+    "triggers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "wordList": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "idList": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
+    "parts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
+    "textList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "boardSpecFactSections": {
+      "required": ["title"],
+      "properties": {"section": {"enum": ["quick-facts", "gotchas"]}}
+    },
+
+    "fact": {
+      "type": "object",
+      "required": ["id", "section", "claim"],
+      "properties": {
+        "id": {"$ref": "#/$defs/factId"},
+        "section": {"type": "string"},
+        "title": {"$ref": "#/$defs/text"},
+        "claim": {"$ref": "#/$defs/text"},
+        "support": {"$ref": "#/$defs/supportList"},
+        "todo": {"$ref": "#/$defs/todo"},
+        "assumes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/assumptionId"}
+        },
+        "scope": {"$ref": "#/$defs/scope"},
+        "critical": {"$comment": "Omit the key for a fact that is not critical.", "const": true},
+        "relates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/relation"}},
+        "conflicts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/conflict"}},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "allOf": [{"$ref": "#/$defs/supportRules"}],
+      "unevaluatedProperties": false
+    },
+
+    "supportList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/support"}},
+
+    "supportRules": {
+      "$comment": "For anything that carries support: a fact, an instance row, a variant row.",
+      "anyOf": [
+        {"required": ["support"]},
+        {"required": ["todo"], "$comment": "message: a gap (no support) must carry a todo"}
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": ["support"],
+            "properties": {"support": {"contains": {
+              "type": "object", "required": ["class"],
+              "properties": {"class": {"enum": ["press", "inference", "emulated", "source-observed"]}}
+            }}}
+          },
+          "then": {
+            "required": ["todo"],
+            "$comment": "message: press, inference, emulated and extension-class support require a todo"
+          }
+        },
+        {
+          "if": {
+            "required": ["support"],
+            "properties": {"support": {"contains": {
+              "type": "object", "required": ["class"],
+              "properties": {"class": {"const": "inference"}}
+            }}}
+          },
+          "then": {
+            "properties": {"support": {
+              "maxItems": 1,
+              "$comment": "message: an inference stands alone in support; cite the read part as its own fact (D3)"
+            }}
+          }
+        },
+        {
+          "if": {
+            "required": ["support"],
+            "properties": {"support": {"contains": {
+              "type": "object", "required": ["class"],
+              "properties": {"class": {"const": "emulated"}}
+            }}}
+          },
+          "then": {
+            "properties": {"support": {
+              "contains": {
+                "type": "object", "required": ["class"],
+                "properties": {"class": {"not": {"const": "emulated"}}}
+              },
+              "$comment": "message: emulated never stands alone; another class must support the claim beside it"
+            }}
+          }
+        }
+      ]
+    },
+
+    "todo": {
+      "type": "object",
+      "required": ["check", "text"],
+      "properties": {
+        "check": {"enum": ["hardware", "document", "source"]},
+        "text": {"$ref": "#/$defs/text"},
+        "method": {"$ref": "#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+
+    "scope": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "boards": {"$ref": "#/$defs/textList"},
+        "revisions": {"$ref": "#/$defs/textList"},
+        "modes": {"$ref": "#/$defs/textList"},
+        "builds": {"$ref": "#/$defs/textList"},
+        "configurations": {"$ref": "#/$defs/textList"}
+      },
+      "additionalProperties": false
+    },
+
+    "relation": {
+      "type": "object",
+      "required": ["fact", "relation"],
+      "properties": {
+        "fact": {"$ref": "#/$defs/factRef"},
+        "relation": {"enum": ["qualifies", "contradicts", "refines", "same-as"]}
+      },
+      "additionalProperties": false
+    },
+
+    "conflict": {
+      "type": "object",
+      "required": ["reading", "support"],
+      "properties": {
+        "reading": {"$ref": "#/$defs/text"},
+        "support": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/readSupport"}},
+        "resolution": {"$ref": "#/$defs/text"},
+        "assumption": {"$ref": "#/$defs/text"},
+        "decided": {
+          "type": "object",
+          "required": ["by", "date"],
+          "properties": {"by": {"$ref": "#/$defs/text"}, "date": {"$ref": "#/$defs/date"}},
+          "additionalProperties": false
+        }
+      },
+      "dependentRequired": {
+        "resolution": ["decided"],
+        "decided": ["resolution"],
+        "assumption": ["resolution"]
+      },
+      "additionalProperties": false
+    },
+
+    "assumption": {
+      "type": "object",
+      "required": ["id", "text"],
+      "properties": {
+        "id": {"$ref": "#/$defs/assumptionId"},
+        "text": {"$ref": "#/$defs/text"},
+        "todo": {"$ref": "#/$defs/todo"}
+      },
+      "additionalProperties": false
+    },
+
+    "instance": {
+      "$comment": "One placement of an IP block in an SoC or chip; verified like a fact. reg and irq are null when unknown, and then the row carries a todo.",
+      "type": "object",
+      "required": ["id", "name", "ip", "reg", "irq", "clocks"],
+      "properties": {
+        "id": {"$ref": "#/$defs/factId"},
+        "name": {"$ref": "#/$defs/text"},
+        "ip": {"$ref": "#/$defs/specId"},
+        "reg": {"type": ["string", "null"], "pattern": "^0x[0-9a-f]+$"},
+        "irq": {"$ref": "#/$defs/irq"},
+        "clocks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "role": {"$ref": "#/$defs/text"},
+        "note": {"$ref": "#/$defs/text"},
+        "support": {"$ref": "#/$defs/supportList"},
+        "todo": {"$ref": "#/$defs/todo"}
+      },
+      "allOf": [
+        {"$ref": "#/$defs/supportRules"},
+        {
+          "if": {"anyOf": [
+            {"required": ["reg"], "properties": {"reg": {"type": "null"}}},
+            {"required": ["irq"], "properties": {"irq": {"type": "null"}}}
+          ]},
+          "then": {"required": ["todo"], "$comment": "message: an instance with reg or irq null must carry a todo"}
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+
+    "irq": {
+      "$comment": "null when unknown (the row then carries a todo); otherwise the GIC line, or the line on a secondary controller.",
+      "type": ["object", "null"],
+      "required": ["kind", "number"],
+      "properties": {
+        "kind": {"enum": ["SPI", "PPI", "extended"]},
+        "number": {"type": "integer", "minimum": 0},
+        "intid": {"type": "integer", "minimum": 0},
+        "trigger": {"$ref": "#/$defs/text"},
+        "parent": {"$ref": "#/$defs/text"},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "if": {"type": "object", "required": ["kind"], "properties": {"kind": {"const": "extended"}}},
+      "then": {"required": ["parent"], "not": {"required": ["intid"]}},
+      "else": {"not": {"type": "object", "required": ["parent"]}},
+      "additionalProperties": false
+    },
+
+    "variant": {
+      "type": "object",
+      "required": ["id", "name", "triggers", "shares", "differs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/factId"},
+        "name": {"$ref": "#/$defs/text"},
+        "triggers": {"$ref": "#/$defs/triggers"},
+        "shares": {"$ref": "#/$defs/textList"},
+        "differs": {"$ref": "#/$defs/text"},
+        "support": {"$ref": "#/$defs/supportList"},
+        "todo": {"$ref": "#/$defs/todo"}
+      },
+      "allOf": [{"$ref": "#/$defs/supportRules"}],
+      "unevaluatedProperties": false
+    },
+
+    "notice": {
+      "type": "object",
+      "required": ["repo", "path", "text"],
+      "properties": {
+        "repo": {"$ref": "#/$defs/name"},
+        "path": {"$ref": "#/$defs/path"},
+        "text": {"$ref": "#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+
+    "support": {
+      "$comment": "One support entry. class is a closed enum; each class declares its own fields in its branch, so a field of another class is unevaluated and refused.",
+      "type": "object",
+      "required": ["class"],
+      "properties": {
+        "class": {"enum": ["databook", "standard", "doc", "rtl", "DT", "src", "hardware",
+                           "emulated", "press", "inference", "source-observed"]}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "databook"}}},
+          "then": {
+            "required": ["doc", "at"],
+            "properties": {
+              "doc": {"$ref": "#/$defs/name"},
+              "at": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/preciseLocator"}},
+              "note": {"$ref": "#/$defs/text"}
+            }
+          }
+        },
+        {
+          "$comment": "standard: a heading alone is admitted for now, as the worked example cites booting.rst by heading; the design's Locators rule asks for more (open question, SF2-1 evidence).",
+          "if": {"required": ["class"], "properties": {"class": {"enum": ["standard", "doc"]}}},
+          "then": {
+            "required": ["doc", "at"],
+            "properties": {
+              "doc": {"$ref": "#/$defs/name"},
+              "at": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/locator"}},
+              "note": {"$ref": "#/$defs/text"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "rtl"}}},
+          "then": {
+            "required": ["design", "revision", "module"],
+            "anyOf": [{"required": ["doc"]}, {"required": ["anchors"]}],
+            "dependentRequired": {"doc": ["at"], "at": ["doc"]},
+            "properties": {
+              "design": {"$ref": "#/$defs/text"},
+              "revision": {"$ref": "#/$defs/text"},
+              "module": {"$ref": "#/$defs/text"},
+              "doc": {"$ref": "#/$defs/name"},
+              "at": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/locator"}},
+              "anchors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/rtlAnchor"}},
+              "note": {"$ref": "#/$defs/text"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "DT"}}},
+          "then": {
+            "required": ["anchors"],
+            "properties": {
+              "anchors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/dtAnchor"}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "src"}}},
+          "then": {
+            "required": ["anchors"],
+            "properties": {
+              "anchors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/srcAnchor"}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "hardware"}}},
+          "then": {
+            "required": ["board", "method", "date"],
+            "properties": {
+              "board": {"$ref": "#/$defs/text"},
+              "method": {"$ref": "#/$defs/text"},
+              "date": {"$ref": "#/$defs/date"},
+              "revision": {"$ref": "#/$defs/text"},
+              "firmware": {"$ref": "#/$defs/text"},
+              "conditions": {"$ref": "#/$defs/text"},
+              "runs": {"$ref": "#/$defs/textList"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "emulated"}}},
+          "then": {
+            "required": ["model", "version"],
+            "anyOf": [{"required": ["runs"]}, {"required": ["observation"]}],
+            "properties": {
+              "model": {"$ref": "#/$defs/text"},
+              "version": {"$ref": "#/$defs/text"},
+              "runs": {"$ref": "#/$defs/textList"},
+              "observation": {"$ref": "#/$defs/factRef"},
+              "note": {"$ref": "#/$defs/text"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "press"}}},
+          "then": {
+            "required": ["title", "url"],
+            "properties": {
+              "title": {"$ref": "#/$defs/text"},
+              "url": {"$ref": "#/$defs/httpsUrl"},
+              "date": {"$ref": "#/$defs/date"},
+              "note": {"$ref": "#/$defs/text"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "inference"}}},
+          "then": {
+            "required": ["premises", "derivation"],
+            "properties": {
+              "premises": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/premise"}},
+              "derivation": {"$ref": "#/$defs/text"},
+              "confidence": {"enum": ["high", "medium", "low"]}
+            }
+          }
+        },
+        {
+          "if": {"required": ["class"], "properties": {"class": {"const": "source-observed"}}},
+          "then": {"$ref": "urn:driver-lab:spec-format:2:extension:source-observed"}
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+
+    "readSupport": {
+      "$comment": "A support entry of any class but inference: a premise's or a conflict's support. A conclusion another fact needs is its own inference fact, referenced by id.",
+      "allOf": [
+        {"$ref": "#/$defs/support"},
+        {"properties": {"class": {"not": {"const": "inference"},
+                                  "$comment": "message: a premise's support is read, never another inference; reference an inference fact instead"}}}
+      ]
+    },
+
+    "premise": {
+      "$comment": "Exactly one of: a fact reference (with optional uses), a states text with its own read support, or a named assumption.",
+      "type": "object",
+      "oneOf": [
+        {"required": ["fact"]},
+        {"required": ["states"]},
+        {"required": ["assumption"]}
+      ],
+      "properties": {
+        "fact": {"$ref": "#/$defs/factRef"},
+        "uses": {"$ref": "#/$defs/text"},
+        "states": {"$ref": "#/$defs/text"},
+        "support": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/readSupport"}},
+        "assumption": {"$ref": "#/$defs/assumptionId"}
+      },
+      "dependentRequired": {"uses": ["fact"], "states": ["support"], "support": ["states"]},
+      "additionalProperties": false
+    },
+
+    "locator": {
+      "$comment": "Where in a document. All values are strings; pages is [first, last]; page and pages never together.",
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "section": {"$ref": "#/$defs/text"},
+        "page": {"$ref": "#/$defs/text"},
+        "pages": {
+          "type": "array",
+          "prefixItems": [{"$ref": "#/$defs/text"}, {"$ref": "#/$defs/text"}],
+          "items": false,
+          "minItems": 2
+        },
+        "table": {"$ref": "#/$defs/text"},
+        "figure": {"$ref": "#/$defs/text"},
+        "clause": {"$ref": "#/$defs/text"},
+        "heading": {"$ref": "#/$defs/text"}
+      },
+      "not": {"required": ["page", "pages"]},
+      "additionalProperties": false
+    },
+
+    "preciseLocator": {
+      "$comment": "A databook locator: a heading alone is not enough (RG1 V2).",
+      "allOf": [
+        {"$ref": "#/$defs/locator"},
+        {
+          "anyOf": [
+            {"required": ["section"]}, {"required": ["page"]}, {"required": ["pages"]},
+            {"required": ["table"]}, {"required": ["figure"]}, {"required": ["clause"]}
+          ],
+          "$comment": "message: a databook locator needs a section, page, pages, table, figure or clause"
+        }
+      ]
+    },
+
+    "lines": {
+      "$comment": "[first, last], 1-based, inclusive; first <= last is the checker's (SF2-2).",
+      "type": "array",
+      "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}],
+      "items": false,
+      "minItems": 2
+    },
+
+    "stale": {
+      "type": "object",
+      "required": ["was"],
+      "properties": {"was": {"$ref": "#/$defs/commit"}},
+      "additionalProperties": false
+    },
+
+    "srcAnchor": {
+      "$comment": "lines and symbol, or search alone (a negative or global claim).",
+      "type": "object",
+      "required": ["repo", "path"],
+      "properties": {
+        "repo": {"$ref": "#/$defs/name"},
+        "path": {"$ref": "#/$defs/path"},
+        "lines": {"$ref": "#/$defs/lines"},
+        "symbol": {"$ref": "#/$defs/text"},
+        "comment": {"const": true},
+        "search": {"$ref": "#/$defs/text"},
+        "stale": {"$ref": "#/$defs/stale"}
+      },
+      "if": {"required": ["search"]},
+      "then": {
+        "not": {"anyOf": [
+          {"required": ["lines"]}, {"required": ["symbol"]},
+          {"required": ["comment"]}, {"required": ["stale"]}
+        ]},
+        "$comment": "message: a search anchor carries no lines, symbol, comment or stale"
+      },
+      "else": {"required": ["lines", "symbol"]},
+      "additionalProperties": false
+    },
+
+    "dtAnchor": {
+      "$comment": "lines for a source .dts/.dtsi; node for a decompiled blob; both allowed.",
+      "type": "object",
+      "required": ["repo", "path"],
+      "properties": {
+        "repo": {"$ref": "#/$defs/name"},
+        "path": {"$ref": "#/$defs/path"},
+        "lines": {"$ref": "#/$defs/lines"},
+        "node": {"$ref": "#/$defs/text"},
+        "symbol": {"$ref": "#/$defs/text"},
+        "comment": {"const": true},
+        "stale": {"$ref": "#/$defs/stale"}
+      },
+      "anyOf": [{"required": ["lines"]}, {"required": ["node"]}],
+      "if": {"required": ["path"], "properties": {"path": {"pattern": "\\.dtsi?$"}}},
+      "then": {"required": ["lines"]},
+      "additionalProperties": false
+    },
+
+    "rtlAnchor": {
+      "type": "object",
+      "required": ["repo", "path", "lines"],
+      "properties": {
+        "repo": {"$ref": "#/$defs/name"},
+        "path": {"$ref": "#/$defs/path"},
+        "lines": {"$ref": "#/$defs/lines"},
+        "symbol": {"$ref": "#/$defs/text"},
+        "comment": {"const": true},
+        "stale": {"$ref": "#/$defs/stale"}
+      },
+      "additionalProperties": false
+    },
+
+    "resources": {
+      "type": "object",
+      "properties": {
+        "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
+        "repos": {"type": "array", "items": {"$ref": "#/$defs/repo"}},
+        "series": {"type": "array", "items": {"$ref": "#/$defs/series"}},
+        "tools": {"type": "array", "items": {"$ref": "#/$defs/tool"}}
+      },
+      "additionalProperties": false
+    },
+
+    "fetch": {"enum": ["ok", "blocked", "truncated", "partial"]},
+
+    "document": {
+      "type": "object",
+      "required": ["name", "class", "title", "url"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "class": {"enum": ["databook", "standard", "doc"]},
+        "title": {"$ref": "#/$defs/text"},
+        "revision": {"$ref": "#/$defs/text"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "retrieval": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["url"],
+            "properties": {"url": {"$ref": "#/$defs/httpsUrl"}, "via": {"$ref": "#/$defs/text"}},
+            "additionalProperties": false
+          }
+        },
+        "commit": {"$ref": "#/$defs/commit"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "pages": {"type": "integer", "minimum": 1},
+        "page_numbering": {"enum": ["printed", "pdf"]},
+        "access": {"enum": ["public", "internal"]},
+        "cite": {"$comment": "A map-only document: citing it is an error. Omit the key otherwise.", "const": false},
+        "verified": {"$ref": "#/$defs/date"},
+        "fetch": {"$ref": "#/$defs/fetch"},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+
+    "repo": {
+      "$comment": "A pin: a full commit, or a branch in ref for a map-only entry; never both.",
+      "type": "object",
+      "required": ["name", "url", "license"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "commit": {"$ref": "#/$defs/commit"},
+        "ref": {"$ref": "#/$defs/text"},
+        "license": {"$ref": "#/$defs/spdxExpression"},
+        "role": {"enum": ["source", "target", "impl", "ref"]},
+        "status": {"enum": ["unmerged", "merged"]},
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["path", "license_from"],
+            "properties": {
+              "path": {"$ref": "#/$defs/path"},
+              "license_from": {"enum": ["spdx-line", "notice", "license-file"]},
+              "status": {"enum": ["unmerged", "merged"]},
+              "note": {"$ref": "#/$defs/text"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "verified": {"$ref": "#/$defs/date"},
+        "fetch": {"$ref": "#/$defs/fetch"},
+        "fetch_via": {"$ref": "#/$defs/text"},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "oneOf": [{"required": ["commit"]}, {"required": ["ref"]}],
+      "additionalProperties": false
+    },
+
+    "series": {
+      "$comment": "An unmerged patch series: a map, never cited.",
+      "type": "object",
+      "required": ["title", "url"],
+      "properties": {
+        "title": {"$ref": "#/$defs/text"},
+        "url": {"$ref": "#/$defs/httpsUrl"},
+        "message_id": {"$ref": "#/$defs/text"},
+        "target": {"$ref": "#/$defs/name"},
+        "status": {"enum": ["unmerged", "merged", "superseded"]},
+        "files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/path"}},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+
+    "tool": {
+      "$comment": "Declarative: what exists and which skill drives it (via).",
+      "type": "object",
+      "required": ["kind", "name", "via"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/text"},
+        "name": {"$ref": "#/$defs/text"},
+        "via": {"$ref": "#/$defs/text"},
+        "note": {"$ref": "#/$defs/text"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

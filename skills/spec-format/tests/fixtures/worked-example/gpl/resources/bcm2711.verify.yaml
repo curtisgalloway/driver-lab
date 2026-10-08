@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+spec: bcm2711
+spec_file: bcm2711.spec.yaml
+spec_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+canonical: fact-v1
+sources:
+  - {name: linux, commit: 8d3ae59288f1e7d58d76558a6ee96d533bc5019f, fetch: ok}
+summary: {pass: 2, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
+verdicts:
+  gic-node:
+    basis: 0000000000000000000000000000000000000000000000000000000000000000
+    verdict: PASS
+    date: 2026-10-08
+    verifier: "Claude Opus 5.5, Claude Code subagent"
+    note: >-
+      lines 56-66: `arm,gic-400`, three interrupt cells, reg 0x40041000/0x1000,
+      0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to
+      0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and
+      IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
+    readers: []
+    carried_from:
+      repo: hardware-specs-gpl
+      commit: cd911120663da72f4101161eef5a22dc13d0cc86
+      path: specs/resources/bcm2711.verify.md
+      key: 'Quick-facts/2 "GIC node"'
+      format: 1
+  reserved-stub-page:
+    basis: 0000000000000000000000000000000000000000000000000000000000000000
+    verdict: PASS
+    date: 2026-10-08
+    verifier: "Claude Opus 5.5, Claude Code subagent"
+    note: >-
+      bcm283x.dtsi line 11 reserves 0x0 for 0x1000; the comment on lines 8-10 is attributed as a
+      comment and matches (firmware startup stubs, secondary CPUs spinning). bcm2711.dtsi
+      includes bcm283x.dtsi (line 2).
+    readers: []
+    carried_from:
+      repo: hardware-specs-gpl
+      commit: cd911120663da72f4101161eef5a22dc13d0cc86
+      path: specs/resources/bcm2711.verify.md
+      key: 'Quick-facts/6 "Reserved stub page"'
+      format: 1

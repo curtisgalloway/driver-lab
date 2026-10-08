@@ -205,21 +205,36 @@ _KEYWORDS_2020_12 = {
 }
 
 
-def _dollar_anchor(pattern: str) -> bool:
-    """Whether a regex uses an unescaped `$` (outside a character class)."""
+def _pattern_problem(pattern: str) -> str | None:
+    """Why a fragment's regex would not mean the same in Python and ECMA-262, or None.
+
+    Refused: an unescaped `$` outside a character class (Python's `$` also matches before a
+    final newline), `\\Z` (an end anchor in Python, a literal Z in ECMA-262) and `(?#...)`
+    comments (Python only, and they hide what the scan reads). A `]` first in a class is
+    literal, as in `[]$]`.
+    """
+    if "(?#" in pattern:
+        return "uses a (?#...) comment, which ECMA-262 does not have"
     escaped = in_class = False
-    for ch in pattern:
+    class_start = -1
+    for at, ch in enumerate(pattern):
         if escaped:
             escaped = False
+            if ch == "Z":
+                return "uses \\Z, an end anchor only in Python; end it with (?![\\s\\S])"
         elif ch == "\\":
             escaped = True
+        elif in_class:
+            first = at == class_start + 1 or (at == class_start + 2
+                                              and pattern[class_start + 1] == "^")
+            if ch == "]" and not first:
+                in_class = False
         elif ch == "[":
-            in_class = True
-        elif ch == "]":
-            in_class = False
-        elif ch == "$" and not in_class:
-            return True
-    return False
+            in_class, class_start = True, at
+        elif ch == "$":
+            return ("uses $, which in Python also matches before a final newline; end it "
+                    "with (?![\\s\\S])")
+    return None
 
 
 def schema_kind(path: Path) -> str:
@@ -313,14 +328,13 @@ def check_fragment(fragment, where: Path, reserved: set[str]) -> list[str]:
                 problems.append(f"{where}: {key} at {at} not allowed")
             elif key not in _KEYWORDS_2020_12:
                 problems.append(f"{where}: {key} at {at} is not a draft 2020-12 keyword")
-            if key == "pattern" and isinstance(value, str) and _dollar_anchor(value):
-                problems.append(f"{where}: pattern at {at} uses $, which in Python also matches "
-                                f"before a final newline; end it with (?![\\s\\S])")
+            if key == "pattern" and isinstance(value, str) and _pattern_problem(value):
+                problems.append(f"{where}: pattern at {at} {_pattern_problem(value)}")
             if key == "patternProperties" and isinstance(value, dict):
                 for name in value:
-                    if _dollar_anchor(name):
-                        problems.append(f"{where}: pattern {name!r} at {at} uses $; end it "
-                                        f"with (?![\\s\\S])")
+                    if _pattern_problem(name):
+                        problems.append(f"{where}: pattern {name!r} at {at} "
+                                        f"{_pattern_problem(name)}")
             if key in _SCHEMA_ONE:
                 walk(value, trail + (key,))
             elif key in _SCHEMA_MAP and isinstance(value, dict):
@@ -378,17 +392,21 @@ def _short(error) -> str:
 
 def _branch_names(schema, instance, resolve, is_valid, depth=0) -> set:
     """Property names the schema declares for this instance: its own properties and those of
-    the in-place branches that apply (allOf, anyOf, oneOf, $ref, and then or else as its if
-    decides). A kind's or a class's branch counts only when the instance is of that kind."""
+    the in-place branches that apply (every allOf branch and $ref; the anyOf and oneOf branches
+    the instance satisfies; then or else as its if decides). A kind's or a class's branch
+    counts only when the instance is of that kind."""
     names: set = set()
     if not isinstance(schema, dict) or depth > 32:
         return names
     props = schema.get("properties")
     if isinstance(props, dict):
         names.update(props)
-    for key in ("allOf", "anyOf", "oneOf"):
+    for sub in schema.get("allOf", []):
+        names |= _branch_names(sub, instance, resolve, is_valid, depth + 1)
+    for key in ("anyOf", "oneOf"):
         for sub in schema.get(key, []):
-            names |= _branch_names(sub, instance, resolve, is_valid, depth + 1)
+            if is_valid(sub, instance):
+                names |= _branch_names(sub, instance, resolve, is_valid, depth + 1)
     if "$ref" in schema:
         names |= _branch_names(resolve(schema["$ref"]), instance, resolve, is_valid, depth + 1)
     if "if" in schema:
@@ -643,7 +661,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command is None:
         return fail("usage", EXIT_USAGE, ["name a subcommand: validate"])
 
-    problems = check_dependencies()
+    try:
+        problems = check_dependencies()
+    except Exception as exc:  # pylint: disable=broad-except
+        import traceback
+
+        traceback.print_exc(file=sys.stderr)
+        return fail("internal", EXIT_INTERNAL, [f"{type(exc).__name__}: {exc}"])
     if problems:
         return fail("precondition", EXIT_PRECONDITION, problems,
                     "install: pip install --require-hashes -r skills/spec-format/requirements.txt")

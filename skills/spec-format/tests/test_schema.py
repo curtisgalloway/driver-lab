@@ -1368,5 +1368,58 @@ class RoundTwo(Validator):
         self.assertNotIn("facts[0].support[0].anchors: unknown key 'anchors' here", messages)
 
 
+class RoundThree(Validator):
+    """Round-3 review fixes."""
+
+    def test_fragment_regex_constructs(self):
+        """Codex 1 and Claude: a comment cannot hide a $; \Z is Python-only."""
+        def frag(pattern):
+            return {"type": "object", "properties": {
+                "observer": {"type": "string", "pattern": pattern}}}
+        entry = soc(facts=[fact(support=[{"class": "source-observed", "observer": "x"}],
+                                todo=TODO)])
+        for pattern, expected in [("(?# [)^x$", "(?#...) comment"), ("^x\\Z", "\\Z"),
+                                  ("[a]$", "uses $"), ("[^]]$", "uses $")]:
+            with self.subTest(pattern):
+                code, result = self.validate(entry, fragment=frag(pattern))
+                messages = [f["message"] for f in result["findings"]]
+                self.assertEqual(code, 1)
+                self.assertTrue(any(expected in m for m in messages), messages)
+        for pattern, value in [("[]$]", "$"), ("[^]$]", "x"), ("^x\\$(?![\\s\\S])", "x$"),
+                               ("[$]", "$"), ("^x(?![\\s\\S])", "x")]:
+            with self.subTest(pattern):
+                self.assert_valid(soc(facts=[fact(support=[{
+                    "class": "source-observed", "observer": value}], todo=TODO)]),
+                    fragment=frag(pattern))
+
+    def test_unknown_key_under_alternatives(self):
+        """Codex 2: names count only from the anyOf/oneOf branches the value satisfies."""
+        for combinator in ["anyOf", "oneOf"]:
+            observer = {
+                "type": "object",
+                "properties": {"n": {"type": "integer"}},
+                combinator: [
+                    {"properties": {"kind": {"const": "a"}, "a": {}}, "required": ["kind"]},
+                    {"properties": {"kind": {"const": "b"}, "b": {}}, "required": ["kind"]},
+                ],
+                "unevaluatedProperties": False,
+            }
+            frag = {"type": "object", "properties": {"observer": observer}}
+            entry = soc(facts=[fact(support=[{"class": "source-observed", "observer": {
+                "kind": "a", "b": 1, "n": "bad"}}], todo=TODO)])
+            with self.subTest(combinator):
+                self.assert_invalid(entry, "unknown key 'b'", fragment=frag)
+
+    def test_commit_spelled_as_ref_in_either_case(self):
+        for ref in ["A" * 40, "Ab" * 32, COMMIT.upper()]:
+            with self.subTest(ref):
+                self.assert_invalid(with_repo(commit=DROP, ref=ref), "does not match")
+
+    def test_fetch_methods_refuse_angle_brackets(self):
+        for bad in ["a<b", "a>b", "x a<b"]:
+            with self.subTest(bad):
+                self.assert_invalid(with_repo(fetch_via=bad), "does not match")
+
+
 if __name__ == "__main__":
     unittest.main()

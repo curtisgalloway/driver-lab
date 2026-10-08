@@ -195,6 +195,14 @@ class ExitCodes(unittest.TestCase):
         self.assertIn("RuntimeError: boom", out)
         self.assertIn("Traceback", err)
 
+    def test_dependency_check_crash_is_internal(self):
+        """Codex: an exception in the dependency check is exit 100 with the JSON object."""
+        with mock.patch.object(spec_cli, "check_dependencies", side_effect=RuntimeError("deps")):
+            code, out, err = run(["validate", "--json", str(GOOD)])
+        self.assertEqual(code, 100)
+        self.assert_failure_object(out, "internal")
+        self.assertIn("RuntimeError: deps", out)
+
     def test_json_equals_form_is_json(self):
         code, out, _ = run(["validate", "--json=1", str(GOOD)])
         self.assertEqual(code, 2)

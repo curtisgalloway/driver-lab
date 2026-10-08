@@ -19,3 +19,13 @@ Plan approved by the user. Decisions: implementer Opus 5.5, one fresh subagent p
 is the second reviewer after `spec-verifier`, read-only, with the verifier's record in hand;
 learnings recorded per unit here and rolled up. Units renamed `RG` (not `SR`) because
 `evidence/SR-7.md` and `SR-8.md` already exist from earlier work.
+
+### 2026-10-07 — Codex needs network to find sources
+
+Probe with `codex exec --sandbox read-only`: curl failed DNS, web fetch returned a cache miss,
+and web search found `armstub8.S` only on `master`, not at `439b619`. Read-only mode has no
+network switch. Staging the sources locally would have given Codex the same bytes as the
+verifier, but the user wants Codex to find sources the spec did not cite, which needs network.
+Decision (user): Codex runs with `--sandbox workspace-write` and network access, in a throwaway
+scratch directory only; the local permission rules allow exactly that form. Re-probe: curl
+fetched the file at `439b619` and read its BSD-3-Clause header.

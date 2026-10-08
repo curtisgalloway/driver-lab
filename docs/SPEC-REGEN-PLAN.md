@@ -42,9 +42,11 @@ proves a change is needed (then it is its own driver-lab pull request).
   a topic branch in each spec repository it touches; it does not push.
 - **Gates, in order:** (1) each touched repository's `scripts/checks.sh` passes; (2)
   `spec-verifier` (fresh subagent) checks every claim and writes its verification record;
-  (3) **Codex** reviews the same claims against the same sources, read-only
-  (`codex exec --sandbox read-only`), with the spec and the verifier's record in hand, asked
-  specifically for claims the verifier passed but should not have and for missing coverage;
+  (3) **Codex** reviews the same claims, with the spec, its list of cited sources and the
+  verifier's record in hand, asked for claims the verifier passed but should not have, for
+  missing coverage, and for **sources the spec should have cited but did not**. It runs with
+  network access in a throwaway scratch directory (`--sandbox workspace-write` with
+  `sandbox_workspace_write.network_access=true`; user decision 2026-10-07), never in a checkout;
   (4) the implementer fixes accepted findings; checks and the verifier re-run on changed claims.
 - **Every review finding is recorded** in the unit's notebook entry as a row: reviewer (verifier
   or Codex), claim, finding, accepted or rejected (why), whether the other reviewer also caught it,
@@ -81,9 +83,10 @@ the boards reference, then Pi 5, Rockchip, and the Google pair last. One unit pe
   `GPL-2.0` only, which neither docs nor permissive accepts; others are `GPL-2.0 OR MIT`. RG1
   will show how many facts move to a GPL overlay because of this; if most do, revisit placement
   before RG2.
-- **Codex access to sources.** Codex runs read-only and may lack network access to fetch cited
-  documents; the orchestrator then supplies local copies, and the notebook records which
-  sources it could not open.
+- **Codex access to sources.** Its read-only sandbox has no network (measured 2026-10-07: curl
+  failed DNS, web fetch missed, web search found only `master`), so it runs networked in a
+  scratch directory instead. A source it fetches may differ from the pinned revision; the
+  notebook records any mismatch.
 
 ## Next session
 

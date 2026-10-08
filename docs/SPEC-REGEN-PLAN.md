@@ -62,7 +62,8 @@ proves a change is needed (then it is its own driver-lab pull request).
 
 | # | Unit | Kind | Expected roots | Notes | Status |
 |---|---|---|---|---|---|
-| RG1 | `bcm2711` | SoC | docs + permissive overlay | Audit facts 2, 3, 6 to the overlay at `raspberrypi/tools@439b619`; proves cross-repo overlays | not started |
+| RG1 | `bcm2711` | SoC | docs + permissive overlay | Audit facts 2, 3, 6 to the overlay at `raspberrypi/tools@439b619`; proves cross-repo overlays | complete ([evidence](../evidence/RG1.md)); also a GPL overlay (all BCM2711 device trees are GPL-2.0-only) |
+| RG-T1 | `[src]` class and checker | tooling | driver-lab + spec-repo CI | Added during RG1 (user decision) | complete; merged as is, Markdown grammar to be retired ([evidence](../evidence/RG1.md#rg-t1-the-checker)) |
 | RG2 | `rpi4` | board | docs (+ overlay if needed) | Reads RG1 | not started |
 | RG3 | `pl011` | IP block | docs | Arm TRM is the main source | not started |
 | RG4 | `dw-apb-uart` | IP block | docs | Synopsys databook availability decides coverage | not started |
@@ -90,5 +91,10 @@ the boards reference, then Pi 5, Rockchip, and the Google pair last. One unit pe
 
 ## Next session
 
-- Current unit: RG1 (`bcm2711`), in progress.
-- Resume action: check RG1's branches in the spec repositories and its notebook entry.
+- Current unit: none. RG1 and RG-T1 are complete and merged (2026-10-08).
+- **Paused for a format change** (user decision, 2026-10-08): specs, board and peripheral, move
+  from Markdown with inline tags to YAML validated by a JSON Schema, rendered to Markdown (and
+  later a viewer and search) for reading. Eight review rounds of the Markdown checker showed the
+  ambiguity is in Markdown itself. Resume action: write the format design for the user's
+  approval; then convert RG1's three specs and continue with RG2 in the new format.
+- Before RG2: apply the verifier and scaffold learnings in the [rollup](../notebook/SPEC-REGEN-learnings.md).

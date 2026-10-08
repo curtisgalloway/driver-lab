@@ -22,9 +22,10 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [RG-regen — Spec regeneration](RG-regen.md)
-Entries: 2026-10-07 through 2026-10-07
-Outcome: in progress; plan approved; RG1 (`bcm2711`) started. Review learnings roll up in
-[SPEC-REGEN-learnings](SPEC-REGEN-learnings.md).
+Entries: 2026-10-07 through 2026-10-08
+Outcome: RG1 (`bcm2711`) and RG-T1 (the `[src]` checker) complete and merged; Codex as an
+independent reviewer found most substantive issues; the spec format moves to YAML with a schema
+next. Review learnings roll up in [SPEC-REGEN-learnings](SPEC-REGEN-learnings.md).
 
 ### [LS-G — Whole-outcome acceptance](LS-G.md)
 Entries: 2026-10-07 through 2026-10-07

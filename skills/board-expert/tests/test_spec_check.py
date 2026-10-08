@@ -170,9 +170,14 @@ class SubsetParser(unittest.TestCase):
             )
 
 
+def masked(text):
+    """text as the checker reads it: the one Markdown parse's masked lines, joined."""
+    return " ".join(line.strip() for line in spec_check.mdtokens.parse(text).masked)
+
+
 class TagRules(unittest.TestCase):
     def ok(self, bullet):
-        return bool(spec_check.TAIL_RE.search(bullet))
+        return bool(spec_check.TAIL_RE.search(masked(bullet)))
 
     def test_tail_accepts_the_documented_shapes(self):
         self.assertTrue(self.ok("- Fact. `[DT]`"))
@@ -187,29 +192,34 @@ class TagRules(unittest.TestCase):
         self.assertFalse(self.ok("- Fact. `[DT]` (node). TODO (verify on hardware): x. Also `[doc]` (p) more."))
 
     def test_gap_bullets(self):
-        self.assertTrue(spec_check.GAP_RE.match("- **Power.** `TODO (verify on hardware)`: PMIC."))
-        self.assertTrue(spec_check.GAP_RE.match("- TODO (verify on hardware): everything."))
-        self.assertFalse(spec_check.GAP_RE.match("- **Power.** The PMIC is X. TODO (verify on hardware)"))
+        gap = lambda text: spec_check.GAP_RE.match(masked(text))  # noqa: E731
+        self.assertTrue(gap("- **Power.** `TODO (verify on hardware)`: PMIC."))
+        self.assertTrue(gap("- TODO (verify on hardware): everything."))
+        self.assertFalse(gap("- **Power.** The PMIC is X. TODO (verify on hardware)"))
+
+    def unnamed(self, tag, tail):
+        """Whether check_tags reports [tag] without its parenthetical in "- Fact. <tail>"."""
+        body = f"## Gotchas\n\n- Fact. {tail} TODO (verify on hardware)\n"
+        return any(m.startswith(f"[{tag}] must be followed by a parenthetical")
+                   for m in self.tags_of(body))
 
     def test_doc_needs_a_parenthetical(self):
-        self.assertIsNone(spec_check.DOC_UNNAMED_RE.search("`[doc]` (page)"))
-        self.assertIsNone(spec_check.DOC_UNNAMED_RE.search("[doc] (page)"))
-        self.assertIsNotNone(spec_check.DOC_UNNAMED_RE.search("`[doc]`"))
-        self.assertIsNotNone(spec_check.DOC_UNNAMED_RE.search("`[doc]`, `[DT]` (node)"))
+        self.assertFalse(self.unnamed("doc", "`[doc]` (page)"))
+        self.assertFalse(self.unnamed("doc", "[doc] (page)"))
+        self.assertTrue(self.unnamed("doc", "`[doc]`"))
+        self.assertTrue(self.unnamed("doc", "`[doc]`, `[DT]` (node)"))
 
     def test_dt_needs_a_parenthetical(self):
-        dt = spec_check.UNNAMED_RES["DT"]
-        self.assertIsNone(dt.search("`[DT]` (`bcm2712.dtsi`)"))
-        self.assertIsNone(dt.search("[DT] (lga-b0.dtb from a prebuilt tree)"))
-        self.assertIsNotNone(dt.search("`[DT]`"))
-        self.assertIsNotNone(dt.search("`[DT]`, `[databook]` (DDI 0183)"))
+        self.assertFalse(self.unnamed("DT", "`[DT]` (`bcm2712.dtsi`)"))
+        self.assertFalse(self.unnamed("DT", "[DT] (lga-b0.dtb from a prebuilt tree)"))
+        self.assertTrue(self.unnamed("DT", "`[DT]`"))
+        self.assertTrue(self.unnamed("DT", "`[DT]`, `[databook]` (DDI 0183)"))
 
     def test_inference_needs_a_parenthetical(self):
-        inf = spec_check.UNNAMED_RES["inference"]
-        self.assertIsNone(inf.search("`[inference]` (the driver clears it before reset; ordering follows)"))
-        self.assertIsNone(inf.search("[inference] (premises: x; derivation: y)"))
-        self.assertIsNotNone(inf.search("`[inference]`"))
-        self.assertIsNotNone(inf.search("`[inference]`, `[databook]` (DDI 0183)"))
+        self.assertFalse(self.unnamed("inference", "`[inference]` (the driver clears it before reset; ordering follows)"))
+        self.assertFalse(self.unnamed("inference", "[inference] (premises: x; derivation: y)"))
+        self.assertTrue(self.unnamed("inference", "`[inference]`"))
+        self.assertTrue(self.unnamed("inference", "`[inference]`, `[databook]` (DDI 0183)"))
 
     def test_inference_is_a_tag_in_the_tail(self):
         self.assertTrue(
@@ -253,11 +263,10 @@ class TagRules(unittest.TestCase):
         )
 
     def test_emulated_needs_a_parenthetical(self):
-        emu = spec_check.UNNAMED_RES["emulated"]
-        self.assertIsNone(emu.search("`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02)"))
-        self.assertIsNone(emu.search("[emulated] (widget-model 1.0, run widget-q1-01)"))
-        self.assertIsNotNone(emu.search("`[emulated]`"))
-        self.assertIsNotNone(emu.search("`[emulated]`, `[databook]` (Widget TRM 4.2)"))
+        self.assertFalse(self.unnamed("emulated", "`[emulated]` (widget-model 1.0, runs widget-q1-01 and widget-q1-02)"))
+        self.assertFalse(self.unnamed("emulated", "[emulated] (widget-model 1.0, run widget-q1-01)"))
+        self.assertTrue(self.unnamed("emulated", "`[emulated]`"))
+        self.assertTrue(self.unnamed("emulated", "`[emulated]`, `[databook]` (Widget TRM 4.2)"))
 
     def test_emulated_beside_another_class_passes(self):
         body = (
@@ -1554,9 +1563,11 @@ class Round3Fixes(unittest.TestCase):
             self.assertIn("verification record belongs to no spec file", "\n".join(messages(data)))
 
     def test_a_tag_named_in_prose_inside_a_parenthetical_is_not_a_tag(self):
+        # User decision 2026-10-08: a code span holding only a tag is that tag, so prose names
+        # a tag inside a parenthetical in a longer code span or in words.
         extra = ("- **Derived.** A conclusion. `[inference]` (premises: the previous bullet's "
-                 "`[src]` anchors and `[DT]` values; derivation: x) `TODO (verify on hardware)`: y.\n"
-                 "- **Doc.** A fact. `[doc]` (vendor page, unlike the `[press]` report)\n")
+                 "`[src] anchors` and the DT values; derivation: x) `TODO (verify on hardware)`: y.\n"
+                 "- **Doc.** A fact. `[doc]` (vendor page, unlike the press-class report)\n")
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -1661,6 +1672,167 @@ class Round4Simplify(unittest.TestCase):
                 code, data, _ = run(root, "--require-license", flags=["--no-pyyaml"])
                 self.assertEqual(code, 1)
                 self.assertIn(want, "\n".join(f["message"] for f in self.errors(data)))
+
+
+SPEC6 = """\
+---
+kind: chip
+id: tchip
+name: Tokenizer chip
+triggers: [tchip]
+resources:
+  repos:
+    - name: fw
+      url: https://example.com/fw
+      ref: %s
+      license: BSD-3-Clause
+---
+
+""" % COMMIT
+
+
+class Round6Tokenizer(unittest.TestCase):
+    """RG-T1 round 6 (user decision 2026-10-08): one CommonMark parse (mdtokens) for fences,
+    code spans and list items. Each round-5 finding has a test here, and so does each rule."""
+
+    def check(self, body, marker=PERMISSIVE, *args):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, {"t.spec.md": SPEC6 + body})
+            code, data, err = run(root, *args, flags=["--no-pyyaml"])
+        return code, [f["message"] for f in data["findings"] if f["level"] == "error"], data
+
+    def assert_error(self, body, want, marker=PERMISSIVE, *args):
+        code, errors, data = self.check(body, marker, *args)
+        self.assertEqual(code, 1, json.dumps(data))
+        self.assertTrue(any(want in e for e in errors), (want, errors))
+
+    def assert_clean(self, body, marker=PERMISSIVE, *args):
+        code, errors, data = self.check(body, marker, *args)
+        self.assertEqual((code, errors), (0, []), json.dumps(data))
+
+    # --- round-5 findings ---------------------------------------------------------------
+
+    def test_r5_1_a_backticked_nested_src_clause_is_a_tag(self):
+        self.assert_error(
+            "## Quick-facts\n\n- Magic is 0x1234. `[doc]` (`[src]` (GPL driver, foo.c:42))\n",
+            "[src] parenthetical cites no anchor", DOCS_ONLY, "--require-license")
+
+    def test_r5_2_an_indented_opening_fence_closes_where_commonmark_says(self):
+        body = ("  ```text\n  example\n```\n\n## Quick-facts\n\n"
+                "- Magic is 0x1234. `[DT]` (widget.dtsi; [src:fw: foo.c:\n  42])\n\n"
+                "```text\nexample\n```\n")
+        self.assert_error(body, "broken across lines", DOCS_ONLY)
+
+    def test_r5_3_an_unterminated_anchor_at_eof_without_a_newline(self):
+        self.assert_error("## Quick-facts\n\n- Magic is 0x1234. `[DT]` (widget.dtsi; [src:fw: foo.c:42)",
+                          "no closing ']'")
+
+    def test_r5_4_a_link_cancelled_by_dotdot_is_still_a_link(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            real = pathlib.Path(tmp) / "a" / "b"
+            real.mkdir(parents=True)
+            root = write_root(real, PERMISSIVE, {"t.spec.md": SPEC6 + "## Quick-facts\n"})
+            os.symlink(real, pathlib.Path(tmp) / "l")
+            given = pathlib.Path(tmp) / "l" / ".." / "b" / "root"
+            self.assertTrue((given / "board-specs.yaml").exists())
+            self.assertTrue(spec_check.through_link(given))
+            self.assertFalse(spec_check.through_link(root))
+            code, data, _ = run(given, flags=["--no-pyyaml"])
+        self.assertEqual(code, 1)
+        self.assertIn("symbolic link", "\n".join(messages(data)))
+
+    def test_r5_5_every_nested_src_clause_needs_its_own_anchor(self):
+        self.assert_error("## Quick-facts\n\n- Value is 1. [src] ([src:fw: a.c:1]; [src] (b.c:2))\n",
+                          "[src] parenthetical cites no anchor")
+        self.assert_clean("## Quick-facts\n\n- Value is 1. [src] ([src:fw: a.c:1]; [src] ([src:fw: b.c:2]))\n")
+
+    def test_r5_6_uppercase_anchor_kinds_are_errors(self):
+        for anchor in ("[SRC:missing: foo.c:42]", "[Src:fw: foo.c:42]", "[sRc:fw: foo.c:42]"):
+            with self.subTest(anchor=anchor):
+                self.assert_error(f"## Quick-facts\n\n- Magic is 0x1234. `[DT]` (widget.dtsi; {anchor})\n",
+                                  "is not lowercase")
+
+    # --- the grammar on the token stream, table-driven ----------------------------------
+
+    def test_adversarial_table(self):
+        ok = None
+        cases = [
+            # (name, body, expected error substring or None for clean)
+            ("eof without newline, valid", "## Quick-facts\n\n- A fact. `[DT]` (x.dtsi)", ok),
+            ("tilde fence hides nothing after it",
+             "## Quick-facts\n\n~~~\n[src:fw: a.c:1]\n~~~\n\n- A fact. no tag here\n", "no provenance tag"),
+            ("anchor inside a tilde fence is code", "## Quick-facts\n\n~~~\n[SRC:x: a.c:1]\n~~~\n", ok),
+            ("indented fence opener", "## Quick-facts\n\n   ```\n[SRC:x: a.c:1]\n   ```\n", ok),
+            ("unterminated fence", "## Quick-facts\n\n```\n- A fact. no tag\n", "code fence never closes"),
+            ("unterminated fence inside an item",
+             "## Quick-facts\n\n- A fact. `[DT]` (x)\n  ```\n  code\n- Next. `[DT]` (y)\n",
+             "code fence never closes"),
+            ("4-space indented ``` is a code block, not a fence",
+             "## Quick-facts\n\n    ```\n\n- A fact. `[DT]` (x)\n", ok),
+            ("longer code span with a tag is prose", "## Quick-facts\n\n- A fact. `[DT] (x.dtsi)`\n",
+             "fact bullet has no provenance tag"),
+            ("code span holding only a tag is the tag", "## Quick-facts\n\n- A fact. `[DT]` (x)\n", ok),
+            ("double-backtick span holding only a tag", "## Quick-facts\n\n- A fact. `` [DT] `` (x)\n", ok),
+            ("prose span names a tag in a parenthetical",
+             "## Quick-facts\n\n- A fact. `[doc]` (page; unlike the `[press] report`)\n", ok),
+            ("nested press clause needs its TODO",
+             "## Quick-facts\n\n- A fact. [inference] (premise [press] (article))\n", "[press] fact without"),
+            ("three-deep nested src without an anchor",
+             "## Quick-facts\n\n- A fact. [inference] (p [doc] (q [src] (r))) TODO (verify on hardware)\n",
+             "[src] parenthetical cites no anchor"),
+            ("an outer src clause cannot borrow a nested clause's anchor",
+             "## Quick-facts\n\n- A fact. [src] (via [src] ([src:fw: a.c:1]))\n",
+             "[src] parenthetical cites no anchor"),
+            ("tag case variant", "## Quick-facts\n\n- A fact. [Src] ([src:fw: a.c:1])\n", "canonical case"),
+            ("tag case variant in a code span", "## Quick-facts\n\n- A fact. `[dt]` (x)\n", "canonical case"),
+            ("tag case variant in prose", "## Quick-facts\n\n- The [Doc] says so. `[DT]` (x)\n", "canonical case"),
+            ("anchor in a backticked span alone counts",
+             "## Quick-facts\n\n- A fact. [src] (`[src:fw: a.c:1]`)\n", ok),
+            ("anchor in a longer code span is prose",
+             "## Quick-facts\n\n- A fact. [src] (`see [src:fw: a.c:1]`)\n", "[src] parenthetical cites no anchor"),
+            ("anchor across a soft break", "## Quick-facts\n\n- A fact. [src] ([src:fw:\n  a.c:1])\n",
+             "broken across lines"),
+            ("anchor across a blank line", "## Quick-facts\n\n- A fact. [DT] (x [s\n\n  r\n  c:fw: a.c:1])\n",
+             "broken across lines"),
+            ("unterminated anchor before the next item",
+             "## Quick-facts\n\n- A. [DT] (x [src:fw: a.c:1)\n- B. [DT] (y])\n", "no closing ']'"),
+            ("lazy continuation line is part of the item",
+             "## Quick-facts\n\n- A fact. `[DT]` (x)\nand more prose.\n", "does not end with its tag clause"),
+        ]
+        for name, body, want in cases:
+            with self.subTest(name=name):
+                if want is None:
+                    self.assert_clean(body)
+                else:
+                    self.assert_error(body, want)
+
+    def test_masked_lines_keep_file_line_numbers(self):
+        code, errors, data = self.check("## Quick-facts\n\n- `x\n  y` z. [DT] (x)\n- B. [Src] (y)\n")
+        where = [f["path"] for f in data["findings"] if "canonical case" in f["message"]]
+        self.assertEqual(len(where), 1)
+        self.assertTrue(where[0].endswith(":18"), where)  # 13 lines before the body, then 5
+
+    def test_missing_dependency_exits_3(self):
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            # A markdown_it package that is the wrong version: the pin is the contract.
+            fake = pathlib.Path(tmp) / "markdown_it"
+            fake.mkdir()
+            (fake / "__init__.py").write_text('__version__ = "0.0.0"\n')
+            root = write_root(tmp, PERMISSIVE, {"t.spec.md": SPEC6})
+            env = dict(os.environ, PYTHONPATH=tmp)
+            proc = subprocess.run([sys.executable, str(CHECKER), str(root)],
+                                  capture_output=True, text=True, env=env)
+        self.assertEqual(proc.returncode, 3, proc.stderr)
+        self.assertIn("missing dependency: the checkers are pinned to markdown-it-py==4.2.0",
+                      proc.stderr)
 
 
 if __name__ == "__main__":

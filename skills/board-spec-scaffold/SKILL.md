@@ -135,7 +135,7 @@ chain bullet.
    whose description says "stub over", so they need no edit. No skill description may enumerate
    the stubs by name (`board-expert`'s says "when no board-specific stub matches"), so adding a stub
    never stales another skill. A spec in a source tree follows that tree's review process.
-6. **Check.** Run `python3 <board-expert>/scripts/spec_check.py <root>... --stubs-from <skills dir>`
+6. **Check.** Run `uv run --with markdown-it-py==4.2.0 python3 <board-expert>/scripts/spec_check.py <root>... --stubs-from <skills dir>`
    over every root the new spec references (a vendor root needs the public root beside it, or its
    overlay targets do not resolve). It enforces `SPEC-FORMAT.md` § *What the checker enforces*:
    required keys per kind, every `parts`, `instances[].ip`, `variant_of`, and `overlays` reference

@@ -651,6 +651,7 @@ class TestLicenseGate(CheckerCase):
         alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
         alone.mkdir(parents=True)
         shutil.copy(CHECKER, alone / "anchor_check.py")
+        shutil.copy(CHECKER.parent / "mdtokens.py", alone / "mdtokens.py")
         proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
                                str(GATE / "specs" / "invalid-license-spec.md")],
                               capture_output=True, text=True)
@@ -762,14 +763,16 @@ class TestNamedDocAnchors(CheckerCase):
         return d
 
     def test_correct_spec_passes(self):
-        s = self.spec(REGISTRY + """\
+        # The bullets are dedented on their own: REGISTRY is not indented, so dedenting the
+        # whole would leave them as a 12-space indented code block, which holds no anchors.
+        s = self.spec(REGISTRY + textwrap.dedent("""\
             - Resets in 10 us. [doc:trm p.12]
             - FIFO depth 64. [doc:trm pp.12-14]
             - Clock gating. [doc:trm §4.3]
             - Last page. [doc:trm §A.1 p.120]
             - Both documents. [doc:trm p.12; ds §3.1]
             - Unnamed beside them. [doc: Widget app note §2]
-            """)
+            """))
         for extra in ((), ("--strict",), ("--docs-dir", self.docs_dir())):
             with self.subTest(extra=extra):
                 rc, report = self.run_json(s, *extra)
@@ -978,6 +981,7 @@ class TestNamedDocAnchors(CheckerCase):
         alone = pathlib.Path(tempfile.mkdtemp(dir=self.tmp)) / "a" / "b" / "scripts"
         alone.mkdir(parents=True)
         shutil.copy(CHECKER, alone / "anchor_check.py")
+        shutil.copy(CHECKER.parent / "mdtokens.py", alone / "mdtokens.py")
         proc = subprocess.run([sys.executable, str(alone / "anchor_check.py"),
                                self.spec(REGISTRY + "- Fact. [doc:trm p.2]\n")],
                               capture_output=True, text=True)
@@ -1449,6 +1453,56 @@ class TestFetchSrcPins(CheckerCase):
         rc, second, err = self.fetch(spec, "--allow-local", cache=cache)
         self.assertEqual((rc, second), (0, first), err)
         self.assertTrue(marker.exists())
+
+
+class TestOneMarkdownParse(CheckerCase):
+    """RG-T1 round 6: code blocks, code spans and list items come from mdtokens, the parse
+    spec_check.py reads too (user decision 2026-10-08)."""
+
+    def anchors(self, body):
+        rc, report = self.run_json(self.spec(f"Source pin: linux@{self.linux_rev}\n\n" + body))
+        return rc, report
+
+    def test_a_code_span_holding_only_an_anchor_is_that_anchor(self):
+        rc, report = self.anchors("- Fact. `[src: drivers/nope.c:1]`\n")
+        self.assertEqual(report["anchors"], 1)
+
+    def test_an_anchor_in_a_longer_code_span_or_a_fence_is_prose(self):
+        rc, report = self.anchors("- Fact. `see [src: drivers/nope.c:1]`\n\n"
+                                  "~~~\n[src: drivers/nope.c:2]\n~~~\n")
+        self.assertEqual(report["anchors"], 0)
+
+    def test_an_uppercase_anchor_kind_is_an_error(self):
+        rc, report = self.anchors("- Fact. [SRC: drivers/drv.c:2]\n")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("is not lowercase" in m for m in self.messages(report, "error")))
+
+    def test_an_unclosed_fence_is_an_error(self):
+        rc, report = self.anchors("```\n- Fact. [src: drivers/drv.c:2]\n")
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("code fence never closes" in m for m in self.messages(report, "error")))
+
+    def test_list_items_are_the_parse_s_items(self):
+        # "2." cannot interrupt a paragraph in CommonMark, so this is paragraph text, not an
+        # untagged list item; "* " can, so the next line is an item and its fact is flagged.
+        rc, report = self.anchors("Intro text\n2. Delay 0x10 ms\n* Timeout 0x20 ms\n")
+        warned = [m for m in self.messages(report, "warn") if "carries no" in m]
+        self.assertEqual(len(warned), 1, warned)
+        self.assertIn("0x20", warned[0])
+
+    def test_a_nested_item_is_its_own_claim(self):
+        # The outer item states 0x10, which the cited line holds; the nested item's own claim
+        # (0xbeef) does not appear there, so its anchor warns. Reading the nested item as part
+        # of the outer one would borrow 0x10 and hide the mismatch.
+        s = self.spec(f"""\
+            Source pin: linux@{self.linux_rev}
+
+            - Outer 0x10.
+              - Inner 0xbeef. [src: drivers/drv.c:2 (WIDGET_CTRL)]
+            """)
+        rc, report = self.run_json(s, "--repo", self.linux)
+        self.assertTrue(any("0xbeef" in m for m in self.messages(report, "warn")),
+                        self.messages(report))
 
 
 if __name__ == "__main__":

@@ -95,7 +95,7 @@ paths for each harness.
   - Every source-derived fact carries a `[src: path:L1-L2 (symbol)]` anchor at a pinned
     commit. A reviewer can check the spec against the code, and the checker can tell which
     claims need re-reading when the tree moves.
-  - Ships `scripts/anchor_check.py` (stdlib-only): resolves anchors against one or several
+  - Ships `scripts/anchor_check.py` (stdlib plus markdown-it-py 4.2.0, through `mdtokens.py`): resolves anchors against one or several
     named, licensed pins, renders a claim-vs-source review sheet with `--show`, detects and
     rewrites drift with `--drift REV --rewrite`, gates pin licenses against a spec root's
     accepts list with `--root DIR`, and checks named document anchors against the spec's
@@ -140,7 +140,7 @@ companion chip.
 - A spec carries cited facts, not source, so it may live in the target OS tree next to the
   board code it describes, or in a spec repository whose license fits the sources it cites. The reference source stays in the expert's out-of-tree cache.
 
-`board-expert/SPEC-FORMAT.md` is the contract. `scripts/spec_check.py` (stdlib-only, tests
+`board-expert/SPEC-FORMAT.md` is the contract. `scripts/spec_check.py` (stdlib plus markdown-it-py 4.2.0, tests
 under `tests/`) enforces it: required keys per kind, every reference resolving, instance
 shapes, the tag clause at the end of every fact, nothing internal under a public root, and
 every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" sentence).
@@ -214,7 +214,7 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 
 ```bash
 python3 -m unittest discover -s skills/board-expert/tests -v
-python3 skills/board-expert/scripts/spec_check.py \
+uv run --with markdown-it-py==4.2.0 python3 skills/board-expert/scripts/spec_check.py \
   skills/board-expert/specs \
   --stubs-from skills
 ```

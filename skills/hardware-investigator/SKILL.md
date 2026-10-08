@@ -93,7 +93,7 @@ the source's license line and its `LICENSE` or `COPYING` file is not reading it 
    which the gate does not check. Never write an anchor for a line you did not read.
 8. **Write the facts file** (format below), then run the gate on it:
    ```
-   python3 <skill>/../peripheral-spec/scripts/anchor_check.py <facts file> \
+   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <facts file> \
        --repo <name>=<tree> [--repo <name>=<tree> …] --root <target root> --require-license
    ```
    It must end `result: PASS`. Fix errors by finding the right lines or the right pin, not by

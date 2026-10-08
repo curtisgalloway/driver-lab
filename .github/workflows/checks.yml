@@ -30,25 +30,32 @@ jobs:
       - name: utilities tests
         run: python3 -m unittest discover -s utilities/tests -v
 
+      # The spec checkers read Markdown through peripheral-spec's mdtokens.py, pinned to
+      # markdown-it-py 4.2.0; without it they exit 3 rather than fall back to another scanner.
+      - name: Markdown parser dependency
+        run: |
+          python3 -m venv "$RUNNER_TEMP/md"
+          "$RUNNER_TEMP/md/bin/python" -m pip install markdown-it-py==4.2.0
+
       - name: board-expert tests
-        run: python3 -m unittest discover -s skills/board-expert/tests -v
+        run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/board-expert/tests -v'
 
       - name: peripheral-spec tests
-        run: python3 -m unittest discover -s skills/peripheral-spec/tests -v
+        run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/peripheral-spec/tests -v'
 
       - name: hardware-investigator tests
-        run: python3 -m unittest discover -s skills/hardware-investigator/tests -v
+        run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/hardware-investigator/tests -v'
 
       - name: board specs
         run: |
-          python3 skills/board-expert/scripts/spec_check.py \
+          "$RUNNER_TEMP/md/bin/python" skills/board-expert/scripts/spec_check.py \
             skills/board-expert/specs \
             --stubs-from skills
 
       - name: ENC28J60 YAML dependency
         run: |
           python3 -m venv "$RUNNER_TEMP/enc28j60-tests"
-          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m pip install PyYAML
+          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m pip install PyYAML markdown-it-py==4.2.0
 
       - name: enc28j60 corpus tests
         run: >-

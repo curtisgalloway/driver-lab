@@ -16,7 +16,7 @@ review freely. Your quota is findings, not confirmations: a verdict with zero fi
 review of this size is itself suspicious — say what you did to earn it.
 
 1. MECHANICAL: run
-     python3 <peripheral-spec>/scripts/anchor_check.py <path-to-review> \
+     uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py <path-to-review> \
          --impl-repo <impl checkout> --ref-repo <ref checkout> \
          -o docs/review-reports/<driver>-check-<date>.txt
      python3 <peripheral-spec>/scripts/inventory_check.py <path-to-review> \
@@ -26,7 +26,7 @@ review of this size is itself suspicious — say what you did to earn it.
    in the review or is a finding. Every reference-header name the review never mentions is a
    finding (an uncompared register) unless the review names it as out of scope with a reason.
 2. FINDING-BY-FINDING: run
-     python3 <peripheral-spec>/scripts/anchor_check.py <path-to-review> \
+     uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py <path-to-review> \
          --impl-repo <impl checkout> --ref-repo <ref checkout> --show
    and read the sheet. For EVERY finding, decide whether the cited lines on EACH side support it:
    the implementation really does what the [impl:] lines show, the reference really does what the

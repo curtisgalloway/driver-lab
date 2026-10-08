@@ -351,14 +351,32 @@ exact list; in short:
 `Standards and databook`, `Programming model`, `Known variants and quirks`) ends with its **tag
 clause**: one or more tags, each optionally followed by a parenthetical citation, then at most one
 closing sentence that starts with `TODO (verify on hardware)`. Put the facts first and the tags
-last. **Only the tail clause is a tag clause.** Every tag token in it counts, nested ones inside a
-parenthetical included (a nested `[press]` or `[emulated]` needs its TODO, a nested `[src]` its
-anchors), with one exception: a tag token in backticks *inside a parenthetical* is prose naming a
-tag ("the previous bullet's `` `[src]` `` anchors"). Write a nested clause without backticks.
-Likewise a tag name mentioned in the prose ("every address
-here is a decompiled-blob `[DT]` fact") is not a tag, the checker ignores it, and the bullet still
-needs a real tag clause at its end. The closing TODO sentence may not contain square brackets; a
-tag token inside it would be read as a tag.
+last. **Only the tail clause is a tag clause.** A tag name mentioned in the prose before it
+("every address here is a decompiled-blob `[DT]` fact") is not a tag, the checker ignores it, and
+the bullet still needs a real tag clause at its end. The closing TODO sentence may not contain
+square brackets; a tag token inside it would be read as a tag.
+
+How the checkers read a bullet (one CommonMark parse, shared by `spec_check.py` and
+`anchor_check.py`, so the two never disagree about what is code):
+
+- **Code.** Fenced and indented code blocks are code wherever CommonMark puts them; nothing in
+  them is a tag or an anchor. A fence that never closes is an error, since it would turn the
+  rest of its list item or file into code.
+- **A code span holding exactly one tag is that tag.** `` `[DT]` `` and `[DT]` are the same
+  token, and so are `` `[src:<repo>: path:L]` `` and the bare anchor, and
+  `` `TODO (verify on hardware)` `` and the bare marker. **Any other code span is prose**: a tag
+  or anchor inside a longer span (`` `[src] anchors` ``, `` `[DT] (x.dtsi)` ``) is not one.
+- **In the tail clause every tag token counts, nested ones included.** A nested `[press]` or
+  `[emulated]` needs its TODO; every nested `[src]` needs anchors of its own inside its own
+  parenthetical, and the anchors of a clause nested inside it do not count for it. So
+  `` [doc] (`[src]` (GPL driver, foo.c:42)) `` is a `[src]` without an anchor, an error. Prose
+  that must name a tag inside a parenthetical writes it inside a longer code span
+  (`` (the previous bullet's `[src] anchors`) ``) or in words ("the src class").
+- **Case is part of the name.** Tags and anchor kinds are case-sensitive: `[Src]`, `[dt]`,
+  `[SRC:` and `[Src:` are errors wherever they stand outside code, never silently prose.
+- **An anchor closes on its line.** A `[src:` anchor must reach its `]` on the line it starts
+  on and before the end of its list item or paragraph; one split by a line break (a blank line
+  included), or by spaces inside `[src:`, or never closed (end of file included) is an error.
 
 ```
 - **Debug UART.** PL011 `uart10` at `0x10_7D00_1000`, left enabled by firmware. `[DT]`
@@ -426,13 +444,14 @@ resources:
   no `accepts:` or `accepts: []` (the documents-only root), with or without `--require-license`.
   A fact whose only source the root does not accept moves to an overlay in a root that does.
 - **One anchor per line.** `anchor_check.py` reads a line at a time, so an anchor broken across
-  lines (blank lines included) or by spaces inside `[src:` is never resolved; the checker fails
-  it. Break the line between anchors instead. A
-  wrapped bullet may carry its anchors on a later line: `anchor_check.py` takes the whole bullet
-  as the claim of every anchor in it.
+  lines (blank lines included), by spaces inside `[src:`, or left without its `]` is never
+  resolved; the checker fails it (see *Tag rules*). Break the line between anchors instead. A
+  wrapped bullet may carry its anchors on a later line: `anchor_check.py` takes the whole list
+  item as the claim of every anchor in it (a nested item is its own claim).
 - **Inside an `[inference]`.** A premise read from code is written either as the bare anchor
-  (`[src:<repo>: path:L]`) or as a nested `[src] ([src:<repo>: path:L (symbol)])` clause, without
-  backticks, inside the inference's parenthetical; the anchors are checked the same way.
+  (`[src:<repo>: path:L]`) or as a nested `[src] ([src:<repo>: path:L (symbol)])` clause (with or
+  without backticks around the tag) inside the inference's parenthetical; the anchors are checked
+  the same way.
 - **What the anchors are checked for.** `spec_check.py` checks what the spec alone shows: the
   anchor's shape, the entry it names, the commit, the license. `anchor_check.py <spec> --root
   <root> --require-license` applies the same gate, and with `--repo <name>=<checkout>` per entry it
@@ -674,14 +693,16 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
 - a fact bullet that does not end with its tag clause; in the tail clause, a `[source-observed]`,
   `[press]`, `[inference]` or `[emulated]` without `TODO (verify on hardware)`; a `[doc]`, `[DT]`,
   `[rtl]`, `[inference]`, `[emulated]` or `[src]` without a following parenthetical (the format
-  requires that it name the source; the checker tests only that it is there, and for `[src]` that
-  it holds a `[src:]` anchor); or a tail clause whose only tag is `[emulated]` (tag names in the
-  prose are ignored);
+  requires that it name the source; the checker tests only that it is there, and for each `[src]`,
+  nested ones included, that its own parenthetical holds a `[src:]` anchor); or a tail clause
+  whose only tag is `[emulated]` (tag names in the prose are ignored); a tag not in its canonical
+  case anywhere outside code; a code fence that never closes;
 - anywhere in a spec's body, a `[src:]` anchor that is malformed, names no repo, names one the
   spec's `resources.repos` does not list, names one whose `ref` is not a full commit id or that
   has no `license:`, or whose license the root's `accepts:` does not accept (always; a root
   without `accepts:` or with `accepts: []` accepts none); an empty `[src:]`; an `[impl:]`,
-  `[tgt:]` or `[ref:]` anchor; or one broken across lines. The
+  `[tgt:]` or `[ref:]` anchor; an anchor kind not in lowercase; or one broken across lines, split
+  by spaces inside `[src:`, or with no `]` before the end of its list item or paragraph. The
   anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
   beside this one when a spec uses them;
 - a `resources.repos` entry whose `url` is not an `https://` URL;
@@ -702,7 +723,11 @@ root can never downgrade its own findings. The spec repositories' CI runs the ch
 
 It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one root, on a part whose `cache`
 differs from its board's, on a spec or overlay with no verification record (`unverified`), and on a record
-whose `spec_sha256` no longer matches the spec (`verification stale`). It is stdlib-only: PyYAML when available, otherwise its own parser for the
+whose `spec_sha256` no longer matches the spec (`verification stale`). It reads Markdown with
+markdown-it-py, pinned to 4.2.0 (`peripheral-spec/scripts/mdtokens.py`, which `anchor_check.py`
+shares): run it as `uv run --with markdown-it-py==4.2.0 python3 spec_check.py ...`. Without that
+exact version it exits 3 (`missing dependency`); it never falls back to a second Markdown scanner.
+For YAML it uses PyYAML when available, otherwise its own parser for the
 format's YAML subset, and its last line says which one ran (`parser: pyyaml` or `parser: subset`).
 The two agree on the quoting traps above by construction. It does not check URL reachability. CI has
 no PyYAML, so it runs the subset parser; run the checker once under a Python that has PyYAML (for

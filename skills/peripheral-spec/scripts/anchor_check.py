@@ -79,7 +79,7 @@ names: ``[impl:]`` is an alias of ``[src:]`` (with ``Impl pin:`` and
 ``--impl-repo``) and ``[ref:]`` an alias of ``[tgt:]`` (with ``Ref pin:`` and
 ``--ref-repo``), so a review's implementation-side anchors get drift tracking.
 
-Modes (all stdlib; needs ``git`` on PATH):
+Modes (need ``git`` on PATH):
 
   default   resolve every anchor at the pin: path exists, line range in bounds,
             symbol (if given) present in or near the range; flag fact-bearing
@@ -98,7 +98,12 @@ Modes (all stdlib; needs ``git`` on PATH):
             ``[stale: was <pin>]`` marker that fails every later check until a
             person re-verifies the claim and removes it.
 
-Exit status: 0 clean, 1 findings, 2 usage or git error.
+Code blocks, code spans and list items are read from one CommonMark parse
+(``mdtokens.py`` beside this script, the parse ``spec_check.py`` uses too), which needs
+markdown-it-py at the version ``mdtokens.PINNED`` names: run as
+``uv run --with markdown-it-py==4.2.0 python3 anchor_check.py ...``.
+
+Exit status: 0 clean, 1 findings, 2 usage or git error, 3 missing dependency.
 """
 
 from __future__ import annotations
@@ -112,9 +117,16 @@ import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
+try:
+    import mdtokens  # same directory: the one Markdown parse both spec checkers read
+except ImportError:
+    mdtokens = None
+
 # The body keeps its leading whitespace: "[doc:trm p.12]" (none) is a named doc anchor,
 # "[doc: Widget TRM §4]" an unnamed citation. Other kinds strip it.
 TAG_RE = re.compile(r"\[(src|tgt|impl|ref|doc|stale):([^\]]*)\]")
+# An anchor kind in any case: only the lowercase kind is an anchor; another case is an error.
+ANY_CASE_KIND_RE = re.compile(r"\[((?i:src|tgt|impl|ref|doc|stale)):")
 KIND_ALIAS = {"impl": "src", "ref": "tgt"}
 PIN_ALIAS = {"impl": "source", "ref": "target"}
 ANCHOR_RE = re.compile(
@@ -367,25 +379,30 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
     takes the whole item as its claim, so a wrapped bullet whose anchors sit on a later line
     keeps the values it states. ``board`` (a board spec, whose facts carry board-spec tags
     that ``spec_check.py`` checks) turns off the untagged-fact heuristic.
+
+    Code blocks, code spans and list items come from mdtokens, the parse ``spec_check.py``
+    reads too: tags are read from its masked lines, so an anchor in a code block or in a
+    longer code span is prose, and a code span holding only an anchor is that anchor. A
+    line belongs to its innermost list item.
     """
     anchors: list[Anchor] = []
     lines = text.split("\n")
+    doc = mdtokens.parse("\n".join([""] * min(skip, len(lines)) + lines[skip:]))
+    item_firsts = {item.start + 1 for item in doc.items}
+    for n in doc.unclosed_fences:
+        report.add("error", n + 1, "code fence never closes: everything after it to the end of "
+                                   "its list item or of the file is code, and holds no anchors")
     item_start = 0  # first line of the list item being read, 0 outside one
     items: dict[int, list[str]] = {}  # item first line -> its lines, tags removed
     # A tags-only line "arms" a block anchor; it covers the next contiguous block
     # (table or list), which may be separated from it by blank lines.
     block_state = None  # None | "armed" | "covering"
     block_anchors: list[Anchor] = []  # anchors of the armed/covering block anchor
-    in_code = False
     for i, line in enumerate(lines, 1):
-        if i <= skip:
+        if i <= skip or (i - 1) in doc.code_lines:
             continue
         stripped = line.strip()
-        if stripped.startswith("```"):
-            in_code = not in_code
-            continue
-        if in_code:
-            continue
+        masked = doc.masked[i - 1]
         pin = PIN_RE.match(stripped)
         if pin:
             key = pin.group(1).lower()
@@ -402,16 +419,17 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
             continue
         if PIN_START_RE.match(stripped):
             report.unread_pins.append((i, stripped))
-        if LIST_RE.match(line) and not line.startswith((" ", "\t")):
-            item_start = i
-            items[i] = []
-        elif item_start and not (stripped and line.startswith((" ", "\t"))
-                                 and not LIST_RE.match(line)):
-            item_start = 0
+        idx = doc.item_at(i - 1)
+        item_start = doc.items[idx].start + 1 if idx is not None else 0
         if item_start:
-            items[item_start].append(TAG_RE.sub("", stripped).strip(" -*"))
-        tags = TAG_RE.findall(line)
-        claim = TAG_RE.sub("", line).strip(" |-*")
+            items.setdefault(item_start, []).append(TAG_RE.sub("", masked.strip()).strip(" -*"))
+        for m in ANY_CASE_KIND_RE.finditer(masked):
+            if m.group(1) != m.group(1).lower():
+                report.add("error", i, f"anchor kind {m.group(0)!r} is not lowercase: write "
+                                       f"[{m.group(1).lower()}: ...] (anchor kinds are "
+                                       "case-sensitive)")
+        tags = TAG_RE.findall(masked)
+        claim = TAG_RE.sub("", masked).strip(" |-*")
         if tags and len(claim) < 40 and not stripped.startswith(("|", "-", "*")) \
                 and not LIST_RE.match(line):
             # The tag closes a multi-line paragraph: the claim is the paragraph.
@@ -467,7 +485,7 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
             continue
         # No tag on this line and no block anchor in force: is it a fact?
         is_row = stripped.startswith("|") and not TABLE_SEP_RE.match(stripped)
-        is_item = bool(LIST_RE.match(line))
+        is_item = i in item_firsts
         if not (is_row or is_item):
             continue
         header_row = is_row and i < len(lines) and TABLE_SEP_RE.match(lines[i].strip() or "x")
@@ -1189,6 +1207,15 @@ def main(argv=None) -> int:
     ap.add_argument("--json", action="store_true", help="emit the report as JSON")
     ap.add_argument("--output", "-o", help="write the report here instead of stdout")
     args = ap.parse_args(argv)
+
+    if mdtokens is None:
+        print(f"missing dependency: mdtokens.py was not found beside {__file__}", file=sys.stderr)
+        return 3
+    try:
+        mdtokens.require()
+    except mdtokens.MissingDependency as exc:
+        print(exc, file=sys.stderr)
+        return 3
 
     try:
         text = Path(args.spec).read_text(encoding="utf-8", errors="replace")

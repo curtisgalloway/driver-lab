@@ -44,7 +44,14 @@ What fails (exit 1):
     ``[tag]``, each optionally followed by a parenthetical citation, then at
     most one closing ``TODO (verify on hardware)`` sentence).  Only the tail
     clause is examined: a tag name mentioned in the prose is not a tag and is
-    ignored by every rule below.  A bullet whose text, after an optional
+    ignored by every rule below.  Code comes from one CommonMark parse
+    (peripheral-spec's ``mdtokens.py``, shared with ``anchor_check.py``):
+    nothing in a code block is a tag, a code span holding exactly one tag (or
+    anchor, or the TODO marker) is that token, and any longer code span is
+    prose.  In the tail every tag token counts, nested ones included, and
+    every ``[src]`` needs anchors in its own parenthetical.  A tag or anchor
+    kind not in its canonical case, outside code, is an error, and so is a
+    code fence that never closes.  A bullet whose text, after an optional
     bold lead-in, starts with ``TODO (verify on hardware)`` is a gap and
     needs no tag
   * a tail clause with ``[source-observed]``, ``[press]``, ``[inference]``
@@ -68,7 +75,8 @@ What fails (exit 1):
     is not a full commit id, that has no ``license:``, or whose license the
     root's ``accepts:`` does not accept (always, not only under
     ``--require-license``; a root with no ``accepts:``, or ``accepts: []``,
-    accepts no ``[src]``); a ``[src:]`` anchor broken across lines
+    accepts no ``[src]``); a ``[src:]`` anchor broken across lines or by
+    spaces, or with no ``]`` before the end of its list item or paragraph
   * an unsubstituted template placeholder (``<...>`` starting with a letter,
     outside backtick code spans, not a URL or a message id) in a spec's
     frontmatter or body, or in a stub
@@ -104,7 +112,11 @@ What warns (reported, exit stays 0):
   * a record under ``resources/`` that belongs to no spec file in its root
     (for example one left under the overlaid id's name)
 
-Stdlib only.  PyYAML is used when importable; otherwise a parser for the
+Markdown is read with markdown-it-py, pinned to 4.2.0 through peripheral-spec's
+``mdtokens.py``: run as ``uv run --with markdown-it-py==4.2.0 python3 spec_check.py``.
+Without that exact version the checker exits 3 (missing dependency); it has no second
+Markdown scanner to fall back to.  Otherwise stdlib.  PyYAML is used when importable;
+otherwise a parser for the
 YAML subset the format uses (block mappings and lists, flow lists, one-level
 flow mappings, folded and literal scalars, comments) reads the frontmatter.
 The subset parser rejects ``: `` inside an unquoted scalar, as PyYAML does,
@@ -117,7 +129,8 @@ Exit codes follow the dev-tools/cli-conventions contract:
   0  clean (warnings allowed)
   1  findings
   2  usage error
-  3  missing precondition (a root has no board-specs.yaml)
+  3  missing precondition (a root has no board-specs.yaml; peripheral-spec's
+     scripts or markdown-it-py 4.2.0 missing)
 """
 
 from __future__ import annotations
@@ -132,6 +145,17 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import spdx  # same directory
+
+# peripheral-spec's scripts sit beside this skill: anchor_check.py parses [src:] anchors and
+# mdtokens.py is the one Markdown parse both checkers read a spec's structure from.
+_PERIPHERAL = Path(__file__).resolve().parent.parent.parent / "peripheral-spec" / "scripts"
+if str(_PERIPHERAL) not in sys.path:
+    sys.path.append(str(_PERIPHERAL))
+try:
+    import anchor_check  # noqa: E402
+    import mdtokens  # noqa: E402
+except ImportError:
+    anchor_check = mdtokens = None
 
 KINDS = ("board", "soc", "chip", "ip")
 LAYERS = ("public", "ip-vendor", "soc-vendor", "product", "local")
@@ -148,7 +172,6 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # An unsubstituted template placeholder: <...> starting with a letter, but not an
 # autolink (<https://...>) or a message id (<id@host>).
 PLACEHOLDER_RE = re.compile(r"<(?!https?://|mailto:)[A-Za-z][^>@\n]*>")
-CODE_SPAN_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
 FACT_SECTIONS = {
     "Quick-facts",
     "Gotchas",
@@ -161,44 +184,32 @@ TAG_NAMES = "databook|standard|rtl|DT|src|source-observed|doc|hardware|press|inf
 # parenthetical, and a variants row has no place for them.
 TAG_CLASSES = tuple(t for t in TAG_NAMES.split("|") if t != "src")
 TAG_RE = re.compile(rf"\[({TAG_NAMES})\]")
+# A tag name in any case: one that is not exactly a canonical name is an error.
+ANY_CASE_TAG_RE = re.compile(rf"\[((?i:{TAG_NAMES}))\]")
 TODO_RE = re.compile(r"TODO \(verify on hardware\)")
 # A parenthetical with up to two levels of nesting inside it, so an [inference]'s premises may
-# hold a `[src]` (`[src:x: f.c:1 (sym)]`) clause.
+# hold a [src] ([src:x: f.c:1 (sym)]) clause. The text is the masked bullet (mdtokens), where
+# code spans no longer contribute brackets or parentheses.
 _PAREN0 = r"\([^()]*\)"
 _PAREN1 = rf"\((?:[^()]|{_PAREN0})*\)"
 _PAREN2 = rf"\((?:[^()]|{_PAREN1})*\)"
 # One tag with an optional parenthetical citation.
-_TAG_CLAUSE = rf"`?\[(?:{TAG_NAMES})\]`?(?:\s*{_PAREN2})?"
+_TAG_CLAUSE = rf"\[(?:{TAG_NAMES})\](?:\s*{_PAREN2})?"
 # The tail a fact bullet must end with: tag clauses, then at most one TODO sentence.
 TAIL_RE = re.compile(
     rf"(?:{_TAG_CLAUSE})(?:\s*[,;]?\s*{_TAG_CLAUSE})*\.?"
-    rf"(?:\s*`?TODO \(verify on hardware\)`?[^\[\]]*)?\s*$"
+    rf"(?:\s*TODO \(verify on hardware\)[^\[\]]*)?\s*$"
 )
-GAP_RE = re.compile(r"^- (?:\*\*[^*]+\*\*\s*)?`?TODO \(verify on hardware\)")
+GAP_RE = re.compile(r"^(?:[-*+]|\d+[.)]) (?:\*\*[^*]+\*\*\s*)?TODO \(verify on hardware\)")
 # Tags that must be followed by a parenthetical naming their source.
 NAMED_TAGS = ("doc", "DT", "inference", "rtl", "emulated", "src")
 # Tags whose fact must carry the closing TODO (verify on hardware) sentence.
 TODO_TAGS = ("source-observed", "press", "inference", "emulated")
-UNNAMED_RES = {
-    tag: re.compile(rf"\[{tag}\](?:`|(?!`))(?!\s*\()") for tag in NAMED_TAGS
-}
-DOC_UNNAMED_RE = UNNAMED_RES["doc"]
-# A [src] tag in a tail clause and the parenthetical that must follow it.
-SRC_CLAUSE_RE = re.compile(rf"`?\[src\]`?\s*({_PAREN1})?")
-# "[src:" with whitespace inside it, or an anchor whose text crosses a line break (blank lines
-# included): anchor_check.py reads one line at a time and would never see it.
-BROKEN_SRC_RE = re.compile(r"\[\s*s\s*r\s*c\s*:[^\]]*")
-FENCE_RE = re.compile(r"^```.*?^```", re.S | re.M)
-
-
-def broken_anchor_lines(body: str) -> list[int]:
-    """1-based body lines where a [src:] anchor starts that is broken by whitespace."""
-    text = FENCE_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), body)
-    return [
-        text.count("\n", 0, m.start()) + 1
-        for m in BROKEN_SRC_RE.finditer(text)
-        if "\n" in m.group(0) or not m.group(0).startswith("[src:")
-    ]
+# The start of a source anchor in any case and with any whitespace inside "[src:": only the
+# exact lowercase "[src:" (or "[impl:", "[tgt:", "[ref:") is the anchor anchor_check reads.
+ANCHOR_START_RE = re.compile(
+    r"\[\s*((?i:s\s*r\s*c|i\s*m\s*p\s*l|t\s*g\s*t|r\s*e\s*f))\s*:"
+)
 
 
 # Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
@@ -466,6 +477,14 @@ class Spec:
     gate: bool = False
     # Lines before the body (the frontmatter and its fences), so findings cite file lines.
     body_offset: int = 0
+    _doc: object = None
+
+    @property
+    def doc(self):
+        """The body's one Markdown parse (mdtokens.Doc), made on first use."""
+        if self._doc is None:
+            self._doc = mdtokens.parse(self.body)
+        return self._doc
 
     @property
     def is_overlay(self) -> bool:
@@ -560,6 +579,21 @@ def walk_root(root: Path, context: bool, findings: list[Finding]) -> list[Path]:
     return files
 
 
+def through_link(root: Path) -> bool:
+    """Whether root is, or is reached through, a symbolic link.
+
+    Each component is inspected as given, before any normalization: in
+    ``/bin/../../tmp/r`` the link ``/bin`` is seen even though ``..`` cancels it lexically.
+    A relative root starts from the working directory, which the OS reports resolved.
+    """
+    cur = Path(root.anchor) if root.is_absolute() else Path.cwd()
+    for part in root.parts[1:] if root.is_absolute() else root.parts:
+        cur = cur / part
+        if cur.is_symlink():
+            return True
+    return False
+
+
 def load_specs(
     roots: list[Path],
     use_pyyaml: bool,
@@ -575,7 +609,7 @@ def load_specs(
     origin = {} if origin is None else origin
     for root in roots:
         context = root in context_roots
-        if Path(os.path.abspath(root)).resolve() != Path(os.path.abspath(root)):
+        if through_link(root):
             if context:
                 raise LinkInContextRoot(f"{root} is, or is reached through, a symbolic link")
             findings.append(
@@ -712,8 +746,8 @@ def check_ids_and_triggers(spec: Spec, findings: list[Finding]) -> None:
 
 
 def check_placeholders(text: str, where: str, findings: list[Finding]) -> None:
-    """An unsubstituted <...> template placeholder, outside code spans, is an error."""
-    stripped = CODE_SPAN_RE.sub("", text)
+    """An unsubstituted <...> template placeholder, outside code, is an error."""
+    stripped = "\n".join(mdtokens.parse(text).masked)
     seen: list[str] = []
     for m in PLACEHOLDER_RE.finditer(stripped):
         if m.group(0) not in seen:
@@ -963,38 +997,61 @@ def check_references(specs: list[Spec], findings: list[Finding]) -> None:
                 )
 
 
-def iter_fact_bullets(body: str):
-    """Yield (line_number, bullet_text) for every top-level bullet in a fact section."""
-    section = None
-    current: list[str] = []
-    start = 0
-    for n, line in enumerate(body.splitlines(), 1):
-        if line.startswith("## "):
-            if current:
-                yield start, "\n".join(current)
-                current = []
-            section = line[3:].strip()
-            continue
-        if section not in FACT_SECTIONS:
-            continue
-        if line.startswith("- "):
-            if current:
-                yield start, "\n".join(current)
-            current = [line]
-            start = n
-        elif current and (line.startswith("  ") or line.strip() == ""):
-            if line.strip():
-                current.append(line)
-        elif current:
-            yield start, "\n".join(current)
-            current = []
-    if current:
-        yield start, "\n".join(current)
+def iter_fact_bullets(doc):
+    """Yield (1-based body line, masked text) for every top-level list item in a fact section.
+
+    Sections, list items and code come from the one Markdown parse (mdtokens): the item is
+    everything CommonMark puts in it, lazy continuation lines and nested lists included.
+    """
+    sections = [(line, text) for line, level, text in doc.headings if level == 2]
+    for idx in doc.top_items():
+        item = doc.items[idx]
+        section = None
+        for line, text in sections:
+            if line < item.start:
+                section = text
+        if section in FACT_SECTIONS:
+            yield item.start + 1, "\n".join(doc.masked[item.start:item.end])
+
+
+def paren_after(text: str, pos: int) -> tuple[int, int] | None:
+    """The balanced parenthetical starting at text[pos] after optional whitespace, as a
+    (start, end) slice, or None when there is none or it never closes."""
+    while pos < len(text) and text[pos].isspace():
+        pos += 1
+    if pos >= len(text) or text[pos] != "(":
+        return None
+    depth = 0
+    for i in range(pos, len(text)):
+        depth += {"(": 1, ")": -1}.get(text[i], 0)
+        if depth == 0:
+            return pos, i + 1
+    return None
+
+
+def own_text(inner: str) -> str:
+    """inner with every nested tag's parenthetical blanked: what a clause cites itself."""
+    out = list(inner)
+    for m in TAG_RE.finditer(inner):
+        span = paren_after(inner, m.end())
+        if span:
+            out[span[0]:span[1]] = " " * (span[1] - span[0])
+    return "".join(out)
+
+
+NAMED_WHAT = {
+    "doc": "its source",
+    "DT": "the file (and its origin, for a blob)",
+    "inference": "its premises and derivation",
+    "rtl": "the design, its revision, and the module",
+    "emulated": "the device model, its version and the run IDs",
+    "src": "the [src:<repo>: path:L] anchors it was read from",
+}
 
 
 def check_tags(spec: Spec, findings: list[Finding]) -> None:
     p = str(spec.path)
-    for line_no, raw in iter_fact_bullets(spec.body):
+    for line_no, raw in iter_fact_bullets(spec.doc):
         where = f"{p}:{line_no + spec.body_offset}"
         if GAP_RE.match(raw):
             continue  # a gap-only bullet: "- **Topic.** TODO (verify on hardware) ..."
@@ -1015,98 +1072,110 @@ def check_tags(spec: Spec, findings: list[Finding]) -> None:
                 findings.append(Finding("error", where, "fact bullet has no provenance tag"))
             continue
         # Only the tail clause is examined from here on: prose may mention tag names freely.
+        # In it every tag token counts, nested ones included; a code span holding only a tag
+        # is that tag (mdtokens), and any longer code span is prose with no tag in it.
         tail = tail_match.group(0)
-        # Every tag token counts, nested ones included, except a backticked one inside a
-        # parenthetical: that is prose naming a tag ("the previous bullet's `[src]` anchors").
-        top = blank_prose_tags(tail)
-        tags = TAG_RE.findall(top)
+        tags = list(TAG_RE.finditer(tail))
+        names = [m.group(1) for m in tags]
         has_todo = bool(TODO_RE.search(tail))
+        messages: list[str] = []
         for needs_todo in TODO_TAGS:
-            if needs_todo in tags and not has_todo:
-                findings.append(
-                    Finding("error", where, f"[{needs_todo}] fact without 'TODO (verify on hardware)'")
+            if needs_todo in names and not has_todo:
+                messages.append(f"[{needs_todo}] fact without 'TODO (verify on hardware)'")
+        for m in tags:
+            tag = m.group(1)
+            if tag not in NAMED_TAGS:
+                continue
+            span = paren_after(tail, m.end())
+            if span is None:
+                messages.append(
+                    f"[{tag}] must be followed by a parenthetical naming {NAMED_WHAT[tag]}"
                 )
-        for tag, unnamed_re in UNNAMED_RES.items():
-            if unnamed_re.search(top):
-                what = {
-                    "doc": "its source",
-                    "DT": "the file (and its origin, for a blob)",
-                    "inference": "its premises and derivation",
-                    "rtl": "the design, its revision, and the module",
-                    "emulated": "the device model, its version and the run IDs",
-                    "src": "the [src:<repo>: path:L] anchors it was read from",
-                }[tag]
-                findings.append(
-                    Finding("error", where, f"[{tag}] must be followed by a parenthetical naming {what}")
-                )
-        # A [src] fact's parenthetical carries its anchors; check_src_anchors judges each one.
-        for m in SRC_CLAUSE_RE.finditer(top):
-            if m.group(1) is not None and count_src_anchors(m.group(1)) == 0:
-                findings.append(
-                    Finding(
-                        "error",
-                        where,
-                        "[src] parenthetical cites no anchor: write [src:<repo>: path:L1-L2 (symbol)] "
-                        "naming a resources.repos entry pinned to a commit",
-                    )
+            elif tag == "src" and count_src_anchors(own_text(tail[span[0] + 1:span[1] - 1])) == 0:
+                # Every [src] clause, nested ones included, carries anchors of its own; a nested
+                # clause's anchors do not count for the clause around it, nor the reverse.
+                messages.append(
+                    "[src] parenthetical cites no anchor: write [src:<repo>: path:L1-L2 (symbol)] "
+                    "naming a resources.repos entry pinned to a commit"
                 )
         # A model observation is never the sole authority for a fact: it stands beside
         # another class, or it is a premise of an [inference] (which then carries the tag).
-        if tags and set(tags) == {"emulated"}:
-            findings.append(
-                Finding(
-                    "error",
-                    where,
-                    "[emulated] is never the sole authority for a fact: cite another class beside "
-                    "it, or make the observation a premise of an [inference]",
-                )
+        if names and set(names) == {"emulated"}:
+            messages.append(
+                "[emulated] is never the sole authority for a fact: cite another class beside "
+                "it, or make the observation a premise of an [inference]"
             )
-
-
-def blank_prose_tags(text: str) -> str:
-    """text with each backticked tag token inside a parenthetical (`[src]`) blanked."""
-    out = list(text)
-    for m in re.finditer(rf"`\[(?:{TAG_NAMES})\]`", text):
-        if text.count("(", 0, m.start()) > text.count(")", 0, m.start()):
-            out[m.start():m.end()] = " " * (m.end() - m.start())
-    return "".join(out)
-
-
-_ANCHOR_CHECK: list = []  # [module or None], loaded once
+        for message in dict.fromkeys(messages):
+            findings.append(Finding("error", where, message))
 
 
 def count_src_anchors(text: str) -> int:
-    """How many well-formed [src:] anchors anchor_check.py parses out of text.
-
-    Without anchor_check.py, a non-empty [src:] body counts; check_src_anchors reports the
-    missing module.
-    """
-    ac = load_anchor_check()
+    """How many well-formed [src:] anchors anchor_check.py parses out of text."""
     n = 0
     for m in re.finditer(r"\[src:([^\]]*)\]", text):
-        if ac is None:
-            n += any(item.strip() for item in m.group(1).split(";"))
-        else:
-            n += len(ac.parse_tag_body("src", m.group(1), 0, "", ac.Report(spec="")))
+        n += len(anchor_check.parse_tag_body("src", m.group(1), 0, "", anchor_check.Report(spec="")))
     return n
 
 
 def load_anchor_check():
-    """peripheral-spec's anchor_check module, beside this skill, or None.
+    """peripheral-spec's anchor_check module (imported beside this skill), or None."""
+    return anchor_check
 
-    [src:] anchors in a board spec use peripheral-spec's anchor grammar; this script parses
-    them with that module rather than with a second parser of its own.
-    """
-    if not _ANCHOR_CHECK:
-        path = Path(__file__).resolve().parent.parent.parent / "peripheral-spec" / "scripts"
-        if str(path) not in sys.path:
-            sys.path.append(str(path))
-        try:
-            import anchor_check  # noqa: PLC0415
-        except ImportError:
-            anchor_check = None
-        _ANCHOR_CHECK.append(anchor_check)
-    return _ANCHOR_CHECK[0]
+
+def check_markdown(spec: Spec, findings: list[Finding]) -> None:
+    """A code fence that never closes (CommonMark runs it to the end of its container, so
+    every fact after it would be code), and a tag name not in its canonical case ([Src],
+    [SRC], [dt]) anywhere outside code: tag names are case-sensitive, never silently prose."""
+    p = str(spec.path)
+    for n in spec.doc.unclosed_fences:
+        findings.append(
+            Finding("error", f"{p}:{n + 1 + spec.body_offset}", "code fence never closes: "
+                    "everything after it to the end of its list item or of the file is code")
+        )
+    for n, line in enumerate(spec.doc.masked, 1):
+        for m in ANY_CASE_TAG_RE.finditer(line):
+            if m.group(1) not in TAG_NAMES.split("|"):
+                canonical = next(t for t in TAG_NAMES.split("|") if t.lower() == m.group(1).lower())
+                findings.append(
+                    Finding(
+                        "error",
+                        f"{p}:{n + spec.body_offset}",
+                        f"tag {m.group(0)!r} is not in its canonical case: write [{canonical}] "
+                        "(tag names are case-sensitive)",
+                    )
+                )
+
+
+def anchor_shape_findings(spec: Spec) -> list[tuple[int, str]]:
+    """(1-based body line, message) for each anchor start that anchor_check would not read:
+    whitespace inside "[src:" (blank lines included), a non-lowercase kind, no closing "]"
+    before the end of its list item or paragraph, or a "]" only after a line break."""
+    doc = spec.doc
+    body = "\n".join(doc.masked)
+    starts = [0]
+    for line in doc.masked:
+        starts.append(starts[-1] + len(line) + 1)
+    out = []
+    for m in ANCHOR_START_RE.finditer(body):
+        line = body.count("\n", 0, m.start())
+        kind = re.sub(r"\s", "", m.group(1))
+        if re.search(r"\s", m.group(0)):
+            out.append((line + 1, "a [src:] anchor is broken across lines or by spaces; keep each "
+                        "anchor whole on one line (anchor_check.py reads one line at a time)"))
+            continue
+        if kind != kind.lower():
+            out.append((line + 1, f"anchor kind {m.group(0)!r} is not lowercase: write "
+                        f"[{kind.lower()}: ...] (anchor kinds are case-sensitive)"))
+        unit_end = next((end for start, end in doc.units if start <= line < end), line + 1)
+        limit = starts[min(unit_end, len(doc.masked))] - 1
+        close = body.find("]", m.end(), max(limit, m.end()))
+        if close < 0:
+            out.append((line + 1, "a [src:] anchor has no closing ']' before the end of its list "
+                        "item or paragraph"))
+        elif "\n" in body[m.end():close]:
+            out.append((line + 1, "a [src:] anchor is broken across lines or by spaces; keep each "
+                        "anchor whole on one line (anchor_check.py reads one line at a time)"))
+    return out
 
 
 def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
@@ -1116,32 +1185,13 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     commit id and its license one the root's accepts: list accepts. Unlike the repos gate
     under --require-license, this applies always, and a root with no accepts: (or an empty
     one, a documents-only root) accepts no [src] at all. Resolving the anchors against the
-    tree is anchor_check.py's job; this checks only what the spec itself can show.
+    tree is anchor_check.py's job; this checks only what the spec itself can show. Anchors
+    are read from the masked body (mdtokens): code blocks and prose code spans hold none.
     """
     p = str(spec.path)
-    lines = spec.body.splitlines()
-    for n in broken_anchor_lines(spec.body):
-        findings.append(
-            Finding(
-                "error",
-                f"{p}:{n + spec.body_offset}",
-                "a [src:] anchor is broken across lines or by spaces; keep each anchor whole on "
-                "one line (anchor_check.py reads one line at a time)",
-            )
-        )
-    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS):
-        return
-    ac = load_anchor_check()
-    if ac is None:
-        findings.append(
-            Finding(
-                "error",
-                p,
-                "[src:] anchors cannot be checked: peripheral-spec's anchor_check.py was not "
-                "found beside board-expert (install peripheral-spec beside this skill)",
-            )
-        )
-        return
+    for n, message in anchor_shape_findings(spec):
+        findings.append(Finding("error", f"{p}:{n + spec.body_offset}", message))
+    ac = anchor_check
     repos = {}
     for group, entry in iter_resources(spec.meta):
         if group == "repos" and isinstance(entry.get("name"), str):
@@ -1179,13 +1229,7 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
             )
         return None
 
-    in_code = False
-    for n, line in enumerate(lines, 1):
-        if line.strip().startswith("```"):
-            in_code = not in_code
-            continue
-        if in_code:
-            continue
+    for n, line in enumerate(spec.doc.masked, 1):
         where = f"{p}:{n + spec.body_offset}"
         report = ac.Report(spec=p)
         anchors = []
@@ -1470,6 +1514,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)
 
+    if mdtokens is None or anchor_check is None:
+        print(f"missing precondition: peripheral-spec's anchor_check.py and mdtokens.py were not "
+              f"found at {_PERIPHERAL} (install peripheral-spec beside board-expert)",
+              file=sys.stderr)
+        return 3
+    try:
+        mdtokens.require()
+    except mdtokens.MissingDependency as exc:
+        print(exc, file=sys.stderr)
+        return 3
+
     checked = [r.resolve() for r in args.roots]
     for ctx in args.context_root:
         c = ctx.resolve()
@@ -1506,6 +1561,7 @@ def main(argv: list[str] | None = None) -> int:
         check_frontmatter(spec, findings)
         check_public(spec, public_skills, findings)
         check_tags(spec, findings)
+        check_markdown(spec, findings)
         check_src_anchors(spec, findings)
         check_placeholders(spec.path.read_text(), str(spec.path), findings)
         if isinstance(spec.id, str):

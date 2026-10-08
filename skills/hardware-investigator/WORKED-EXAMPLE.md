@@ -55,7 +55,7 @@ Caller sources: `linux=<scratch>/widget-linux`.
    (compare `examples/expected/answer-linux.md`, whose `@REV` stands for the commit).
 6. Check:
    ```
-   python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
+   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
        --repo linux=<scratch>/widget-linux --root <skill>/examples/roots/gpl --require-license
    ```
    Expected: `result: PASS (0 errors, 0 warnings)`, exit 0.
@@ -83,7 +83,7 @@ Caller sources: `linux=<scratch>/widget-linux`.
 3. Pin `fw`, read `uart/widget_uart_init.c`, write the facts file (compare
    `examples/expected/answer-fw.md`), then check:
    ```
-   python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
+   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
        --repo fw=<scratch>/widget-fw --root <skill>/examples/roots/permissive --require-license
    ```
    Expected: `result: PASS (0 errors, 0 warnings)`.

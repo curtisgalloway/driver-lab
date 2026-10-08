@@ -123,6 +123,11 @@ def main(argv: list[str] | None = None) -> int:
         print("missing precondition: peripheral-spec's anchor_check.py is not installed beside "
               "board-expert", file=sys.stderr)
         return 3
+    try:
+        spec_check.mdtokens.require()
+    except spec_check.mdtokens.MissingDependency as exc:
+        print(exc, file=sys.stderr)
+        return 3
     meta = spec_check.load_yaml(m.group(1), spec_check.pyyaml_available()) or {}
     cited = cited_repos(m.group(2), ac)
     schemes = ("https://", "file://") if args.allow_local else ("https://",)

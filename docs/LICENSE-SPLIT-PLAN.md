@@ -414,8 +414,10 @@ cell. Evidence:
   `main` commit at or after `10ab32b` and fix the comment that says driver-lab pins the same
   commit; closes LS-R19's last clause.
 - **`bringup-kit` README** (LS-G item 1): add 0BSD to the permissive repository's source list.
-- **Stale branch** `origin/specs/source-observed-audit-fixes` (closed PR #41, two unique commits
-  by `git cherry`): the user decides whether to delete it.
+- **`[repo]` provenance tag** (closed PR #41): the branch was deleted on 2026-10-07; its two
+  commits are kept as tag `archive/source-observed-audit-fixes` (`79b0fea`). The spec edits are
+  obsolete, but its `[repo]` tag (SPEC-FORMAT, `spec_check.py`, a test, the scaffold template)
+  was never adopted; reuse it when spec regeneration needs facts from repository metadata.
 
 ## Next session
 

@@ -56,8 +56,10 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **Design gate:** satisfied (approved 2026-10-08). A milestone that needs a design change stops,
   amends the design, and asks the user before continuing.
 - **User overrides:** none.
-- **Implementers:** one fresh subagent per milestone; the user selects the model (Opus 5.5 so
-  far in this project). The orchestrator holds pushes, merges, Codex runs and user questions.
+- **Implementers:** one fresh subagent per milestone. Model by unit (user decision 2026-10-08):
+  Opus 5.5 for SF2-1 to SF2-7 and SF2-G (loader, checker, records, CommonMark checks, viewer,
+  resolver, payload schemas, the gate); Sonnet 5.5 for SF2-8 to SF2-12 (skill text, templates,
+  migration, cutover, retirement). The orchestrator holds pushes, merges, Codex runs and user questions.
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh
     subagent that runs the checks, writes break cases including degenerate inputs: empty,
@@ -209,13 +211,13 @@ decision](#needs-a-user-decision)).
 
 | Rollup row | Milestone |
 |---|---|
-| verifier: summary table against its figure and chapter | pre-RG2 (or SF2-8) |
+| verifier: summary table against its figure and chapter | pre-RG2 |
 | verifier: coverage pass | pre-RG2; the content-unit review method uses a Codex coverage review |
 | verifier: a TODO's method must be able to observe the thing | SF2-1 (`todo.method`), SF2-8 |
 | verifier: grade citation precision | SF2-3 (`citation_precision`), SF2-8 |
 | verifier: facts plus a trailing TODO | SF2-1 (`todo` is a field), SF2-8 |
 | scaffold, investigator: Arm static PDFs; canonical and retrieval URL | SF2-1 (`retrieval`), SF2-8, SF2-9 |
-| scaffold: SoC checklist (console, entry contract, memory, interrupts) | pre-RG2 (or SF2-8) |
+| scaffold: SoC checklist (console, entry contract, memory, interrupts) | pre-RG2 |
 | scaffold: `[DT]` takes the tree's license; docs-root template without repos | SF2-2 (DT gated), SF2-8 (templates) |
 | investigator: license per cited file | SF2-6 (D12), SF2-9 |
 | docs and permissive README/AGENTS citation rules | SF2-11 |
@@ -609,7 +611,7 @@ scaffold, spec-verifier).
 **In scope:** the four skills above and their tests where they have them; `GLOSSARY.md`;
 learnings rows marked SF2-8.
 **Out of scope:** peripheral-spec, reference-driver-review, hardware-investigator (SF2-9);
-pre-RG2 procedure rows unless the user folds them in.
+pre-RG2 procedure rows (user decision: they stay in the pre-RG2 pass).
 
 ### Implementation steps
 1. Contract document in `skills/spec-format/SKILL.md`; pointer in `SPEC-FORMAT.md`.
@@ -812,20 +814,22 @@ This plan ends at SF2-G. The spec-regeneration series ([plan](SPEC-REGEN-PLAN.md
 until then and resumes with RG2 (`rpi4`) written in format 2, after the pre-RG2 learnings pass.
 No RG unit starts while a format 2 milestone is open.
 
-## Needs a user decision
+## Decisions (user, 2026-10-08)
 
-1. **Implementer model** for the milestones (Opus 5.5 so far).
-2. **GitHub Pages** on the three public spec repositories (SF2-11): enabling it publishes a
-   site; outward-facing, needs an explicit go.
-3. **Pre-RG2 procedure learnings** (verifier summary-table check, coverage pass, scaffold SoC
-   checklist): fold them into SF2-8's rewrite of `spec-verifier` and the scaffold, or keep them
-   for the separate pass before RG2 as the regeneration plan says.
-4. **Coverage findings in SF2-10** that would add new facts: backlog them for RG units
-   (proposed, keeps migration a conversion) or add them during migration.
-5. **Stop rules** as set in the conventions (three rounds code, two docs and content): confirm
-   or change.
-6. **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07
-   authorization).
+1. **Implementer model:** mixed by unit (Opus 5.5 for SF2-1 to SF2-7 and SF2-G, Sonnet 5.5 for
+   SF2-8 to SF2-12; see Conventions).
+2. **Pre-RG2 procedure learnings** stay in the separate pass before RG2; SF2-8 does not absorb
+   them.
+3. **Coverage findings in SF2-10** that would add new facts go to the RG backlog; the migration
+   stays a conversion.
+4. **Stop rules** as set in the conventions are confirmed.
+
+## Needs a user decision (later)
+
+- **GitHub Pages** on the three public spec repositories, before SF2-11: outward-facing, needs
+  an explicit go.
+- **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07
+  authorization).
 
 ## Discovered work / backlog
 
@@ -836,7 +840,7 @@ No RG unit starts while a format 2 milestone is open.
 
 ## Next session
 
-- Current milestone and status: none started; the plan awaits the user's review.
-- Resume action: answer [Needs a user decision](#needs-a-user-decision), then begin SF2-1.
+- Current milestone and status: none started; plan approved by the user on 2026-10-08.
+- Resume action: begin SF2-1 (implementer: Opus 5.5).
 - Read first: the design, this plan's conventions and SF2-1, the
   [SF2-design](../notebook/SF2-design.md) chapter.

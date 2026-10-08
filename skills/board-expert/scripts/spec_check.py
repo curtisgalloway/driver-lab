@@ -77,12 +77,16 @@ What fails (exit 1):
   * a stub (``--stub PATH``, or every stub found by ``--stubs-from DIR``: a
     ``*/SKILL.md`` whose frontmatter says "stub over") whose ``spec: <id>``
     does not resolve
-  * a verification record (``<root>/resources/<id>.verify.md``, written by
-    the ``spec-verifier`` skill; an overlay's is under its own root, named for
-    the id it overlays) whose frontmatter is malformed, or whose
-    ``summary.fail`` is not zero (even when the record is stale); with
-    ``--require-verified``, also a spec with no record or a record whose
-    ``spec_sha256`` no longer matches
+  * a verification record (``<root>/resources/<name>.verify.md``, where
+    ``<name>`` is the spec file's name without ``.spec.md``, overlays included;
+    written by the ``spec-verifier`` skill) whose frontmatter is malformed,
+    whose ``spec_file`` is not that spec's path relative to the root, or which
+    is current and whose ``summary.fail`` is not zero (a stale record reports
+    stale, whatever its counts); two spec files in one root that would share a
+    record; with ``--require-verified``, also a spec with no record or a record
+    whose ``spec_sha256`` no longer matches
+  * a ``--context-root`` that is, contains, or sits inside a checked root
+    (usage error, exit 2)
 
 What warns (reported, exit stays 0):
 
@@ -94,7 +98,9 @@ What warns (reported, exit stays 0):
   * a spec with no verification record ("unverified"), or one whose record
     was written for an older version of the file ("verification stale"),
     unless ``--require-verified`` makes these errors. A stale record with
-    FAIL verdicts also produces an error and remains "stale" in the summary
+    FAIL verdicts reports stale only: its verdicts were for another version
+  * a record under ``resources/`` that belongs to no spec file in its root
+    (for example one left under the overlaid id's name)
 
 Stdlib only.  PyYAML is used when importable; otherwise a parser for the
 YAML subset the format uses (block mappings and lists, flow lists, one-level
@@ -178,7 +184,21 @@ DOC_UNNAMED_RE = UNNAMED_RES["doc"]
 SRC_CLAUSE_RE = re.compile(rf"`?\[src\]`?\s*({_PAREN1})?")
 # A [src:] anchor whose closing bracket is not on the same line: anchor_check.py reads one
 # line at a time, so it would never see the anchor.
-SPLIT_SRC_RE = re.compile(r"\[(?:s(?:r(?:c(?::[^\]]*)?)?)?)?$")
+SPLIT_SRC_RE = re.compile(r"\[src:[^\]]*$")
+# The start of an anchor cut before its colon ("[", "[s", "[sr", "[src" at the end of a line);
+# it is a split only when the next line's text completes "[src:".
+SPLIT_HEAD_RE = re.compile(r"\[(?:s(?:rc?)?)?$")
+
+
+def is_split_anchor(lines: list[str], idx: int) -> bool:
+    """Whether lines[idx] ends in a [src:] anchor that continues on the next line."""
+    line = lines[idx].rstrip()
+    if SPLIT_SRC_RE.search(line):
+        return True
+    head = SPLIT_HEAD_RE.search(line)
+    if head is None or idx + 1 >= len(lines):
+        return False
+    return (head.group(0) + lines[idx + 1].lstrip()).startswith("[src:")
 # Anchor kinds anchor_check.py reads that a board spec may not use: [impl:] is an alias of
 # [src:] and [tgt:]/[ref:] cite a target-OS tree, none of which a board spec pins.
 OTHER_ANCHOR_KINDS = ("impl", "tgt", "ref")
@@ -732,6 +752,16 @@ def check_resources(spec: Spec, findings: list[Finding]) -> None:
             )
         if group == "repos":
             check_repo_license(spec, label, entry, findings)
+            url = entry.get("url")
+            if url is not None and (not isinstance(url, str) or not url.startswith("https://")):
+                findings.append(
+                    Finding(
+                        "error",
+                        p,
+                        f"repos entry {label!r}: url {url!r} must be an https:// URL (tools "
+                        "fetch it, and accept no other transport)",
+                    )
+                )
         for item in entry.get("files") or []:
             if isinstance(item, str):
                 continue
@@ -1032,7 +1062,8 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
     """
     p = str(spec.path)
     lines = spec.body.splitlines()
-    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS):
+    if not any(f"[{kind}:" in line for line in lines for kind in ("src",) + OTHER_ANCHOR_KINDS) \
+            and not any(is_split_anchor(lines, i) for i in range(len(lines))):
         return
     ac = load_anchor_check()
     if ac is None:
@@ -1090,7 +1121,7 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
         if in_code:
             continue
         where = f"{p}:{n + spec.body_offset}"
-        if SPLIT_SRC_RE.search(line):
+        if is_split_anchor(lines, n - 1):
             findings.append(
                 Finding(
                     "error",
@@ -1159,6 +1190,22 @@ def record_path(spec: Spec) -> Path:
     return spec.root / "resources" / (spec.path.name[: -len(".spec.md")] + ".verify.md")
 
 
+def check_orphan_records(specs: list[Spec], findings: list[Finding]) -> None:
+    """Warn on a record no spec file in its root owns (such as one under an overlaid id's name)."""
+    owned = {record_path(s) for s in specs}
+    for root in sorted({s.root for s in specs}):
+        for rec in sorted((root / "resources").glob("*.verify.md")):
+            if rec not in owned:
+                findings.append(
+                    Finding(
+                        "warning",
+                        str(rec),
+                        "verification record belongs to no spec file in this root: a record is "
+                        "named for its spec file (<file name>.verify.md); rename or remove it",
+                    )
+                )
+
+
 def check_record_collisions(specs: list[Spec], findings: list[Finding]) -> None:
     """Two spec files in one root whose names would share one verification record."""
     owners: dict[Path, list[Spec]] = {}
@@ -1217,7 +1264,7 @@ def check_verification(
         )
         malformed = True
     rel = spec.path.relative_to(spec.root).as_posix()
-    if meta.get("spec_file") is not None and str(meta.get("spec_file")) != rel:
+    if "spec_file" in meta and meta.get("spec_file") != rel:
         findings.append(
             Finding(
                 "error",
@@ -1363,6 +1410,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv)
 
+    checked = [r.resolve() for r in args.roots]
+    for ctx in args.context_root:
+        c = ctx.resolve()
+        for r in checked:
+            if c == r or c in r.parents or r in c.parents:
+                print(
+                    f"usage error: --context-root {ctx} is, contains, or sits inside the checked "
+                    f"root {r}; a context root must be a separate root",
+                    file=sys.stderr,
+                )
+                return 2
+
     findings: list[Finding] = []
     use_pyyaml = not args.no_pyyaml
     parser_used = parser_name(use_pyyaml)
@@ -1388,6 +1447,7 @@ def main(argv: list[str] | None = None) -> int:
             verification[status] = verification.get(status, 0) + 1
     check_references(specs, findings)
     check_record_collisions(specs, findings)
+    check_orphan_records(specs, findings)
     ids = {s.id for s in specs if not s.is_overlay and isinstance(s.id, str)}
     stubs = list(args.stub)
     for skills_dir in args.stubs_from:
@@ -1398,12 +1458,12 @@ def main(argv: list[str] | None = None) -> int:
     for stub in stubs:
         check_stub(stub, ids, findings)
 
+    context = [r.resolve() for r in args.context_root]
     for f in findings:
-        for root in args.context_root:
-            if f.path == str(root) or f.path.startswith(str(root) + "/"):
-                f.level = "warning"
-                f.message = f"context root: {f.message}"
-                break
+        where = Path(re.sub(r":\d+$", "", f.path)).resolve()
+        if any(where == r or r in where.parents for r in context):
+            f.level = "warning"
+            f.message = f"context root: {f.message}"
     errors = [f for f in findings if f.level == "error"]
     warnings = [f for f in findings if f.level == "warning"]
     if args.json:

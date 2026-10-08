@@ -404,7 +404,8 @@ root receives `board-specs.yaml`. An optional `<board>-expert/SKILL.md` makes th
 discoverable.
 
 `spec_check.py` checks the board files and cross-root references. The scaffold's verification phase
-produces `<root>/resources/<id>.verify.md` for each file, including overlays under their own roots.
+produces `<root>/resources/<name>.verify.md` for each file, named for the file (`<name>.spec.md`),
+including overlays under their own roots.
 Board mapping and peripheral authoring are separate products: fixing a board-console fact belongs in
 the board map; the Ethernet controller's programming sequence belongs in the driver spec.
 

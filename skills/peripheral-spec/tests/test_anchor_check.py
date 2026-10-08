@@ -1254,21 +1254,40 @@ class TestBoardSpecReviewFixes(CheckerCase):
         self.assertEqual(rc, 0, self.messages(report))
 
 
-FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"
+class TestRound2Fixes(CheckerCase):
+    """RG-T1 round-2 review findings: each test fails without its fix."""
 
+    board = TestBoardSpecReviewFixes.board
+    _write = TestBoardSpecReviewFixes._write
 
-class TestFetchSrcPins(CheckerCase):
-    """board-expert's fetch_src_pins.py: the CI path that resolves board-spec anchors."""
+    def test_a_value_at_the_start_of_a_long_item_is_still_checked(self):
+        body = ("- **Magic.** The magic word is 0xdeadbeef. " + "word " * 70 + "\n"
+                "  `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])\n")
+        rc, report = self.run_json(self.board(body), "--repo", f"fw={self.fw}")
+        self.assertTrue(any("none of the claim's hex literals (0xdeadbeef)" in m
+                            for m in self.messages(report, "warn")), self.messages(report))
 
-    def spec_for(self, url, ref):
-        return self._spec(f"""\
+    def test_line_zero_fails(self):
+        rc, report = self.run_json(self.board("- **Zero.** A fact. `[src]` ([src:fw: stub.c:0])\n"))
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("lines count from 1" in m for m in self.messages(report, "error")))
+
+    def test_drift_rewrite_touches_the_repos_entry_not_a_same_named_doc(self):
+        repo, rev = make_repo(self.tmp, "fw-drift2", {"stub.c": FW_C})
+        new_rev = commit(repo, {"stub.c": "/* moved */\n" + FW_C})
+        path = self.spec(f"""\
             ---
             overlays: widgetchip
             resources:
+              docs:
+                - name: fw
+                  title: Firmware manual
+                  url: https://example.invalid/fw.pdf
+                  ref: manual-v1
               repos:
                 - name: fw
-                  url: {url}
-                  ref: {ref}
+                  url: https://example.invalid/fw
+                  ref: {rev}
                   license: BSD-3-Clause
             ---
 
@@ -1276,24 +1295,50 @@ class TestFetchSrcPins(CheckerCase):
 
             - **Magic.** 0x5afe570b. `[src]` ([src:fw: stub.c:2 (STUB_MAGIC)])
             """)
+        rc, out = self.run_check(path, "--repo", f"fw={repo}", "--drift", "HEAD", "--rewrite")
+        text = pathlib.Path(path).read_text()
+        self.assertIn("ref: manual-v1", text, out)
+        self.assertIn(f"ref: {new_rev}", text, out)
+        self.assertNotIn(rev, text)
 
-    def _spec(self, body):
+
+FETCH = HERE.parent.parent / "board-expert" / "scripts" / "fetch_src_pins.py"
+
+
+class TestFetchSrcPins(CheckerCase):
+    """board-expert's fetch_src_pins.py: the CI path that resolves board-spec anchors.
+
+    Real specs may only name https:// URLs; these tests fetch local repositories through the
+    hidden --allow-local flag, which adds file:// and nothing else.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.aux, cls.aux_rev = make_repo(cls.tmp, "aux", {"aux.c": "int aux;\n"})
+        for repo in (cls.fw, cls.aux):
+            git(repo, "config", "uploadpack.allowFilter", "true")
+            git(repo, "config", "uploadpack.allowAnySHA1InWant", "true")
+
+    def spec_for(self, url, ref, anchors="[src:fw: stub.c:2 (STUB_MAGIC)]", extra=""):
         f = tempfile.NamedTemporaryFile("w", suffix=".spec.md", dir=self.tmp, delete=False)
-        f.write(textwrap.dedent(body))
+        f.write("---\noverlays: widgetchip\nresources:\n  repos:\n" + extra +
+                f"    - name: fw\n      url: {url}\n      ref: {ref}\n      license: BSD-3-Clause\n"
+                f"    - name: aux\n      url: file://{self.aux}\n      ref: {self.aux_rev}\n"
+                "      license: BSD-3-Clause\n---\n\n## Quick-facts\n\n"
+                f"- **Magic.** 0x5afe570b. `[src]` ({anchors})\n")
         f.close()
         return f.name
 
-    def fetch(self, spec, *args):
-        cache = tempfile.mkdtemp(dir=self.tmp)
+    def fetch(self, spec, *args, cache=None):
+        cache = cache or tempfile.mkdtemp(dir=self.tmp)
         proc = subprocess.run([sys.executable, str(FETCH), spec, cache, *args],
                               capture_output=True, text=True)
         return proc.returncode, proc.stdout.split(), proc.stderr
 
     def test_fetches_the_pin_and_anchors_resolve(self):
-        git(self.fw, "config", "uploadpack.allowFilter", "true")
-        git(self.fw, "config", "uploadpack.allowAnySHA1InWant", "true")
         spec = self.spec_for(f"file://{self.fw}", self.fw_rev)
-        rc, repos, err = self.fetch(spec)
+        rc, repos, err = self.fetch(spec, "--allow-local")
         self.assertEqual(rc, 0, err)
         self.assertEqual(len(repos), 1, err)
         self.assertTrue(repos[0].startswith("fw="))
@@ -1301,18 +1346,69 @@ class TestFetchSrcPins(CheckerCase):
         self.assertEqual(rc, 0, self.messages(report))
         self.assertNotIn("anchors not resolved", "\n".join(self.messages(report)))
 
-    def test_over_the_limit_is_skipped_with_a_note(self):
-        git(self.fw, "config", "uploadpack.allowFilter", "true")
-        git(self.fw, "config", "uploadpack.allowAnySHA1InWant", "true")
-        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev), "--limit-mb", "0")
-        self.assertEqual(rc, 0)
-        self.assertEqual(repos, [])
-        self.assertIn("over the 0 MB limit", err)
+    def test_only_https_without_the_test_flag(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev))
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("is not an https:// URL", err)
 
-    def test_branch_ref_is_not_fetched(self):
-        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "main"))
+    def test_an_option_shaped_url_never_runs(self):
+        probe = pathlib.Path(self.tmp) / "PWNED"
+        url = f"--upload-pack=touch {probe}"
+        rc, repos, err = self.fetch(self.spec_for(url, self.fw_rev), "--allow-local")
+        self.assertEqual(rc, 1)
+        self.assertFalse(probe.exists())
+        # And the git call itself: the URL sits after "--", so even past the scheme check, and
+        # with the local transport allowed (which would otherwise run the upload-pack), it is a
+        # repository name, never an option.
+        sys.path.insert(0, str(FETCH.parent))
+        import fetch_src_pins  # noqa: PLC0415
+        local = fetch_src_pins.GIT_SAFE + ["-c", "protocol.file.allow=always"]
+        kind, why = fetch_src_pins.fetch(url, str(self.fw), pathlib.Path(tempfile.mkdtemp(dir=self.tmp)),
+                                         1 << 30, 60, local)
+        self.assertEqual(kind, "fail", why)
+        self.assertFalse(probe.exists())
+
+    def test_over_the_limit_is_skipped_with_a_note(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev),
+                                    "--allow-local", "--limit-mb", "0")
         self.assertEqual((rc, repos), (0, []))
-        self.assertIn("no url or full commit ref", err)
+        self.assertIn("skipped (size: the fetched objects are 0 MB, over the 0 MB limit)", err)
+
+    def test_an_unknown_commit_fails(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "deadbeef" * 5), "--allow-local")
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("error:", err)
+        self.assertIn("git fetch failed", err)
+
+    def test_branch_ref_fails(self):
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", "main"), "--allow-local")
+        self.assertEqual((rc, repos), (1, []))
+        self.assertIn("is not a full commit id", err)
+
+    def test_discovery_uses_the_anchor_parser(self):
+        for anchors in ("[src: fw: stub.c:2]; [src:aux: aux.c:1]", "[src:fw: stub.c:2; aux: aux.c:1]"):
+            with self.subTest(anchors=anchors):
+                rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev, anchors),
+                                            "--allow-local")
+                self.assertEqual(rc, 0, err)
+                self.assertEqual(sorted(r.split("=")[0] for r in repos), ["aux", "fw"])
+
+    def test_a_malformed_unused_entry_does_not_crash(self):
+        extra = "    - name: [unexpected-list]\n      url: https://example.invalid/x\n"
+        rc, repos, err = self.fetch(self.spec_for(f"file://{self.fw}", self.fw_rev, extra=extra),
+                                    "--allow-local")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual([r.split("=")[0] for r in repos], ["fw"])
+
+    def test_a_second_spec_reuses_the_fetch(self):
+        cache = tempfile.mkdtemp(dir=self.tmp)
+        spec = self.spec_for(f"file://{self.fw}", self.fw_rev)
+        rc, first, _ = self.fetch(spec, "--allow-local", cache=cache)
+        marker = pathlib.Path(first[0].split("=", 1)[1]) / "reused"
+        marker.write_text("x")
+        rc, second, err = self.fetch(spec, "--allow-local", cache=cache)
+        self.assertEqual((rc, second), (0, first), err)
+        self.assertTrue(marker.exists())
 
 
 if __name__ == "__main__":

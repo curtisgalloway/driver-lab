@@ -166,7 +166,8 @@ verification procedure, and `SPEC-FORMAT.md` § Verification points here.
   entry the anchors name, each checkout able to reach the entry's `ref` (the checker reads each
   entry with a `ref` as a Source pin; no `Source pin:` line is needed;
   `board-expert/scripts/fetch_src_pins.py <spec> <dir>` makes such checkouts and prints the
-  `--repo` values). An unresolved path, line
+  `--repo` values; it fetches `https://` URLs only, and fails on a commit or repository that
+  does not exist). An unresolved path, line
   range or symbol is a `FAIL` for that claim, and so is a warning that an anchor's repository was
   not given, until it is given. (2) **The claim matches the anchored lines**: render them with
   `anchor_check.py --show` and judge, as for a peripheral spec, whether the lines support the

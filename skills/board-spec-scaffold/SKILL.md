@@ -42,7 +42,7 @@ chain bullet.
 | `<board>-expert/SKILL.md` stub | the user wants the board findable by name and callable by consumers | `templates/stub-SKILL.md` |
 | `<id>.spec.md` with `overlays:` | private resources for this hardware, vendor or bench-local | `templates/overlay.spec.md` |
 | `<vendor>-board-tools/SKILL.md` | a vendor has no generic skill yet for its internal tools | `templates/vendor-board-tools-SKILL.md` |
-| `<root>/resources/<id>.verify.md` | always, as the last step: the verification record | none; `spec-verifier` writes it |
+| `<root>/resources/<name>.verify.md` (`<name>`: the spec file's name without `.spec.md`, one per file, overlays included) | always, as the last step: the verification record | none; `spec-verifier` writes it |
 
 ## Conventions to honor
 
@@ -145,8 +145,8 @@ chain bullet.
    it cites and the record has zero `FAIL`. Run the verification phase as `spec-verifier` § Board
    specs defines it: spawn the verifier subagent with the spec and nothing of this session, two
    independent verifiers for the addressing model, entry state, and debug UART, and write
-   `<root>/resources/<id>.verify.md` (the record lives outside the spec so the reader never loads
-   it). Fix every `FAIL` the record proposes, then re-run until it is clean; the checker reports a
+   `<root>/resources/<name>.verify.md`, named for the spec file (the record lives outside the
+   spec so the reader never loads it). Fix every `FAIL` the record proposes, then re-run until it is clean; the checker reports a
    missing record as "unverified" and a record older than the spec as "stale". The same phase runs
    again on demand through `spec-verifier`.
 8. **Remind to sync.** If the user's machines link skills from a checkout with a sync tool, tell them

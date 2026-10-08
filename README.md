@@ -171,7 +171,7 @@ every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" s
     no hardware questions itself.
 - **`spec-verifier`**: re-derives a spec's claims from the sources it cites, in a fresh
   verifier context, and writes a verification record outside the spec
-  (`<root>/resources/<id>.verify.md` for a board spec; a `resources/` sibling or the
+  (`<root>/resources/<name>.verify.md` for a board spec, named for its file; a `resources/` sibling or the
   project's `docs/provenance/` for the others). One procedure, with a section per kind:
   - *Board specs*: every tagged fact against its device tree, databook, or document; two
     independent verifiers for the addressing model, entry state, and debug UART.

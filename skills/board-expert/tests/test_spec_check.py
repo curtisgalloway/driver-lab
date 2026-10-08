@@ -1440,5 +1440,88 @@ class OverlayMergeAndContext(unittest.TestCase):
             self.assertNotIn("resolves to nothing", "\n".join(messages(data)))
 
 
+
+class Round2Fixes(unittest.TestCase):
+    """RG-T1 round-2 review findings: each test fails without its fix."""
+
+    def check(self, marker, specs, *args, flags=("--no-pyyaml",)):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, marker, specs)
+            return run(root, *args, flags=list(flags))
+
+    def errors(self, data):
+        return [f["message"] for f in data["findings"] if f["level"] == "error"]
+
+    def test_repos_url_must_be_https(self):
+        for url in ("--upload-pack=touch /tmp/x", "file:///tmp/fw", "git@example.com:fw.git",
+                    "http://example.com/fw"):
+            with self.subTest(url=url):
+                spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+                    "https://example.com/stub", f'"{url}"')
+                code, data, _ = self.check(PERMISSIVE, {"c.spec.md": spec})
+                self.assertEqual(code, 1)
+                self.assertIn("must be an https:// URL", "\n".join(self.errors(data)))
+
+    def test_a_lone_anchor_split_before_its_colon_fails(self):
+        spec = SRC_CHIP.format(ref=COMMIT, lic="BSD-3-Clause", extra="").replace(
+            "`[src]`\n  ([src:stub: armstubs/armstub8.S:53-57 (OSC_FREQ)]; [src:stub: armstubs/armstub8.S:110-112])",
+            "`[DT]` (widget.dtsi, premise [src\n  :stub: armstubs/armstub8.S:53-57])")
+        self.assertNotIn("[src:", spec)
+        code, data, _ = self.check(PERMISSIVE, {"c.spec.md": spec})
+        self.assertEqual(code, 1)
+        self.assertIn("broken across lines", "\n".join(self.errors(data)))
+
+    def test_prose_ending_in_a_bracket_is_not_a_split(self):
+        extra = "\nOrientation text that ends in a bracket [\nand goes on.\n"
+        code, data, err = self.check(PERMISSIVE, {"c.spec.md": SRC_CHIP.format(
+            ref=COMMIT, lic="BSD-3-Clause", extra="") + extra})
+        self.assertEqual(code, 0, err + json.dumps(data))
+
+    def test_context_root_may_not_be_a_checked_root(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = write_root(tmp, "layer: public\n", {"bad.spec.md": "no frontmatter\n"})
+            for ctx in (root, pathlib.Path(str(root) + "/"), root / ".." / "root", root.parent):
+                with self.subTest(ctx=ctx):
+                    code, _, err = run(root, "--context-root", ctx, flags=["--no-pyyaml"])
+                    self.assertEqual(code, 2, err)
+                    self.assertIn("a context root must be a separate root", err)
+
+    def test_spec_file_null_is_malformed(self):
+        import tempfile, shutil
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "root"
+            (root / "resources").mkdir(parents=True)
+            shutil.copy(VERIFY / "board-specs.yaml", root)
+            shutil.copy(VERIFY / "vok.spec.md", root)
+            rec = (VERIFY / "resources" / "vok.verify.md").read_text().replace(
+                "spec_file: vok.spec.md", "spec_file: null")
+            (root / "resources" / "vok.verify.md").write_text(rec)
+            code, data, _ = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("verification record: spec_file None is not 'vok.spec.md'",
+                          "\n".join(messages(data)))
+
+    def test_a_record_owned_by_no_spec_file_warns(self):
+        import tempfile, shutil
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "root"
+            (root / "resources").mkdir(parents=True)
+            shutil.copy(VERIFY / "board-specs.yaml", root)
+            shutil.copy(VERIFY / "vok.spec.md", root)
+            shutil.copy(VERIFY / "resources" / "vok.verify.md", root / "resources")
+            shutil.copy(VERIFY / "resources" / "vfail.verify.md", root / "resources")
+            code, data, _ = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0)
+            orphans = [f for f in data["findings"] if "belongs to no spec file" in f["message"]]
+            self.assertEqual(len(orphans), 1, data["findings"])
+            self.assertTrue(orphans[0]["path"].endswith("vfail.verify.md"))
+
+
 if __name__ == "__main__":
     unittest.main()

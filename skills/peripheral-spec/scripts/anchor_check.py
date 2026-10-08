@@ -293,6 +293,9 @@ def parse_tag_body(kind: str, body: str, spec_line: int, claim: str, report: Rep
             continue
         l1 = int(m["l1"])
         l2 = int(m["l2"]) if m["l2"] else l1
+        if l1 < 1 or l2 < 1:
+            report.add("error", spec_line, f"line 0 in anchor {item!r}: lines count from 1", item)
+            continue
         if l2 < l1:
             report.add("error", spec_line, f"inverted line range in anchor {item!r}", item)
             l1, l2 = l2, l1
@@ -311,8 +314,7 @@ def paragraph_before(lines: list[str], idx: int, tail: str) -> str:
         parts.append(TAG_RE.sub("", prev).strip())
         j -= 1
     parts.reverse()
-    joined = " ".join(parts + [tail]).strip(" .,;")
-    return joined[-300:]
+    return " ".join(parts + [tail]).strip(" .,;")
 
 
 def split_front_matter(text: str) -> tuple[str | None, int]:
@@ -480,7 +482,7 @@ def parse_spec(text: str, report: Report, strict: bool, skip: int = 0,
     for a in anchors:
         text = " ".join(t for t in items.get(a.group, []) if t)
         if text:
-            a.claim = text[-300:]
+            a.claim = text  # whole: the hex check reads it; displays truncate
     report.anchors = len(anchors)
     return anchors
 
@@ -929,6 +931,27 @@ def read_docs_registry(front: str | None, meta: dict | None, report: Report) -> 
     return registry
 
 
+def repos_entry_line(front: str | None, name: str) -> int:
+    """The spec line of ``name: <name>`` inside ``resources.repos`` (front matter starts at
+    line 2), not a same-named entry under ``docs`` or ``series``; 1 when not found."""
+    lines = (front or "").split("\n")
+    pat = re.compile(r"^\s*(?:-\s*)?name:\s*['\"]?" + re.escape(name) + r"['\"]?\s*$")
+    repos_indent = None
+    for n, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if repos_indent is not None and indent <= repos_indent:
+            repos_indent = None
+        if re.match(r"^repos:\s*$", stripped):
+            repos_indent = indent
+            continue
+        if repos_indent is not None and pat.match(line):
+            return n + 2
+    return 1
+
+
 def read_repos_pins(front: str | None, meta: dict | None, report: Report) -> None:
     """A board spec's ``resources.repos`` entries are its Source pins.
 
@@ -952,7 +975,7 @@ def read_repos_pins(front: str | None, meta: dict | None, report: Report) -> Non
             continue
         ref = str(ref)
         lic = str(lic).strip() if lic is not None else None
-        line = entry_line(front, name, 1)
+        line = repos_entry_line(front, name)
         stated = next((p for p in same if p["name"] == name), None)
         if stated is not None:
             stated["repos_line"] = line

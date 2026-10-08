@@ -52,6 +52,13 @@ Each self-test also runs `widgetchip-src-overlay.spec.md` beside `widgetchip.spe
 `spec_check.py --require-license` and `anchor_check.py --root --require-license`: both pass in
 the GPL and permissive repositories and fail in the docs repository.
 
+With `RESOLVE_SRC=1` (as CI runs), each self-test also proves anchor resolution ran:
+`widgetchip-resolve-good-overlay.spec.md` and `widgetchip-resolve-bad-overlay.spec.md` pin the
+real `raspberrypi/tools` repository at one commit; `fetch_src_pins.py` fetches it and
+`anchor_check.py` must pass the good anchor and fail the bad one with `does not exist at`. They
+run under a temporary marker that accepts BSD-3-Clause, so they test resolution in every
+repository, the documents-only one included.
+
 The permissive repository's self-test also places `widgetchip.spec.md` under the docs
 repository's marker and the BSD overlay under its own, and checks that the overlay fails alone
 and passes with both roots.

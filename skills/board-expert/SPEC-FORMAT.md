@@ -401,10 +401,11 @@ resources:
 ```
 
 - **The pin is the repos entry.** Each anchor names a `resources.repos` entry of the same spec
-  file (`[src:<name>: path:L1-L2 (symbol)]`; both checkers reject the unnamed form `[src: path:L]`
-  and an empty `[src:]`). A board spec cites source only this way: `[impl:]`, `[tgt:]` and `[ref:]`
+  file (`[src:<name>: path:L1-L2 (symbol)]`; both checkers reject the unnamed form `[src: path:L]`,
+  an empty `[src:]` and line 0). A board spec cites source only this way: `[impl:]`, `[tgt:]` and `[ref:]`
   (the peripheral-spec and review forms) are errors in a board spec. That
-  entry is the pin: its `ref` is a full commit id (40 lowercase hex digits, or 64 for a SHA-256
+  entry is the pin: its `url` is an `https://` URL (the checker rejects any other scheme, for
+  every repos entry, because tools fetch it and accept no other transport), its `ref` is a full commit id (40 lowercase hex digits, or 64 for a SHA-256
   repository), never a branch or tag, and its `license:` is the SPDX expression of the files
   cited through it. An overlay's anchors name the overlay's own entries, since the license gate
   is the overlay's root's.
@@ -428,10 +429,14 @@ resources:
   <root> --require-license` applies the same gate, and with `--repo <name>=<checkout>` per entry it
   resolves every anchor at the pin: a missing path, a line range out of bounds or a symbol not
   found is an error; a claim whose hex literals appear in none of the lines its anchors cite is
-  a warning. A spec repository's CI runs it on every board spec carrying a `[src:]` anchor and
+  a warning. The claim is the whole bullet and the lines are those of every anchor in it, so a
+  value that a sibling anchor in the same bullet cites satisfies the check even when the anchor
+  next to it cites something else; the verifier, not this heuristic, judges each anchor. A spec repository's CI runs it on every board spec carrying a `[src:]` anchor and
   fetches the pinned repositories to resolve against
-  (`board-expert/scripts/fetch_src_pins.py`: one shallow, blob-less commit per entry, skipped
-  above a size limit); whether the lines support the claim is the verifier's (`spec-verifier`
+  (`board-expert/scripts/fetch_src_pins.py`: one shallow, blob-less commit per entry, `https://`
+  only; skipped with a note when the transfer times out or the fetched objects exceed the size
+  limit, and a failure for any other fetch error, such as a commit or repository that does not
+  exist); whether the lines support the claim is the verifier's (`spec-verifier`
   § Board specs). A `--drift <rev> --rewrite` run updates the entry's `ref:` to the new commit.
 - **Names and values, not excerpts.** A `[src]` fact may name symbols and constants from the
   code; it never reproduces the code. When the license asks that its notice travel with
@@ -667,6 +672,7 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
   `[tgt:]` or `[ref:]` anchor; or one broken across lines. The
   anchors are parsed by `peripheral-spec`'s `anchor_check.py`, so that skill must be installed
   beside this one when a spec uses them;
+- a `resources.repos` entry whose `url` is not an `https://` URL;
 - an unsubstituted template placeholder, `<...>` starting with a letter outside backtick code spans
   (autolinks and message ids excepted), in a spec's frontmatter or body or in a stub;
 - a stub whose `spec: <id>` does not resolve. `--stubs-from` finds every `*/SKILL.md` under a
@@ -677,7 +683,10 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
   with `--require-verified`, also a spec or overlay with no record or with a stale one.
 
 A root given with `--context-root` is read so that overlays and parts resolve, and its own
-findings are reported as warnings: it fails in its own repository's checks, not in another's.
+findings are reported as warnings: it fails in its own repository's checks, not in another's. A
+context root that is, contains, or sits inside a checked root is a usage error (exit 2), so a
+root can never downgrade its own findings. The spec repositories' CI runs the checker with
+`--require-verified`, so nothing merges unverified or with a stale record there.
 
 It warns, without failing, on a root marker without `license:` or `accepts:`, on two overlays for one id in one root, on a part whose `cache`
 differs from its board's, on a spec or overlay with no verification record (`unverified`), and on a record

@@ -530,3 +530,16 @@ Cost: one rewrite; no wrong claim was committed.
 Prevention: for a glob test, assert the glob matches the entry first (or glob the directories
 themselves), then assert the verdict.
 Fix belongs in: the project-plan skill (fail-first: read why each test failed, not only that it did).
+
+### 2026-10-08T12:09-07:00 — design chapter written after the session, a third time
+Chapter: [SF2-design](notebook/SF2-design.md)
+What happened: the spec format 2 design session ran as a subagent task without opening a
+notebook chapter; the chapter was written when the plan was, so its entries carry the time of
+writing and the decisions' times come from commits. Same pattern as the 2026-09-24 and
+2026-10-06 entries.
+Cost: no lost content (the decisions are in the design and its commits), but the chapter is a
+reconstruction.
+Prevention: a design brief from the orchestrator should name the notebook chapter to open, as
+milestone briefs do.
+Fix belongs in: the orchestrator's brief template (`orchestrate-milestones`) or the project-plan
+skill's design phase.

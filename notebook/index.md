@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-07T18:30-07:00
+Updated: 2026-10-07T19:30-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -21,11 +21,16 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [RG-regen — Spec regeneration](RG-regen.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: in progress; plan approved; RG1 (`bcm2711`) started. Review learnings roll up in
+[SPEC-REGEN-learnings](SPEC-REGEN-learnings.md).
+
 ### [LS-G — Whole-outcome acceptance](LS-G.md)
 Entries: 2026-10-07 through 2026-10-07
-Outcome: complete at the checkpoint; the design's five acceptance items met from fresh clones of
-all eight repositories, item 2's published-CI half waiting on nine scratch pull requests; stale
-status text in the plan, design and `peripheral-spec` corrected.
+Outcome: complete; the design's five acceptance items met from fresh clones of all eight
+repositories, item 2 also in published CI (nine scratch pull requests, every cell as expected);
+stale status text in the plan, design and `peripheral-spec` corrected.
 
 ### [LS12 — Consumers updated](LS12.md)
 Entries: 2026-10-07 through 2026-10-07

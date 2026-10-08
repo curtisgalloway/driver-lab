@@ -17,7 +17,7 @@ findings, not confirmations: a verdict with zero findings on a spec of this size
 suspicious — say what you did to earn it.
 
 1. MECHANICAL: run
-     python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> \
+     uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> \
          [--target-repo <target checkout>] [--root <root> --require-license] \
          [--docs-dir <pdf dir>] -o docs/spec-reports/<device>-check-<date>.txt
      python3 <this-skill>/scripts/inventory_check.py <path-to-spec> --repo <source checkout> \
@@ -31,7 +31,7 @@ suspicious — say what you did to earn it.
    the spec or is a finding. Every inventory omission is a finding unless the spec names it as
    out of scope with a reason.
 2. CLAIM-BY-CLAIM: run
-     python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> --show
+     uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> --show
    and read the review sheet. For EVERY anchored claim, decide whether the cited lines actually
    support it: the offset is the #define's value, the bit is the mask's bit, the step is what the
    statement does, the layout matches the struct, the ordering is the code's ordering. Cheaper

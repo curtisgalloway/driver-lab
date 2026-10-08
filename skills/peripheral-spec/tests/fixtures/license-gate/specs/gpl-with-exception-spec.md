@@ -1,7 +1,7 @@
-<!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
--->
+---
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+---
 
 # A GPL-2.0 WITH Linux-syscall-note source (synthetic license-gate fixture)
 

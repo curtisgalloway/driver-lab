@@ -127,9 +127,10 @@ evaluation; add other terms as the documents that use them are updated.
 | L01 review trio | The three reviews a candidate change gets: a reference-driver review, a requirements review against the blind list, and `review-swarm` on the diff. |
 | Root / root marker | A directory of specs / its `board-specs.yaml`, naming the root's layer; the board-expert reader merges several roots in layer order. From the license split on, the marker also declares the root's license and accepts list. |
 | Overlay | A spec in one root that adds to or corrects a spec of the same ID in another root, without copying it. |
-| Pin | A spec line naming a source tree and its commit (`Source pin: linux@abc123`); anchors cite lines at that commit. |
+| Pin | A spec line naming a source tree and its commit (`Source pin: linux@abc123`); anchors cite lines at that commit. In a board spec the pin is a `resources.repos` entry with a full commit `ref` and a `license:`, and no `Source pin:` line is needed. |
 | Accepts list | The SPDX license identifiers a spec root allows its anchored sources to carry (`accepts:` in the root marker). |
-| License gate | The check that fails a spec citing a source whose license the root's accepts list does not include: `anchor_check.py --root` for a peripheral spec's pins, `spec_check.py --require-license` for a board spec's `resources.repos` licenses. |
+| License gate | The check that fails a spec citing a source whose license the root's accepts list does not include: `anchor_check.py --root` for a peripheral spec's pins, `spec_check.py --require-license` for a board spec's `resources.repos` licenses, and `spec_check.py` always for a board spec's `[src:]` anchors. |
+| `[src]` fact | A board-spec fact read from source code at a pinned commit, cited with `[src:<repo>: path:L]` anchors into a `resources.repos` entry whose license the root accepts; a fact about the code, not a hardware requirement, and needs no hardware TODO (`SPEC-FORMAT.md`, "Facts read from source"; added 2026-10-07, RG-T1). |
 | Placement rule | A spec lives in the most restrictive repository among the sources it anchors to, and never cites a source more restrictive than that repository. |
 | Spec repositories | `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`: the three public homes for specs, by license. |
 | Open side | driver-lab outside its frozen archive since the license split: the method for specs that cite their sources and are published where their licenses fit. |

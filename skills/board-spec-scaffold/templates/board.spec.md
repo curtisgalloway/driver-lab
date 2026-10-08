@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: <year> contributors
+# SPDX-License-Identifier: Apache-2.0
 kind: board
 id: <id>
 name: <Board display name>
@@ -41,11 +43,6 @@ resources:
       cite: true
   tools: []
 ---
-
-<!--
-SPDX-FileCopyrightText: <year> contributors
-SPDX-License-Identifier: Apache-2.0
--->
 
 # <Board display name>
 

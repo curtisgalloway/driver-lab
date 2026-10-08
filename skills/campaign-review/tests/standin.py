@@ -163,9 +163,9 @@ class Standin:
         )
         self.spec.write_text(
             "---\n"
+            + HEADER  # a spec's SPDX header: YAML comments in its frontmatter (SPEC-FORMAT)
             + yaml.safe_dump(meta, sort_keys=False)
             + "---\n"
-            + MARKDOWN_HEADER
             + "\n# Invented event counter\n\n## Orientation\n"
             "A fictional component for testing the review method only.\n"
             "\n## Quick-facts\n"

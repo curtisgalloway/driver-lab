@@ -201,7 +201,7 @@ comfortably beside the review.
 
 1. **Mechanical check** (every review, before any human reads it):
    ```
-   python3 <peripheral-spec>/scripts/anchor_check.py <review> \
+   uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py <review> \
        --impl-repo <impl checkout> --ref-repo <reference checkout> \
        -o docs/review-reports/<driver>-check-<date>.txt
    ```
@@ -234,7 +234,7 @@ comfortably beside the review.
 A review drives fixes, and the fixes invalidate its `[impl:]` anchors. When implementation fixes
 land: mark each addressed finding with its resolution and the fixing commit, then re-pin —
 ```
-python3 <peripheral-spec>/scripts/anchor_check.py docs/<driver>-review.md \
+uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py docs/<driver>-review.md \
     --impl-repo <impl checkout> --drift <new-rev> [--rewrite]
 ```
 — exactly as the parent skill re-pins a spec: moved anchors are rewritten, changed ones gain

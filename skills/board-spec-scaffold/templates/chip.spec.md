@@ -1,4 +1,6 @@
 ---
+# SPDX-FileCopyrightText: <year> contributors
+# SPDX-License-Identifier: Apache-2.0
 kind: chip
 id: <chip-id>
 name: <Chip vendor and part name>
@@ -23,11 +25,6 @@ resources:
       note: "<which section covers the host-visible address mapping>"
   tools: []
 ---
-
-<!--
-SPDX-FileCopyrightText: <year> contributors
-SPDX-License-Identifier: Apache-2.0
--->
 
 # <Chip display name>
 

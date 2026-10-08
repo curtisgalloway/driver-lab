@@ -157,6 +157,15 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   that rests on a call site cites the call site, not (only) the callee. A negative claim ("never
   written", "no handler anywhere") cannot be anchored to presence — cite the file's extent and
   say it was established by search, so the verifier knows to repeat the search.
+- **Code is not citation.** The checker reads the spec through one CommonMark parse
+  (`scripts/mdtokens.py`, which board-expert's `spec_check.py` shares; run both with
+  `uv run --with markdown-it-py==4.2.0`): an anchor in a fenced or indented code block, or inside
+  a longer code span, is prose and is not checked; a code span holding exactly one anchor is that
+  anchor. Anchor kinds are lowercase (`[SRC:` is an error). The spec follows board-expert's
+  spec Markdown profile (`SPEC-FORMAT.md`, "The spec Markdown profile"): no HTML, block quotes,
+  images, character references or link reference definitions, and a fence must close. Its
+  SPDX header is YAML comment lines in a front matter block (`---` / `# SPDX-...` / `---`). A
+  wrapped list item is one claim; a nested item is its own.
 - **Block anchors**: a line containing *only* tags anchors the whole table or list that follows
   it (blank lines between are fine; a sentence between is not — it becomes the tag's claim and the
   table goes unanchored). Use it for a register table whose rows all come from one header region;
@@ -175,7 +184,10 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   describe the files you cite through that pin, since it is what the license gate reads. A
   published spec states one on every pin: in a root that declares `accepts:`, a pin with no
   license fails the gate. A line that starts `Source pin:` but does not have this shape is a
-  warning, and an error under `--root`.
+  warning, and an error under `--root`. A *board* spec (`board-expert/SPEC-FORMAT.md`, "Facts
+  read from source") states its pins in front matter instead: the checker reads each
+  `resources.repos` entry with a `name` and a `ref` as a Source pin, with the entry's
+  `license:`, and a `Source pin:` line of the same name must agree with it.
 - **Documents** may be listed in YAML front matter (the `---` block at the very top of the spec)
   and cited by name:
   ```
@@ -290,14 +302,14 @@ driver fits comfortably beside the spec.
 
 1. **Mechanical check** (orchestrator, every spec, before any human reads it):
    ```
-   python3 <this-skill>/scripts/anchor_check.py <spec> --repo <source checkout> \
+   uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <spec> --repo <source checkout> \
        [--target-repo <target checkout>] -o docs/spec-reports/<device>-check-<date>.txt
    ```
    With several pins, give one `--repo <name>=<checkout>` per Source pin (and
    `--target-repo <name>=<checkout>` per Target pin). For a spec headed for a spec repository, add
    the license gate and the document hashes:
    ```
-   python3 <this-skill>/scripts/anchor_check.py <spec> --repo linux=<checkout> \
+   uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <spec> --repo linux=<checkout> \
        --repo fw=<checkout> --root <spec repo>/specs --require-license [--docs-dir <pdf dir>]
    ```
    `--root <dir>` reads `<dir>/board-specs.yaml` and fails every `[src:]`/`[tgt:]` anchor whose
@@ -336,7 +348,7 @@ driver fits comfortably beside the spec.
 2. **Independent verification** (a fresh subagent, `templates/verifier-prompt.md`): it runs the
    checker itself, then reads the review sheet —
    ```
-   python3 <this-skill>/scripts/anchor_check.py <spec> --repo <source checkout> --show
+   uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <spec> --repo <source checkout> --show
    ```
    — which prints each claim followed by the cited source lines, and judges **whether the cited
    lines actually support the claim**: the offset matches the `#define`, the step is what the
@@ -374,7 +386,7 @@ The spec is a **derived artifact**; the source is the truth. Three consequences:
   Working around a wrong spec leaves the next reader with two wrong documents.
 - **Moving the pin is a checked operation.** Before re-pinning to a newer commit:
   ```
-  python3 <this-skill>/scripts/anchor_check.py docs/<device>-spec.md --repo <src> --drift <new-rev>
+  uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py docs/<device>-spec.md --repo <src> --drift <new-rev>
   ```
   With several Source pins, `--drift-pin <name>` says which pin is moving (required when several
   `--repo` checkouts are given). It reports

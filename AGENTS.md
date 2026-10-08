@@ -40,14 +40,14 @@ list:
 python3 utilities/check-no-private-paths.py
 python3 utilities/check-open-side.py
 python3 -m unittest discover -s utilities/tests
-python3 -m unittest discover -s skills/board-expert/tests
-python3 -m unittest discover -s skills/peripheral-spec/tests
-python3 -m unittest discover -s skills/hardware-investigator/tests
-python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
+uv run --with markdown-it-py==4.2.0 python3 -m unittest discover -s skills/board-expert/tests
+uv run --with markdown-it-py==4.2.0 python3 -m unittest discover -s skills/peripheral-spec/tests
+uv run --with markdown-it-py==4.2.0 python3 -m unittest discover -s skills/hardware-investigator/tests
+uv run --with markdown-it-py==4.2.0 python3 skills/board-expert/scripts/spec_check.py skills/board-expert/specs --stubs-from skills
 uv run --with pyyaml python3 -m unittest discover -s evals/enc28j60/tests
 uv run --with pyyaml python3 evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
-uv run --with pyyaml python3 -m unittest discover -s skills/campaign-review/tests
+uv run --with pyyaml --with markdown-it-py==4.2.0 python3 -m unittest discover -s skills/campaign-review/tests
 uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals/e1000
 ```
 

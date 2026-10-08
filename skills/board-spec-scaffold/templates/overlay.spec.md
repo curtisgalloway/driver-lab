@@ -1,4 +1,5 @@
 ---
+# <license header per the vendor repo's convention, as YAML comments: # SPDX-...>
 overlays: <id>
 resources:
   repos:
@@ -21,8 +22,6 @@ resources:
       via: skill:<vendor>-board-tools
       note: <serial, power, netboot, screen available?>
 ---
-
-<!-- license header per the vendor repo's convention -->
 
 # <Hardware display name> — <vendor> overlay
 

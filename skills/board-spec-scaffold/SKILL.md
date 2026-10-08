@@ -42,7 +42,7 @@ chain bullet.
 | `<board>-expert/SKILL.md` stub | the user wants the board findable by name and callable by consumers | `templates/stub-SKILL.md` |
 | `<id>.spec.md` with `overlays:` | private resources for this hardware, vendor or bench-local | `templates/overlay.spec.md` |
 | `<vendor>-board-tools/SKILL.md` | a vendor has no generic skill yet for its internal tools | `templates/vendor-board-tools-SKILL.md` |
-| `<root>/resources/<id>.verify.md` | always, as the last step: the verification record | none; `spec-verifier` writes it |
+| `<root>/resources/<name>.verify.md` (`<name>`: the spec file's name without `.spec.md`, one per file, overlays included) | always, as the last step: the verification record | none; `spec-verifier` writes it |
 
 ## Conventions to honor
 
@@ -52,11 +52,13 @@ chain bullet.
 - **Reuse before writing.** If an SoC or chip spec already resolves in any root the user can see,
   reference it in `parts` rather than writing another. Two boards on the same SoC share one SoC spec.
 - **Agent-neutral prose.** Refer to "the agent", not to any one product's name.
-- **License header: match the target repo's convention.** In this repo every spec, stub, and
-  SKILL.md carries exactly `SPDX-FileCopyrightText: 2026 contributors` and
-  `SPDX-License-Identifier: Apache-2.0` in an HTML comment immediately *after* the frontmatter,
-  never above it — a comment before the frontmatter stops it parsing. A source tree carries whatever
-  header its neighbors do.
+- **License header: match the target repo's convention.** In this repo every spec carries
+  exactly `# SPDX-FileCopyrightText: 2026 contributors` and
+  `# SPDX-License-Identifier: Apache-2.0` as YAML comment lines *inside* its frontmatter, right
+  after the opening `---`: the spec Markdown profile allows no HTML in a spec's body (SPEC-FORMAT,
+  "The spec Markdown profile"). A stub or other SKILL.md carries the same two lines in an HTML
+  comment immediately *after* its frontmatter, never above it — a comment before the frontmatter
+  stops it parsing. A source tree carries whatever header its neighbors do.
 - **Cache convention.** A board spec names `cache: <board-id>-resources` (`rpi5-resources`); the
   expert clones under `~/src/<board-id>-resources/`. SoC, chip, and IP parts inherit the board's
   cache unless they name their own; a generic IP spec names `<ip-id>-resources`.
@@ -117,7 +119,9 @@ chain bullet.
    `TODO (verify on hardware)` rather than guessing. Put the tag clause at the end of every bullet
    (`SPEC-FORMAT.md` § Tag rules); a `[doc]` names its page; `[press]`, `[inference]` and
    `[emulated]` carry the TODO, and an `[emulated]` observation names its
-   model version and runs and never stands alone. Sibling models go in `variants:` or their
+   model version and runs and never stands alone; a fact read from code is `[src]` with its
+   `[src:<repo>: path:L]` anchors into a `repos` entry pinned to a full commit, when the root
+   accepts that entry's license (§ Facts read from source). Sibling models go in `variants:` or their
    own `variant_of` spec (`QUESTIONS.md` item 6).
 4. **Write the root marker, stub, overlay, and vendor skill** if wanted, from their templates.
    Placeholders only in the vendor templates: the real names belong in the vendor's private repo.
@@ -133,7 +137,7 @@ chain bullet.
    whose description says "stub over", so they need no edit. No skill description may enumerate
    the stubs by name (`board-expert`'s says "when no board-specific stub matches"), so adding a stub
    never stales another skill. A spec in a source tree follows that tree's review process.
-6. **Check.** Run `python3 <board-expert>/scripts/spec_check.py <root>... --stubs-from <skills dir>`
+6. **Check.** Run `uv run --with markdown-it-py==4.2.0 python3 <board-expert>/scripts/spec_check.py <root>... --stubs-from <skills dir>`
    over every root the new spec references (a vendor root needs the public root beside it, or its
    overlay targets do not resolve). It enforces `SPEC-FORMAT.md` § *What the checker enforces*:
    required keys per kind, every `parts`, `instances[].ip`, `variant_of`, and `overlays` reference
@@ -143,8 +147,8 @@ chain bullet.
    it cites and the record has zero `FAIL`. Run the verification phase as `spec-verifier` § Board
    specs defines it: spawn the verifier subagent with the spec and nothing of this session, two
    independent verifiers for the addressing model, entry state, and debug UART, and write
-   `<root>/resources/<id>.verify.md` (the record lives outside the spec so the reader never loads
-   it). Fix every `FAIL` the record proposes, then re-run until it is clean; the checker reports a
+   `<root>/resources/<name>.verify.md`, named for the spec file (the record lives outside the
+   spec so the reader never loads it). Fix every `FAIL` the record proposes, then re-run until it is clean; the checker reports a
    missing record as "unverified" and a record older than the spec as "stale". The same phase runs
    again on demand through `spec-verifier`.
 8. **Remind to sync.** If the user's machines link skills from a checkout with a sync tool, tell them

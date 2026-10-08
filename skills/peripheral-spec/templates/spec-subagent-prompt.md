@@ -63,7 +63,7 @@ covers the block, not just the driver's footprint. Use `<board-expert>` for boar
 cached references.
 
 SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <pin>=<source checkout> \
+    uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <pin>=<source checkout> \
         [--repo <pin>=<checkout> ...] [--target-repo <target checkout>] \
         [--root <the spec repository's specs/ root> --require-license]
     python3 <this-skill>/scripts/inventory_check.py <scratch path> --repo <pin>=<source checkout> \

@@ -119,6 +119,11 @@ class Root:
     extension: dict | None = None
     marker: object = None  # the marker's Loaded, for positions
     files: list = dataclasses.field(default_factory=list)
+    # What could not be read: reasons the root's set of specs is unknown (an invalid marker, a
+    # directory that could not be listed), and files that failed to load or validate with the
+    # spec ids they may declare (None: unknown). References into either fail closed.
+    incomplete: list = dataclasses.field(default_factory=list)
+    failed: list = dataclasses.field(default_factory=list)
 
     @property
     def label(self) -> str:
@@ -132,6 +137,7 @@ class SpecFile:
     loaded: object
     data: dict
     records: dict = dataclasses.field(default_factory=dict)  # fact id -> Record
+    duplicated: set = dataclasses.field(default_factory=set)  # fact ids declared twice here
     assumptions: dict = dataclasses.field(default_factory=dict)  # id -> path
     documents: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
     repos: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
@@ -228,17 +234,20 @@ class Checker:
 
     # --- findings ----------------------------------------------------------------------------
 
-    def add(self, where, path: tuple, message: str, *, level="error", key=False):
+    def add(self, where, path: tuple, message: str, *, level="error", key=False,
+            downgrade=True):
         """A finding at a value (or its key) of a spec file, or at line 1 of a plain path.
 
-        where is a SpecFile, or (Path, Root, Loaded-or-None)."""
+        where is a SpecFile, or (Path, Root, Loaded-or-None). A finding in a context root's own
+        file is a warning, unless downgrade is False: a condition of the run's inputs that
+        could change what a checked root's references resolve to stays an error."""
         if isinstance(where, SpecFile):
             file, root, loaded = where.path, where.root, where.loaded
         else:
             file, root, loaded = where
         mark = loaded.mark(path, key=key) if loaded is not None else None
         line, column = (mark.line, mark.column) if mark else (1, 1)
-        if root is not None and root.context:
+        if root is not None and root.context and downgrade:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
 
@@ -291,6 +300,10 @@ class Checker:
         ok, _, loaded = self.api.validate_file(marker, schemas, None, raw)
         self._schema_findings(raw, root)
         if not ok:
+            data = loaded.data if loaded is not None else None
+            name = data.get("name") if isinstance(data, dict) else None
+            root.name = name if isinstance(name, str) else None  # still blocks its name
+            root.incomplete.append("its marker is invalid, so its specs were not read")
             return
         data = loaded.data
         root.marker = loaded
@@ -323,8 +336,8 @@ class Checker:
         """The spec files below root, found without following links. A link is a finding in a
         checked root and a usage error in a context root; so is a nested marker, and a file
         whose name says spec but which discovery would pass over."""
-        found = []
-        for top, dirs, names in os.walk(root.given, followlinks=False):
+        found, failures = [], []
+        for top, dirs, names in os.walk(root.given, followlinks=False, onerror=failures.append):
             dirs.sort()
             for name in sorted(dirs) + sorted(names):
                 path = Path(top) / name
@@ -351,6 +364,13 @@ class Checker:
                             if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml)")
                     self.add((path, root, None), (), f"not read as a spec: {want}")
             dirs[:] = [d for d in dirs if not (Path(top) / d).is_symlink()]
+        for exc in failures:
+            where = Path(getattr(exc, "filename", None) or root.given)
+            self.add((where, root, None), (), f"cannot list this directory "
+                                              f"({exc.strerror or exc}); the root's specs are "
+                                              f"not all known, so the check cannot pass",
+                     downgrade=False)
+            root.incomplete.append(f"{where} could not be listed")
         return found
 
     def load_spec(self, root: Root, path: Path, schemas):
@@ -358,6 +378,12 @@ class Checker:
         ok, _, loaded = self.api.validate_file(path, schemas, root.extension, raw)
         self._schema_findings(raw, root)
         if not ok:
+            data = loaded.data if loaded is not None else None
+            ids = None
+            if isinstance(data, dict):
+                ids = {v for v in (data.get("id"), data.get("overlays")) if isinstance(v, str)}
+                ids = ids or None
+            root.failed.append((path, ids))
             return
         f = SpecFile(path, root, loaded, loaded.data)  # kind facts fails validation by its name
         root.files.append(f)
@@ -371,6 +397,7 @@ class Checker:
             for i, item in enumerate(f.data.get(key, [])):
                 rid = item["id"]
                 if rid in f.records:
+                    f.duplicated.add(rid)
                     other = f.records[rid]
                     self.add(f, (key, i, "id"), f"fact id {rid!r} is used twice in this file "
                                                 f"(first at {_where(other.path)}); ids are the "
@@ -565,63 +592,81 @@ class Checker:
             self.add(f, path, f"{what} names repos entry {name!r}: {reason}")
         return True
 
-    def reach(self, rec: Record) -> dict:
-        """Every (file, repos name) a record's citations reach, its own and those of every fact
-        it references, transitively: {(file, name): the record that cites it}."""
+    def reach(self, rec: Record):
+        """What a record's citations reach, its own and those of every fact it references,
+        transitively: ({(file, repos name): the record that cites it}, [unestablished hops]).
+        An unestablished hop is (record, reference, why) for a reference that resolves to
+        nothing, to more than one fact, or into what could not be read: the gate fails closed
+        on it, since what lies beyond it is unknown."""
         if rec in self._reach:
             return self._reach[rec]
-        out, seen, queue = {}, {rec}, deque([rec])
+        out, problems, seen, queue = {}, [], {rec}, deque([rec])
         while queue:
             cur = queue.popleft()
             for anchor, _ in anchors(cur.data, cur.path):
                 out.setdefault((cur.file, anchor["repo"]), cur)
             for _, ref, _ in references(cur.data, cur.path):
-                target, _ = self.resolve(cur.file, ref)
-                if target is not None and target not in seen:
+                target, why = self.resolve(cur.file, ref)
+                if target is None:
+                    problems.append((cur, ref, why))
+                elif target not in seen:
                     seen.add(target)
                     queue.append(target)
-        self._reach[rec] = out
-        return out
+        self._reach[rec] = (out, problems)
+        return self._reach[rec]
 
     # --- references --------------------------------------------------------------------------
 
     def resolve(self, f: SpecFile, ref: str):
-        """(Record, None) or (None, why it resolves to nothing)."""
+        """(Record, None), or (None, why not) when the reference resolves to nothing, to more
+        than one record, or into a root or file that could not be read in full."""
         key = (f, ref)
-        if key in self._resolved:
-            return self._resolved[key]
+        if key not in self._resolved:
+            self._resolved[key] = self._resolve(f, ref)
+        return self._resolved[key]
+
+    def _resolve(self, f: SpecFile, ref: str):
         m = REF.fullmatch(ref)
         spec_id, root_name, fact_id = m.group(1), m.group(2), m.group(3)
-        result = (None, None)
         if spec_id is None:
+            if fact_id in f.duplicated:
+                return None, f"is ambiguous: this file declares fact {fact_id!r} twice"
             rec = f.records.get(fact_id)
-            result = (rec, None) if rec else (None, f"no fact {fact_id!r} in this file")
-        else:
-            if root_name is None:
-                roots = [f.root]
-            else:
-                roots = [r for r in self.roots if r.name == root_name]
-            if not roots:
-                result = (None, f"no root named {root_name!r} among the roots read (a renamed "
-                                f"root leaves every reference to it dangling)")
-            else:
-                root = roots[0]
-                owners = [g for g in root.files if g.spec_id == spec_id]
-                rec = next((g.records[fact_id] for g in owners if fact_id in g.records), None)
-                if rec is not None:
-                    result = (rec, None)
-                else:
-                    where = (f"spec {spec_id!r} has no fact {fact_id!r} in root {root.label}"
-                             if owners else f"root {root.label} holds no spec {spec_id!r}")
-                    elsewhere = [g for g in self.files if g.root is not root
-                                 and g.spec_id == spec_id and fact_id in g.records]
-                    if elsewhere and root_name is None:
-                        other = elsewhere[0].root.label
-                        where += (f"; it is in root {other}, and a reference into another "
-                                  f"root names it: {spec_id}@{other}#{fact_id}")
-                    result = (None, where)
-        self._resolved[key] = result
-        return result
+            return (rec, None) if rec else (None, f"resolves to nothing: no fact {fact_id!r} "
+                                                  f"in this file")
+        roots = [f.root] if root_name is None else [r for r in self.roots if r.name == root_name]
+        if not roots:
+            return None, (f"resolves to nothing: no root named {root_name!r} among the roots "
+                          f"read (a renamed root leaves every reference to it dangling)")
+        if len(roots) > 1:
+            return None, (f"is ambiguous: {len(roots)} roots read are named {root_name!r} "
+                          f"({', '.join(str(r.given) for r in roots)})")
+        root = roots[0]
+        if root.incomplete:
+            return None, (f"cannot be resolved: root {root.label} was not read in full "
+                          f"({'; '.join(root.incomplete)})")
+        blocked = [p for p, ids in root.failed if ids is None or spec_id in ids]
+        if blocked:
+            return None, (f"cannot be resolved: {blocked[0]} failed to load or validate and "
+                          f"may declare spec {spec_id!r} in root {root.label}")
+        owners = [g for g in root.files if g.spec_id == spec_id]
+        found = [g.records[fact_id] for g in owners if fact_id in g.records]
+        if len(found) > 1 or any(fact_id in g.duplicated for g in owners):
+            places = ", ".join(_rel(r.file) for r in found)
+            return None, (f"is ambiguous: spec {spec_id!r} declares fact {fact_id!r} more "
+                          f"than once in root {root.label} ({places})")
+        if found:
+            return found[0], None
+        where = (f"resolves to nothing: spec {spec_id!r} has no fact {fact_id!r} in root "
+                 f"{root.label}" if owners else
+                 f"resolves to nothing: root {root.label} holds no spec {spec_id!r}")
+        elsewhere = [g for g in self.files if g.root is not root
+                     and g.spec_id == spec_id and fact_id in g.records]
+        if elsewhere and root_name is None:
+            other = elsewhere[0].root.label
+            where += (f"; it is in root {other}, and a reference into another root names "
+                      f"it: {spec_id}@{other}#{fact_id}")
+        return None, where
 
     def check_references(self):
         premise_edges: dict = {}
@@ -633,7 +678,7 @@ class Checker:
                 for kind, ref, path in references(rec.data, rec.path):
                     target, why = self.resolve(f, ref)
                     if target is None:
-                        self.add(f, path, f"{what}: reference {ref!r} resolves to nothing: {why}")
+                        self.add(f, path, f"{what}: reference {ref!r} {why}")
                         continue
                     if kind != "observation":
                         relation = None
@@ -656,13 +701,16 @@ class Checker:
         self.check_cycles(premise_edges)
 
     def gate_reference(self, f: SpecFile, what: str, ref: str, path: tuple, target: Record):
+        """The transitive gate for one reference: everything its target reaches must be
+        accepted by the citing file's root, and every hop on the way must be established."""
+        reached, unknown = self.reach(target)
         problems = []
-        for (g, name), via in sorted(self.reach(target).items(),
+        for (g, name), via in sorted(reached.items(),
                                      key=lambda item: (str(item[0][0].path), item[0][1])):
             through = "" if via is target else f" through {via.full}"
             if name not in g.repos:
-                problems.append(f"an anchor of {via.full} names repos entry {name!r}, which "
-                                f"its file does not list")
+                problems.append(f"an anchor of {via.full} naming repos entry {name!r}, which "
+                                f"its file does not list (its license is unknown)")
                 continue
             reason = self.gate(f.root, g.repos[name][0]["license"])
             if reason:
@@ -670,6 +718,10 @@ class Checker:
         for problem in problems:
             self.add(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
                               f"D13)")
+        for via, hop, why in unknown:
+            self.add(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
+                              f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
+                              f"fails closed")
 
     def check_cycles(self, edges: dict):
         """Inference premises form a directed acyclic graph: report every fact on a cycle."""
@@ -738,7 +790,8 @@ class Checker:
                     others = ", ".join(str(r.given) for r in owners if r is not root)
                     self.add((root.given / MARKER, root, root.marker), ("name",),
                              f"root name {name!r} is also the name of {others}; roots read "
-                             f"together have distinct names (references name them)")
+                             f"together have distinct names (references name them)",
+                             downgrade=False)
 
     def check_composition(self):
         base: dict = {}

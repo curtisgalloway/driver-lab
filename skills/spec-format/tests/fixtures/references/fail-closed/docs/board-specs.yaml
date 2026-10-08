@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Checked: documents only.
+format: 2
+layer: public
+name: fc-docs
+license: CC-BY-4.0
+accepts: []

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# One root declaring gfact twice: a base citing a document, an overlay citing GPL source.
+format: 2
+layer: public
+name: fc-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only]

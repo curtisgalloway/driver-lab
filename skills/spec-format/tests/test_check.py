@@ -342,8 +342,102 @@ class References(TempRoots):
                                       "x", "widgetchip@b#reset"))})
         code, result = check(good, "--context-root", bad)
         self.assertEqual(code, 1)
-        self.assertIn("no root named 'b'", errors(result, "other.spec.yaml")[0]["message"])
+        self.assertIn("reference 'widgetchip@b#reset' cannot be resolved: root b was not "
+                      "read in full (its marker is invalid", errors(result, "other.spec.yaml")[0]["message"])
         self.assertTrue(warnings(result))  # the context root's marker finding
+
+
+FAIL = REFS / "fail-closed"
+
+
+class FailClosed(unittest.TestCase):
+    """The gate fails closed: a hop it cannot establish is an error on the checked citing file
+    (fixtures/references/fail-closed: docs -> context perm -> fc-gpl's gfact)."""
+
+    def chain(self, *context):
+        args = [FAIL / "docs", "--context-root", FAIL / "perm"]
+        for c in context:
+            args += ["--context-root", FAIL / c]
+        return check(*args)
+
+    def assert_closed(self, result, text):
+        [f] = errors(result, "docs/dchip.spec.yaml")
+        self.assertEqual((f["line"], f["column"]), (20, 19))
+        self.assertIn("fact 'a': reference 'pchip@fc-perm#p' reaches pchip@fc-perm#p, whose "
+                      "reference 'gchip@fc-gpl#gfact'", f["message"])
+        self.assertIn(text, f["message"])
+        self.assertIn("the license gate fails closed", f["message"])
+
+    def test_the_gpl_chain_fails_the_gate(self):
+        code, result = self.chain("gpl")
+        self.assertEqual(code, 1)
+        self.assertIn("GPL-2.0-only is not accepted by root fc-docs", errors(result)[0]["message"])
+
+    def test_target_root_not_given(self):
+        code, result = self.chain()
+        self.assertEqual(code, 1)
+        self.assertEqual(len(errors(result)), 1)  # only the checked file's: perm's is a warning
+        self.assert_closed(result, "resolves to nothing: no root named 'fc-gpl'")
+
+    def test_target_spec_fails_the_schema(self):
+        code, result = self.chain("gpl-schema-failed")
+        self.assertEqual(code, 1)
+        self.assert_closed(result, "failed to load or validate and may declare spec 'gchip'")
+
+    def test_target_marker_invalid(self):
+        code, result = self.chain("gpl-bad-marker")
+        self.assertEqual(code, 1)
+        self.assert_closed(result, "root fc-gpl was not read in full (its marker is invalid")
+
+    def test_duplicate_fact_id_in_the_target_root(self):
+        code, result = self.chain("gpl-dup-id")
+        self.assertEqual(code, 1)
+        self.assert_closed(result, "is ambiguous: spec 'gchip' declares fact 'gfact' more than once")
+
+    def test_two_roots_with_one_name_either_order(self):
+        for order in (("gpl-clean-twin", "gpl"), ("gpl", "gpl-clean-twin")):
+            code, result = self.chain(*order)
+            self.assertEqual(code, 1, order)
+            closed = [f for f in errors(result) if f["path"].endswith("docs/dchip.spec.yaml")]
+            self.assertEqual(len(closed), 1, order)
+            self.assertIn("is ambiguous: 2 roots read are named 'fc-gpl'", closed[0]["message"])
+
+    def test_the_clean_twin_alone_passes(self):
+        code, result = self.chain("gpl-clean-twin")
+        self.assertEqual((code, errors(result)), (0, []))
+
+    def test_direct_reference_into_an_unreadable_target(self):
+        # the first hop itself: reported as the reference's own failure, an error
+        code, result = check(FAIL / "perm", "--context-root", FAIL / "gpl-schema-failed")
+        self.assertEqual(code, 1)
+        self.assertIn("reference 'gchip@fc-gpl#gfact' cannot be resolved",
+                      errors(result)[0]["message"])
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root reads any directory")
+    def test_a_directory_that_cannot_be_listed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for ctx in (False, True):
+                gpl = pathlib.Path(tmp) / f"gpl{ctx}"
+                shutil.copytree(FAIL / "gpl", gpl)
+                hidden = gpl / "sub"
+                hidden.mkdir()
+                shutil.move(gpl / "gchip.spec.yaml", hidden / "gchip.spec.yaml")
+                hidden.chmod(0)
+                try:
+                    if ctx:
+                        code, result = self.chain_with(gpl)
+                    else:
+                        code, result = check(gpl)
+                finally:
+                    hidden.chmod(0o755)
+                self.assertEqual(code, 1, ctx)
+                listing = [f for f in errors(result) if "cannot list this directory" in f["message"]]
+                self.assertEqual(len(listing), 1, (ctx, result["findings"]))
+                if ctx:
+                    self.assert_closed(result, "root fc-gpl was not read in full")
+
+    def chain_with(self, gpl):
+        return check(FAIL / "docs", "--context-root", FAIL / "perm", "--context-root", gpl)
 
 
 class Roots(TempRoots):
@@ -395,12 +489,14 @@ class Roots(TempRoots):
     def test_duplicate_root_names(self):
         a = self.root("a", {"board-specs.yaml": marker("same")})
         b = self.root("b", {"board-specs.yaml": marker("same")})
+        c = self.root("c", {"board-specs.yaml": marker("c")})
         code, result = check(a, "--context-root", b)
-        self.assertEqual(code, 1)  # the checked root's marker keeps its error
-        self.assertEqual(len(errors(result)), 1)
-        self.assertEqual(len(warnings(result)), 1)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(errors(result)), 2)  # never downgraded: it decides resolution
         self.assertIn("root name 'same' is also the name of", errors(result)[0]["message"])
         self.assertEqual(errors(result)[0]["line"], 5)  # at the name
+        code, result = check(c, "--context-root", a, "--context-root", b)  # both context
+        self.assertEqual((code, len(errors(result))), (1, 2))
 
     def test_marker_spdx(self):
         cases = {
@@ -423,6 +519,7 @@ class Roots(TempRoots):
     def test_degenerate_markers(self):
         for i, text in enumerate([marker(name='""'), marker(name="' '"), marker(name="'a\\n'"),
                                   marker(layer="vendor"), HDR + "format: 2\n",
+                                  marker().replace("license: CC-BY-4.0\n", ""),
                                   marker(accepts="[' ']"), marker(accepts="['']")]):
             r = self.root(f"d{i}", {"board-specs.yaml": text.replace("'a\\n'", '"a\\n"'),
                                     "x.spec.yaml": chip("x")})
@@ -457,8 +554,6 @@ class BoardFixtures(unittest.TestCase):
     BAD = {
         "alias-clash.spec.yaml": ["alias 'fineip' is the id of another spec"],
         "assumption-unresolved.spec.yaml": ["assumption 'same-silicon' is not in this file"],
-        "broken.spec.yaml": ["expected ',' or ']'"],
-        "colon.spec.yaml": ["mapping values are not allowed here"],
         "cyc-a.spec.yaml": ["parts form a cycle: cyc-a -> cyc-b -> cyc-a"],
         "cyc-b.spec.yaml": ["parts form a cycle: cyc-a -> cyc-b -> cyc-a"],
         "doc-class.spec.yaml": ["a doc citation names document 'widget-trm' of class databook"],
@@ -519,6 +614,19 @@ class BoardFixtures(unittest.TestCase):
         present = {p.name for p in (CHECK / "bad_root").iterdir()} - {"board-specs.yaml"}
         self.assertEqual(present - set(self.BAD), {"fineip.spec.yaml", "finechip.spec.yaml",
                                                    "fineboard.spec.yaml"})
+
+    def test_load_failures_block_references_into_their_root(self):
+        code, result = check(CHECK / "bad_load_root")
+        self.assertEqual(code, 1)
+        got = {(pathlib.Path(f["path"]).name, f["message"].split(":")[0]) for f in errors(result)}
+        self.assertEqual({n for n, _ in got}, {"broken.spec.yaml", "colon.spec.yaml",
+                                              "refers.spec.yaml"})
+        [f] = errors(result, "refers.spec.yaml")
+        self.assertIn("reference 'broken#anything' cannot be resolved", f["message"])
+        self.assertIn("failed to load or validate and may declare spec 'broken'", f["message"])
+        msgs = {pathlib.Path(f["path"]).name: f["message"] for f in errors(result)}
+        self.assertIn("expected ',' or ']'", msgs["broken.spec.yaml"])
+        self.assertIn("mapping values are not allowed here", msgs["colon.spec.yaml"])
 
     def test_findings_point_at_the_value(self):
         _, result = check(CHECK / "bad_root")

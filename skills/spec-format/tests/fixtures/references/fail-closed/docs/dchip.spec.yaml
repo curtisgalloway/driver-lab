@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A docs fact resting on a permissive fact.
+format: 2
+kind: chip
+id: dchip
+name: Dchip
+triggers: [dchip]
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+facts:
+  - id: a
+    section: quick-facts
+    title: T a
+    claim: C a.
+    support:
+      - class: inference
+        premises:
+          - fact: "pchip@fc-perm#p"
+        derivation: it follows
+    todo: {check: hardware, text: check it.}

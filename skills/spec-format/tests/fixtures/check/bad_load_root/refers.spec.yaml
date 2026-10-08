@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A same-file reference resolves; a reference into this root by spec id cannot, since an
+# unparseable file here may declare that spec.
+format: 2
+kind: chip
+id: refers
+name: Refers
+triggers: [refers]
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+facts:
+  - id: base
+    section: quick-facts
+    title: Base
+    claim: A cited value.
+    support: [{class: databook, doc: trm, at: [{section: "1"}]}]
+  - id: derived
+    section: quick-facts
+    title: Derived
+    claim: A derived value.
+    support:
+      - class: inference
+        premises:
+          - fact: "#base"
+          - fact: "broken#anything"
+        derivation: it follows
+    todo: {check: hardware, text: check it.}

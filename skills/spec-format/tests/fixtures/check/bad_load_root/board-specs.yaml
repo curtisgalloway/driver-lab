@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Files that fail to load (their spec ids are unknown), and a file whose references into this
+# root therefore cannot be established: the check fails closed.
+format: 2
+layer: public
+name: bad-load
+license: Apache-2.0
+accepts: []

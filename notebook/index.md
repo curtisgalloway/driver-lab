@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-07T19:30-07:00
+Updated: 2026-10-08T12:09-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-design — Spec format 2: design decisions and the plan](SF2-design.md)
+Entries: 2026-10-08T12:09-07:00 through 2026-10-08T12:09-07:00 (written after the design session)
+Outcome: design approved with D1–D22 (PR #65); plan SF2-1–SF2-12 and gate SF2-G written. D1, D4,
+D5 differ from the draft's recommendations; D19–D22 added during review. Open: six user decisions
+listed in the plan.
 
 ### [RG-regen — Spec regeneration](RG-regen.md)
 Entries: 2026-10-07 through 2026-10-08

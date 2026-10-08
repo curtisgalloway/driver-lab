@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Spec format 2: facts as YAML records, validated by a JSON Schema (design)
 
-Status: **design draft, 2026-10-08, for the user's approval.** Nothing here is built. The
+Status: **approved by the user on 2026-10-08 (decisions D1–D22 below).** Nothing here is built yet. The
 direction (one YAML format for every spec, validated by a JSON Schema, with Markdown as a rendered
 view) was approved by the user on 2026-10-08 ([RG-regen](../notebook/RG-regen.md), "RG-T1 rounds
 6–8, merge, and the format decision"). The user settled the design's open choices the same day;

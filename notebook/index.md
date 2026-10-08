@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-07T12:40-07:00
+Updated: 2026-10-07T18:30-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -13,13 +13,19 @@ process log for this project is [PROCESS-NOTES.md](../PROCESS-NOTES.md). Terms: 
 one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, process log).
 
 > **Frozen archive.** Chapters for work before driver-lab's license split (2026-10-06), every
-> chapter here except `LS-design` and `LS1`–`LS12`, are kept as history; the clean-room skills
+> chapter here except `LS-design`, `LS1`–`LS12` and `LS-G`, are kept as history; the clean-room skills
 > they name now live in [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills),
 > where new evaluation rounds run. Names and paths in them are as they were then
 > (`os-investigator` is now `cleanroom-investigator`). See the
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [LS-G — Whole-outcome acceptance](LS-G.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete at the checkpoint; the design's five acceptance items met from fresh clones of
+all eight repositories, item 2's published-CI half waiting on nine scratch pull requests; stale
+status text in the plan, design and `peripheral-spec` corrected.
 
 ### [LS12 — Consumers updated](LS12.md)
 Entries: 2026-10-07 through 2026-10-07

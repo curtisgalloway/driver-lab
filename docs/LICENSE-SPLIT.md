@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 
 Status: **design, revision 2026-10-05, approved by the user 2026-10-05.** The open decisions of the
 2026-09-30 draft are settled (see [Decisions](#decisions)); requirements carry labels LS-R1 to
-LS-R20 for the [implementation plan](LICENSE-SPLIT-PLAN.md). Nothing below is built yet except
-the deletion of the old specs (PR #42).
+LS-R20 for the [implementation plan](LICENSE-SPLIT-PLAN.md). Built in milestones LS1–LS12 and
+accepted in LS-G (2026-10-07); the plan's design-coverage table links the evidence for each
+requirement.
 
 ## Terms
 

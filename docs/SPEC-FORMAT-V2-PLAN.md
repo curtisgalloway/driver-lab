@@ -851,7 +851,9 @@ Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
 - **`accepts`** is required in a format 2 root marker; `[]` means documents only.
 - **`resources`** is absent or non-empty (`{}` was a second spelling).
 - **`fetch_via` and retrieval `via`** are prose, never executed.
-- **Exit code 4** is `spec.py`'s internal error, apart from 1 (a file is invalid).
+- **Exit code 100** is `spec.py`'s internal error, apart from 1 (a file is invalid): the tool-specific
+  band of the house exit-code contract. (First set to 4, reversed the same day: 4 is reserved
+  there for "target unreachable".)
 - **Requirements markers:** only `python_version` and `python_full_version` comparisons, as
   padded three-part versions; anything else is exit 3.
 

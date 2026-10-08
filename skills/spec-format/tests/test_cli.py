@@ -190,7 +190,7 @@ class ExitCodes(unittest.TestCase):
     def test_internal_error_still_emits_json(self):
         with mock.patch.object(spec_cli, "cmd_validate", side_effect=RuntimeError("boom")):
             code, out, err = run(["validate", "--json", str(GOOD)])
-        self.assertEqual(code, 4)
+        self.assertEqual(code, 100)
         self.assert_failure_object(out, "internal")
         self.assertIn("RuntimeError: boom", out)
         self.assertIn("Traceback", err)
@@ -243,7 +243,7 @@ class Output(unittest.TestCase):
         self.assertTrue(out.startswith("---\nname: "))
         self.assertIn("Exit status", out)
         self.assertIn("--require-hashes", out)
-        self.assertIn("4 an internal error", out)
+        self.assertIn("100 an internal error", out)
         self.assertNotIn("uv run --with-requirements skills", out)
 
     def test_runs_as_a_script(self):

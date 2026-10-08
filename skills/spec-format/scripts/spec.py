@@ -10,7 +10,8 @@ Exit status (the house contract): 0 every file valid; 1 a file failed to load or
 2 usage (bad arguments, a path that does not exist, a file name that says no schema);
 3 a pinned dependency is missing or at another version than skills/spec-format/requirements.txt
 pins, or that file holds a marker spec.py cannot evaluate (there is no fallback parser);
-4 an internal error in spec.py itself, not a verdict on any file.
+100 an internal error in spec.py itself, not a verdict on any file (the tool-specific band
+100-124 of the house exit-code contract; 4 is reserved there for "target unreachable").
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ import re
 import sys
 from pathlib import Path
 
-EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 4
+EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 100
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
@@ -62,7 +63,7 @@ run did not validate (then `files` is empty and each finding has path "" and lin
 A file that cannot be read is a finding on that file.
 
 Exit status: 0 all valid; 1 a file invalid; 2 usage; 3 a pinned dependency missing or at
-another version; 4 an internal error in spec.py (the files were not judged).
+another version; 100 an internal error in spec.py (the files were not judged).
 """
 
 
@@ -597,7 +598,7 @@ class _Parser(argparse.ArgumentParser):
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
-        epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 4 internal",
+        epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 100 internal",
     )
     parser.add_argument("--skill", action="store_true", help="print the usage skill and exit")
     sub = parser.add_subparsers(dest="command")

@@ -32,7 +32,7 @@ What exists so far (SF2-1):
   `schema/root.schema.json` (`board-specs.yaml` with `format: 2`) and
   `schema/verify.schema.json` (`resources/<name>.verify.yaml`).
 - `scripts/spec.py validate <file>... [--root <dir>] [--json]`; `spec.py --skill` prints how
-  to drive it. Exit 0 valid, 1 invalid, 2 usage, 3 a pinned dependency missing, 4 an internal
+  to drive it. Exit 0 valid, 1 invalid, 2 usage, 3 a pinned dependency missing, 100 an internal
   error.
 - `requirements.txt`: PyYAML, jsonschema and markdown-it-py with their dependencies, pinned by
   hash. Install with `pip install --require-hashes -r skills/spec-format/requirements.txt`.

@@ -178,7 +178,8 @@ def facts_file(**changes) -> dict:
 
 
 def marker(**changes) -> dict:
-    return apply({"format": 2, "layer": "public", "name": "r", "accepts": ["MIT"]}, changes)
+    return apply({"format": 2, "layer": "public", "name": "r", "license": "MIT", "accepts": ["MIT"]},
+                 changes)
 
 
 def verdict(**changes) -> dict:
@@ -825,6 +826,7 @@ class RootMarker(Validator):
             ("no format", marker(format=DROP), "'format' is a required"),
             ("v1 marker", marker(format=1), "2 was expected"),
             ("no name", marker(name=DROP), "'name' is a required"),
+            ("no license", marker(license=DROP), "'license' is a required"),
             ("blank name", marker(name=""), "does not match"),
             ("name with a space", marker(name="hardware specs"), "does not match"),
             ("name with @", marker(name="a@b"), "does not match"),

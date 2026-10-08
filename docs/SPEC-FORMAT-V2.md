@@ -480,7 +480,8 @@ The rules of [SPEC-FORMAT.md](../skills/board-expert/SPEC-FORMAT.md) ("Roots and
 the license split carry over. Restated for format 2:
 
 - **Root marker.** `board-specs.yaml` keeps its name and fields (`layer`, `name`, `roots`,
-  `license`, `accepts`) and gains `format: 2`. `accepts` becomes required, and `accepts: []`
+  `license`, `accepts`) and gains `format: 2`. `license` and `accepts` become required (`license`:
+  orchestrator decision during SF2-2's review, 2026-10-08), and `accepts: []`
   means documents only (orchestrator decision, 2026-10-08; format 1 read an absent `accepts` as
   undeclared, with a warning). `name` becomes required, because root-qualified
   references name it (D1): the three repositories' markers already declare
@@ -1077,7 +1078,7 @@ specs build on the same data later; this design covers the first static version 
 | `skills/hardware-investigator/examples/` | expected facts files | rewritten as `kind: facts` |
 | `skills/board-spec-scaffold/templates/` | 6 spec templates and the root marker | rewritten as YAML templates |
 | `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2`; keeps its `name` |
-| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name` and `accepts` (both already present) are now required; references use `name` |
+| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name`, `license` and `accepts` (all already present) are now required; references use `name` |
 | The three spec repositories' CI | `scripts/checks.sh`, one workflow | `checks.sh` on format 2, plus a publish workflow for the Pages site (D5); nothing generated is committed |
 
 ### Converting a spec

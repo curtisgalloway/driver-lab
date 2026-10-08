@@ -27,6 +27,10 @@ request, not inside a unit.
 | review practice | When a format rule changes, grep every skill for the old rule | RG-T1 T7 | Codex | proposed |
 | review practice | Every spec field handed to a subprocess is untrusted input: `--` before positional args, scheme allow-list, no shell; reviewers probe it | RG-T1 R1 | both | proposed |
 | review practice | A flag or path that relaxes a gate (context roots, skip-on-error) needs a test proving it cannot relax the gated input itself | RG-T1 R2, R3 | both, Claude | proposed |
+| `spec-verifier` | Rule for a correct value whose locator is missing from the bullet (split three ADJUDICATE items); and whether a derivation inside a `[doc]` bullet needs `[inference]` | RG1 A1–A3, V5 | verifiers | proposed |
+| `spec-verifier` | Say who spawns the second verifier when verification is delegated, and add a record field showing whether it ran | RG1 re-verification reports | verifiers | proposed |
+| `SPEC-FORMAT.md` | `summary` keys omit `adjudicate`; `sources` has no place for a document hash | RG1 re-verification reports | verifiers | proposed |
+| `spec-verifier` | A `[src]` bullet stating where hardware is (an address map) needs a document class too; say so in the class rule | RG1 V8 | verifier | proposed |
 | orchestrator briefs | Give parallel verifiers distinct scratch directories; give the right `anchor_check.py` path | RG1 overlay verifier | verifier | applied from RG2 |
 
 ## Reviewer comparison

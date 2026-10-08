@@ -129,3 +129,27 @@ two blockers; each again found items the other did not.
 
 Pattern across both rounds: Codex is stronger at degenerate inputs and second parsers; the
 Claude reviewer is stronger at proving what tests can and cannot fail and at policy drift.
+
+### 2026-10-08 — RG1 re-verification: values right, citations and classes not
+
+Four fresh verifiers re-checked the revised specs with the RG-T1 checker: docs (which spawned its
+own second verifier), permissive overlay, the new GPL overlay, and an independent second reader of
+34 bring-up-critical bullets across all three. No value (address, number, name, default) was
+wrong except in the GPL overlay; nearly every finding is a citation or a tag class.
+
+| # | Reviewer | Spec, claim | Finding | Verdict |
+|---|---|---|---|---|
+| V5 | docs verifier + its second | docs QF2 | "high mode is the full map" is a conclusion tagged as a document fact | accepted: becomes `[inference]` |
+| V6 | docs verifier | docs QF15 | section number wrong (§3.3.6 for §3.3.7) | accepted |
+| V7 | docs verifier | docs QF22 | "physical address" is on an uncited wiki page | accepted |
+| A1–A3 | docs verifier vs its second | docs QF1, QF5, QF14 | correct values, locator or exception missing | ADJUDICATE; user: stricter reading |
+| A4 | permissive verifier vs second reader | permissive QF1 | build identity assumes the stub is built from `armstub8.S` | ADJUDICATE; user: stricter reading (explicit assumption) |
+| V8 | permissive verifier | permissive QF8, Gotchas/3 | a hardware-location sentence rests on `[src]` alone | accepted: add `[databook]` |
+| V9 | permissive verifier | permissive QF9 | IDs 16–24 unimplemented; only seven group registers | accepted (a fact error Codex's C3 fix introduced) |
+| V10 | GPL verifier | GPL QF6 | `reg` is the placeholder `<0 0 0>`, not empty | accepted |
+| V11 | GPL verifier | GPL Gotchas/1 | 3 GB limit shown for PCIe only, not USB | accepted |
+| V12 | GPL verifier | GPL QF1 | "describes Low Peripheral mode" needs the docs spec's facts | accepted: `[inference]` |
+
+Two readings worth keeping: the second reader passed all of docs QF1/5/14, while the docs
+verifier's own second verifier failed them, so "two verifiers" varies with who reads; and V9 is a
+precision error introduced while fixing a Codex finding, which only the next verification caught.

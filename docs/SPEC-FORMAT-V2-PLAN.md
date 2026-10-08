@@ -102,7 +102,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| SF2-1 | Strict loader, pinned dependencies, core schemas | — | in_progress (review) |
+| SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | pending |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
@@ -247,70 +247,12 @@ decision](#needs-a-user-decision)).
 
 ## SF2-1 — Strict loader, pinned dependencies, core schemas
 
-**Outcome:** `skills/spec-format/` exists as a reference skill (D7) with `load_strict` and the
-JSON Schemas for the root marker, the verification record, and specs of kinds `board`, `soc`,
-`chip`, `ip`, `overlay` and `facts`. Before: no format 2 code. After: `spec.py validate <file>`
-(proposed name) loads a file, rejects every YAML pitfall in the design's table with a line and
-column, and validates it against the schema for its kind.
-**Design coverage:** R1 (board kinds), R3, D3 (schema part), D6, D7, D8, D9 (loader), D12
-(schema), D14 (field), D15 (fragment mechanism), D17, D18 (schema); § The fact record, Conflict
-entries, Assumptions, Instances and variants, Prose, Provenance classes, Locators, Anchors
-(shapes), Inference, Resources (shapes), YAML loader, Dependencies.
-**Dependencies:** none.
-**In scope:** loader; three schemas; the `support` classes with per-class fields; the
-`source-observed` fragment hook; `dep-quality` and pins; the `spec.py` command skeleton
-(subcommand dispatch, `--json`, exit codes 0/1/2/3).
-**Out of scope:** cross-file checks (SF2-2); typed `data` payloads for peripheral specs and
-reviews (SF2-7); records' semantic checks (SF2-3).
-
-### Implementation steps
-1. Run `dep-quality` on `jsonschema`, `jschon`, PyYAML and markdown-it-py; record the scores in
-   the evidence; pin the chosen versions with hashes in `skills/spec-format/requirements.txt`
-   (proposed). If `dep-quality` argues against `jsonschema`, stop and ask (D8 was "subject to the
-   score").
-2. `skills/spec-format/SKILL.md` (proposed): reference skill, not user-invocable; one paragraph
-   pointing at the design until SF2-8 writes the contract.
-3. `skills/spec-format/scripts/specload.py` (proposed): `load_strict(path)` per the design's
-   loader table (resolver for `true`/`false`/`null`/decimal integers only; anchors, aliases,
-   merge keys, explicit tags, several documents, duplicate keys, non-string keys, control and
-   invisible characters, non-NFC strings, BOM and non-UTF-8 all errors with line and column).
-4. `skills/spec-format/schema/spec.schema.json`, `root.schema.json`, `verify.schema.json`
-   (proposed): closed records (`unevaluatedProperties: false`), kind conditionals, per-class
-   support entries, locators, anchors, inference premises, fact and reference patterns, `todo`,
-   `scope`, `critical`, `relates`, `conflicts`, `assumptions`, `instances`, `variants`,
-   `resources` (documents, repos with `role`, `files`, `https` URLs; series; tools), `notices`.
-5. `spec.py` skeleton with `validate`; the `source-observed` fragment named in a root marker is
-   loaded and composed into the schema (D15), with a test fragment under `tests/fixtures`.
-6. Fixtures: one valid file per kind; one invalid file per schema rule and per loader pitfall;
-   the design's worked example slices (copied into fixtures) must validate.
-7. CI step and AGENTS.md line.
-
-### Acceptance criteria
-- [ ] Every row of the design's loader table has a fixture that fails with the expected message
-  and line.
-- [ ] The design's worked-example YAML (docs, permissive and GPL slices, the record) validates.
-- [ ] Each support class rejects a missing required field and an unknown field; `inference` with
-  a sibling support entry, `emulated` alone, `press` without `todo` all fail.
-- [ ] A `repos` entry with a non-`https` URL fails validation.
-- [ ] Exit codes: 0 valid, 1 invalid, 2 usage, 3 a pinned dependency missing (no fallback parser).
-
-### Testing and review
-- Tests: `skills/spec-format/tests/test_load.py`, `test_schema.py` (proposed).
-- Verify with: the SF2-1 lines under [Checks added by this plan](#checks-added-by-this-plan);
-  the full AGENTS.md list still passes.
-- Review focus: equivalent spellings the loader or schema still admits (a second way to write
-  the same thing is the format 1 failure); closed records really closed under every `if/then`.
-- Review method: code unit (conventions).
-
-### Session sizing
-Needs the design's sections from "The spec file" to "Inference" and "Validation", plus
-`campaign-review/scripts/index_check.py`'s `UniqueLoader`. Uncertainty: `unevaluatedProperties`
-with nested conditionals. Split point: the record and root schemas can move to SF2-3 if the spec
-schema takes the session.
-
-### Evidence and findings
-Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-1.md` (written after
-review). Notebook: [SF2-1](../notebook/SF2-1.md).
+**Outcome:** `skills/spec-format/` with `load_strict`, the spec, root-marker and record schemas,
+`spec.py validate` and hash-pinned dependencies (jsonschema 4.26.0, PyYAML 6.0.3, markdown-it-py
+4.2.0). **Dependencies:** none. **Status:** complete. **Evidence:** [SF2-1](../evidence/SF2-1.md)
+(acceptance table, design coverage, scores, three review rounds). **Open limitations:** `lines`
+order, fact-id uniqueness and the paged-`standard` locator rule are SF2-2's; peripheral and review
+kinds are SF2-7's.
 
 ---
 
@@ -871,7 +813,8 @@ Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
 
 ## Next session
 
-- Current milestone and status: none started; plan approved by the user on 2026-10-08.
-- Resume action: begin SF2-1 (implementer: Opus 5.5).
-- Read first: the design, this plan's conventions and SF2-1, the
-  [SF2-design](../notebook/SF2-design.md) chapter.
+- Current milestone and status: SF2-1 complete ([evidence](../evidence/SF2-1.md)); SF2-2 next.
+- Resume action: begin SF2-2 (implementer: Opus 5.5) once SF2-1 is merged.
+- Read first: the design, this plan's conventions and SF2-2, the [SF2-1](../notebook/SF2-1.md)
+  chapter's decisions (the checker inherits the paged-`standard` rule, `lines` order and fact-id
+  uniqueness).

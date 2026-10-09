@@ -266,6 +266,8 @@ def replace_snapshot(path, original, replacement):
             os.fchmod(stream.fileno(), mode)
             stream.flush()
             os.fsync(stream.fileno())
+        if rewrite_file_check(path) != mode:
+            raise resolve.ResolutionError("spec file mode changed during drift; original retained")
         if path.read_bytes() != original:
             raise resolve.ResolutionError("spec changed during drift; original retained")
         os.replace(staged, path)

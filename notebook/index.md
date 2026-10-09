@@ -22,12 +22,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-6 — Resolve, show and drift](SF2-6.md)
-Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T15:53:47-07:00
-Outcome: open; review round 3 redesign implemented, awaiting orchestrator review.
-D9 verifies parsed keys, values and types after rewriting; unintended changes
-refuse with a data path. Link, permission and special-mode checks protect
-replacement; preflight checks only the selected pin’s anchors. D12 remains
-the first tag anywhere in five lines; N28 and M05 now have assertion coverage.
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation
+round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
+"verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
+and keeps the original on any other difference. Do not patch a splicer a second time; verify its
+output. Recheck file policy beside the final comparison, not only before staging.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

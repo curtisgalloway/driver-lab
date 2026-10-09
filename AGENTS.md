@@ -81,25 +81,32 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
 - **Delegation in orchestrated runs** (user approved 2026-10-09). The orchestrator keeps the
   decisions: fix briefs, stop-rule calls, the judgment on any risky-pattern hit in a patch,
   commit messages, pull request bodies and conflict resolution. Mechanical steps go to cheaper
-  subagents with a fixed brief and a report of ten lines or fewer:
-  - **Patch gate (Haiku), after each Codex run.**
-    - Read the refused list.
-    - Grep the patch's added lines for risky patterns: shell or eval calls, network calls,
-      subprocess use, home or absolute user paths, dotfiles, agent configuration.
-    - Apply the patch with `git apply` in the milestone worktree.
-    - Build a fresh `.venv-sf2` with `--require-hashes`.
-    - Run the spec-format and utility suites, plus `check-no-private-paths.py` and
-      `check-open-side.py`.
-    - Grep new untracked files for home paths.
-    - Report pass or fail, test counts, the number of refused files, and every pattern hit
-      verbatim.
-    - It does not commit; the orchestrator reads any hits, then commits.
+  subagents with a fixed brief and a report of ten lines or fewer. Use the `run-delegate` skill
+  for read-only runs and `git-delegate` for git writes. Launch a fresh runner each time.
+  - **Patch gate, after each Codex run.**
+    - The orchestrator applies the patch itself: one `git apply` in the milestone worktree.
+    - Then a read-only Haiku runner (`run-delegate`, report mode `failures`):
+      - reads the refused list;
+      - greps the patch's added lines for risky patterns: shell or eval calls, network calls,
+        subprocess use, home or absolute user paths, dotfiles, agent configuration;
+      - builds a fresh `.venv-sf2` with `--require-hashes`;
+      - runs the spec-format and utility suites, `check-no-private-paths.py` and
+        `check-open-side.py`;
+      - greps new untracked files for home paths;
+      - reports test counts, the number of refused files, failures with the tool's own error
+        lines, and every pattern hit, all verbatim.
+    - The orchestrator reads any hits.
+    - Before committing, the orchestrator reruns the suite itself, quietly, and judges only
+      the exit status. A runner's "all green" never gates a commit, push or merge.
   - **Git sequences (Haiku), through the `git-delegate` skill:** committing applied changes,
     merging `origin/main` into a branch, push, `gh pr create`, merge and the `git cherry`-gated
-    cleanup. A push or merge is named on the brief's approved line.
+    cleanup. A push or merge is named on the brief's approved line. The brief tells the
+    runner to keep the commit message's trailer lines exactly as given and add no
+    attribution of its own.
   - **Review archiving (Haiku):** copying a Codex review's brief and log into the run store's
-    `review/<name>/`, extracting its final answer, and appending ledger lines. This can share
-    a brief with the patch gate.
+    `review/<name>/`, extracting its final answer, and appending ledger lines. These writes go
+    only to the private run store, so this runner gets its own brief, separate from the
+    read-only patch gate.
   - **Reviewers save their own reports.** A reviewer subagent writes its full report to
     `review/<name>/report.md` in the run store (with the shell when the harness refuses file
     writes). It returns a summary of at most about fifteen lines: blockers, should-fix titles,

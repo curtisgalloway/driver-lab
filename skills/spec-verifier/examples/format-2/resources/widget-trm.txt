@@ -1,0 +1,15 @@
+SPDX-FileCopyrightText: 2026 contributors
+SPDX-License-Identifier: Apache-2.0
+
+Synthetic Widget manual, revision 1. No real hardware is described.
+Page 1
+
+Section 1: Reset
+Reset completes in 10 clock cycles. This is a fixed count in this synthetic model.
+
+Section 2: Budget
+A budget twice the reset count allows 20 clock cycles. This is an arithmetic budget,
+not a measurement of a real device.
+
+Section 3: Unspecified behavior
+This manual does not define the synthetic Widget's power-on state.

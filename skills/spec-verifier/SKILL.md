@@ -1,13 +1,11 @@
 ---
 name: spec-verifier
 description: >-
-  Verify a spec against the sources it cites and write a verification record outside the spec.
-  Works for board specs (board-expert's SPEC-FORMAT.md) and peripheral specs and reviews
-  (peripheral-spec, reference-driver-review): a fresh
-  verifier subagent opens every cited authority at the recorded ref, commit, or date, gives a
-  verdict per claim, and never edits the spec. Use when asked to verify, re-verify, double-check, or
-  audit a spec, to check a spec against its sources, when a checker reports a spec unverified or
-  its record stale, after a spec edit, or after the sources moved. Re-runnable; orchestrator only.
+  Verify hardware specs against their cited evidence in fresh reader contexts and write
+  separate verification records. Use to verify, re-verify or audit a spec, after a spec or
+  source changes, or when its checker reports stale or missing verdicts. Format 2 uses
+  fact-keyed YAML records and delta verification; format 1 remains supported until SF2-12.
+  Orchestrator only: readers compare evidence; the orchestrator coordinates and checks.
 ---
 
 <!--
@@ -15,244 +13,322 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Spec verifier (re-derive a spec's claims from its sources, on demand)
-
-A spec is written once by an author who read the sources as they went. Verification is the separate
-pass that re-derives every claim from the authority it cites, in a context that never saw the
-author's reasoning, and records the result **outside the spec**, so the record costs no context when
-the spec is used. Every spec-creating skill here runs this phase as its last step and points back
-here for the re-run: `board-spec-scaffold` for board specs, `peripheral-spec` and
-`reference-driver-review` for peripheral specs and reviews. A skill from another repository that
-defines its own spec kind may wrap this procedure: it loads this file, adds its kind's section and
-rules, and its rules win where the two differ.
+# Spec verifier
 
 ## Terms
 
-- **Claim** — the unit that gets a verdict. For a board spec, one fact bullet. For an anchored
-  spec or review, one anchor (`[src:]`, `[tgt:]`, `[impl:]`, `[ref:]`) and the claim it is attached
-  to.
-- **Source** — what a claim cites: a repository at a commit, a patch series, a document at a URL, a
-  device tree file, a databook section.
-- **Verdict** — `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, or `ADJUDICATE`, per claim.
-- **Adjudication** — a decision only a person can make, because two independent readers of the same
-  authority reached different answers. An `ADJUDICATE` claim is excluded from the pass/fail counts
-  and carried in its own `summary.adjudicate` bucket; it is neither credit nor blame until settled.
-- **Verification record** — the file that holds the verdicts, in a `resources/` directory beside
-  the spec's root or the spec itself. Not a spec; never loaded by a reader.
-- **Verifier** — the subagent that produces the verdicts. A fresh context: the spec, its declared
-  sources, and this file. Nothing else.
-- **Named pin / license gate** — a spec line naming one of several source trees with its commit
-  and SPDX license (`Source pin: linux@<rev> GPL-2.0-only`) / the `anchor_check.py --root` check
-  that fails an anchor whose pin's license the spec root's `accepts:` list does not include.
-- **Orchestrator** — you. You spawn the verifier, write the record, run the mechanical checks, and
-  report. You never read sources and never edit the spec.
+- **Fact / fact id** — one structured claim in a YAML spec / its stable identifier.
+- **Support / document class** — its declared evidence / `databook`, `standard` or `doc`.
+- **Basis / upstream map** — the fingerprint of a fact and its declared dependencies / the
+  bases of facts in other roots it rests on, used to distinguish upstream changes.
+- **Freshness / verdict** — whether the recorded basis still matches / what the reader found:
+  `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP` or `ADJUDICATE`. A current verdict need not be PASS.
+- **Orchestrator / verifier / second reader** — the coordinating agent / a fresh agent reading
+  sources / another independent reader of a critical fact. A harness is the agent's application.
+- **Delta verification** — renewing only the verdicts that need it.
+- **Contrary evidence / citation precision** — evidence that might limit or contradict a
+  claim / whether its citation identifies the evidence for the whole claim.
 
-## The record
+See the [glossary](../../GLOSSARY.md), sibling [format contract](../spec-format/SKILL.md)
+and [record schema](../spec-format/schema/verify.schema.json).
 
-Same frontmatter for every kind; the body's keys differ per kind (below).
+## Choose the format first
 
-```markdown
----
-spec: rpi5                          # the spec id, or the spec's basename for kinds without ids
-spec_file: rpi5.spec.md             # path relative to the record's parent's parent
-spec_sha256: <64 hex digits>        # sha256 of the spec file as verified
-verified: 2026-09-18                # ISO date
-verifier: <which agent and harness produced this record>
-sources:                            # every repo, series, and doc actually consulted
-  - name: linux-rpi
-    commit: <40 hex digits>
-    fetch: ok
-  - name: RP1 peripherals datasheet
-    url: https://datasheets.raspberrypi.com/rp1/rp1-peripherals.pdf
-    fetch: ok
-  - name: TF-A Raspberry Pi 5 platform page
-    url: https://trustedfirmware-a.readthedocs.io/en/latest/plat/rpi5.html
-    fetch: blocked
-summary: {pass: 9, fail: 0, unverifiable: 1, gap: 1, adjudicate: 0}
----
+Read the root's `board-specs.yaml`: `format: 2` selects this procedure and `*.spec.yaml`.
+A root without that field and the remaining Markdown peripheral specs and reviews use
+[FORMAT-1.md](FORMAT-1.md), retained until SF2-12. Never compose mixed formats. An invalid
+marker is a finding, not permission to guess a format.
 
-# Verification of `rpi5`
+### Board specs
 
-- Quick-facts/1 "Boot media and chain": PASS — chain and config.txt role match the Raspberry Pi
-  documentation config.txt page; BL31 role matches the TF-A rpi5 platform page.
-- Quick-facts/5 "Power": GAP — a TODO-only bullet; nothing to verify.
-- Gotchas/2: UNVERIFIABLE — the RP1 datasheet section is cited by number; the PDF fetch was
-  blocked, so the section was not read this pass.
-- Gotchas/3: FAIL — the spec says the psci node's method is "smc"; bcm2712.dtsi at <commit> says
-  "hvc". Proposed correction: change the parenthetical and the claim to hvc, and check the BL31
-  page for which conduit it installs.
+Board, SoC, chip, IP and overlay files use the same format 2 procedure. Each file gets its
+own record, overlays included. The record's `spec` is the file's `id`, or its `overlays` id.
+For format 1, follow [Board specs](FORMAT-1.md#board-specs).
+
+### Peripheral specs and reviews
+
+Format 2 peripheral specs and reviews also use this procedure. Verdicts cover facts, not
+each anchor independently. D16 reserves `fact-id.sub-id` for a register field or sequence
+step with its own support; the current checker rejects those sub-keys until SF2-7 implements
+that content. Do not invent accepted sub-keys or drop evidence to force a record through.
+For format 1, follow [Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews).
+
+## Coordinate a format 2 reading
+
+The orchestrator selects work, spawns fresh readers, assembles their YAML and runs the gate.
+It never reads sources or edits the spec in this role. Readers may write proposed records
+in separate scratch directories; the orchestrator alone installs them in the root. Give
+readers the spec, declared dependencies, this skill and access to sources at the pins.
+Do not give them the author's reasoning, this conversation or earlier verdicts. For delta
+work give selected fact ids and changed upstream references, without previous conclusions.
+
+Commands use repository-relative paths; when installed, locate the sibling
+`spec-format/scripts/spec.py`. Use Python with spec-format's hash-pinned requirements
+installed. Run `spec.py --skill` to confirm availability. `check` and `status` exist from
+SF2-3; `resolve` and `show` require SF2-6. Report a missing prerequisite rather than
+substituting format 1 tools.
+
+1. **Check structure and licenses.** Supply the selected root and every dependency root
+   needed by composition or fact references as context:
+
+   ```bash
+   python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license
+   python3 skills/spec-format/scripts/spec.py status <root> --context-root <dependency-root> --require-license --json
+   python3 skills/spec-format/scripts/spec.py status <root> --context-root <dependency-root> --require-license --stale --json
+   ```
+
+   Repeat `--context-root` for more dependencies; omit it when none are needed. A context
+   root's own findings print as warnings, but a reference into an untrusted context still
+   fails. A current FAIL is an expected error until an author fixes it. Correct schema,
+   reference, citation and license errors before evidence reading; report them to the
+   author, never edit the spec here. Repair a bad record that makes a root untrusted first.
+
+2. **Select the delta from status.** JSON `specs[].facts[]` supplies `key`, `ref`, `kind`,
+   `status`, `verdict`, `carried`, `basis`, `recorded`, `upstream`, `changed`, `reason` and
+   `second_reader`. Use `key` as the verdict key and full `ref` to identify a fact across
+   roots. `record` names an existing record (null if absent); `state` reports whether it
+   loaded. Status exits 1 on a check error but still prints its report; inspect `findings`.
+
+   | Status | Work |
+   | --- | --- |
+   | `current` | Preserve the verdict, basis, date and readers; no new primary reading. |
+   | `stale` | A fresh verifier reads the fact and its dependencies at current identities. |
+   | `unverified` | A fresh verifier reads it for the first recorded verdict. |
+   | `unknown` | Read `reason` and fix the unresolved dependency or rejected citation first. A reader can investigate, but a null basis cannot produce a current verdict. Re-run status after correction. |
+   | `upstream-stale` | Read changes to the upstream facts named in `changed` and check whether the dependent claim still follows. Unchanged local sources need no repeat reading. Renew only after that check. |
+
+   `--stale` includes every non-current fact **and current critical facts missing a second
+   reader**. For the latter, launch only the missing reader. Also inspect the unfiltered
+   report for current FAIL and ADJUDICATE: they need correction or user adjudication even
+   when absent from the stale list. Preserve other current verdicts unchanged.
+
+3. **Primary reading.** The verifier performs the standing evidence checks below on each
+   selected supported fact. For an upstream-only change, apply them to the changed evidence
+   and its effect on the dependent claim. A gap follows GAP below. Check instances and
+   variants by their own ids and support too. Read referenced facts and named assumptions;
+   note any condition on which the conclusion depends.
+
+4. **Second reader (D14).** The **orchestrator**, never the verifier, spawns a different
+   fresh reader for each `critical: true` fact lacking a reading at the current basis.
+   One reader may cover several critical facts in a file. Give the same evidence brief,
+   without the first verdict or reasoning. Another session of the same model is allowed;
+   it must be another reader. Identify each by agent/model/harness and a distinct session
+   label. The verifier's own reading never counts, even under another spelling: the checker
+   compares identities after Unicode NFC normalization, whitespace collapse and case folding.
+   Do not evade the comparison with aliases.
+
+   Store the second result in the fact's `readers`, each `{verifier, verdict, date, note}`
+   (`date` and `note` are optional in the schema; include them for an audit trail). Omit
+   `readers` until someone runs; `readers: []` is invalid. Never reuse a stale second reading
+   for a renewed basis. For an upstream-only critical fact, the second reader independently
+   checks the upstream changes too. Disagreement follows ADJUDICATE below.
+
+5. **Assemble and gate.** Install one record per file, preserve verdicts outside the delta,
+   count all five summary buckets, and re-run status before copying new bases. If inputs
+   changed during reading, do not stamp a verdict with a newer basis: re-read the affected
+   delta. Report corrections for the author to apply, then re-run on affected facts within
+   the campaign's recorded stop rules.
+
+## Standing evidence checks for the verifier
+
+- **Materialize cited bytes.** Use full `resources.repos` commits, `resources.documents`
+  identities and each document's canonical `url` and `retrieval` entries. Retrieval methods
+  are descriptive text, never commands to execute. Record sources and fetch failures. Match
+  `sha256` when document bytes are available; a blocked fetch does not authorize an unpinned
+  replacement.
+- **Resolve and read.** Machine-check anchors at the pin, per-file licenses and available
+  document hashes; then read each fact beside its cited source lines:
+
+  ```bash
+  python3 skills/spec-format/scripts/spec.py resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  python3 skills/spec-format/scripts/spec.py show <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  ```
+
+  Repeat `--repo` for named repos; unbound repos are fetched over HTTPS. `--docs-dir` supplies
+  files as `<document-dir>/<document-name>`; omit it when unavailable and state which hashes
+  were not checked. `show` displays source evidence; read document text separately. Inspect
+  warnings and skipped counts: a fully skipped resolution can exit 0 and establishes no
+  anchor. Repeat every `search` anchor's search; resolution checks scope existence only.
+  Resolution alone never earns PASS.
+- **Compare the whole claim.** Check values, units, address spaces, ordering, scope and
+  conditions. `comment: true` attributes a comment, not established behavior. Emulated
+  support is judged against the cited model/version/run observations, not model source or
+  mechanism. Hardware support is judged against the measurement and stated board, method,
+  date and conditions. Extension support follows the root's rules; it never replaces core
+  citations.
+- **Search for contrary evidence every time.** Read adjacent qualifications, alternative
+  paths/configurations, errata and sources that could show the claim too broad. Describe the
+  search scope and result in `note`; set `contrary_evidence` to `none-found`, `found` or
+  `not-checked`. `none-found` means the stated search found none, not that none exists.
+  `found` names conflicting evidence and its effect on the verdict. `not-checked` states
+  the obstacle; never imply the step ran. This is a standing step for delta readings too.
+- **Grade citation precision separately.** Set `citation_precision: exact` when the anchors
+  or locators identify the evidence for the whole claim closely enough to repeat the reading;
+  use `imprecise` for overly broad or incomplete citations and explain how to narrow them.
+  A missing locator, wrong passage or nonexistent anchor is FAIL, not merely imprecise.
+  `databook` needs section/page/pages/table/figure/clause; `standard` does too when its
+  document has `pages`; unpaged standards and `doc` may use headings. Shape and bounds are
+  mechanical; the reader checks that the locator is right. An otherwise supported claim
+  may PASS with an imprecise citation, with the precision finding reported separately.
+- **Read versus derived (D3).** Read-class support may jointly support a claim, but a derived
+  conclusion needs its own `inference` fact with `premises` and `derivation`. A derivation
+  hidden in a `doc` claim is FAIL with a proposed split. Inference stands alone in `support`.
+  Check premises, derivation and degree of certainty. If a verdict needs an undeclared fact
+  or assumption, request a declared dependency (`relates`, a premise reference or `assumes`)
+  before accepting it. A record note cannot make the basis track an undeclared dependency.
+- **Source code about hardware needs documentation.** A `src` fact (format 1's `[src]`) can
+  state what code defines or does. A claim about where hardware is or what it requires needs
+  document-class support too; its absence is FAIL on class. A claim that a product runs a
+  particular build cannot be proved by code alone: propose a separate inference with explicit
+  premises, assumptions, scoped certainty and a TODO, rather than relabeling it as definite.
+- **Check every TODO method.** A TODO alongside support does not erase the supported part
+  or turn it into GAP. Read `todo.check`, `todo.text` and optional `todo.method`: can the
+  method observe the remaining question under the stated conditions? Reading an EL3-only
+  register from EL1 cannot settle its value; a few patch words cannot identify a whole
+  shipped build. An impossible method or a trailing TODO used to cover unsupported assertions
+  is FAIL with a proposed correction. A legitimate outstanding hardware check may coexist
+  with PASS on a conditional inference; PASS does not mean the TODO was performed.
+
+## Verdicts and disagreements
+
+| Verdict | Use |
+| --- | --- |
+| PASS | Evidence supports the claim as stated and classified, with scope and named assumptions. Explain the comparison in `note`. |
+| FAIL | A discrepancy, wrong class, missing/wrong locator or invalid TODO method. Include `correction` proposing a fix; never edit the spec. |
+| UNVERIFIABLE | Evidence could not be read (blocked, partial or truncated fetch, inaccessible measurement). State what was not established. A citation shown nonexistent at the pin is FAIL. |
+| GAP | Only a fact with **no `support`** and a TODO. Check whether the TODO can settle it; explain deficiencies in `note` for the author. Never GAP a supported fact, instance or variant. The checker requires a gap's verdict to be GAP. |
+| ADJUDICATE | Independent readings disagree. Store both in `readings`, each `{verifier, verdict, reasoning}`, and actual second readings in `readers`. Count only in `summary.adjudicate`, never PASS/FAIL merely because of disagreement. |
+
+**The user adjudicates.** Present both readings and disputed evidence. Do not vote or pick
+one yourself. Leave `adjudication` absent while unsettled. On the user's decision, retain
+`readings`, add `adjudication: {decision, by, date, rule}`, set PASS or FAIL, and include
+`correction` only for FAIL. A finding of excessive definiteness is FAIL on definiteness.
+Retain dissenting history in `readings`; the checker requires `readers` entries to agree
+with a settled verdict, so obtain an updated second reading rather than rewrite its earlier
+conclusion as agreement.
+
+A current ADJUDICATE is a **warning in both gate modes**. The campaign's merge rule still
+requires zero unsettled ADJUDICATE; a zero-error check cannot waive the user's decision.
+Current UNVERIFIABLE and GAP may pass the mechanical gate too: report those limits.
+
+## Write the YAML record
+
+Write `<root>/resources/<name>.verify.yaml`, with `<name>` the spec file's basename without
+`.spec.yaml`, even for a nested spec or overlay. Never put it in a nested `resources/`,
+share it between files, or leave format 1 records in a format 2 root.
+
+- `format: 2`; `spec`: spec id (overlay target id); `spec_file`: root-relative path;
+  `canonical: fact-v1`; `spec_sha256`: SHA-256 of the exact spec bytes at assembly, for
+  information only. Compute that file digest normally; it does not decide freshness.
+- `sources`: everything consulted, with `name`, `commit` for a repository, `url` and `sha256`
+  for document bytes, `fetch` and useful `note`. Each source needs `commit` or `sha256` in
+  this schema. For inaccessible evidence use its declared identity and state bytes were not
+  confirmed; never invent a hash. Evidence with neither identity cannot be encoded as a
+  source: report the schema limitation and request an identified resource. For a run extract
+  without such identity, name it in the verdict note and report the missing source identity.
+- `verdicts`: keyed by **bare fact id**, including instance and variant ids. Copy a new
+  verdict's `basis` from that fact's **`spec.py status --json`** row, and its `upstream` map
+  when nonempty; omit `{}` because an empty map is invalid. Null `basis` or `upstream` means
+  unknown: repair the cause and rerun status. **Never compute a basis by hand**, use
+  `recorded` as today's basis, or update hashes without a reading.
+- Each verdict has `verdict`, ISO `date`, `verifier` (agent, model, harness, reader identity),
+  `note`, `contrary_evidence`, `citation_precision` and any required `readers`, `correction`,
+  `readings` or `adjudication`. No top-level `verified` or `verifier` exists in format 2.
+  Cite evidence in notes; do not paste source code into records.
+- `summary` has exactly `pass`, `fail`, `unverifiable`, `gap`, `adjudicate`, all present,
+  even when zero. Count every stored verdict, preserved verdicts outside the delta included.
+
+### Carrying a format 1 verdict (D10)
+
+Carry only when claim text is byte-identical and a fresh conversion-fidelity check confirms
+the same citations and locators, nothing added. Split claims, added search premises and
+fidelity failures need fresh readings. Copy what the old record said, identify its
+`carried_from: {repo, commit, path, key, format: 1}`, and use the converted fact's basis from
+status. Retain original dates, reader identities and reasoning; do not imply a new reading.
+**Omit `contrary_evidence` and `citation_precision`** for format 1 carries, as the schema
+requires. Never invent readers that the old record did not document; a carried critical
+fact still needs its independent second reader. A later fresh primary reading replaces the
+carry: remove `carried_from` and supply both new fields. Status reports `carried: true`.
+
+## Gate and report
+
+```bash
+python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license --require-verified pr
+python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license --require-verified main
 ```
 
-Rules that hold for every kind:
+Use `pr` for a proposed change: stale, upstream-stale, unverified, unknown and a current
+critical fact without a second reader are errors. `main` differs only in allowing
+upstream-stale as a warning (D19); local stale still fails. Current FAIL always fails.
+Repeat status to check the delta and report the gate, five summary counts, precision and
+contrary-evidence limits, TODOs, each FAIL's correction and unsettled ADJUDICATE. Commit or
+stage records only when the project calls for it; do not push without authorization.
 
-- **One line per claim, every claim.** Gaps get `GAP`; claims whose authority could not be reached
-  get `UNVERIFIABLE` with the reason (fetch blocked, NDA, no public authority named); claims two
-  independent verifiers read differently get `ADJUDICATE` with both readings.
-- **A citation that cannot be located is a `FAIL`**, not `UNVERIFIABLE`: a file that does not exist
-  at the recorded ref, a line range that no longer holds the symbol, a page that does not say what
-  the claim says, a databook section that does not cover the register.
-- **`FAIL` carries the discrepancy and the proposed correction.** The verifier never edits the
-  spec. The user, or the creating skill on the user's say-so, applies the fix; then re-run.
-- **The record cites; it does not quote.** Describe what was compared and how it differs, by
-  anchor, section or file and line; do not paste driver or firmware code into it.
-- **Keys survive edits.** Claims are keyed by something stable (section and ordinal, the anchor
-  text), never by line number.
-- `summary` counts equal the verdict lines, `adjudicate` included (omit the key only when it is
-  zero); `spec_sha256` is the spec file's hash at write time, so any later edit makes the record
-  visibly stale.
+## Complete worked record
 
-## The procedure
+The [example root](examples/format-2/board-specs.yaml) describes a **synthetic** Widget,
+not real hardware. Its [spec](examples/format-2/widget.spec.yaml) cites a local
+[synthetic manual](examples/format-2/resources/widget-trm.txt). Copy this record verbatim to
+`<example-root>/resources/widget.verify.yaml` in scratch and run
+`check <example-root> --require-verified pr`. The test in
+`skills/spec-format/tests/test_verifier_example.py` copies this exact fenced record into a
+fixture root and requires zero errors. Bases came from `status --json`; changing example
+facts or resource identities requires a new reading and new bases.
 
-1. **Identify the kind** from the spec: YAML frontmatter with `kind:` or `overlays:` is a board
-   spec; `Source pin:` / `Impl pin:` lines and `[src:]`-family anchors mean a peripheral spec or
-   review. Resolve a board spec across roots the way `board-expert` § 1 does; a path names the
-   others. "Re-verify everything under `<dir>`" means every spec file below it.
-2. **Run the kind's mechanical checks first** (below). They are cheap, and a spec that fails them
-   is not worth a verifier's time until fixed.
-3. **Spawn the verifier**: a subagent with a fresh context, given the spec file, read-only access
-   to whatever the spec composes or pins (a board spec's `parts`; a peripheral spec's source and
-   target checkouts at their pins), this file, and, for a board spec, `board-expert`'s section 2
-   for how sources are cached. Not the author's report, not the previous record, not this
-   conversation. Verify several specs in parallel, one verifier
-   per spec.
-4. **The verifier materializes the sources** it needs: repositories cloned into the cache the spec
-   names (or the checkout the pin names) at the recorded ref or commit, series pulled in the form
-   their note says works, documents fetched. It records every one under `sources` with its commit
-   or URL and the fetch result.
-5. **For every claim, in order**: open the cited authority, compare each stated value (address,
-   size, interrupt number, cell count, clock name, frequency, ordering, register bit, exception
-   level, line range, symbol) with what the authority says, and write the verdict line.
-6. **Independent second verifier** where the kind says so (bring-up-critical facts of a board spec;
-   the register-map tables of a peripheral spec). Same brief, no shared context. **A disagreement is
-   an `ADJUDICATE` item, not a `FAIL`**: the two readers could not settle the question between
-   them, which says nothing yet about whether the spec is wrong. Record both readings, and leave
-   the claim **out of the pass/fail counts** — it is reported separately and waits for a person.
-   Two things follow. If adjudication finds the spec wrong, that is a `FAIL` on the merits, and the
-   record is rewritten with the resolved verdict. If adjudication finds the spec stated something
-   more definitely than its evidence supports — a claim true of one tree written as true of both,
-   an `[inference]` written as though it were read — that is also a `FAIL`, on the definiteness
-   rather than on the disagreement. What is never a `FAIL` is the disagreement itself.
-7. **Write the record.** Compute `spec_sha256`, fill `verified` and `verifier`, check the summary
-   against the body, write the file at the kind's location, replacing any earlier record, and run
-   the kind's checker so it is accepted.
-8. **Report** the summary and every `FAIL` with its proposed correction, quoted from the record.
-   Do not apply corrections. After a fix, run again; the loop ends at zero `FAIL`.
+```yaml
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+spec: widget
+spec_file: widget.spec.yaml
+spec_sha256: cede86a3c587d0c5ee9b91f960b7c9b336a52835bc64060bc12dcfbb20a87a44
+canonical: fact-v1
+sources:
+  - name: widget-trm.txt
+    url: https://example.invalid/widget-trm.txt
+    sha256: d0e5bca13fe26ed53ffda676cd3cc26d3e9b4e0d52a96764fab502cd6d4d4c98
+    fetch: ok
+    note: Synthetic local manual, not a fetched vendor document.
+summary: {pass: 2, fail: 0, unverifiable: 0, gap: 1, adjudicate: 0}
+verdicts:
+  reset-cycles:
+    basis: da201037e033377cd06d77da5e33037a0693307ca8c9c72aa61ec99160f58f80
+    verdict: PASS
+    date: 2026-10-09
+    verifier: Synthetic primary reader, example model/harness, session A
+    note: >-
+      Section 1 on page 1 states 10 cycles. Read all three sections for qualifications
+      and conflicting counts; none found. This establishes only the synthetic claim.
+    contrary_evidence: none-found
+    citation_precision: exact
+    readers:
+      - verifier: Synthetic second reader, example model/harness, session B
+        verdict: PASS
+        date: 2026-10-09
+        note: Illustrative independent comparison with section 1's fixed count.
+  reset-budget:
+    basis: 856cffa8e58a404fb197c2123c565d2b5ee08965f56083ab6eeafc84a1028c25
+    verdict: PASS
+    date: 2026-10-09
+    verifier: Synthetic primary reader, example model/harness, session A
+    note: >-
+      The declared reset-cycles premise gives 10; twice that is 20. Checked the manual's
+      three sections for a contrary limit; section 2 agrees. The TODO's method can
+      observe that documentary comparison; this is no hardware measurement.
+    contrary_evidence: none-found
+    citation_precision: exact
+  power-on-state:
+    basis: 91ab9398fa6ec9db9a0bb4fc7adc3e4791e35152810d3f9c96f10853e16f8e9e
+    verdict: GAP
+    date: 2026-10-09
+    verifier: Synthetic primary reader, example model/harness, session A
+    note: >-
+      No support entry; the TODO can be settled by a future explicit definition.
+      No authority is cited for a power-on value, so citation precision is imprecise
+      and contrary evidence for such a value was not checked.
+    contrary_evidence: not-checked
+    citation_precision: imprecise
+```
 
-## Board specs
-
-The kind defined by `board-expert/SPEC-FORMAT.md`; this section is the one statement of its
-verification procedure, and `SPEC-FORMAT.md` § Verification points here.
-
-- **Claims** are the fact bullets of the fact sections (`Quick-facts`, `Gotchas`, and for an IP spec
-  `Standards and databook`, `Programming model`, `Known variants and quirks`), each keyed as
-  `<Section>/<ordinal> "<bold lead-in>"` (1-based, top-level bullets only, lead-in omitted when
-  absent). A gap bullet (`TODO (verify on hardware)` first) is `GAP`.
-- **Sources** are the bullet's tag clause: `[DT] (file)` names a device tree in a `repos` or
-  `series` entry at its `ref`; `[databook]`, `[standard]`, `[doc]` name a `docs` entry or a document
-  id; `[hardware]` names a board and a method; `[press]` names a page and is compared against it like
-  any other claim, TODO or not; `[src]` names anchors (`[src:<repo>: path:L1-L2 (symbol)]`)
-  into a `repos` entry pinned to a commit, and is verified as the next bullet says; a class an
-  extension defines is verified as that extension says; `[inference]` names its
-  premises and derivation in its parenthetical, and is verified on whether those premises hold and
-  whether the conclusion follows from them; `[emulated]` names a device model, its version and
-  run IDs, and is compared against an extract of what those runs recorded (traces, captures,
-  logs, verdicts), prepared by the operator, never against the model's source, and fails when it claims more than the runs show or states
-  the model's mechanism rather than an observation. `instances:` rows are claims
-  too: each `reg`, `irq`, and `clocks` value against the device tree it came from, keyed
-  `instances/<name>`.
-- **`[src]` facts**, and `[src:]` anchors that are an `[inference]`'s premises, are verified in
-  three steps. (1) **The anchors resolve at the pin**: run `peripheral-spec/scripts/anchor_check.py
-  <spec> --root <root> --require-license --repo <name>=<checkout>` with one `--repo` per `repos`
-  entry the anchors name, each checkout able to reach the entry's `ref` (the checker reads each
-  entry with a `ref` as a Source pin; no `Source pin:` line is needed;
-  `board-expert/scripts/fetch_src_pins.py <spec> <dir>` makes such checkouts and prints the
-  `--repo` values; it fetches `https://` URLs only, and fails on a commit or repository that
-  does not exist). An unresolved path, line
-  range or symbol is a `FAIL` for that claim, and so is a warning that an anchor's repository was
-  not given, until it is given. (2) **The claim matches the anchored lines**: render them with
-  `anchor_check.py --show` and judge, as for a peripheral spec, whether the lines support the
-  claim; a claim that says what the hardware requires, or that a product runs this code, is not
-  supported by `[src]` alone and is a `FAIL` on its class (it should be an `[inference]`). (3)
-  **The pin's license is in the root's accepts list**: the entry's `license:` must describe the
-  cited files (check the file's notice or SPDX line at the pin) and be accepted by the root's
-  `accepts:`; a mismatch with the files, or a `license gate:` error from either checker, is a
-  `FAIL`. Record each entry under `sources` with its `commit`.
-- **Composition.** The verifier may read the specs a board composes through `parts`, so "see
-  `bcm2712`" resolves, but each spec file gets its own record. Overlays are verified under their own
-  root, one record each.
-- **Two verifiers** for the bring-up-critical facts: the addressing model, the boot chain and entry
-  state, and the debug UART bullets of every `soc` spec in the composition, and the debug console
-  bullet of the board.
-- **Mechanical check**: `board-expert/scripts/spec_check.py <root>... --stubs-from <skills dir>`
-  before and after (with the roots an overlay's target lives in, so it resolves). The checker
-  accepts a record only when its `summary.fail` is zero: a current record with any `FAIL` is an
-  error, the expected result until the spec is fixed and verified again. Once the spec is edited
-  the record is stale and reports only that, so a fix can be checked before the next pass.
-  Once `FAIL` is zero, the checker must accept the record with no error and no `verification
-  stale` warning (`--require-verified` makes a missing or stale record an error).
-- **Record location**: `<root>/resources/<name>.verify.md`, where `<root>` is the directory
-  holding the root marker `board-specs.yaml` (`specs/` in the spec repositories) and `<name>` is
-  the spec file's name without `.spec.md` (one record per spec file, so an overlay and its base,
-  or two overlays of one id, in one root never share one). `spec` is the id (an overlay's: the id
-  it overlays); `spec_file` is the file's path relative to `<root>`, and the checker rejects a
-  record whose `spec_file` names another file.
-
-## Peripheral specs and reviews
-
-The kinds produced by `peripheral-spec` (`[src:]`/`[tgt:]` anchors, `Source pin:` /
-`Target pin:`) and `reference-driver-review` (`[impl:]`/`[ref:]`, `Impl pin:` / `Ref pin:`). **Every
-anchor is verified back to source**, in two layers:
-
-1. **Resolve every anchor, mechanically.** Run `peripheral-spec/scripts/anchor_check.py`
-   in its default mode with the spec's repositories (`--repo` / `--target-repo`, or `--impl-repo` /
-   `--ref-repo` for a review) at the pins: every path must exist, every line range be in bounds,
-   every symbol be present in or near its range, every hex literal in a claim appear in the lines it
-   cites, every `[hw-required]` be backed by a `[doc:]`. **Give every pin its checkout:** a spec
-   with several named pins (`Source pin: <name>@<rev> <license>`) needs one
-   `--repo <name>=<checkout>` per Source pin (and `--target-repo <name>=<checkout>` per Target
-   pin); a pin left without one leaves its anchors unresolved, which the checker reports only
-   as a warning, so check the warnings. When the spec lives in a spec root (a
-   directory whose `board-specs.yaml` declares `license:` and `accepts:`), run the same command
-   with `--root <root> --require-license`, so the record is made under the license gate the
-   repository's CI applies: a `license gate:` error is a `FAIL` for that anchor. When the spec
-   lists documents in its `docs:` front matter and the files are at hand, add
-   `--docs-dir <dir>`: a hash mismatch is a `FAIL` for every claim citing that document. Where
-   register headers exist, run `inventory_check.py` too, once per pin whose tree holds them
-   (`--repo <name>=<checkout>`; it compares one tree per run): omissions and value mismatches
-   against the headers are findings. Any `[stale: was <pin>]` marker is a `FAIL` until a person
-   re-verifies the claim and clears it.
-2. **Judge every anchor, by reading.** Run the creating skill's own independent verifier as it
-   defines it (`peripheral-spec/templates/verifier-prompt.md`, or
-   `reference-driver-review/templates/verifier-prompt.md` for a review): a fresh subagent that
-   renders the review sheet with `anchor_check.py --show`, which places each claim beside the
-   source lines it cites, reads the main source files in full once, and decides for every anchor
-   whether the cited lines *support the claim*, not merely whether they resolve: a range that
-   exists but describes a different register, a symbol that is present but whose value the claim
-   misstates, an ordering the lines do not establish, all `FAIL`. It keeps that verifier's blind
-   re-derivation sample, recomputed counts, and re-established negative claims. `[doc:]` tags are
-   checked against the document section the same way a board spec's `[databook]` is. What this
-   skill adds is the record: that verifier's `{section, line, anchor, reason}` list becomes
-   per-anchor verdict lines, and every anchor it passed gets a `PASS` line too.
-
-- **Claims** are keyed by the anchor text as written (`[src: path:L1-L2 (symbol)]`, or
-  `[src:<pin>: path:L1-L2 (symbol)]` with a named pin), plus the `[doc:]` tags; a claim with
-  several anchors gets one line per anchor. The record's `sources` lists every pin and every
-  registry document.
-- **Two verifiers** for the register-map tables (offsets, widths, bit positions), the densest values
-  and the place `peripheral-spec` already runs two investigators.
-- **Record location**: `resources/<spec-basename>.verify.md` in a `resources/` directory beside the
-  spec, or, when the project already keeps `docs/provenance/` for the spec's sidecars, there as
-  `<spec-basename>.verify.md`; say which in the report. `spec_file` is relative to the record's
-  parent's parent. Save the `anchor_check.py` and `inventory_check.py` reports beside it.
-- The record complements `anchor_check.py --drift`: drift detection says which anchors need
-  re-review when the tree moves; this record says whether the claims were right at the pin.
-
-## Rules
-
-- **You never read sources.** The verifier subagent does, in its own context.
-- **You never edit a spec.** A `FAIL` is a finding with a proposed fix, not a change.
-- **The record is the only output.** Nothing from the verifier's work goes anywhere else, and no
-  reader loads the record's body: `board-expert` reports a spec's `verified` date and `summary`
-  from the record's frontmatter only.
-- **Fresh context, every time.** A re-run gets a new verifier that has not seen the old record.
-- Commit or stage the record if the project commits them; do not push unprompted.
+The reader identities and readings above are illustrative, not evidence that real reader
+sessions ran. The fixture test establishes schema, freshness and gate behavior only.

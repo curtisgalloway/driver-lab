@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: widget
+name: Synthetic Widget
+triggers: [synthetic widget]
+orientation: This example exercises records; it describes no real hardware.
+resources:
+  documents:
+    - name: widget-trm.txt
+      class: databook
+      title: Synthetic Widget manual
+      revision: "1"
+      url: https://example.invalid/widget-trm.txt
+      sha256: d0e5bca13fe26ed53ffda676cd3cc26d3e9b4e0d52a96764fab502cd6d4d4c98
+      pages: 1
+      page_numbering: printed
+      access: public
+facts:
+  - id: reset-cycles
+    section: quick-facts
+    title: Reset cycles
+    claim: Reset completes in 10 clock cycles in the synthetic Widget.
+    critical: true
+    support:
+      - class: databook
+        doc: widget-trm.txt
+        at: [{section: "1", page: "1"}]
+  - id: reset-budget
+    section: quick-facts
+    title: Reset budget
+    claim: A budget twice the synthetic reset count allows 20 clock cycles.
+    support:
+      - class: inference
+        premises:
+          - fact: "#reset-cycles"
+        derivation: Twice 10 clock cycles is 20 clock cycles.
+    todo:
+      check: document
+      text: Confirm that the manual's budget section states the same count.
+      method: Read section 2 and compare its budget with the calculated 20 cycles.
+  - id: power-on-state
+    section: gotchas
+    title: Power-on state
+    claim: The synthetic Widget's power-on state is unspecified.
+    todo:
+      check: document
+      text: Obtain a synthetic manual revision defining the power-on state.
+      method: Read an explicit power-on-state definition in that revision.

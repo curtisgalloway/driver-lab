@@ -575,6 +575,44 @@ class Untrusted(unittest.TestCase):
             self.assertEqual(code, 1)  # perm's own reference fails the gate: untrusted too
 
 
+class TrustOrder(TempRoots):
+    def test_untrust_found_late_reaches_earlier_citations(self):
+        """Roots in the order docs, A, B, C; C is untrusted from the start. Each citation rests
+        on a clean fact whose root has a sibling fact that is not clean, so no reach crosses
+        an untrusted root on its own: B becomes untrusted in the reference pass (its fact p
+        rests on C), after A's reference to B's clean q resolved; A becomes untrusted in the
+        trust pass; and docs' reference to A's clean s fails only on the pass after that (a
+        fixed point, not one sweep)."""
+        b = self.root("b", {"board-specs.yaml": marker("rb"),
+                            "bchip.spec.yaml": chip("bchip", facts=fact("q") + inference(
+                                "p", "gchip@fc-gpl#gfact"))})
+        a = self.root("a", {"board-specs.yaml": marker("ra"),
+                            "achip.spec.yaml": chip("achip", facts=fact("s") + inference(
+                                "t", "bchip@rb#q"))})
+        docs = self.root("docs", {"board-specs.yaml": marker("rd"),
+                                  "dchip.spec.yaml": chip("dchip", facts=inference(
+                                      "x", "achip@ra#s"))})
+        code, result = check(docs, "--context-root", a, "--context-root", b,
+                             "--context-root", UNTRUSTED / "dup-repos")
+        self.assertEqual(code, 1)
+        f = only(errors(result))
+        self.assertIn("reference 'achip@ra#s' rests on root ra, which is untrusted",
+                      f["message"])
+
+    def test_duplicate_fact_id_in_the_own_root_is_ambiguous(self):
+        base = chip(facts=fact("a"))
+        over = overlay(facts=fact("a"), head="resources:\n  documents:\n"
+                       '    - {name: trm, class: databook, title: TRM, url: "https://example.invalid/t"}\n')
+        other = chip("other", facts=inference("b", "widgetchip#a"))
+        root = self.root("r", {"board-specs.yaml": marker(), "w.spec.yaml": base,
+                               "o.spec.yaml": over, "other.spec.yaml": other})
+        code, result = check(root)
+        self.assertEqual(code, 1)
+        f = only(errors(result, "other.spec.yaml"))
+        self.assertIn("reference 'widgetchip#a' is ambiguous: spec 'widgetchip' declares fact "
+                      "'a' more than once", f["message"])
+
+
 class Roots(TempRoots):
     def test_usage_errors(self):
         a = self.root("a", {"board-specs.yaml": marker("a")})

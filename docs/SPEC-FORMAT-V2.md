@@ -271,7 +271,8 @@ conditional. Changing an assumption's text changes the basis hash of every fact 
 `id` and `support`, so each row is verified like any fact (today keyed `instances/<name>` with no
 citation of its own). `reg` is a hex string (D6). `variants:` rows gain `id` and `support` in
 place of today's `tag` and `source`, so a variant known only from press carries a `press` entry
-and its TODO like any fact.
+and its TODO like any fact. A row is never a gap fact: a `GAP` verdict on an instance or variant
+row is an error (settled in SF2-3; made explicit in review round 1, 2026-10-08).
 
 ### Prose that is not a fact
 
@@ -527,7 +528,10 @@ the license split carry over. Restated for format 2:
 
 `<root>/resources/<name>.verify.yaml`, where `<name>` is the spec file's name without
 `.spec.yaml`; one record per spec file, overlays included; two spec files whose records would
-collide are an error, as today. The reader never loads a record body; `spec.py status` prints the
+collide are an error, as today. Inside `resources/`, any other file whose name contains
+`verify` (in any case: `w.verify`, `wverify.yaml`, `w.Verify.yaml`) is an error, and a record
+anywhere but the root's own `resources/` (a nested `sub/resources/` included) is an error (review
+round 1, 2026-10-08). The reader never loads a record body; `spec.py status` prints the
 summary and freshness for each spec in a composition.
 
 ```yaml
@@ -571,7 +575,8 @@ Rules (all checked by `spec.py check`):
   reader's verdict and reasoning) and, once settled, `adjudication: {decision, by, date, rule}`,
   after which the verdict becomes `PASS` or `FAIL` and the history stays in `adjudication`.
 - **Two readers.** A fact marked `critical` needs a second reader in `readers` with its own
-  verdict (D14). This answers RG1's "add a record field showing whether the second verifier ran".
+  verdict (D14). A reader whose `verifier` is the verdict's own (compared after NFC, collapsing
+  white space and folding case) is not a second reader (review round 1, 2026-10-08). This answers RG1's "add a record field showing whether the second verifier ran".
 - **`carried_from`** names the earlier record (repository, commit, path), the key it had there and
   its format version. A carried verdict is a carry-forward, not a fresh reading, and the
   rendered status says so.
@@ -596,9 +601,11 @@ basis(fact) = sha256( "fact-v1\n"
   NFC. The data holds only strings, integers, booleans, null, lists and mappings (no floats), so
   this is deterministic without a canonicalization library.
 - *Identity fields* are the ones a verdict depends on: for a repos entry `url`, `commit`,
-  `license`, and the listed file's entry; for a document `url`, `revision`, `sha256`, `pages`,
-  `page_numbering`. Bookkeeping (`verified`, `fetch`, `fetch_via`, `note`) does not stale a
-  verdict.
+  `license`, and, for each path the fact cites, its `files` entry's `path` and `license_from`;
+  for a document `url`, `revision`, `commit`, `sha256`, `pages`, `page_numbering`. Bookkeeping
+  (`verified`, `fetch`, `fetch_via`, `note`, a `files` entry's `note`) does not stale a verdict.
+  (A document's `commit` and the `files` entry's fields were named in review round 1,
+  2026-10-08.)
 - References recurse, so the hash is a Merkle hash over the fact's dependencies: editing the docs
   spec's `addressing-model` stales the GPL overlay's inference that rests on it, and nothing
   else.
@@ -619,8 +626,12 @@ by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` imple
   fact rests on, reached through references that stay in the fact's own root until they cross,
   each with its basis when the verdict was reached (absent when there are none). A stale verdict
   is upstream-stale when recomputing the basis with those recorded upstream bases gives back the
-  verdict's `basis` (nothing in the fact's own root changed), and the status names the upstream
-  facts whose basis moved. A current verdict's `upstream` must match exactly, which the checker
+  verdict's `basis` (nothing in the fact's own root changed), the fact's whole dependency
+  closure beyond those upstream facts stays outside its own root, and the status names the
+  upstream facts whose basis moved. If anything an upstream fact rests on, directly or
+  transitively, lies in the fact's own root (`A#a` rests on `B#b`, which rests on `A#c`), the
+  verdict is stale: the recorded upstream bases would otherwise also freeze a fact of the own
+  root and hide its edit (review round 1, 2026-10-08). A current verdict's `upstream` must match exactly, which the checker
   enforces; without it, an upstream change reads as plain stale, the stricter outcome.
   `spec.py status --json` prints each fact's basis and `upstream` map for the verifier to copy.
 - **Reference cycles.** `relates` can form a cycle (`same-as` both ways); premises cannot. A
@@ -630,9 +641,12 @@ by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` imple
   member's line for another member carries the digest in place of a basis. Outside cycles this
   is the formula above unchanged; on a cycle, any change to any member stales every member. (The
   *local part* is the formula's first three canonical terms.)
-- **A basis that cannot be established is unknown, never current**: a reference that does not
-  resolve or that the check failed, a cited `doc`, `repo` or assumption the file does not list,
-  a cited path not in the repos entry's `files`, or a fact resting on such a fact. Unknown is a
+- **A basis that cannot be established is unknown, never current**: a reference the check
+  rejected for any reason (it does not resolve, names the fact itself or a fact its list already
+  names, merges in a later layer, fails the license gate or the trust rule, closes a premise
+  cycle), a cited `doc`, `repo` or assumption the file does not list or lists twice, a cited
+  path not in the repos entry's `files` or listed there twice, or a fact resting on such a fact.
+  (Rejections and names listed twice were added in review round 1, 2026-10-08.) Unknown is a
   warning, and an error under either `--require-verified` mode.
 
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and

@@ -298,8 +298,8 @@ modes (proposed flag: `--require-verified=pr|main`).
   fact changes exactly the expected hashes.
 - [ ] Upstream-stale is an error under the pull-request mode and a warning under `main` mode; a
   test proves `main` mode does not relax a fact staled by its own file.
-- [ ] A key naming no fact, a summary that does not match, and a missing second reader on a
-  `critical` fact are errors.
+- [ ] A key naming no fact and a summary that does not match are errors; a missing second reader
+  on a `critical` fact is a warning, an error under `--require-verified`.
 
 ### Testing and review
 - Tests: `test_records.py` (proposed).

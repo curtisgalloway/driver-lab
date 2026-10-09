@@ -145,6 +145,9 @@ class SpecFile:
     assumptions: dict = dataclasses.field(default_factory=dict)  # id -> path
     documents: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
     repos: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
+    # Names this file declares twice, so a citation of them is ambiguous (freshness: unknown):
+    # ("documents", name), ("repos", name), ("assumptions", id), ("files", repos name, path).
+    ambiguous: set = dataclasses.field(default_factory=set)
     # Its verification record (records.py): none | ok | invalid | shared; valid verdicts by id.
     record_state: str = "none"
     record_path: Path | None = None
@@ -244,7 +247,9 @@ class Checker:
         self.stubs = 0
         self.unreadable_markers: list = []  # markers whose root name is therefore unknown
         self._resolved: dict = {}
-        self._failed_refs: set = set()  # (file, path) of references already reported failing
+        # (file, path) of every reference the check rejected: the one record of "this reference
+        # failed", read by the trust pass and by freshness (a fact resting on one is unknown)
+        self._failed_refs: set = set()
         self._reach: dict = {}
 
     # --- findings ----------------------------------------------------------------------------
@@ -267,6 +272,11 @@ class Checker:
         if root is not None and root.context and downgrade:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
+
+    def reject(self, f, path: tuple, message: str):
+        """An error at a reference: reported, and recorded as failed, in one step."""
+        self._failed_refs.add((f, path))
+        self.add(f, path, message)
 
     def _schema_findings(self, raw, root):
         for f in raw:
@@ -392,8 +402,10 @@ class Checker:
                             if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml), "
                             "or move it out of the root")
                     self.add((path, root, None), (), f"not read as a spec: {want}")
-                elif ".verify." in lower:
-                    # .verify.yml, a case variant, a backup, a format 1 .verify.md: a record
+                elif ".verify." in lower or (Path(top) == root.given / "resources"
+                                             and "verify" in lower):
+                    # .verify.yml, a case variant, a backup, a format 1 .verify.md, and in
+                    # resources/ any name with "verify" in it (w.verify, wverify.yaml): a record
                     # discovery passes over would leave its verdicts unread without a word
                     self.add((path, root, None), (), "not read as a verification record: name "
                                                      "it <name>.verify.yaml (lowercase, .yaml) "
@@ -434,6 +446,7 @@ class Checker:
                 f.records[rid] = Record(f, (key, i), item)
         for i, item in enumerate(f.data.get("assumptions", [])):
             if item["id"] in f.assumptions:
+                f.ambiguous.add(("assumptions", item["id"]))
                 self.add(f, ("assumptions", i, "id"), f"assumption id {item['id']!r} is used "
                                                       f"twice in this file")
             else:
@@ -442,6 +455,7 @@ class Checker:
         for group, table in (("documents", f.documents), ("repos", f.repos)):
             for i, entry in enumerate(resources.get(group, [])):
                 if entry["name"] in table:
+                    f.ambiguous.add((group, entry["name"]))
                     self.add(f, ("resources", group, i, "name"),
                              f"{group} entry {entry['name']!r} is listed twice in this file")
                 else:
@@ -450,6 +464,7 @@ class Checker:
             seen = set()
             for i, item in enumerate(entry.get("files", [])):
                 if item["path"] in seen:
+                    f.ambiguous.add(("files", name, item["path"]))
                     self.add(f, path + ("files", i, "path"),
                              f"repos entry {name!r} lists {item['path']!r} twice in files")
                 seen.add(item["path"])
@@ -708,8 +723,7 @@ class Checker:
                 for kind, ref, path in references(rec.data, rec.path):
                     target, why = self.resolve(f, ref)
                     if target is None:
-                        self.add(f, path, f"{what}: reference {ref!r} {why}")
-                        self._failed_refs.add((f, path))
+                        self.reject(f, path, f"{what}: reference {ref!r} {why}")
                         continue
                     if kind != "observation":
                         relation = None
@@ -717,17 +731,17 @@ class Checker:
                             relation = rec.data["relates"][path[-2]]["relation"]
                         dup = (kind, target, relation)
                         if dup in seen:
-                            self.add(f, path, f"{what}: {ref!r} names {target.full}, as "
-                                              f"{seen[dup]!r} already does in this {kind} list")
+                            self.reject(f, path, f"{what}: {ref!r} names {target.full}, as "
+                                                 f"{seen[dup]!r} already does in this {kind} list")
                         seen.setdefault(dup, ref)
                     if target is rec and kind != "premise":
-                        self.add(f, path, f"{what}: {ref!r} names the fact itself")
+                        self.reject(f, path, f"{what}: {ref!r} names the fact itself")
                     if kind == "premise":
                         edges.append((target, path))
                     if target.file.root.rank > f.root.rank:
-                        self.add(f, path, f"{what}: {ref!r} names a fact in layer "
-                                          f"{target.file.root.layer}, which merges after this "
-                                          f"file's layer {f.root.layer}")
+                        self.reject(f, path, f"{what}: {ref!r} names a fact in layer "
+                                             f"{target.file.root.layer}, which merges after this "
+                                             f"file's layer {f.root.layer}")
                     self.gate_reference(f, what, ref, path, target)
         self.check_cycles(premise_edges)
 
@@ -746,15 +760,13 @@ class Checker:
             reason = self.gate(f.root, g.repos[name][0]["license"])
             if reason:
                 problems.append(f"repos entry {name!r} of {_rel(g)}{through}: {reason}")
-        if problems or unknown:
-            self._failed_refs.add((f, path))
         for problem in problems:
-            self.add(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
-                              f"D13)")
+            self.reject(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
+                                 f"D13)")
         for via, hop, why in unknown:
-            self.add(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
-                              f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
-                              f"fails closed")
+            self.reject(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
+                                 f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
+                                 f"fails closed")
 
     def reach_roots(self, rec: Record) -> dict:
         """Every root a record rests on: its own and those of every fact it references,
@@ -790,11 +802,10 @@ class Checker:
                             if (f, path, root) in emitted:
                                 continue
                             emitted.add((f, path, root))
-                            self._failed_refs.add((f, path))
                             through = "" if via is target else f" through {via.full}"
                             trusted = not f.root.untrusted
-                            self.add(f, path, f"{what}: reference {ref!r} rests on "
-                                              f"{_untrusted(root)}{through}")
+                            self.reject(f, path, f"{what}: reference {ref!r} rests on "
+                                                 f"{_untrusted(root)}{through}")
                             changed = changed or trusted
             if not changed:
                 return
@@ -850,8 +861,8 @@ class Checker:
             for rec in scc:
                 for target, path in edges.get(rec, []):
                     if target in members:
-                        self.add(rec.file, path, f"{_label(rec)} {rec.id!r}: its inference "
-                                                 f"premises form a cycle among {names}")
+                        self.reject(rec.file, path, f"{_label(rec)} {rec.id!r}: its inference "
+                                                    f"premises form a cycle among {names}")
 
     # --- across files ------------------------------------------------------------------------
 

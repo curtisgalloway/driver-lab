@@ -344,6 +344,9 @@ class Invariance(Roots):
                                     "verified: 2026-10-07\n      fetch: partial\n"
                                     "      fetch_via: git\n      note: n\n")
                 .replace("role: source", "role: ref")),
+            "a cited files entry's note": self.spec(linux=LINUX.replace(
+                "{path: drivers/w.c, license_from: spdx-line}",
+                "{path: drivers/w.c, license_from: spdx-line, note: Read for reset}")),
         }
         for name, edited in variants.items():
             with self.subTest(name):
@@ -380,6 +383,7 @@ class Invariance(Roots):
                                  "https://example.invalid/trm2.pdf"),
                                 ("revision", None, "revision: B"),
                                 ("sha256", None, f'sha256: "{"a" * 64}"'),
+                                ("commit", None, f'commit: "{"b" * 40}"'),
                                 ("page_numbering", None, "page_numbering: pdf")):
             with self.subTest(field):
                 trm = (TRM.replace(old, new) if old else
@@ -569,7 +573,12 @@ class RecordChecks(Roots):
     def test_records_discovery_passes_over_are_errors(self):
         for rel in ("w.verify.yaml", "resources/sub/w.verify.yaml", "resources/w.verify.yml",
                     "resources/w.VERIFY.yaml", "resources/w.verify.yaml~",
-                    "resources/w.verify.yaml.bak", "resources/w.verify.md"):
+                    "resources/w.verify.yaml.bak", "resources/w.verify.md",
+                    # only the root's own resources/ holds records, never a nested one
+                    "sub/resources/w.verify.yaml",
+                    # in resources/, any name with "verify" in it (review round 1)
+                    "resources/w.verify", "resources/wverify.yaml",
+                    "resources/W.Verify-notes.txt"):
             with self.subTest(rel):
                 r = self.root(f"m{len(list(self.tmp.iterdir()))}", {
                     "board-specs.yaml": marker("r"), "w.spec.yaml": chip(), rel: "x\n"})
@@ -960,6 +969,10 @@ class Upstream(Roots):
     def test_context_roots_get_no_freshness_findings(self):
         code, result = check(self.gpl, "--context-root", self.docs, "--require-verified", "pr")
         self.assertEqual((code, result["findings"]), (0, []))  # the docs facts have no record
+        # check --json counts the checked roots only: the docs root's two unverified facts
+        # are not counted
+        self.assertEqual(result["verification"], {"current": 3, "stale": 0, "upstream-stale": 0,
+                                                  "unverified": 0, "unknown": 0})
         code, result = status(self.gpl, "--context-root", self.docs)
         self.assertEqual([s["root"] for s in result["specs"]], ["g"])
 
@@ -1146,6 +1159,201 @@ class Verdicts(Roots):
             "widgetchip", "w-extra.spec.yaml", {"x": verdict(b["widgetchip@o#x"])}))
         code, result = check(over, "--context-root", base, "--require-verified", "pr")
         self.assertEqual((code, result["findings"]), (0, []))
+
+
+class ReviewRound1(Roots):
+    """The fixes of SF2-3's review round 1, one rule each."""
+
+    def test_an_own_root_fact_reached_through_another_root_is_stale_not_upstream(self):
+        """a1 rests on bchip@bb#b1, which rests on a2 in a1's own root. Editing a2 changes b1's
+        basis, but the change is in a1's own root, so a1 is stale, and main does not relax it
+        (upstream-stale needs the closure beyond the frontier to stay outside the own root)."""
+        a = self.root("aa", {"board-specs.yaml": marker("aa"), "a.spec.yaml": chip(
+            "achip", facts=ref_fact("a1", "bchip@bb#b1") + fact("a2"))})
+        b = self.root("bb", {"board-specs.yaml": marker("bb"), "b.spec.yaml": chip(
+            "bchip", facts=ref_fact("b1", "achip@aa#a2"))})
+        self.verify_all(a, "achip", "a.spec.yaml", a, b)
+        self.assertEqual(set(records_of_root(a, "a")["a1"]["upstream"]), {"bchip@bb#b1"})
+        text = (a / "a.spec.yaml").read_text()
+        (a / "a.spec.yaml").write_text(text.replace("C a2.", "C a2, edited."))
+        st = rows(status(a, b)[1])
+        self.assertEqual((st["achip@aa#a1"]["status"], st["achip@aa#a1"]["changed"]),
+                         ("stale", []))
+        code, result = check(a, b, "--require-verified", "main")
+        self.assertEqual(code, 1)
+        self.assertIn("fact 'a1': verdict stale", "\n".join(
+            f["message"] for f in errors(result)))
+        self.assertEqual(warnings(result, "upstream-stale"), [])
+
+    def test_a_forged_basis_on_a_cycle_across_roots_reads_stale(self):
+        """a <-> b across roots, a edited: a verdict whose basis is a's recomputation with b
+        fixed at its recorded basis still reads stale, never upstream-stale, because b's
+        closure returns to a's own root."""
+        def a_text(claim):
+            return chip("achip", facts=fact("a", claim=claim, extra=(
+                '    relates: [{fact: "bchip@rb#b", relation: same-as}]\n')))
+
+        ra = self.root("ra", {"board-specs.yaml": marker("ra"), "a.spec.yaml": a_text("C a.")})
+        rb = self.root("rb", {"board-specs.yaml": marker("rb"), "b.spec.yaml": chip(
+            "bchip", facts=fact("b", extra='    relates: [{fact: "achip@ra#a", '
+                                           'relation: same-as}]\n'))})
+        old_b = rows(status(ra, rb)[1])["bchip@rb#b"]["basis"]
+        (ra / "a.spec.yaml").write_text(a_text("C a, edited."))
+        import types
+
+        import speccheck
+
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        checker = speccheck.check(api, spec_cli.load_schemas(), [ra, rb])
+        # the forgery: a's recomputation with b fixed at its recorded basis, as status() runs it
+        fresh = records.Freshness(checker, failed=set(checker._failed_refs))
+        rec = next(r for f in checker.files for r in f.records.values()
+                   if r.full == "achip@ra#a")
+        frontier = fresh.frontier(rec)
+        forged = records.compute([rec], fresh.edges, records.local_part,
+                                 {t: old_b for t in frontier.values()}, {})[rec][0]
+        self.assertNotEqual(forged, fresh.basis(rec)[0])
+        self.write(ra, "resources/a.verify.yaml", record("achip", "a.spec.yaml", {
+            "a": verdict(forged, upstream={"bchip@rb#b": old_b})}))
+        st = rows(status(ra, rb)[1])["achip@ra#a"]
+        self.assertEqual((st["status"], st["changed"]), ("stale", []))
+
+    def test_a_reference_into_another_file_of_the_same_root_is_not_upstream(self):
+        """The frontier is by root, not by file: a fact resting on a fact in another spec file
+        of its own root records no upstream map, and an edit there reads stale."""
+        a = self.root("aa", {"board-specs.yaml": marker("aa"),
+                             "a.spec.yaml": chip("achip", facts=ref_fact("a1", "dchip#d1")),
+                             "d.spec.yaml": chip("dchip", facts=fact("d1"))})
+        self.verify_all(a, "achip", "a.spec.yaml", a)
+        self.verify_all(a, "dchip", "d.spec.yaml", a)
+        self.assertNotIn("upstream", records_of_root(a, "a")["a1"])
+        self.assertEqual(check(a, "--require-verified", "pr")[1]["findings"], [])
+        (a / "d.spec.yaml").write_text((a / "d.spec.yaml").read_text().replace("C d1.",
+                                                                               "C d1, edited."))
+        st = rows(status(a)[1])
+        self.assertEqual(st["achip@aa#a1"]["status"], "stale")
+        code, result = check(a, "--require-verified", "main")
+        self.assertIn("fact 'a1': verdict stale", "\n".join(
+            f["message"] for f in errors(result)))
+
+    def test_a_name_listed_twice_makes_the_basis_unknown(self):
+        """A document, repos entry, assumption or files path listed twice is ambiguous: every
+        fact citing it is unknown, even when a record once matched its basis."""
+        anchor = ("    support:\n      - class: src\n        anchors: [{repo: linux, "
+                  "path: drivers/w.c, lines: [1, 2], symbol: s}]\n")
+        cases = {
+            "documents": (TRM + TRM.replace("trm.pdf", "trm2.pdf"), LINUX, "", fact("a"),
+                          "document 'trm' is listed twice in its file"),
+            "repos": (TRM, LINUX + LINUX.replace("/linux", "/linux2"), "",
+                      fact("a", support=anchor), "repos entry 'linux' is listed twice"),
+            "assumptions": (TRM, LINUX, "assumptions:\n  - {id: s, text: one}\n"
+                                        "  - {id: s, text: two}\n",
+                            fact("a", extra="    assumes: [s]\n"),
+                            "assumption 's' is declared twice in its file"),
+            "files": (TRM, LINUX.replace(
+                "        - {path: drivers/x.c, license_from: spdx-line}\n",
+                "        - {path: drivers/w.c, license_from: notice}\n"), "",
+                fact("a", support=anchor), "lists 'drivers/w.c' twice in files"),
+        }
+        for name, (docs, repos, head, facts, reason) in cases.items():
+            with self.subTest(name):
+                r = self.root(f"d{len(list(self.tmp.iterdir()))}", {
+                    "board-specs.yaml": marker("r", accepts="[GPL-2.0-only]", lic="GPL-2.0-only"),
+                    "w.spec.yaml": chip(docs=docs, repos=repos, head=head,
+                                        facts=facts + fact("fine"))})
+                self.write(r, "resources/w.verify.yaml", record("widgetchip", "w.spec.yaml", {
+                    "a": verdict("0" * 64)}))
+                st = rows(status(r)[1])
+                row = st["widgetchip@r#a"]
+                self.assertEqual((row["status"], row["basis"]), ("unknown", None))
+                self.assertIsInstance(row["reason"], str)
+                self.assertIn(reason, row["reason"])
+                self.assertEqual(st["widgetchip@r#fine"]["status"],
+                                 "unknown" if name == "documents" else "unverified")
+
+    def test_every_reference_the_check_rejects_makes_the_fact_unknown(self):
+        """A layer-order rejection after the verdict, a duplicate in a list and a fact relating
+        to itself: each is reported, and each makes the referring fact unknown."""
+        up = self.root("up", {"board-specs.yaml": marker("up"),
+                              "u.spec.yaml": chip("upchip", facts=fact("mode"))})
+        g = self.root("g", {"board-specs.yaml": marker("g"),
+                            "x.spec.yaml": chip("xchip", facts=ref_fact("a", "upchip@up#mode"))})
+        self.verify_all(g, "xchip", "x.spec.yaml", g, "--context-root", up)
+        self.assertEqual(check(g, "--context-root", up, "--require-verified", "pr")[1]
+                         ["findings"], [])
+        (up / "board-specs.yaml").write_text(marker("up", layer="local"))
+        code, result = check(g, "--context-root", up)
+        self.assertEqual(code, 1)
+        need(errors(result, "which merges after this file's layer public"))
+        row = rows(status(g, "--context-root", up)[1])["xchip@g#a"]
+        self.assertEqual(row["status"], "unknown")
+        self.assertIn("failed the check", row["reason"])
+        r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=(
+            fact("b") + ref_fact("dup", "#b", "widgetchip@r#b")
+            + fact("self", extra='    relates: [{fact: "#self", relation: same-as}]\n')))})
+        st = rows(status(r)[1])
+        for key in ("dup", "self"):
+            self.assertEqual(st[f"widgetchip@r#{key}"]["status"], "unknown", key)
+        self.assertEqual(st["widgetchip@r#b"]["status"], "unverified")
+
+    def test_a_reader_with_the_verdicts_own_verifier_is_not_a_second_reader(self):
+        r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(
+            facts=fact("a", extra="    critical: true\n"))})
+        b = self.bases(r)
+        for who in ("a model", "A Model"):
+            with self.subTest(who):
+                self.write(r, "resources/w.verify.yaml", record("widgetchip", "w.spec.yaml", {
+                    "a": verdict(b["widgetchip@r#a"],
+                                 readers=[{"verifier": who, "verdict": "PASS"}])}))
+                for mode, level in ((None, "warning"), ("pr", "error"), ("main", "error")):
+                    code, result = check(r, *(["--require-verified", mode] if mode else []))
+                    f = only(result["findings"])
+                    self.assertEqual(f["level"], level, mode)
+                    self.assertIn("a reader with the verdict's own verifier is not a second "
+                                  "reader", f["message"])
+                self.assertEqual(rows(status(r)[1])["widgetchip@r#a"]["second_reader"],
+                                 "missing")
+
+    def test_a_gap_verdict_on_an_instance_or_variant_row_is_an_error(self):
+        """Rows have no gap notion (accepted in SF2-3): a row is never a gap, so GAP on one is
+        an error, and its other verdicts are not checked against a gap rule."""
+        soc = (HDR + "format: 2\nkind: soc\nid: wsoc\nname: W\ntriggers: [wsoc]\n"
+               "instances:\n  - {id: uart0, name: uart0, ip: wuart, reg: \"0x1000\", "
+               "irq: {kind: SPI, number: 1}, clocks: [],\n"
+               '     support: [{class: databook, doc: trm, at: [{section: "2"}]}]}\n'
+               "resources:\n  documents:\n" + TRM + "facts:\n" + fact("a"))
+        ip = (HDR + "format: 2\nkind: ip\nid: wuart\nname: U\ntriggers: [wuart]\n"
+              "resources:\n  documents:\n" + TRM + "facts:\n"
+              + fact("u", section="programming-model"))
+        r = self.root("r", {"board-specs.yaml": marker("r"), "s.spec.yaml": soc,
+                            "u.spec.yaml": ip})
+        b = self.bases(r)
+        self.write(r, "resources/s.verify.yaml", record("wsoc", "s.spec.yaml", {
+            "uart0": verdict(b["wsoc@r#uart0"], "GAP"), "a": verdict(b["wsoc@r#a"])}))
+        code, result = check(r)
+        self.assertEqual(code, 1)
+        f = only(errors(result))
+        self.assertIn("verdict GAP for instance 'uart0': GAP is a gap fact's verdict, and an "
+                      "instance or variant row is never a gap", f["message"])
+        self.assertTrue(f["path"].endswith("resources/s.verify.yaml"))
+        self.write(r, "resources/s.verify.yaml", record("wsoc", "s.spec.yaml", {
+            "uart0": verdict(b["wsoc@r#uart0"], "UNVERIFIABLE"), "a": verdict(b["wsoc@r#a"])}))
+        self.assertEqual(errors(check(r)[1]), [])
+
+    def test_status_text_prints_each_error(self):
+        r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=fact("a"))})
+        b = self.bases(r)
+        self.write(r, "resources/w.verify.yaml", record(
+            "widgetchip", "w.spec.yaml", {"a": verdict(b["widgetchip@r#a"])},
+            summary={"pass": 99, "fail": 0, "unverifiable": 0, "gap": 0, "adjudicate": 0}))
+        code, out, _ = run("status", "--stale", r)
+        self.assertEqual(code, 1)
+        found = [x for x in out.splitlines() if "summary pass: 99" in x]
+        self.assertEqual(len(found), 1, out)
+        self.assertIn("w.verify.yaml:", found[0])
+        self.assertIn("error", found[0])
+        self.assertTrue(out.splitlines()[-1].endswith("the check found 1 error(s), 0 warning(s)"))
 
 
 class StatusCommand(Roots):

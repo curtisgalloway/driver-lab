@@ -55,8 +55,10 @@ What exists so far (SF2-1 to SF2-3):
   `upstream` map to match. Each verdict is current, stale, upstream-stale, unverified or unknown
   by its **basis hash** (canonical form `fact-v1`: the fact without `section`, the identity fields
   of what it cites, its assumptions, and the bases of the facts it references; a reference cycle
-  hashes as one). A current FAIL is an error; the rest, and a `critical` fact without a second
-  reader, are warnings for checked roots, errors under `--require-verified pr` and, except
+  hashes as one). Upstream-stale also needs everything the upstream facts rest on to stay
+  outside the fact's own root; a reference the check rejected, or a cited name listed twice,
+  leaves the basis unknown. A current FAIL is an error; the rest, and a `critical` fact without
+  a second reader (a reader with the verdict's own verifier does not count), are warnings for checked roots, errors under `--require-verified pr` and, except
   upstream-stale, under `--require-verified main` (D19). A record's defects and a current FAIL
   make the root untrusted.
 - `scripts/spec.py status <root>... [--context-root <dir>]... [--stale] [--json]`: per spec

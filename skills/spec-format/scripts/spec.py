@@ -751,6 +751,7 @@ def cmd_status(args) -> tuple[int, dict]:
     for spec in specs:
         for r in spec["facts"]:
             tally[r["status"]] += 1
+    text += [str(f) for f in ordered if f.level == "error"]  # what the exit status rests on
     text.append(", ".join(f"{n} {k}" for k, n in tally.items())
                 + f"; the check found {errors} error(s), {warnings} warning(s)")
     return (EXIT_INVALID if errors else EXIT_OK), {

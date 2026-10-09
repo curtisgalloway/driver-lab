@@ -790,13 +790,17 @@ class BoardFixtures(unittest.TestCase):
         code, result = check(CHECK / "bad_root")
         self.assertEqual(code, 1)
         # SF2-3: a fact citing a name its file does not list (an assumption, a document, an
-        # unlisted path) has no basis hash, so its freshness is unknown: a consequence of that
-        # file's one defect, not a second defect
+        # unlisted path) or lists twice, or resting on a reference the check rejected (a
+        # duplicate premise, a fact relating to itself), has no basis hash, so its freshness is
+        # unknown: a consequence of that file's one defect, not a second defect
         self.assertEqual(sorted((pathlib.Path(f["path"]).name, f["message"].split(": ")[1])
                                 for f in warnings(result)),
                          [("assumption-unresolved.spec.yaml", "freshness unknown"),
                           ("doc-unresolved.spec.yaml", "freshness unknown"),
-                          ("path-unlisted.spec.yaml", "freshness unknown")])
+                          ("dup-doc-name.spec.yaml", "freshness unknown"),
+                          ("dup-premise.spec.yaml", "freshness unknown"),
+                          ("path-unlisted.spec.yaml", "freshness unknown"),
+                          ("self-relates.spec.yaml", "freshness unknown")])
         got: dict = {}
         for f in errors(result):
             got.setdefault(pathlib.Path(f["path"]).name, []).append(f["message"])

@@ -16,9 +16,9 @@ the fact's **basis hash** when it was reached (D2):
 *canonical* is JSON with keys sorted by code point, no insignificant white space, UTF-8, every
 string and key in NFC; the data holds only strings, integers, booleans, null, lists and mappings
 (anything else is a bug, never hashed). The resource part is `{"documents": {name: identity},
-"repos": {name: identity}}`, identity fields only (documents: url, revision, sha256, pages,
-page_numbering; repos: url, commit, license, and `files`, the entries of the paths the fact
-cites, by path). The assumption part is `{id: entry}`. A fact references facts through inference
+"repos": {name: identity}}`, identity fields only (documents: url, revision, commit, sha256,
+pages, page_numbering; repos: url, commit, license, and `files`, the path and license_from of
+each entry the fact cites, by path). The assumption part is `{id: entry}`. A fact references facts through inference
 premises, `relates` and an emulated entry's `observation`.
 
 References form a graph that `relates` can make cyclic (`same-as` both ways). A fact on a cycle
@@ -31,14 +31,14 @@ neighbors' bases first, so the component is hashed as one: its digest is
 and a member's line for another member carries that digest in place of a basis. Outside cycles
 this is exactly the formula above; on one, any change to any member stales every member.
 
-A basis that cannot be established (a reference that does not resolve or failed the check, a
-cited name the file does not list, a fact resting on such a fact) is **unknown**: never current.
+A basis that cannot be established (a reference the check rejected, a cited name the file does
+not list or lists twice, a fact resting on such a fact) is **unknown**: never current.
 
 Freshness of a verdict: **current** (its basis equals the fact's), **stale**, **upstream-stale**
 (stale only because facts in other roots changed, reached through references that stay in the
 fact's own root until they cross: the verdict's `upstream` map records those facts' bases when
-it was reached, and recomputing the basis with them gives back the verdict's), **unverified**
-(no verdict) or **unknown**.
+it was reached, recomputing the basis with them gives back the verdict's, and nothing those
+facts rest on lies in the fact's own root), **unverified** (no verdict) or **unknown**.
 """
 
 from __future__ import annotations
@@ -48,8 +48,9 @@ import json
 import unicodedata
 
 CANONICAL = "fact-v1"
-DOC_IDENTITY = ("url", "revision", "sha256", "pages", "page_numbering")
+DOC_IDENTITY = ("url", "revision", "commit", "sha256", "pages", "page_numbering")
 REPO_IDENTITY = ("url", "commit", "license")
+FILE_IDENTITY = ("path", "license_from")  # a repos entry's `files` item; `note` is bookkeeping
 SUMMARY = {"pass": "PASS", "fail": "FAIL", "unverifiable": "UNVERIFIABLE", "gap": "GAP",
            "adjudicate": "ADJUDICATE"}
 STATUSES = ("current", "stale", "upstream-stale", "unverified", "unknown")
@@ -104,6 +105,8 @@ def local_part(rec):
     for entry, _ in speccheck.supports(rec.data, ()):
         if "doc" in entry:
             name = entry["doc"]
+            if ("documents", name) in f.ambiguous:
+                return None, f"{rec.full}: document {name!r} is listed twice in its file"
             if name not in f.documents:
                 return None, f"{rec.full}: document {name!r} is not in its file's resources"
             doc = f.documents[name][0]
@@ -111,6 +114,8 @@ def local_part(rec):
         if entry.get("class") in speccheck.ANCHORED:
             for anchor in entry.get("anchors", []):
                 name = anchor["repo"]
+                if ("repos", name) in f.ambiguous:
+                    return None, f"{rec.full}: repos entry {name!r} is listed twice in its file"
                 if name not in f.repos:
                     return None, f"{rec.full}: repos entry {name!r} is not in its file's resources"
                 paths.setdefault(name, set()).add(anchor["path"])
@@ -121,14 +126,21 @@ def local_part(rec):
         if missing:
             return None, (f"{rec.full}: {missing[0]!r} is not in the files of repos entry "
                           f"{name!r}, so its license entry is unknown")
+        twice = sorted(p for p in cited if ("files", name, p) in f.ambiguous)
+        if twice:
+            return None, (f"{rec.full}: repos entry {name!r} lists {twice[0]!r} twice in "
+                          f"files, so its license entry is ambiguous")
         identity = {k: entry[k] for k in REPO_IDENTITY if k in entry}
-        identity["files"] = [listed[p] for p in sorted(cited)]
+        identity["files"] = [{k: listed[p][k] for k in FILE_IDENTITY if k in listed[p]}
+                             for p in sorted(cited)]
         repos[name] = identity
     names = list(rec.data.get("assumes", []))
     for entry in rec.data.get("support", []):
         names += [p["assumption"] for p in entry.get("premises", []) if "assumption" in p]
     assumptions = {}
     for name in names:
+        if ("assumptions", name) in f.ambiguous:
+            return None, f"{rec.full}: assumption {name!r} is declared twice in its file"
         if name not in f.assumptions:
             return None, f"{rec.full}: assumption {name!r} is not in its file's assumptions"
         assumptions[name] = f.data["assumptions"][f.assumptions[name][1]]
@@ -279,6 +291,22 @@ class Freshness:
                     queue.append(t)
         return out
 
+    def returns_home(self, rec, frontier) -> bool:
+        """Whether anything the frontier facts rest on, transitively, lies in rec's own root.
+        Then the recorded upstream bases also fix facts of the fact's own root, so a change
+        there could hide behind them: upstream-stale is refused (review round 1)."""
+        seen, queue = set(frontier.values()), list(frontier.values())
+        while queue:
+            cur = queue.pop()
+            for _, t, _ in self.edges(cur):
+                if t is None or t in seen:
+                    continue
+                if t.file.root is rec.file.root:
+                    return True
+                seen.add(t)
+                queue.append(t)
+        return False
+
     def upstream_now(self, rec) -> dict | None:
         """{full reference: basis now} over the frontier, or None if one is unknown."""
         out = {}
@@ -302,6 +330,8 @@ class Freshness:
         frontier = self.frontier(rec)
         if not recorded or set(recorded) != set(frontier):
             return "stale", None
+        if self.returns_home(rec, frontier):
+            return "stale", None  # the closure beyond the frontier re-enters the own root
         fixed = {t: recorded[full] for full, t in frontier.items()}
         again = compute([rec], self.edges, local_part, fixed, {})
         if again.get(rec, (None,))[0] != verdict["basis"]:
@@ -318,8 +348,8 @@ class Freshness:
 def check_structure(checker, schemas):
     """Load and check every record of every root: its name maps to one spec file, `spec` and
     `spec_file` name it, every key names a fact (instance, variant) of that file, `summary`
-    counts the verdicts, a GAP verdict belongs to a gap fact and a gap fact's verdict is GAP,
-    and second readers agree with the verdict they confirm. Valid verdicts are attached to the
+    counts the verdicts, a GAP verdict belongs to a gap fact (never an instance or variant row)
+    and a gap fact's verdict is GAP, and second readers agree with the verdict they confirm. Valid verdicts are attached to the
     spec file (`f.verdicts`) for freshness."""
     by_path = {f.path: f for f in checker.files}
     for root in checker.roots:
@@ -401,6 +431,10 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
             elif not gap and v["verdict"] == "GAP":
                 checker.add(where, kpath + ("verdict",), f"verdict GAP for {fid!r}, which has "
                                                          f"support: GAP is a gap fact's verdict")
+        elif v["verdict"] == "GAP":
+            checker.add(where, kpath + ("verdict",), f"verdict GAP for {_what(rec)}: GAP is a gap "
+                                                     f"fact's verdict, and an instance or variant "
+                                                     f"row is never a gap")
         if v["verdict"] != "ADJUDICATE":
             for i, reader in enumerate(v.get("readers", [])):
                 if reader["verdict"] != v["verdict"]:
@@ -482,8 +516,10 @@ def second_pass(checker, mode):
             status, detail = fresh.status(rec, v)
             basis, _ = fresh.basis(rec)
             critical = rec.data.get("critical") is True
-            reader = ("not-needed" if not critical else
-                      "present" if v is not None and "readers" in v else "missing")
+            others = [r for r in (v or {}).get("readers", [])
+                      if _who(r["verifier"]) != _who(v["verifier"])]
+            own = bool(v and v.get("readers")) and not others
+            reader = ("not-needed" if not critical else "present" if others else "missing")
             rows.append({
                 "key": rec.id, "ref": rec.full, "kind": _what(rec).split()[0], "status": status,
                 "verdict": v["verdict"] if v else None, "carried": bool(v and "carried_from" in v),
@@ -518,10 +554,18 @@ def second_pass(checker, mode):
                 checker.add(f, at, f"{what}: its verdict is ADJUDICATE, not yet settled",
                             level="warning")
             if status == "current" and reader == "missing":
+                same = ("; a reader with the verdict's own verifier is not a second reader"
+                        if own else "")
                 checker.add(f, at, f"{what}: critical, so its verdict needs a second reader's "
-                                   f"verdict in readers (D14)", level=level("reader"))
+                                   f"verdict in readers (D14){same}", level=level("reader"))
         checker.status.append({"file": f, "record": record if f.record_path else None,
                                "state": f.record_state, "rows": rows})
+
+
+def _who(verifier: str) -> str:
+    """A verifier's name for comparing readers: NFC, white space collapsed, case folded, so a
+    respelling of the same verifier never counts as a second reader."""
+    return " ".join(unicodedata.normalize("NFC", verifier).split()).casefold()
 
 
 def _cut(text: str) -> str:

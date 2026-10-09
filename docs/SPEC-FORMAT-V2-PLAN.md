@@ -60,8 +60,11 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **User overrides:** none.
 - **Implementers:** one fresh implementer per milestone. By unit (user decision 2026-10-08,
   revised the same evening after a larger Codex allowance): Opus 5.5 subagents for SF2-1 to
-  SF2-3 and SF2-G; **Codex** (`codex exec`, its own worktree, `quota-strategy`'s launch recipe)
-  for SF2-4 to SF2-12. Reviewers stay as the review method says (an Opus reviewer plus a Codex
+  SF2-3 and SF2-G; **Codex** (through `utilities/codex-implement.py BASE RUN_DIR BRIEF`)
+  for SF2-4 to SF2-12. Codex returns a patch (user decision 2026-10-09): it works in a
+  private export of BASE that is deleted afterwards, and the wrapper writes the accepted
+  changes as `codex-<stamp>.patch` plus a `codex-<stamp>.refused.txt` list in RUN_DIR. The
+  orchestrator reads both before `git apply` in the milestone worktree. Reviewers stay as the review method says (an Opus reviewer plus a Codex
   review). The orchestrator holds pushes, merges, Codex runs and user questions.
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh

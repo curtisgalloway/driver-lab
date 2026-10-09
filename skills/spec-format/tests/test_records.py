@@ -1645,6 +1645,35 @@ class ReviewRound2(Roots):
                     self.assertEqual(st[f"widgetchip@r#{key}"]["status"], "unknown",
                                      (name, key))
 
+    def test_every_citation_error_is_recorded_as_a_rejected_citation(self):
+        """One source of truth: each citation-level error, including those local_part also
+        reads as unknown (a ref pin, an unlisted path or assumption), is recorded by
+        Checker.reject as a rejected citation, never as a rejected reference."""
+        import types
+
+        import speccheck
+
+        repo = dict(self.REPO)
+        del repo["commit"]
+        repo["ref"] = "v1"
+        anchor = ("    support:\n      - class: src\n        anchors: [{{repo: linux, "
+                  "path: {path}, lines: [1, 2], symbol: s}}]\n")
+        r = self.root("r", {"board-specs.yaml": marker("r", accepts="[GPL-2.0-only]",
+                                                       lic="GPL-2.0-only"),
+                            "w.spec.yaml": chip(docs=flow(self.DOC), repos=flow(repo), facts=(
+                                fact("pin", support=anchor.format(path="drivers/w.c"))
+                                + fact("path", support=anchor.format(path="drivers/zz.c"))
+                                + fact("assumed", extra="    assumes: [nosuch]\n")))})
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        checker = speccheck.check(api, spec_cli.load_schemas(), [r])
+        cites = {path for _, path in checker._failed_cites}
+        self.assertEqual(cites, {("facts", 0, "support", 0, "anchors", 0, "repo"),
+                                 ("facts", 1, "support", 0, "anchors", 0, "repo"),
+                                 ("facts", 1, "support", 0, "anchors", 0, "path"),
+                                 ("facts", 2, "assumes", 0)})
+        self.assertEqual(checker._failed_refs, set())
+
     def test_a_gap_verdict_on_a_variant_row_is_an_error(self):
         """N3: the variant half of the row rule (round 1 tested the instance half)."""
         soc = (HDR + "format: 2\nkind: soc\nid: wsoc\nname: W\ntriggers: [wsoc]\n"

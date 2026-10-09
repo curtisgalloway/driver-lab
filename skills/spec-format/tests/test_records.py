@@ -205,8 +205,10 @@ class Canonical(unittest.TestCase):
         self.assertNotEqual(records.canonical(["1"]), records.canonical([1]))
 
     def test_refuses_what_the_format_does_not_hold(self):
-        for bad in (1.5, {1: "x"}, (1, 2), b"x", {"a": float("nan")}):
-            with self.assertRaises(TypeError, msg=repr(bad)):
+        for bad, says in ((1.5, "float is not part"), ({1: "x"}, "key 1 is not a string"),
+                          ((1, 2), "tuple is not part"), (b"x", "bytes is not part"),
+                          ({"a": float("nan")}, "float is not part")):
+            with self.assertRaisesRegex(TypeError, says, msg=repr(bad)):
                 records.canonical(bad)
         with self.assertRaises(TypeError):
             records.canonical({unicodedata.normalize("NFD", "é"): 1, "é": 2})

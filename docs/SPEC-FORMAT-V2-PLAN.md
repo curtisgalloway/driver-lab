@@ -103,7 +103,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
-| SF2-2 | Checker: composition, references, license gate | SF2-1 | in progress: implemented, awaiting review ([notebook](../notebook/SF2-2.md)) |
+| SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
@@ -258,56 +258,14 @@ kinds are SF2-7's.
 
 ## SF2-2 — Checker: composition, references and the license gate
 
-**Outcome:** `spec.py check <root>... [--context-root ...] [--require-license]` checks what a
-schema cannot: discovery, composition, overlays, names, references, layer order, the license
-gate direct and transitive, privacy and placeholders. The license-gate fixture matrix runs in
-format 2 with the same expected results.
-**Design coverage:** R3, D1, D12 (closed `files` list), D13, D15 (rule), D17; § References,
-Roots/layers/overlays/license gate, Validation rows "check".
-**Dependencies:** SF2-1.
-**In scope:** root discovery (marker `name` required in format 2, duplicate names an error,
-no symbolic links); `*.spec.yaml` discovery; `parts`, `overlays`, `variant_of`,
-`instances[].ip`; fact-id uniqueness per spec id per root; `repo`, `doc`, `assumption` names;
-document class and page bounds; the three reference forms (`#id`, `spec#id`,
-`spec@root#id`), required qualification across roots, cycles, layer order; the gate over `src`,
-`DT` and `rtl` anchors and through references, using `board-expert/scripts/spdx.py`;
-`--context-root` downgrading only a context root's own findings; public-layer privacy;
-template placeholders; stubs (`--stubs-from`).
-**Out of scope:** records (SF2-3); text checks (SF2-4); anything needing a checkout (SF2-6).
-
-### Implementation steps
-1. `skills/spec-format/scripts/speccheck.py` (proposed), called by `spec.py check`.
-2. Rewrite `skills/peripheral-spec/tests/fixtures/license-gate/` board fixtures and roots as
-   format 2 under `skills/spec-format/tests/fixtures/license-gate/` (proposed; the v1 fixtures
-   stay until SF2-12), with `expected.json` carried over row for row.
-3. Rewrite the board-expert `bad_root`, `good_root`, `vendor_root` fixtures in format 2, each bad
-   fixture keeping its one defect.
-4. Reference fixtures: a GPL-root inference referencing a docs fact (passes), the reverse
-   (fails the transitive gate), an unqualified cross-root reference (fails), a same-id fact in
-   two roots (passes), a cycle (fails), a reference into a later layer (fails), a renamed root
-   (every dangling reference reported).
-
-### Acceptance criteria
-- [ ] The license-gate matrix gives the expected exit code for every pair, in format 2.
-- [ ] Each reference fixture above gives its expected result with a message naming the fact.
-- [ ] A context root that is, contains or sits inside a checked root is a usage error (exit 2);
-  a test proves a context root cannot downgrade a checked root's own finding.
-- [ ] No code path reads a claim, title or prose string for meaning (reviewer confirms).
-
-### Testing and review
-- Tests: `test_check.py` (proposed), the matrix test.
-- Review focus: the gate as one function over one structure; degenerate inputs (empty `accepts`,
-  empty anchors list, `name: ""`, a reference that is `#`); relaxing flags.
-- Review method: code unit.
-
-### Session sizing
-Needs the design's References and Roots sections, `spdx.py`, the v1 matrix README. The largest
-code unit. Split point: the transitive gate and cross-root reference fixtures (step 4) become
-SF2-2b if steps 1–3 take the session.
-
-### Evidence and findings
-Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-2.md` (written after
-review). Notebook: [SF2-2](../notebook/SF2-2.md).
+**Outcome:** `spec.py check <root>... [--context-root ...] [--require-license]` checks discovery,
+composition, overlays, names, ids, references, layer order, privacy, placeholders, stubs and the
+license gate, direct and transitive. The gate fails closed: a reference may only rest on a root
+that checks clean (user decision). The format 1 license-gate matrix gives the same codes in format
+2. **Dependencies:** SF2-1. **Status:** complete, merged with tracked gaps by user decision.
+**Evidence:** [SF2-2](../evidence/SF2-2.md) (acceptance table, three review rounds, decisions,
+mutation results). **Open limitations:** the five tracked gaps under
+[Discovered work / backlog](#discovered-work--backlog).
 
 ---
 
@@ -800,6 +758,26 @@ Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
 - **Requirements markers:** only `python_version` and `python_full_version` comparisons, as
   padded three-part versions; anything else is exit 3.
 
+Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../evidence/SF2-2.md):
+
+- **User: "distrust broken roots".** A reference may only rest on a root that checks clean. A root
+  with any error of its own (counted before context downgrading) is untrusted. While any marker
+  is unreadable, every root-qualified reference fails. Extension fragments use plain properties
+  only. Stated in the design's license-gate section.
+- **User: merge SF2-2 with tracked gaps** (the backlog's SF2-2 entries), with no further code
+  changes after the confirmation round.
+- **Orchestrator:**
+  - the gate fails closed;
+  - `license` is required in a root marker;
+  - placeholders are template-shaped;
+  - extension fragments may not declare citation field names;
+  - `parts` and `instances[].ip` are composition and stay ungated;
+  - over-blocking is accepted (an unparseable file blocks every qualified reference into its
+    root);
+  - the implementer's seven interpretations are accepted (canonical `accepts`; the gate covers
+    conflicts, notices, `relates` and observations; one premise per fact; overlay layer and
+    sections; discovery errors; series targets resolve; `roots:` not followed).
+
 ## Needs a user decision (later)
 
 - **`bringup-kit`** follow-up if SF2-12 finds its tests need a change (outside the 2026-10-07
@@ -811,11 +789,35 @@ Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
   schema fragment and moves to format 2; not in this plan.
 - **Coverage-review record format**: design non-goal; RG1 showed the need.
 - **Viewer search and navigation**: design non-goal; builds on SF2-5.
+- **SF2-2 tracked gaps** (user decision 2026-10-08: merge SF2-2 as is and track these):
+  - **Extension fragments can carry citation-shaped data.** `repo`, `path` or `anchors` can sit
+    inside open nested objects (`additionalProperties: true`, `{}`, `items: {}`, an object
+    `const`/`enum`, a nested object with `required` names), which the gate never reads. Impact:
+    an extension entry could cite gated source invisibly; no extension uses format 2 yet. Fix
+    when an extension adopts format 2 (D15 revisit): restrict fragments to flat scalars, or
+    disable fragments.
+  - **Files with unrecognized names are skipped with no finding.** Examples: `b-spec.yaml`,
+    `b.yaml`, `b_spec.yaml`, `b.spec`. Impact: a skipped file could hide a competing candidate,
+    and its root stays trusted. Fix: every YAML file in a root other than the marker,
+    `*.spec.yaml` and `resources/*.verify.yaml` is an error (SF2-3 introduces the records). Watch
+    SF2-10's migration output for format 1 `-spec.yaml` names.
+  - **The citing-root exemption.** A same-root reference to an ambiguous candidate (for example
+    one hidden in a misnamed file) gets no error on the citing file. Impact: the run still fails,
+    on the other file, so nothing passes; only the attribution is missing. Fix point: report on
+    the citing file when its own root is untrusted for a reason that touches the referenced
+    spec.
+  - **A rejected symlinked checked root.** It drops out of name ambiguity. Impact: the run still
+    fails with the symlink error. Fix: treat a skipped root's identity as unknown (as an
+    unreadable marker is), or refuse the invocation.
+  - **Nits:** `reach_roots`' transitive walk is redundant with the fixed point (no test needs
+    it; drop it or test it). Untrusted-root messages cut the underlying reason at 200
+    characters, and the full path takes most of them.
 
 ## Next session
 
-- Current milestone and status: SF2-1 complete ([evidence](../evidence/SF2-1.md)); SF2-2 next.
-- Resume action: begin SF2-2 (implementer: Opus 5.5) once SF2-1 is merged.
-- Read first: the design, this plan's conventions and SF2-2, the [SF2-1](../notebook/SF2-1.md)
-  chapter's decisions (the checker inherits the paged-`standard` rule, `lines` order and fact-id
-  uniqueness).
+- Current milestone and status: SF2-2 complete ([evidence](../evidence/SF2-2.md)); SF2-3 next.
+- Resume action: begin SF2-3 (implementer: Opus 5.5) once SF2-2 is merged.
+- Read first: the design (including the license-gate section's trust rule), this plan's
+  conventions and SF2-3, the [SF2-2](../notebook/SF2-2.md) chapter's decisions. SF2-3 adds
+  `resources/*.verify.yaml`; the tracked gap on unrecognized file names names those records as
+  the one YAML a root may hold besides specs and the marker.

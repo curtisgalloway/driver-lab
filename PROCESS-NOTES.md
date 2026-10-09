@@ -554,3 +554,25 @@ Cost: one extra check; nothing shipped unverified.
 Prevention: when a check line claims hash pinning, tamper one package's hashes and confirm the
 installer refuses before relying on it.
 Fix belongs in: the `dep-quality` skill (pinning step) or driver-lab AGENTS.md, if it recurs.
+
+### 2026-10-08T17:38-07:00 — a mutation pass without a clean baseline counted every mutation as caught
+Chapter: [SF2-2](notebook/SF2-2.md)
+What happened: the pre-review mutation pass copied only `skills/` into a scratch tree. One test
+reads the design document, so the copied suite failed before any mutation, and every mutation was
+counted as caught (80 of 80). Codex found it in round 1. The rerun copies the whole tree, asserts
+a clean baseline first, and separates an assertion failure from a crash: 91 assertion, 2 crash
+only, 2 survived of 95.
+Cost: a withdrawn claim and one extra round of tests; survivors reached review unnoticed.
+Prevention: a mutation runner runs the unmodified copy first and refuses to continue unless it
+passes, and judges by `failures=` rather than a nonzero exit.
+Fix belongs in: the project-plan skill's "mutation pass" step (or a shared runner script).
+
+### 2026-10-08T17:38-07:00 — a fixture named `*~` was ignored by git and left out of a commit
+Chapter: [SF2-2](notebook/SF2-2.md)
+What happened: the round-2 backup-name fixture `b.spec.yaml~` matched the repository's `*~` ignore
+rule, so `git add <dir>` skipped it without a word. Tests passed locally; a fresh checkout would
+have passed that case for the wrong reason. Caught by `git status` and fixed with `git add -f`; a
+clean `git archive` export now runs the suite.
+Cost: one follow-up commit.
+Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
+Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.

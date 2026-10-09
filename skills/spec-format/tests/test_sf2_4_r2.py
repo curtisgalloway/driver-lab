@@ -96,7 +96,7 @@ class ReviewRound2(unittest.TestCase):
                 self.assertIsNone(json.loads(out)["markdown"])
         self.assertEqual(specmd.findings("> " * 15 + "shallow"), [])
 
-    def test_footnotes_in_fields_and_code_exemptions(self):
+    def test_footnotes_in_fields_including_code(self):
         for value in ("Claim[^x]", "[^x]: definition", "> Claim[^x]", "- [^x]: definition"):
             with self.subTest(value=value):
                 self.assertTrue(any(f.kind == "footnote" for f in specmd.findings(value)))
@@ -108,7 +108,7 @@ class ReviewRound2(unittest.TestCase):
                 self.assertEqual((code, err), (1, ""))
                 self.assertIsNone(json.loads(out)["markdown"])
         for value in ("`[^x]`", "```\n[^x]: text\n```", "    [^x]: text"):
-            self.assertEqual(specmd.findings(value), [])
+            self.assertTrue(any(f.kind == "footnote" for f in specmd.findings(value)))
 
     def test_fence_and_table_review_payloads(self):
         data = yaml.safe_load(chip())

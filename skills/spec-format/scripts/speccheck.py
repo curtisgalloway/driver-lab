@@ -348,6 +348,9 @@ class Checker:
         root.rank = LAYERS.index(root.layer)
         root.extension = self.api.load_extension(marker, data, [])
         where = (marker, root, loaded)
+        import textcheck
+
+        textcheck.check_backticks(self, where, data)
         try:
             self.spdx.parse(data["license"])
         except self.spdx.SpdxError as exc:

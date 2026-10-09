@@ -646,3 +646,38 @@ render_md before adding the script path and failed immediately; corrected PYTHON
 one complete mutation rerun and one audit rerun. Prevention: score crashes separately,
 exercise output boundaries independently, and establish import paths before imports. Fix
 belongs in test and validation tooling.
+
+### 2026-10-09T16:13:18-07:00 — SF2-4 confirmation fixture corrections
+
+The first regression run used multiline and indented footnote payloads in single-line titles;
+schema rejection correctly preceded the expected text finding. Normalize those title fixtures
+to valid single-line strings. Importing the test helper class also collected its tests twice;
+import the module instead. A guessed record schema filename needed correction to
+`verify.schema.json`. Cost: one failed targeted run and one missing-file read. Prevention:
+check schema constraints and available filenames before constructing fixtures. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:16:00-07:00 — SF2-4 GFM proof assertion
+
+The first GFM proof recognized the escaped claim but required an exact autolink URL for the
+title. GFM includes the unrecognized closing backticks in that active autolink, percent-encoding
+them in its URL. Match the active link's URL prefix instead. Cost: one failed proof run;
+the corrected run confirms both escapes in safe and unsafe modes. Prevention: inspect the
+rendered HTML before asserting URL serialization. Fix belongs in the verification script.
+
+### 2026-10-09T16:16:31-07:00 — SF2-4 optional test selection
+
+The follow-up for the board suite's optional PyYAML test named a guessed test class in the
+same shell call that listed the available classes. The selected class did not exist.
+Cost: one failed test-selection command; rerunning the observed `SubsetParser` method passes.
+Prevention: consume discovery output before composing the dependent command. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:19:20-07:00 — SF2-4 mutation target scope
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: corrected. The initial integration mutation's
+unscoped replacement matched the new function's declaration before its call; compilation
+failed, so that attempt is not scored. Match the indented call with surrounding newlines.
+Cost: a partial mutation run and a complete rerun in four independent temporary copies.
+Prevention: compile every changed mutation target before starting the suite. Fix belongs
+in the mutation runner's preflight; all 112 current targets compile and fail by assertion.

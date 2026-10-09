@@ -34,6 +34,7 @@ def code(value) -> str:
     """A literal CommonMark code span, even for backticks or leading/trailing spaces."""
     text = specload.visible_name(str(value).replace("\n", " ").replace("\r", " "))
     fence = "`" * (max((len(m[0]) for m in re.finditer(r"`+", text)), default=0) + 1)
+    assert len(fence) <= textcheck.MAX_BACKTICKS + 1, "code span exceeds 33 backticks"
     pad = " " if text.startswith("`") or text.endswith("`") or (
         text.startswith(" ") and text.endswith(" ") and text.strip()) else ""
     # Empty spans do not exist in CommonMark; use escaped empty text instead.
@@ -69,6 +70,7 @@ class View(list):
     def author(self, value, label="Author text"):
         self.extend([label + " (author text):", ""])
         fence = "`" * max(3, max((len(m[0]) + 1 for m in re.finditer(r"`+", value)), default=3))
+        assert len(fence) <= textcheck.MAX_BACKTICKS + 1, "author fence exceeds 33 backticks"
         content = value + ("\n" if value and not value.endswith("\n") else "")
         self.expected[(self.line, "fence", content)] += 1
         self.extend([fence + "\n" + content + fence, ""])

@@ -303,6 +303,23 @@ MUTATIONS.extend([
     ("record-note-dropped", "render_md", 'notes.append(("Record note", verdict["note"]))', 'pass'),
 ])
 
+MUTATIONS.extend([
+    ("backtick-run-bound", "textcheck", 'if re.search(r"`{33,}", value):', 'if False:'),
+    ("backtick-string-values", "textcheck", 'if isinstance(data, str):', 'if False:'),
+    ("backtick-mapping-keys", "textcheck", 'if isinstance(key, str):', 'if False:'),
+    ("backtick-mapping-traversal", "textcheck", 'yield from strings(value, at)', 'yield from ()'),
+    ("backtick-list-traversal", "textcheck", 'yield from strings(value, path + (i,))', 'yield from ()'),
+    ("backtick-data-integration", "textcheck", '\n    check_backticks(checker, where, data)\n', '\n    pass\n'),
+    ("backtick-root-integration", "speccheck", 'textcheck.check_backticks(self, where, data)', 'pass'),
+    ("backtick-source-path", "textcheck",
+     'check_backticks(checker, file, {"source_path": file.path.relative_to(file.root.given).as_posix()})', 'pass'),
+    ("render-span-bound", "render_md",
+     'assert len(fence) <= textcheck.MAX_BACKTICKS + 1, "code span exceeds 33 backticks"', 'pass'),
+    ("render-fence-bound", "render_md",
+     'assert len(fence) <= textcheck.MAX_BACKTICKS + 1, "author fence exceeds 33 backticks"', 'pass'),
+    ("footnote-plain-substring", "specmd", 'if "[^" in source:', 'if False:'),
+])
+
 EQUIVALENT = {
     "escape-no-pipe": "Pipes now route through code spans and GFM table-cell escaping.",
     "escape-no-backtick": "Backticks now route through code spans with sized delimiters.",
@@ -324,7 +341,7 @@ def main():
     (tree / "docs").mkdir()
     shutil.copyfile(REPO / "docs/SPEC-FORMAT-V2.md", tree / "docs/SPEC-FORMAT-V2.md")
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(destination / "tests"))
-    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_sf2_4_r1", "test_sf2_4_r2"]
+    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_sf2_4_r1", "test_sf2_4_r2", "test_sf2_4_r3"]
     baseline = subprocess.run(cmd, cwd=tree, env=env, capture_output=True, text=True, check=False)
     (run / "baseline.log").write_text(baseline.stdout + baseline.stderr)
     if baseline.returncode:

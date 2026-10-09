@@ -102,6 +102,10 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
     def add(line, kind, message, level="error"):
         out.append(TextFinding(line, kind, message, level))
 
+    for line, source in enumerate(text.split("\n"), 1):
+        if "[^" in source:
+            add(line, "footnote", "footnote reference or definition inside a field")
+
     def inline(children, first, depth=0):
         tags = []
         level = depth

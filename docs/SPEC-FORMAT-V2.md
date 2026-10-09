@@ -1092,11 +1092,23 @@ renders each field's CommonMark (D4); the Markdown view displays its source verb
    code spans whose delimiter cannot close early. Other generated values use escaped text.
    Table cells also escape pipes for GFM's table splitting. Headings contain generated text
    only; they never carry an author field.
+   **Backtick bound (user decision, 2026-10-09):** `check` refuses a run of more than
+   32 consecutive backticks in every author field and generated string taken from a spec,
+   verification record or root file, including notices, mapping keys and source paths.
+   The diagnostic names the field and says "a run of more than 32 backticks". Delimiter
+   sizing stays the same; render asserts that no emitted fence or span exceeds 33 backticks.
+   GFM's cmark-gfm parser caps fences at 255 backticks and inline delimiters at 80:
+   a 256-backtick wrapper can close at an author's 255-backtick fence, and an 81-backtick
+   span can expose active Markdown. The 32-backtick input bound keeps both containers
+   below those limits without depending on the assembled CommonMark check to detect it.
 3. **Containment (D22).** `check` still rejects raw HTML, disallowed links, headings,
    unclosed fences, reference definitions and footnote references or definitions in author
    fields, for the HTML viewer. Block or inline nesting deeper than 16 is an error; the
    parser's limit is 64, well above the field limit and below Python's recursion ceiling,
-   so it cannot silently skip the checked depth. Notices are exempt.
+   so it cannot silently skip the checked depth. The plain substring `[^` anywhere in
+   author text is rejected too, including formatted or backtick-containing labels and code;
+   token-level footnote checks remain. Notices are exempt from these CommonMark checks,
+   but still subject to the backtick bound.
    Render repeats the field checks, then parses the assembled view. Every author fence must
    have its expected position and content, be closed and at the top level, with no info
    string. Outside fences, only generated headings, lists, paragraphs, tables and code spans

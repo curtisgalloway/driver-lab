@@ -289,6 +289,11 @@ class Invariance(Roots):
                                     "[{repo: linux, path: drivers/x.c, lines: [1, 2], "
                                     "symbol: x_init}]\n")),
             "h": fact("h"),
+            # names its assumption only through an inference premise, never in `assumes`
+            "i": ("  - id: i\n    section: quick-facts\n    title: T i\n    claim: C i.\n"
+                  "    support:\n      - class: inference\n        premises:\n"
+                  "          - assumption: same-silicon\n        derivation: it follows\n"
+                  "    todo: {check: hardware, text: check it.}\n"),
         }
         order = order or sorted(facts)
         return chip(head=f"assumptions:\n  - {{id: same-silicon, text: {assumption}}}\n",
@@ -313,7 +318,7 @@ class Invariance(Roots):
             "keys reordered": text.replace("    title: T a\n    claim: C a.\n",
                                            "    claim: C a.\n    title: T a\n"),
             "comments": text.replace("facts:\n", "# a comment\nfacts:  # another\n"),
-            "facts reordered": self.spec(order=list("hgfedcba")),
+            "facts reordered": self.spec(order=list("ihgfedcba")),
             "folded and reflowed": text.replace("    claim: C a.\n", "    claim: >-\n      C\n"
                                                                     "      a.\n"),
             "flow to block": text.replace(
@@ -356,7 +361,7 @@ class Invariance(Roots):
                 "{path: drivers/x.c, license_from: notice}")), ["g"]),
             "document identity": (self.spec(trm=TRM.replace("pages: 80", "pages: 81")),
                                   ["a", "c", "d", "e", "h"]),
-            "assumption text": (self.spec(assumption="the parts share a die"), ["e"]),
+            "assumption text": (self.spec(assumption="the parts share a die"), ["e", "i"]),
         }
         for name, (edited, want) in cases.items():
             with self.subTest(name):
@@ -538,13 +543,28 @@ class RecordChecks(Roots):
         self.assertEqual((code, result["findings"]), (0, []))
 
     def test_two_spec_files_sharing_a_record_name(self):
-        r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(),
-                            "ip/w.spec.yaml": chip("otherchip")})
-        code, result = check(r)
-        self.assertEqual(code, 1)
-        found = errors(result, "would share the verification record resources/w.verify.yaml")
-        self.assertEqual(sorted(pathlib.Path(f["path"]).relative_to(r).as_posix()
-                                for f in found), ["ip/w.spec.yaml", "w.spec.yaml"])
+        r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=fact("a")),
+                            "ip/w.spec.yaml": chip("otherchip", facts=fact("b"))})
+        b = self.bases(r)
+        # a record that would be current for either file, were it read: it is read for neither
+        for sid, rel, key in (("widgetchip", "w.spec.yaml", "a"),
+                              ("otherchip", "ip/w.spec.yaml", "b")):
+            with self.subTest(rel):
+                self.write(r, "resources/w.verify.yaml", record(sid, rel, {
+                    key: verdict(b[f"{sid}@r#{key}"])}))
+                code, result = check(r)
+                self.assertEqual(code, 1)
+                found = errors(result)
+                self.assertTrue(all("would share the verification record "
+                                    "resources/w.verify.yaml" in f["message"] for f in found),
+                                found)
+                self.assertEqual(sorted(pathlib.Path(f["path"]).relative_to(r).as_posix()
+                                        for f in found), ["ip/w.spec.yaml", "w.spec.yaml"])
+                st = rows(status(r)[1])
+                self.assertEqual({k: (v["status"], v["verdict"]) for k, v in st.items()},
+                                 {"widgetchip@r#a": ("unverified", None),
+                                  "otherchip@r#b": ("unverified", None)})
+                self.assertEqual(len(warnings(result, "its record name is shared")), 2)
 
     def test_records_discovery_passes_over_are_errors(self):
         for rel in ("w.verify.yaml", "resources/sub/w.verify.yaml", "resources/w.verify.yml",
@@ -885,6 +905,20 @@ class Upstream(Roots):
         self.assertIn("fact 'direct': verdict stale", "\n".join(
             f["message"] for f in errors(result)))
 
+    def test_an_upstream_map_naming_other_facts_reads_stale(self):
+        """Upstream-stale needs the recorded map's keys to be exactly the facts the fact rests
+        on now; a map with an extra key explains nothing, so the verdict is plain stale."""
+        rec = records_of_root(self.gpl, "x")
+        good = rec["direct"]["upstream"]["upchip@up#mode"]
+        rec["direct"]["upstream"] = {"upchip@up#mode": good, "upchip@up#other": good}
+        self.write(self.gpl, "resources/x.verify.yaml", record("xchip", "x.spec.yaml", rec))
+        code, result = check(self.gpl, "--context-root", self.make_docs("C mode, edited."),
+                             "--require-verified", "main")
+        self.assertEqual(code, 1)
+        mine = [f for f in result["findings"] if f["message"].startswith("fact 'direct': ")]
+        self.assertEqual([(f["level"], f["message"].split(": ")[1]) for f in mine],
+                         [("error", "verdict stale")])
+
     def test_an_empty_upstream_on_a_fact_without_one_is_refused(self):
         rec = records_of_root(self.gpl, "x")
         rec["local"]["upstream"] = {}
@@ -904,9 +938,11 @@ class Upstream(Roots):
         st = rows(status(self.gpl, "--context-root", docs)[1])
         self.assertEqual((st["xchip@g#through"]["status"], st["xchip@g#through"]["basis"]),
                          ("unknown", None))
+        self.assertIsInstance(st["xchip@g#direct"]["reason"], str)
         self.assertIn("reference 'upchip@up#mode' resolves to nothing",
                       st["xchip@g#direct"]["reason"])
         # through rests on direct, whose reference the gate already failed
+        self.assertIsInstance(st["xchip@g#through"]["reason"], str)
         self.assertIn("reference '#direct' failed the check", st["xchip@g#through"]["reason"])
 
     def test_a_current_fail_upstream_untrusts_its_root(self):
@@ -932,6 +968,47 @@ def records_of_root(root, stem):
     import specload
 
     return specload.load_strict(root / "resources" / f"{stem}.verify.yaml")["verdicts"]
+
+
+class Compute(unittest.TestCase):
+    """records.compute on a hand-built graph, apart from any checker."""
+
+    class Node:
+        def __init__(self, full):
+            self.full = full
+
+    def test_resting_on_an_unknown_fact_is_unknown(self):
+        """A reference that resolves to a fact whose basis is unknown makes the referring fact
+        unknown too, with the first reason found; it never hashes the missing basis."""
+        x, y, z = self.Node("s@r#x"), self.Node("s@r#y"), self.Node("s@r#z")
+        graph = {x: [("#y", y, None)], y: [("#z", z, None)], z: []}
+        local = {x: ("x", None), y: ("y", None), z: (None, "z cites an unlisted document")}
+        out = records.compute([x], graph.__getitem__, local.__getitem__, {}, {})
+        self.assertEqual(out, {z: (None, "z cites an unlisted document"),
+                               y: (None, "z cites an unlisted document"),
+                               x: (None, "z cites an unlisted document")})
+
+    def test_a_fact_naming_itself_is_a_cycle_of_one(self):
+        """A self-reference cannot take its own basis first, so it hashes as a cycle: the
+        member's line for itself carries the cycle digest."""
+        x = self.Node("s@r#x")
+        out = records.compute([x], {x: [("#x", x, None)]}.__getitem__,
+                              {x: ("x", None)}.__getitem__, {}, {})
+
+        def h(text):
+            return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+        digest = h(f"fact-v1-cycle\ns@r#x {h('x')}\n")
+        self.assertEqual(out[x], (h(f"fact-v1\nx\ns@r#x {digest}"), None))
+
+    def test_resting_on_known_facts_hashes_their_bases(self):
+        x, y = self.Node("s@r#x"), self.Node("s@r#y")
+        out = records.compute([x], {x: [("#y", y, None)], y: []}.__getitem__,
+                              {x: ("x", None), y: ("y", None)}.__getitem__, {}, {})
+        y_basis = hashlib.sha256(b"fact-v1\ny\n").hexdigest()
+        self.assertEqual(out[y], (y_basis, None))
+        self.assertEqual(out[x], (hashlib.sha256(f"fact-v1\nx\ns@r#y {y_basis}".encode())
+                                  .hexdigest(), None))
 
 
 class CrossRootCycle(Roots):
@@ -1028,6 +1105,33 @@ class Verdicts(Roots):
             "a": verdict("0" * 64)}))
         st = rows(status(r)[1])["widgetchip@r#a"]
         self.assertEqual((st["status"], st["basis"], st["recorded"]), ("unknown", None, "0" * 64))
+
+    def test_each_unlisted_name_makes_the_basis_unknown(self):
+        """A cited document, repos entry, assumption or path the file does not list leaves the
+        basis unknown, whatever else the fact cites; the reason names what is missing."""
+        anchor = ("    support:\n      - class: src\n        anchors: [{{repo: {repo}, "
+                  "path: {path}, lines: [1, 2], symbol: s}}]\n")
+        facts = (fact("doc", support=('    support: [{class: databook, doc: nosuch, '
+                                      'at: [{section: "1"}]}]\n'))
+                 + fact("repo", support=anchor.format(repo="nosuch", path="drivers/w.c"))
+                 + fact("path", support=anchor.format(repo="linux", path="drivers/zz.c"))
+                 + fact("assumed", extra="    assumes: [nosuch]\n")
+                 + fact("fine"))
+        r = self.root("r", {"board-specs.yaml": marker("r", accepts="[GPL-2.0-only]",
+                                                       lic="GPL-2.0-only"),
+                            "w.spec.yaml": chip(repos=LINUX, facts=facts)})
+        st = rows(status(r)[1])
+        want = {"doc": "document 'nosuch' is not in its file's resources",
+                "repo": "repos entry 'nosuch' is not in its file's resources",
+                "path": "'drivers/zz.c' is not in the files of repos entry 'linux'",
+                "assumed": "assumption 'nosuch' is not in its file's assumptions"}
+        for key, reason in want.items():
+            with self.subTest(key):
+                row = st[f"widgetchip@r#{key}"]
+                self.assertEqual((row["status"], row["basis"]), ("unknown", None))
+                self.assertIsInstance(row["reason"], str)
+                self.assertIn(reason, row["reason"])
+        self.assertEqual(st["widgetchip@r#fine"]["status"], "unverified")
 
     def test_an_overlay_record(self):
         base = self.root("base", {"board-specs.yaml": marker("b"),

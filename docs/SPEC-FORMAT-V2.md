@@ -611,9 +611,8 @@ fact with no verdict is **unverified**. `spec.py status --stale` lists the stale
 facts, which is exactly the delta a re-verification has to cover. RG1's stop rule ("re-verify
 only the changed bullets") becomes mechanical.
 
-Three points the formula leaves open, settled in SF2-3 (proposed by the implementer, **pending
-the orchestrator's and the user's decision**; `skills/spec-format/scripts/records.py` implements
-them):
+Three points the formula leaves open, settled in SF2-3 (proposed by the implementer, accepted
+by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` implements them):
 
 - **Telling upstream-stale apart needs a second stored value.** One hash cannot say which of its
   inputs changed. A verdict therefore also records **`upstream`**: the facts in other roots its
@@ -642,7 +641,7 @@ changing (through a root-qualified reference) is reported as **upstream-stale**,
 upstream fact. A record's own defects (a key naming no fact, a summary that does not match) and
 a current `FAIL` make the root untrusted, like any error in its files; the freshness findings
 (stale, unverified, a missing second reader) are a policy on the checked root, reported for
-checked roots only, and do not (SF2-3, pending decision with the points above).
+checked roots only, and do not (settled in SF2-3 with the points above).
 
 How the spec repositories' CI uses this (D19):
 

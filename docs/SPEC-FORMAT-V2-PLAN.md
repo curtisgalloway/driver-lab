@@ -313,8 +313,9 @@ exacting tests. Split point: `status` can move to SF2-4 if needed.
 
 ### Evidence and findings
 Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-3.md` (written after
-review). Notebook: [SF2-3](../notebook/SF2-3.md). Pending decision: the three points the design's
-Freshness section marks "pending" (the `upstream` map, reference cycles, unknown bases).
+review). Notebook: [SF2-3](../notebook/SF2-3.md). The three points the design's Freshness
+section settles in SF2-3 (the `upstream` map, reference cycles, unknown bases) were accepted by
+the orchestrator on 2026-10-08.
 
 ---
 

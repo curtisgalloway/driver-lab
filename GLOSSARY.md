@@ -149,7 +149,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Fact reference | How a premise or relation names a fact: `#<fact id>` in the same file, `<spec id>#<fact id>` in the same root. |
 | Root-qualified reference | A fact reference into another root, naming the root by its marker's `name`: `bcm2711@hardware-specs-docs#addressing-model`. Also a fact's full reference, used by the viewer and the basis hash. |
 | Upstream-stale | A verdict made stale only by a change to a fact in another root that it references; a warning on the dependent repository's `main`, an error on its next pull request. |
-| Upstream map | In spec format 2, a verdict's `upstream` field: the facts in other roots its fact rests on, each with its basis hash when the verdict was reached. It is how the checker tells an upstream-stale verdict from a stale one (SF2-3, pending decision). |
+| Upstream map | In spec format 2, a verdict's `upstream` field: the facts in other roots its fact rests on, each with its basis hash when the verdict was reached. It is how the checker tells an upstream-stale verdict from a stale one (SF2-3). |
 | Support entry | One piece of evidence for a fact record: its provenance class and the fields that class requires (a document and locators, anchors into a pinned repository, a board and method, premises and a derivation). |
 | Locator | The structured place in a document a citation points at: section, page, table, figure, clause or heading. |
 | Named assumption | An assumption stated once in a spec's `assumptions` list and named by every fact that rests on it, so it is visible and invalidates those facts when it changes. |

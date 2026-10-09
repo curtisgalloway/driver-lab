@@ -271,7 +271,8 @@ conditional. Changing an assumption's text changes the basis hash of every fact 
 `id` and `support`, so each row is verified like any fact (today keyed `instances/<name>` with no
 citation of its own). `reg` is a hex string (D6). `variants:` rows gain `id` and `support` in
 place of today's `tag` and `source`, so a variant known only from press carries a `press` entry
-and its TODO like any fact.
+and its TODO like any fact. A row is never a gap fact: a `GAP` verdict on an instance or variant
+row is an error (settled in SF2-3; made explicit in review round 1, 2026-10-08).
 
 ### Prose that is not a fact
 
@@ -527,7 +528,10 @@ the license split carry over. Restated for format 2:
 
 `<root>/resources/<name>.verify.yaml`, where `<name>` is the spec file's name without
 `.spec.yaml`; one record per spec file, overlays included; two spec files whose records would
-collide are an error, as today. The reader never loads a record body; `spec.py status` prints the
+collide are an error, as today. Inside `resources/`, any other file whose name contains
+`verify` (in any case: `w.verify`, `wverify.yaml`, `w.Verify.yaml`) is an error, and a record
+anywhere but the root's own `resources/` (a nested `sub/resources/` included) is an error (review
+round 1, 2026-10-08). The reader never loads a record body; `spec.py status` prints the
 summary and freshness for each spec in a composition.
 
 ```yaml
@@ -546,6 +550,7 @@ summary: {pass: 2, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
 verdicts:
   gic-node:                         # the bare fact id: records are per file
     basis: <64 hex>                 # the fact's basis hash when this verdict was reached
+    upstream: {...}                 # facts in other roots it rests on, with their bases (see Freshness)
     verdict: PASS                   # PASS | FAIL | UNVERIFIABLE | GAP | ADJUDICATE
     date: 2026-10-08
     verifier: "<agent, model, harness>"
@@ -570,7 +575,8 @@ Rules (all checked by `spec.py check`):
   reader's verdict and reasoning) and, once settled, `adjudication: {decision, by, date, rule}`,
   after which the verdict becomes `PASS` or `FAIL` and the history stays in `adjudication`.
 - **Two readers.** A fact marked `critical` needs a second reader in `readers` with its own
-  verdict (D14). This answers RG1's "add a record field showing whether the second verifier ran".
+  verdict (D14). A reader whose `verifier` is the verdict's own (compared after NFC, collapsing
+  white space and folding case) is not a second reader (review round 1, 2026-10-08). This answers RG1's "add a record field showing whether the second verifier ran".
 - **`carried_from`** names the earlier record (repository, commit, path), the key it had there and
   its format version. A carried verdict is a carry-forward, not a fresh reading, and the
   rendered status says so.
@@ -586,18 +592,34 @@ Each verdict records the **basis hash** of its fact at the time of the verdict:
 ```
 basis(fact) = sha256( "fact-v1\n"
                       + canonical(fact without `section`)
-                      + "\n" + canonical(the resource entries the fact cites, identity fields only)
-                      + "\n" + canonical(the assumptions it names)
+                      + "\n" + canonical(the resource entries the fact cites, all but bookkeeping)
+                      + "\n" + canonical(the assumptions it names, all but bookkeeping)
                       + "\n" + sorted "<full reference> <basis(ref)>" lines for every fact it references )
 ```
 
 - *Canonical* is JSON with sorted keys, no insignificant whitespace, UTF-8, strings in Unicode
   NFC. The data holds only strings, integers, booleans, null, lists and mappings (no floats), so
   this is deterministic without a canonicalization library.
-- *Identity fields* are the ones a verdict depends on: for a repos entry `url`, `commit`,
-  `license`, and the listed file's entry; for a document `url`, `revision`, `sha256`, `pages`,
-  `page_numbering`. Bookkeeping (`verified`, `fetch`, `fetch_via`, `note`) does not stale a
-  verdict.
+- *All but bookkeeping*: a cited entry counts whole, except a short, closed list of
+  **bookkeeping** fields per kind, which never stale a verdict:
+
+  | Entry | Bookkeeping fields (everything else counts) |
+  | --- | --- |
+  | a document | `verified`, `fetch`, `note` |
+  | a repos entry | `verified`, `fetch`, `fetch_via`, `note` |
+  | a repos entry's `files` item | `note` |
+  | an assumption | `todo` |
+
+  A field not in the list, including one the schema gains later, counts by default. A repos
+  entry's `files` contributes only the items of the paths the fact cites (each without its
+  `note`), so listing another path stales nothing. A field joins the list only by a recorded
+  decision that names it here. (User decision, 2026-10-08, review round 2: "hash all but
+  bookkeeping". Rounds 1 and 2 each found a field missing from the earlier allow-list of
+  *identity fields* — a document's `commit`, then a `files` item's `status` and a repos entry's
+  `ref`, `status` and `role` — and each time an edit to that field left the verdict current.
+  Inverting the list makes the mistake fail safe: forgetting a field now stales too much, never
+  too little. `records.BOOKKEEPING` holds the list; the tests change every schema property of
+  each kind and fail when the schema gains one the test does not list.)
 - References recurse, so the hash is a Merkle hash over the fact's dependencies: editing the docs
   spec's `addressing-model` stales the GPL overlay's inference that rests on it, and nothing
   else.
@@ -610,10 +632,50 @@ fact with no verdict is **unverified**. `spec.py status --stale` lists the stale
 facts, which is exactly the delta a re-verification has to cover. RG1's stop rule ("re-verify
 only the changed bullets") becomes mechanical.
 
+Three points the formula leaves open, settled in SF2-3 (proposed by the implementer, accepted
+by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` implements them):
+
+- **Telling upstream-stale apart needs a second stored value.** One hash cannot say which of its
+  inputs changed. A verdict therefore also records **`upstream`**: the facts in other roots its
+  fact rests on, reached through references that stay in the fact's own root until they cross,
+  each with its basis when the verdict was reached (absent when there are none). A stale verdict
+  is upstream-stale when recomputing the basis with those recorded upstream bases gives back the
+  verdict's `basis` (nothing in the fact's own root changed), the fact's whole dependency
+  closure beyond those upstream facts stays outside its own root, and the status names the
+  upstream facts whose basis moved. If anything an upstream fact rests on, directly or
+  transitively, lies in the fact's own root (`A#a` rests on `B#b`, which rests on `A#c`), the
+  verdict is stale: the recorded upstream bases would otherwise also freeze a fact of the own
+  root and hide its edit (review round 1, 2026-10-08). A current verdict's `upstream` must match exactly, which the checker
+  enforces; without it, an upstream change reads as plain stale, the stricter outcome.
+  `spec.py status --json` prints each fact's basis and `upstream` map for the verifier to copy.
+- **Reference cycles.** `relates` can form a cycle (`same-as` both ways); premises cannot. A
+  cycle (a strongly connected set of facts) is hashed as one: its digest is
+  `sha256("fact-v1-cycle\n" + sorted "<full reference> sha256(local part)" lines of its members +
+  "\n" + sorted "<full reference> <basis>" lines of the facts outside it they reference)`, and a
+  member's line for another member carries the digest in place of a basis. Outside cycles this
+  is the formula above unchanged; on a cycle, any change to any member stales every member. (The
+  *local part* is the formula's first three canonical terms.)
+- **A basis that cannot be established is unknown, never current**: a reference the check
+  rejected for any reason (it does not resolve, names the fact itself or a fact its list already
+  names, merges in a later layer, fails the license gate or the trust rule, closes a premise
+  cycle), a citation the check rejected for any reason (a `cite: false` document, a document of
+  another class than the citation, a locator outside the document or written wrong, an anchor's
+  backward lines, an anchor naming a repos entry the license gate refuses or one pinned by a
+  ref), a cited `doc`, `repo` or assumption the file does not list or lists twice, a cited
+  repos entry pinned by `ref` rather than `commit` (a ref names no fixed tree), a cited path not
+  in the repos entry's `files` or listed there twice, or a fact resting on such a fact.
+  (Rejections and names listed twice were added in review round 1, 2026-10-08; citation
+  rejections and the ref pin in review round 2, the same day. Citation rejections are recorded
+  by the same `Checker.reject` that records reference rejections.) Unknown is a
+  warning, and an error under either `--require-verified` mode.
+
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and
 errors under `--require-verified`. A stale verdict caused only by a fact in another root
 changing (through a root-qualified reference) is reported as **upstream-stale**, naming the
-upstream fact.
+upstream fact. A record's own defects (a key naming no fact, a summary that does not match) and
+a current `FAIL` make the root untrusted, like any error in its files; the freshness findings
+(stale, unverified, a missing second reader) are a policy on the checked root, reported for
+checked roots only, and do not (settled in SF2-3 with the points above).
 
 How the spec repositories' CI uses this (D19):
 

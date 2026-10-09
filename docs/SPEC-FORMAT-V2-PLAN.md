@@ -107,7 +107,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 |----|---------|--------------|--------|
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
-| SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
+| SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
 | SF2-6 | Resolve, show and drift | SF2-2 | pending |
@@ -300,13 +300,13 @@ modes (proposed flag: `--require-verified=pr|main`).
 3. `spec.py status` with `--json`.
 
 ### Acceptance criteria
-- [ ] Reflowing a folded scalar, reordering keys, moving a fact's section and editing comments
+- [x] Reflowing a folded scalar, reordering keys, moving a fact's section and editing comments
   leave every basis hash unchanged; editing a claim, a locator, a cited commit or a referenced
   fact changes exactly the expected hashes.
-- [ ] Upstream-stale is an error under the pull-request mode and a warning under `main` mode; a
+- [x] Upstream-stale is an error under the pull-request mode and a warning under `main` mode; a
   test proves `main` mode does not relax a fact staled by its own file.
-- [ ] A key naming no fact, a summary that does not match, and a missing second reader on a
-  `critical` fact are errors.
+- [x] A key naming no fact and a summary that does not match are errors; a missing second reader
+  on a `critical` fact is a warning, an error under `--require-verified`.
 
 ### Testing and review
 - Tests: `test_records.py` (proposed).
@@ -319,7 +319,11 @@ Needs the design's Verification records section and SF2-2's composition API. Sma
 exacting tests. Split point: `status` can move to SF2-4 if needed.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-3.md`. Notebook: `notebook/SF2-3.md`.
+Status: complete. Evidence: [SF2-3](../evidence/SF2-3.md) (acceptance table, three review rounds,
+decisions, the bookkeeping list, mutation results). Notebook: [SF2-3](../notebook/SF2-3.md).
+Three review rounds: round 2 met the stop rule and the user chose "hash all but bookkeeping";
+round 3 found no blocker. **Open limitations:** the three SF2-3 tracked items under
+[Discovered work / backlog](#discovered-work--backlog).
 
 ---
 
@@ -845,11 +849,28 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
     it; drop it or test it). Untrusted-root messages cut the underlying reason at 200
     characters, and the full path takes most of them.
 
+- **SF2-3 tracked items** (review nits, no code change at the close):
+  - **The own-verifier rule catches case only** (round 2, N2): readers' verifiers are compared
+    after NFC, white-space collapse and case folding, so a fullwidth letter or a trailing period
+    reads as a second reader. Impact: a `critical` fact can pass `--require-verified` with its
+    one verifier listed twice under two spellings; free-text verifiers cannot close this short
+    of an identity registry.
+  - **The first pass reads freshness without the rejected sets** (round 3, N1;
+    `records.first_pass`): a current FAIL whose citation the check now rejects is reported as a
+    current FAIL and also reads unknown. Impact: two errors where one would do; the run fails
+    either way.
+  - **One spec id declared by two files of a root collapses to one full reference** (round 3,
+    N2): status rows for the two files' facts of the same id merge into one row. Impact:
+    status output only; the check already reports the duplicate id as an error.
+
 ## Next session
 
-- Current milestone and status: SF2-2 complete ([evidence](../evidence/SF2-2.md)); SF2-3 next.
-- Resume action: begin SF2-3 (implementer: Opus 5.5) once SF2-2 is merged.
-- Read first: the design (including the license-gate section's trust rule), this plan's
-  conventions and SF2-3, the [SF2-2](../notebook/SF2-2.md) chapter's decisions. SF2-3 adds
-  `resources/*.verify.yaml`; the tracked gap on unrecognized file names names those records as
-  the one YAML a root may hold besides specs and the marker.
+- Current milestone and status: SF2-3 complete ([evidence](../evidence/SF2-3.md)), on branch
+  `sf2/sf2-3` awaiting the orchestrator's pull request. SF2-6 runs in parallel in its own
+  worktree.
+- Resume action: once SF2-3 merges, begin SF2-4 (implementer: Codex, per Conventions); Rock 5T
+  spec drafting may start by hand ([Stop point](#stop-point-and-what-follows), item 5).
+- Read first: the design's Verification records and Freshness sections (the `upstream` map,
+  cycles, `unknown`, bookkeeping fields), this plan's conventions and SF2-4, and the
+  [SF2-3](../notebook/SF2-3.md) chapter's decision entries. SF2-4 renders the statuses
+  `spec.py status` reports; the three SF2-3 tracked items are in the backlog.

@@ -57,7 +57,7 @@ class CodexImplementTest(unittest.TestCase):
     return worktree
 
   def build(self, *args):
-    return self.mod.build(*args, "20261009T000000Z")
+    return self.mod.build(*args, "20261009T000000Z", "/private/tmpdir")
 
   def assert_refused(self, *args):
     with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(io.StringIO()):
@@ -65,28 +65,20 @@ class CodexImplementTest(unittest.TestCase):
     self.assertEqual(cm.exception.code, 2, args)
 
   def test_fixed_form(self):
-    cmd, worktree, log = self.build(self.worktree, self.run_dir, self.brief)
+    cmd, worktree, log, last = self.build(self.worktree, self.run_dir, self.brief)
     self.assertEqual(worktree, self.worktree)
     self.assertEqual(log, os.path.join(self.run_dir, "codex-20261009T000000Z.log"))
+    self.assertEqual(last, os.path.join(self.run_dir, "last-message-20261009T000000Z.md"))
     self.assertEqual(cmd[:4], ["codex", "exec", "--sandbox", "workspace-write"])
     self.assertEqual(cmd[cmd.index("--cd") + 1], self.worktree)
     adds = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--add-dir"]
-    self.assertEqual(adds, [self.run_dir])
+    self.assertEqual(adds, ["/private/tmpdir"])
+    self.assertIn("sandbox_workspace_write.exclude_slash_tmp=true", cmd)
+    self.assertFalse(any(self.store in a for a in cmd[:-3]))
     self.assertIn("model_reasoning_effort=high", cmd)
     self.assertTrue(cmd[-1].startswith(f"Read {self.brief} and carry it out"))
     self.assertIn("do not run git commit", cmd[-1])
     self.assertFalse(any(".git" in a for a in cmd))
-
-  def test_pip_cache_only_when_a_real_directory(self):
-    cache = os.path.join(self.home, ".cache", "pip")
-    os.makedirs(os.path.dirname(cache))
-    os.symlink(self.home, cache)
-    cmd, _, _ = self.build(self.worktree, self.run_dir, self.brief)
-    self.assertNotIn(cache, cmd)
-    os.remove(cache)
-    os.mkdir(cache)
-    cmd, _, _ = self.build(self.worktree, self.run_dir, self.brief)
-    self.assertIn(cache, cmd)
 
   def test_worktree_must_be_a_linked_worktree_under_the_repo(self):
     self.assert_refused(self.store, self.run_dir, self.brief)
@@ -192,6 +184,48 @@ class CodexImplementTest(unittest.TestCase):
         shutil.rmtree(os.path.join(self.worktree, made.split("/")[0]), ignore_errors=True)
         if os.path.exists(target):
           os.remove(target)
+
+  def test_changed_or_removed_agent_files_and_hidden_ones_are_reported(self):
+    self.write(os.path.join(self.worktree, "AGENTS.md"), "rules\n")
+    self.write(os.path.join(self.worktree, "docs", ".claude", "x"), "x\n")
+    agents = os.path.join(self.worktree, "AGENTS.md")
+    for body in (f"echo more >> '{agents}'\n", f"rm '{agents}'\n",
+                 f"echo y > '{self.worktree}/docs/.claude/x'\n",
+                 f"mkdir -p '{self.worktree}/.venv/lib' && touch '{self.worktree}/.venv/lib/CLAUDE.md'\n",
+                 f"touch '{self.worktree}/GEMINI.md'\n"):
+      with self.subTest(body=body):
+        self.write(agents, "rules\n")
+        self.write(os.path.join(self.worktree, "docs", ".claude", "x"), "x\n")
+        with self.fake_codex(body):
+          code, err = self.run_main()
+        self.assertEqual(code, 4)
+        self.assertIn("TAMPER", err)
+        for leftover in (".venv", "GEMINI.md"):
+          path = os.path.join(self.worktree, leftover)
+          if os.path.isdir(path):
+            shutil.rmtree(path)
+          elif os.path.lexists(path):
+            os.remove(path)
+
+  def test_a_new_symlink_out_of_the_worktree_is_reported(self):
+    link = os.path.join(self.worktree, "evidence.md")
+    with self.fake_codex(f"ln -s '{self.home}/.bashrc' '{link}'\n"):
+      code, err = self.run_main()
+    self.assertEqual(code, 4)
+    self.assertIn("links outside the worktree", err)
+    os.remove(link)
+    with self.fake_codex(f"ln -s README '{link}'\n"):
+      code, err = self.run_main()
+    self.assertEqual((code, err), (0, ""))
+
+  def test_codex_gets_a_private_tmpdir_that_is_removed_afterwards(self):
+    seen = os.path.join(self.tmp, "seen")
+    with self.fake_codex(f"echo \"$TMPDIR\" > '{seen}'\n"):
+      code, _ = self.run_main()
+    self.assertEqual(code, 0)
+    tmpdir = open(seen, encoding="utf-8").read().strip()
+    self.assertIn("codex-implement-", tmpdir)
+    self.assertFalse(os.path.exists(tmpdir))
 
   def test_agent_configuration_present_before_is_not_reported(self):
     self.write(os.path.join(self.worktree, "CLAUDE.md"), "already here\n")

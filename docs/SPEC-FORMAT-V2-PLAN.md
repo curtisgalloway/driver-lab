@@ -58,10 +58,11 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **Design gate:** satisfied (approved 2026-10-08). A milestone that needs a design change stops,
   amends the design, and asks the user before continuing.
 - **User overrides:** none.
-- **Implementers:** one fresh subagent per milestone. Model by unit (user decision 2026-10-08):
-  Opus 5.5 for SF2-1 to SF2-7 and SF2-G (loader, checker, records, CommonMark checks, viewer,
-  resolver, payload schemas, the gate); Sonnet 5.5 for SF2-8 to SF2-12 (skill text, templates,
-  migration, cutover, retirement). The orchestrator holds pushes, merges, Codex runs and user questions.
+- **Implementers:** one fresh implementer per milestone. By unit (user decision 2026-10-08,
+  revised the same evening after a larger Codex allowance): Opus 5.5 subagents for SF2-1 to
+  SF2-3 and SF2-G; **Codex** (`codex exec`, its own worktree, `quota-strategy`'s launch recipe)
+  for SF2-4 to SF2-12. Reviewers stay as the review method says (an Opus reviewer plus a Codex
+  review). The orchestrator holds pushes, merges, Codex runs and user questions.
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh
     subagent that runs the checks, writes break cases including degenerate inputs: empty,
@@ -91,7 +92,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
     (the user adjudicates).
   - Reaching a limit: the orchestrator lists the open blockers with options (fix in a follow-up
     milestone, narrow the scope, accept and record as a limitation) and asks; no further round
-    starts without the user's decision.
+    starts without the user's decision. **Exception** (user, 2026-10-08): when every remaining
+    gap needs malformed input that the source repository's own CI already rejects, the
+    orchestrator merges and tracks the gaps in the backlog without asking.
 - **Review order:** review and fixes precede the checkpoint commit, which is the last step.
 - **Orchestrated mode:** allowed (`orchestrate-milestones`): one fresh subagent per milestone,
   the orchestrator landing each as one pull request per repository.
@@ -109,16 +112,20 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
 | SF2-6 | Resolve, show and drift | SF2-2 | pending |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
-| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-5, SF2-6 | pending |
+| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
-| SF2-11 | The three spec repositories cut over, published | SF2-10 (Pages approved) | pending |
+| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
 
-Order: the board-spec path end to end first (SF2-1 → SF2-6, SF2-8, SF2-10, SF2-11), because
-it carries the only published content; peripheral and review support (SF2-7, SF2-9) may run in
-parallel with SF2-8 and SF2-10 once its dependencies merge. SF2-12 waits for both paths.
+Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives format 2): the board-spec
+path first, **SF2-3 → SF2-4 → SF2-8**, with **SF2-6 running in parallel now** in its own
+worktree (it needs only SF2-2). SF2-5 (viewer and publishing) moves after SF2-8 and lands before
+SF2-11: SF2-8's skills read the Markdown view from SF2-4, not the HTML viewer, and its contract
+text marks `render --format html` as arriving with SF2-5. Then SF2-10 and SF2-11. Peripheral
+and review support (SF2-7, SF2-9) may run in parallel with SF2-8 and SF2-10 once its
+dependencies merge. SF2-12 waits for both paths.
 
 ### Outline mapping
 
@@ -511,7 +518,8 @@ writes YAML records with basis hashes, `readers`, `contrary_evidence`, `citation
 `carried_from`, and runs delta verification from `spec.py status --stale`.
 **Design coverage:** D7 (contract), D14 (procedure); § Effects (SPEC-FORMAT, board-expert,
 scaffold, spec-verifier).
-**Dependencies:** SF2-3, SF2-5, SF2-6 (the commands the text names must exist).
+**Dependencies:** SF2-3, SF2-4, SF2-6 (the commands the text names must exist; SF2-5's
+`render --format html` is named as arriving later, per the 2026-10-08 reorder).
 **In scope:** the four skills above and their tests where they have them; `GLOSSARY.md`;
 learnings rows marked SF2-8.
 **Out of scope:** peripheral-spec, reference-driver-review, hardware-investigator (SF2-9);
@@ -717,7 +725,25 @@ Status: pending. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
 
 This plan ends at SF2-G. The spec-regeneration series ([plan](SPEC-REGEN-PLAN.md)) is paused
 until then and resumes with RG2 (`rpi4`) written in format 2, after the pre-RG2 learnings pass.
-No RG unit starts while a format 2 milestone is open.
+No RG unit starts while a format 2 milestone is open, with one exception (user, 2026-10-08):
+the Rock 5T specs below.
+
+**Rock 5T specs first** (user decisions, 2026-10-08, made in the bringup-kit session and
+confirmed in this one):
+
+1. The Radxa Rock 5T bring-up drives format 2. The first new format 2 specs are an `rk3588`
+   SoC unit and a `rock5t` board unit, ahead of the remaining RG2–RG11 order. `rk3588` is the
+   full RK3588, not RG8's `rk3588s`; reuse and compose where the design allows.
+2. They go in the public hardware-specs repositories, layered: a docs-only base plus a GPL
+   overlay for Linux and devicetree facts. Both tiers are wanted; the docs-only base also
+   measures how far a spec gets without Linux.
+3. First pass: the board spec plus specs for the bring-up's first two milestones (console and
+   cores, then storage or network boot). The rest is written after bench evidence.
+4. Bring-up records for the Rock 5T stay in a separate private board repository. Specs are
+   public; records are private.
+5. Drafting starts by hand once SF2-3 merges (schemas, checker, license gate and records exist
+   then), as a separate unit run from this repository, with a light pass after SF2-8 (scaffold
+   and verifier procedure) and SF2-7 (peripheral payloads).
 
 ## Decisions (user, 2026-10-08)
 
@@ -731,7 +757,13 @@ No RG unit starts while a format 2 milestone is open.
 5. **GitHub Pages** (later the same day): approved for the three spec repositories; SF2-11 may
    enable it.
 6. **Models unchanged** (later the same day): Opus 5.5 for SF2-1 to SF2-7, SF2-G and every
-   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12.
+   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12. *Superseded by 7.*
+7. **Codex implements SF2-4 onward** (evening, after a larger Codex allowance), except SF2-G;
+   Opus 5.5 keeps SF2-3, SF2-G and every reviewer and verifier.
+8. **Stop-rule exception:** merge and track, without asking, when the remaining gaps need
+   malformed input the source's own CI already rejects (Conventions, stop rules).
+9. **Reorder for the Rock 5T** (both sessions): SF2-6 in parallel now; SF2-5 after SF2-8 and
+   before SF2-11; Rock 5T specs drafted after SF2-3 ([Stop point](#stop-point-and-what-follows)).
 
 Orchestrator decisions during SF2-1's review (2026-10-08), within the design's scope:
 

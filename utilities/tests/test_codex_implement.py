@@ -12,10 +12,13 @@ import contextlib
 import importlib.util
 import io
 import os
+import resource
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -33,11 +36,20 @@ while [ $# -gt 0 ]; do
   shift
 done
 env > '{env_dump}'
+printf '%s' "$last" > '{env_dump}.last'
 cd "$work" || exit 99
 {body}
 echo 'final message' > "$last"
 exit {code}
 """
+
+
+def alive(pid):
+  try:
+    with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
+      return f.read().rsplit(")", 1)[1].split()[0] != "Z"
+  except FileNotFoundError:
+    return False
 
 
 def load():
@@ -295,6 +307,30 @@ class CodexImplementTest(unittest.TestCase):
         "PYTHONDONTWRITEBYTECODE": "1", "UV_CACHE_DIR": os.path.join(tmp, "uv-cache"),
     })
     self.assertIn("fine.txt", self.read(self.output("patch")))
+    last = self.read(self.env_dump + ".last")
+    run_root = os.path.dirname(tmp)
+    self.assertEqual(last, os.path.join(run_root, "out", "last-message.md"))
+    self.assertEqual(self.read(self.output("last")), "final message\n")
+
+  def test_without_isolated_interpreter_exits_before_doing_anything(self):
+    site = os.path.join(self.tmp, "site")
+    marker = os.path.join(self.tmp, "sitecustomize-ran")
+    self.write(os.path.join(site, "sitecustomize.py"),
+               f"open({marker!r}, 'w').close()\n")
+    env = dict(os.environ, PYTHONPATH=site)
+    plain = subprocess.run([sys.executable, SCRIPT, self.base, self.run_dir, self.brief],
+                           env=env, capture_output=True, text=True, check=False)
+    self.assertEqual(plain.returncode, 2)
+    self.assertIn("python3 -I", plain.stderr)
+    self.assertEqual(plain.stdout, "")
+    self.assertEqual(os.listdir(self.run_dir), ["brief.md"])
+    self.assertTrue(os.path.exists(marker), "the hostile sitecustomize should run without -I")
+    os.remove(marker)
+    isolated = subprocess.run([sys.executable, "-I", SCRIPT], env=env, capture_output=True,
+                              text=True, check=False)
+    self.assertEqual(isolated.returncode, 2)
+    self.assertIn("usage", isolated.stderr)
+    self.assertFalse(os.path.exists(marker))
 
   # The patch.
 
@@ -410,9 +446,113 @@ class CodexImplementTest(unittest.TestCase):
     self.assertEqual(os.listdir(self.parent), [])
     self.assertEqual(stat.S_IMODE(os.stat(self.parent).st_mode), 0o700)
 
+  def test_symlink_planted_at_the_final_message_path_is_not_written_through(self):
+    target = os.path.join(self.tmp, "victim.md")
+    self.write(target, "original\n")
+    self.fake_codex(f"ln -s '{target}' '{self.output('last')}'")
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 4, err)
+    self.assertEqual(self.read(target), "original\n")
+    self.assertTrue(os.path.islink(self.output("last")))
+    self.assertEqual(os.listdir(self.parent), [])
+
+  def test_oversized_file_is_accepted_only_when_unchanged(self):
+    big = "a" * (2 * 1024 * 1024 + 1)
+    self.write(os.path.join(self.repo, "big1.txt"), big)
+    self.write(os.path.join(self.repo, "big2.txt"), big)
+    self.git("add", "big1.txt", "big2.txt")
+    self.git("commit", "-q", "-m", "big")
+    self.base = self.git("rev-parse", "HEAD")
+    self.fake_codex("printf b | dd of=big1.txt bs=1 count=1 conv=notrunc 2>/dev/null")
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    report = self.read(self.output("refused"))
+    self.assertIn("big1.txt\tlarger than", report)
+    self.assertNotIn("big2.txt", report)
+    self.assertEqual(self.read(self.output("patch")), "")
+
+  def test_interrupted_wait_kills_the_group_before_cleanup(self):
+    child_file = os.path.join(self.tmp, "child")
+    self.fake_codex(f"sleep 300 &\necho $! > '{child_file}'\nsleep 1")
+    real_remove = self.mod.remove_tree
+    seen = {}
+
+    def interrupted(*args):
+      del args
+      deadline = time.monotonic() + 10
+      while not os.path.exists(child_file) and time.monotonic() < deadline:
+        time.sleep(0.01)
+      raise KeyboardInterrupt
+
+    def remove(root):
+      pid = int(self.read(child_file))
+      deadline = time.monotonic() + 2
+      while alive(pid) and time.monotonic() < deadline:
+        time.sleep(0.01)
+      seen["alive"] = alive(pid)
+      real_remove(root)
+
+    with mock.patch.object(self.mod.os, "waitid", side_effect=interrupted), \
+         mock.patch.object(self.mod, "remove_tree", side_effect=remove), \
+         contextlib.redirect_stdout(io.StringIO()):
+      with self.assertRaises(KeyboardInterrupt):
+        self.mod.main([self.base, self.run_dir, self.brief])
+    self.assertIs(seen.get("alive"), False)
+    self.assertEqual(os.listdir(self.parent), [])
+
+  def test_directory_swapped_for_outward_symlink_during_cleanup_changes_nothing(self):
+    outside = os.path.join(self.tmp, "outside")
+    self.write(os.path.join(outside, "keep.txt"), "keep\n")
+    os.chmod(outside, 0o750)
+    self.fake_codex("mkdir victim && echo x > victim/f")
+    real_open_dir = self.mod.open_dir
+
+    def swapping(name, dir_fd):
+      if name == "victim":
+        os.unlink("f", dir_fd=real_open_dir(name, dir_fd))
+        os.rmdir(name, dir_fd=dir_fd)
+        os.symlink(outside, name, dir_fd=dir_fd)
+      return real_open_dir(name, dir_fd)
+
+    with mock.patch.object(self.mod, "open_dir", side_effect=swapping):
+      code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    self.assertEqual(stat.S_IMODE(os.stat(outside).st_mode), 0o750)
+    self.assertEqual(os.listdir(outside), ["keep.txt"])
+    self.assertEqual(os.listdir(self.parent), [])
+
+  def test_deep_tree_fails_the_walk_and_is_still_removed(self):
+    self.fake_codex('p=deep; i=0\nwhile [ $i -lt 1100 ]; do p="$p/d"; i=$((i+1)); done\n'
+                    'mkdir -p "$p" && echo x > "$p/f"')
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 4, err)
+    self.assertIn("deeper than 64", err)
+    self.assertFalse(os.path.exists(self.output("patch")))
+    self.assertEqual(os.listdir(self.parent), [])
+
+  def test_remove_tree_handles_trees_deeper_than_path_max(self):
+    root = os.path.join(self.tmp, "deep-root")
+    os.mkdir(root)
+    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+    for _ in range(1500):
+      os.mkdir("dd", dir_fd=fd)
+      child = os.open("dd", os.O_RDONLY | os.O_DIRECTORY, dir_fd=fd)
+      os.close(fd)
+      fd = child
+    os.close(os.open("f", os.O_WRONLY | os.O_CREAT, 0o600, dir_fd=fd))
+    os.fchmod(fd, 0)
+    os.close(fd)
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (min(256, hard), hard))
+    try:
+      self.mod.remove_tree(root)
+    finally:
+      resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+    self.assertFalse(os.path.lexists(root))
+
   def test_cleanup_failure_exits_four(self):
     self.fake_codex("echo hi > fine.txt")
-    with mock.patch.object(self.mod.shutil, "rmtree", side_effect=OSError("boom")):
+    with mock.patch.object(self.mod, "remove_tree", side_effect=OSError("boom")):
       code, _, err = self.run_codex()
     self.assertEqual(code, 4)
     self.assertIn("cannot remove scratch root", err)

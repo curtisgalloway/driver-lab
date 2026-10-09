@@ -3,7 +3,11 @@
 """Run Codex as a milestone implementer in one fixed form; Codex returns a patch.
 
 Usage:
-  codex-implement.py BASE RUN_DIR BRIEF [--dry-run]
+  python3 -I <repo>/utilities/codex-implement.py BASE RUN_DIR BRIEF [--dry-run]
+
+The interpreter must run isolated (-I): otherwise caller-controlled PYTHONPATH, PYTHONSTARTUP or
+a user site directory could run code (a sitecustomize.py, say) before any check here. Without -I
+the script exits 2 at once; the permission rule allows only the -I form.
 
 BASE     A full 40-hex commit of this repository (the one holding this script).
 RUN_DIR  An existing directory directly inside the run store named by `run_store` in
@@ -45,15 +49,24 @@ the tree Codex wrote, and no tree Codex wrote outlives the script:
      non-UTF-8) files, files over 2 MiB, and any change to AGENTS.md, AGENTS.override.md,
      CLAUDE.md, CLAUDE.local.md or GEMINI.md (any case), which needs a human; the refused report
      shows those files' diffs.
-  5. The scratch root is deleted. A failed cleanup is an error (exit 4).
+  5. Codex's whole process group is killed and its leader reaped before anything else, even
+     on an interrupt. Then the scratch root is deleted through directory descriptors, never
+     following a link, iteratively however deep it is. A failed cleanup is an error (exit 4).
+  6. The inspection walk is iterative and capped at 64 directory levels and 200,000 entries;
+     past either cap the run fails (exit 4, no patch) and the tree is still deleted. A file over
+     2 MiB is accepted only when it is byte-for-byte unchanged from BASE.
+  7. Codex's final message is staged inside the scratch root, in a directory the sandbox cannot
+     write, and the script itself publishes it and every other output into RUN_DIR through a
+     descriptor opened O_DIRECTORY|O_NOFOLLOW, with O_EXCL|O_NOFOLLOW, so a symlink planted in
+     RUN_DIR while Codex runs is refused rather than written through.
 
 Codex's sandbox can still read the whole filesystem, and network access is on, so fetched content
 could steer it to send local files out; run it only where that is acceptable.
 
 Outputs, all created exclusively (none may exist beforehand) and printed:
   RUN_DIR/codex-<stamp>.log            Codex's stdout and stderr, written by this script
-  RUN_DIR/last-message-<stamp>.md      Codex's final message (its ledger content), written by the
-                                       Codex CLI outside the sandbox
+  RUN_DIR/last-message-<stamp>.md      Codex's final message (its ledger content), staged by the
+                                       Codex CLI and published by this script
   RUN_DIR/codex-<stamp>.patch          a `git apply` unified diff of the accepted changes
   RUN_DIR/codex-<stamp>.refused.txt    each refused path and why
 
@@ -69,8 +82,17 @@ still written when the walk succeeds); 2 usage or validation error; 3 codex miss
 misconfigured; 4 an export, walk, read or cleanup failure.
 """
 
+import sys
+
+if __name__ == "__main__" and not sys.flags.isolated:
+  print("codex-implement: run me with an isolated interpreter: python3 -I "
+        "<repo>/utilities/codex-implement.py BASE RUN_DIR BRIEF", file=sys.stderr)
+  sys.exit(2)
+
+# pylint: disable=wrong-import-position
 import datetime
 import difflib
+import errno
 import hashlib
 import io
 import os
@@ -80,7 +102,6 @@ import shutil
 import signal
 import stat
 import subprocess
-import sys
 import tarfile
 import tempfile
 import tomllib
@@ -90,6 +111,9 @@ COMMIT = re.compile(r"[0-9a-f]{40}")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin"
 MAX_BYTES = 2 * 1024 * 1024
+MAX_DEPTH = 64
+MAX_ENTRIES = 200_000
+DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
 AGENT_FILES = frozenset(n.lower() for n in (
     "AGENTS.md", "AGENTS.override.md", "CLAUDE.md", "CLAUDE.local.md", "GEMINI.md"))
 REPO = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -294,11 +318,15 @@ def kind_of(mode):
 
 
 def read_regular(path, st, base_entry):
-  """Read a regular file without following links; ("big", size) past the size limit."""
-  limit = MAX_BYTES
-  if base_entry and base_entry[0] == "file" and len(base_entry[2]) == st.st_size:
-    limit = max(limit, st.st_size)
-  if st.st_size > limit:
+  """Read a regular file without following links.
+
+  New content over MAX_BYTES is ("big", size) whatever the baseline's size; a file over the
+  limit is accepted only when it is byte-for-byte the baseline, which is checked by streaming
+  it against the baseline rather than reading it into memory.
+  """
+  base_data = base_entry[2] if base_entry and base_entry[0] == "file" else None
+  oversized = st.st_size > MAX_BYTES
+  if oversized and (base_data is None or len(base_data) != st.st_size):
     return ("big", st.st_size)
   try:
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -308,36 +336,54 @@ def read_regular(path, st, base_entry):
     fst = os.fstat(fd)
     if (fst.st_dev, fst.st_ino) != (st.st_dev, st.st_ino) or not stat.S_ISREG(fst.st_mode):
       raise Failure(f"{path} changed while it was being read")
+    executable = bool(fst.st_mode & 0o100)
     chunks, size = [], 0
     while True:
       chunk = os.read(fd, 1 << 16)
       if not chunk:
         break
-      chunks.append(chunk)
+      if oversized:
+        if base_data[size:size + len(chunk)] != chunk:
+          return ("big", st.st_size)
+      else:
+        chunks.append(chunk)
       size += len(chunk)
-      if size > limit:
+      if size > (len(base_data) if oversized else MAX_BYTES):
         return ("big", size)
   except OSError as exc:
     raise Failure(f"cannot read {path}: {exc}") from exc
   finally:
     os.close(fd)
-  entry = ("file", bool(fst.st_mode & 0o100), b"".join(chunks))
+  if oversized:
+    if size != len(base_data):
+      return ("big", size)
+    entry = ("file", executable, base_data)
+  else:
+    entry = ("file", executable, b"".join(chunks))
   if st.st_nlink > 1 and entry != base_entry:
     return ("hardlink", st.st_nlink)
   return entry
 
 
 def walk(root, base):
-  """Codex's tree as {path: entry}, plus new directories skipped for their names."""
-  dirs, found, skipped = known_dirs(base), {}, []
+  """Codex's tree as {path: entry}, plus new directories skipped for their names.
 
-  def visit(rel_dir):
+  Iterative, with an explicit stack; deeper than MAX_DEPTH or more than MAX_ENTRIES entries is
+  a Failure.
+  """
+  dirs, found, skipped = known_dirs(base), {}, []
+  stack, count = [""], 0
+  while stack:
+    rel_dir = stack.pop()
     top = os.path.join(root, rel_dir) if rel_dir else root
     try:
       with os.scandir(top) as it:
         names = sorted(entry.name for entry in it)
     except OSError as exc:
       raise Failure(f"cannot list {top}: {exc}") from exc
+    count += len(names)
+    if count > MAX_ENTRIES:
+      raise Failure(f"Codex's tree has more than {MAX_ENTRIES} entries")
     for name in names:
       rel = f"{rel_dir}/{name}" if rel_dir else name
       path = os.path.join(top, name)
@@ -346,10 +392,12 @@ def walk(root, base):
       except OSError as exc:
         raise Failure(f"cannot lstat {path}: {exc}") from exc
       if stat.S_ISDIR(st.st_mode):
-        if rel in dirs or safe_name(rel):
-          visit(rel)
-        else:
+        if not (rel in dirs or safe_name(rel)):
           skipped.append(rel)
+        elif rel.count("/") + 1 >= MAX_DEPTH:
+          raise Failure(f"Codex's tree is deeper than {MAX_DEPTH} directories: {rel[:200]}")
+        else:
+          stack.append(rel)
       elif stat.S_ISLNK(st.st_mode):
         try:
           found[rel] = ("link", os.readlink(path))
@@ -359,8 +407,6 @@ def walk(root, base):
         found[rel] = read_regular(path, st, base.get(rel))
       else:
         found[rel] = ("other", kind_of(st.st_mode))
-
-  visit("")
   return found, skipped
 
 
@@ -458,29 +504,103 @@ def compare(base, tree, skipped):
   return "".join(patch), "".join(report), len(patch), len(refused)
 
 
-def create(path, text):
-  fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-  with os.fdopen(fd, "w", encoding="utf-8", newline="") as out:
-    out.write(text)
+
+
+class LaunchError(Exception):
+  """Codex could not be started (exit 3)."""
+
+
+def publish(dir_fd, name, data):
+  """Create name in the pinned directory dir_fd exclusively, never through a link."""
+  fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=dir_fd)
+  with os.fdopen(fd, "wb") as out:
+    out.write(data)
+
+
+def read_staged(path):
+  """The final message Codex staged in the private out directory, or None if there is none."""
+  try:
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+  except FileNotFoundError:
+    return None
+  with os.fdopen(fd, "rb") as staged:
+    if not stat.S_ISREG(os.fstat(staged.fileno()).st_mode):
+      raise Failure(f"staged final message is not a regular file: {path}")
+    return staged.read()
+
+
+def open_dir(name, dir_fd):
+  """Open a subdirectory of dir_fd for removal, making it readable first; never follow a link.
+
+  chmod with follow_symlinks=False refuses a symlink rather than following it, and the open uses
+  O_NOFOLLOW, so a directory swapped for a link fails here instead of reaching outside.
+  """
+  try:
+    os.chmod(name, 0o700, dir_fd=dir_fd, follow_symlinks=False)
+  except (OSError, ValueError, NotImplementedError):
+    pass
+  return os.open(name, DIR_FLAGS, dir_fd=dir_fd)
 
 
 def remove_tree(root):
-  """Delete the scratch root, first making every directory in it searchable; raise on failure."""
+  """Delete root through directory descriptors, iteratively, never following a link.
 
-  def unlock(path):
+  Each frame is [parent fd, name, fd, remaining names]. Below MAX_DEPTH a directory is renamed
+  up into root before it is entered, so the stack and the open descriptors stay bounded however
+  deep the tree is. Raises OSError on failure.
+  """
+  parent_fd = os.open(os.path.dirname(root), DIR_FLAGS)
+  stack, flattened = [], 0
+  try:
+    stack.append([parent_fd, os.path.basename(root), open_dir(os.path.basename(root), parent_fd),
+                  None])
+    while stack:
+      frame = stack[-1]
+      parent, name, fd, names = frame
+      if names is None:
+        names = frame[3] = os.listdir(fd)
+      if not names:
+        stack.pop()
+        os.close(fd)
+        os.rmdir(name, dir_fd=parent)
+        continue
+      child = names.pop()
+      st = os.stat(child, dir_fd=fd, follow_symlinks=False)
+      if not stat.S_ISDIR(st.st_mode):
+        os.unlink(child, dir_fd=fd)
+        continue
+      if len(stack) >= MAX_DEPTH:
+        flattened += 1
+        moved = f"flattened-{flattened}"
+        os.rename(child, moved, src_dir_fd=fd, dst_dir_fd=stack[0][2])
+        stack[0][3].append(moved)
+        continue
+      try:
+        child_fd = open_dir(child, fd)
+      except OSError as exc:
+        if exc.errno not in (errno.ELOOP, errno.ENOTDIR):
+          raise
+        os.unlink(child, dir_fd=fd)
+        continue
+      stack.append([fd, child, child_fd, None])
+  finally:
+    for frame in stack:
+      os.close(frame[2])
+    os.close(parent_fd)
+
+
+def stop(proc):
+  """Kill Codex's whole process group, then reap the leader, even if interrupted again."""
+  try:
+    os.killpg(proc.pid, signal.SIGKILL)
+  except (ProcessLookupError, PermissionError):
+    pass
+  while True:
     try:
-      if not stat.S_ISDIR(os.lstat(path).st_mode):
-        return
-      os.chmod(path, 0o700)
-      with os.scandir(path) as it:
-        subdirs = [e.path for e in it if e.is_dir(follow_symlinks=False)]
-    except OSError:
+      proc.wait()
       return
-    for sub in subdirs:
-      unlock(sub)
-
-  unlock(root)
-  shutil.rmtree(root)
+    except KeyboardInterrupt:
+      continue
 
 
 def child_env(codex, tmp):
@@ -554,50 +674,64 @@ def prepare(base, run_dir, brief, when):
 
 def run(base, brief, codex, outputs):
   parent = check_parent(True)
+  run_dir = os.path.dirname(outputs["log"])
+  try:
+    run_fd = os.open(run_dir, DIR_FLAGS)
+  except OSError as exc:
+    fail(f"cannot open RUN_DIR without following links: {exc}")
   root = os.path.realpath(tempfile.mkdtemp(prefix="run-", dir=parent))
-  work, tmp = os.path.join(root, "work"), os.path.join(root, "tmp")
+  work, tmp, out = (os.path.join(root, name) for name in ("work", "tmp", "out"))
+  staged = os.path.join(out, "last-message.md")
+  name = {key: os.path.basename(path) for key, path in outputs.items()}
   status = 4
   try:
-    os.mkdir(work, 0o700)
-    os.mkdir(tmp, 0o700)
+    for path in (work, tmp, out):
+      os.mkdir(path, 0o700)
     entries = export(base)
     extract(entries, work)
     print(f"log: {outputs['log']}\nlast message: {outputs['last']}", flush=True)
-    fd = os.open(outputs["log"], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as log:
+    log_fd = os.open(name["log"], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600,
+                     dir_fd=run_fd)
+    with os.fdopen(log_fd, "w", encoding="utf-8") as log:
       try:
-        proc = subprocess.Popen(command(codex, base, work, brief, outputs["last"]),
+        proc = subprocess.Popen(command(codex, base, work, brief, staged),
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
                                 env=child_env(codex, tmp), cwd=work, start_new_session=True)
       except OSError as exc:
-        print(f"codex-implement: cannot start {codex}: {exc}", file=sys.stderr)
-        status = 3
-        raise
-      returncode = proc.wait()
+        raise LaunchError(f"cannot start {codex}: {exc}") from exc
       try:
-        os.killpg(proc.pid, signal.SIGKILL)
-      except (ProcessLookupError, PermissionError):
-        pass
+        os.waitid(os.P_PID, proc.pid, os.WEXITED | os.WNOWAIT)
+      finally:
+        stop(proc)
     tree, skipped = walk(work, entries)
     patch, report, accepted, refused = compare(entries, tree, skipped)
-    create(outputs["patch"], patch)
-    create(outputs["refused"], report)
+    publish(run_fd, name["patch"], patch.encode("utf-8"))
+    publish(run_fd, name["refused"], report.encode("utf-8"))
     print(f"patch: {outputs['patch']} ({accepted} file(s))\n"
           f"refused: {outputs['refused']} ({refused} path(s))", flush=True)
-    status = 0 if returncode == 0 else 1
+    message = read_staged(staged)
+    if message is None:
+      print("codex-implement: Codex left no final message", file=sys.stderr)
+    else:
+      publish(run_fd, name["last"], message)
+    status = 0 if proc.returncode == 0 else 1
+  except LaunchError as exc:
+    print(f"codex-implement: {exc}", file=sys.stderr)
+    status = 3
   except Failure as exc:
     print(f"codex-implement: {exc}; no patch written", file=sys.stderr)
     status = 4
   except OSError as exc:
-    if status != 3:
-      print(f"codex-implement: {exc}", file=sys.stderr)
-      status = 4
+    print(f"codex-implement: {exc}", file=sys.stderr)
+    status = 4
   finally:
     try:
       remove_tree(root)
     except OSError as exc:
       print(f"codex-implement: cannot remove scratch root {root}: {exc}", file=sys.stderr)
       status = 4
+    finally:
+      os.close(run_fd)
   return status
 
 
@@ -605,11 +739,11 @@ def main(argv):
   dry = "--dry-run" in argv
   args = [a for a in argv if a != "--dry-run"]
   if len(args) != 3:
-    fail("usage: codex-implement.py BASE RUN_DIR BRIEF [--dry-run]")
+    fail("usage: python3 -I codex-implement.py BASE RUN_DIR BRIEF [--dry-run]")
   base, brief, codex, outputs = prepare(*args, stamp())
   if dry:
     check_parent(False)
-    print(command(codex, base, "<scratch>/work", brief, outputs["last"]))
+    print(command(codex, base, "<scratch>/work", brief, "<scratch>/out/last-message.md"))
     print(child_env(codex, "<scratch>/tmp"))
     return 0
   return run(base, brief, codex, outputs)

@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
-Subcommands built so far: `validate` (SF2-1) and `check` (SF2-2, in speccheck.py). Later
-milestones add `status`, `render`, `resolve`, `show`, `drift`, `inventory` and `migrate`.
+Subcommands built so far: `validate`, `check`, `resolve`, `show` and `drift`. Later
+milestones add `status`, `render`, `inventory` and `migrate`.
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -41,7 +41,7 @@ DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markd
 SKILL = """\
 ---
 name: spec-format-cli
-description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references and the license gate).
+description: Drive spec.py, the spec format 2 tool (validate files, check roots, resolve anchors, show evidence and compare or rewrite pins with drift).
 ---
 
 # spec.py
@@ -50,6 +50,11 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py check <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stub <SKILL.md>]...
         [--stubs-from <skills dir>]... [--json]
+    python3 skills/spec-format/scripts/spec.py resolve <file>... [--repo NAME=CHECKOUT]...
+        [--docs-dir DIR] [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
+    python3 skills/spec-format/scripts/spec.py show <file>... [resolver options]
+    python3 skills/spec-format/scripts/spec.py drift <commit> <file> [--pin NAME]
+        [--rewrite] [resolver options]
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -79,7 +84,19 @@ cites. `--public-skill` names a skill a public root's tools may name in `via:`. 
 `{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "findings": [{"path",
 "line", "column", "level", "message"}]}`, with `"error"` as for `validate` when no check ran.
 
-Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a file invalid or a
+`resolve` checks source anchors and licenses at immutable pins, and document hashes when
+`--docs-dir` supplies bytes as DIR/NAME. `--repo` binds a named entry to the top level of a
+local checkout; unbound entries are fetched over HTTPS. Only size/time limits skip anchors;
+the summary counts skips explicitly, and a fully skipped run exits 0. `show` also displays
+facts beside cited source lines, escaping terminal control characters. Search anchors check
+scope existence only; their prose is never executed.
+
+`drift` compares one cited entry with a full lowercase commit id (40 or 64 hex digits).
+`--pin` is required when several entries are cited. `--rewrite` moves the pin, updates unique
+moved ranges and marks changed anchors stale while preserving comments and layout. Changed
+search scopes and operational read failures refuse rewriting and retain the original file.
+
+Exit status: 0 all valid (validate) or no error (check/resolve/show/drift; warnings allowed); 1 a file invalid or a
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 """
@@ -695,6 +712,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
+    sys.path.insert(0, str(HERE))
     import drift
     import resolve
 
@@ -805,4 +823,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    sys.modules["spec"] = sys.modules[__name__]
     sys.exit(main())

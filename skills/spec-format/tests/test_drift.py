@@ -289,6 +289,7 @@ class DriftBoundaryTests(GitFixture):
         out = drift.rewrite(
             "commit: " + self.commit + "\n", ("commit",), "1" * 40, [], self.commit
         )
+        self.assertIn("commit: '" + "1" * 40 + "'", out)
         self.path.write_text(out)
         self.assertEqual(specload.load_strict(self.path)["commit"], "1" * 40)
 

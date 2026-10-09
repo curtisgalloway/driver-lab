@@ -605,3 +605,26 @@ for named staging and the authorized common object/ref store for the local
 commit; the orchestrator must refresh the normal index later. Privacy and
 open-side checks were repeated with that index so new files were included.
 Fix belongs in the harness permission profile; no repository utility changed.
+
+## 2026-10-09T14:28:09-07:00 — SF2-6: scratch environment setup
+
+System Python lacks ensurepip, so `python3 -m venv` failed. Used `uv venv`
+and `uv pip install --require-hashes` in scratch storage instead. The pinned
+requirements are unchanged. This cost one setup attempt; the check runner
+should probe venv support or use an available interpreter.
+
+## 2026-10-09T14:41:52-07:00 — SF2-6: mutation runner and export checks
+
+The first mutation run replaced a bare identifier beyond its AST span and
+created two invalid programs. It also exposed assertion gaps in older tests;
+none of those crash or survivor results counted as success. The runner now
+changes the exact span, and the final run has clean baselines and 84 assertion
+kills. A scratch-script quoting error cost one restart. Fix belongs in the
+mutation runner: use exact spans and preserve a clean baseline per case.
+
+Utility tests infer checkout membership from an ancestor Git marker, while
+campaign-review requires Git file enumeration. The export run recorded both
+failures; campaign-review then passed in a scratch checkout. The reviewer c06
+harness indexed an anchors key absent from usage-error JSON and was adapted
+in scratch to use a missing-key-safe read. These are environment and harness
+assumptions, so the implementation was not changed to accommodate them.

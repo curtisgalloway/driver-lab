@@ -260,7 +260,7 @@ class ResolveTests(GitFixture):
         for source, phrase in [
             (SOURCE.replace("SPDX-License-Identifier:", "License:"), "no SPDX"),
             (SOURCE.replace("MIT", "Wut"), "invalid SPDX"),
-            (SOURCE + "// SPDX-License-Identifier: BSD-2-Clause\n", "differs"),
+            (SOURCE.replace("MIT", "BSD-2-Clause"), "differs"),
         ]:
             with self.subTest(source):
                 (self.repo / "code.c").write_text(source)

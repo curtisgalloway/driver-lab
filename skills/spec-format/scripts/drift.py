@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
+import re
 import tempfile
 
 import resolve
@@ -26,14 +27,14 @@ def compare(old, new, anchor):
             unchanged = old.entry(anchor["path"]) == new.entry(anchor["path"])
         except resolve.LimitExceeded:
             raise
-        except resolve.ResolutionError:
+        except resolve.ContentError:
             unchanged = False
         return ("same" if unchanged else "search-changed"), None
     try:
         lines = new.lines(anchor["path"])
     except resolve.LimitExceeded:
         raise
-    except resolve.ResolutionError:
+    except resolve.ContentError:
         return "stale", None
     candidate = copy.deepcopy(anchor)
     if "lines" not in anchor:
@@ -41,7 +42,7 @@ def compare(old, new, anchor):
             new_span, new_cited = resolve.cited_lines(new, anchor)
         except resolve.LimitExceeded:
             raise
-        except resolve.ResolutionError:
+        except resolve.ContentError:
             return "stale", None
         return ("same" if new_cited == cited else "stale"), new_span
     if lines[span[0] - 1 : span[1]] == cited:
@@ -60,7 +61,7 @@ def compare(old, new, anchor):
         resolve.cited_lines(new, candidate)
     except resolve.LimitExceeded:
         raise
-    except resolve.ResolutionError:
+    except resolve.ContentError:
         return "stale", None
     return ("same" if moved == span else "moved"), moved
 
@@ -90,6 +91,18 @@ def rewrite(source, commit_at, commit, changes, was):
 
     def scalar(at, value):
         node = marked[at]
+        if node.style in ("|", ">"):
+            header_end = source.index("\n", node.start_mark.index) + 1
+            content = source[header_end:node.end_mark.index]
+            old_value = node.value
+            if old_value.endswith("\n") or not old_value:
+                raise resolve.ContentError("block commit must strip its final newline (use |- or >-)")
+            match = list(re.finditer(re.escape(old_value), content))
+            if len(match) != 1:
+                raise resolve.ContentError("block commit must occupy one contiguous line; folded multi-line commits cannot be rewritten")
+            hit = match[0]
+            edits.append((header_end + hit.start(), header_end + hit.end(), str(value)))
+            return
         quote = node.style if node.style in ("'", '"') else ""
         if isinstance(value, str) and value.isdecimal():
             quote = quote or "'"
@@ -107,7 +120,15 @@ def rewrite(source, commit_at, commit, changes, was):
             node = marked[at]
             if node.flow_style:
                 pos = node.end_mark.index - 1
-                edits.append((pos, pos, f", stale: {{was: '{was}'}}"))
+                tail = source[node.value[-1][1].end_mark.index:pos]
+                import yaml
+
+                comma = any(
+                    isinstance(token, yaml.FlowEntryToken)
+                    for token in yaml.scan("{" + tail + "}")
+                )
+                separator = " " if comma else ", "
+                edits.append((pos, pos, f"{separator}stale: {{was: '{was}'}}"))
             else:
                 first_key = node.value[0][0]
                 pos = source.rfind("\n", 0, node.end_mark.index) + 1
@@ -194,7 +215,7 @@ def run(args):
                         resolve.check_license(new, entry, anchor)
                     except resolve.LimitExceeded:
                         raise
-                    except resolve.ResolutionError:
+                    except resolve.ContentError:
                         status, span = "stale", None
                 changes.append((at, status, span))
                 output.append(dict(path=anchor["path"], status=status, lines=span))

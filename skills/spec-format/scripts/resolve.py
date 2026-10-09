@@ -42,6 +42,10 @@ class LimitExceeded(ResolutionError):
     """Only transfer/read size and elapsed-time limits may skip resolution."""
 
 
+class ContentError(ResolutionError):
+    """Missing or changed content, rather than an operational read failure."""
+
+
 def git_env():
     """Keep caller Git configuration and URL rewrites out of network operations."""
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
@@ -50,6 +54,7 @@ def git_env():
         GIT_CONFIG_GLOBAL=os.devnull,
         GIT_TERMINAL_PROMPT="0",
         GIT_ALLOW_PROTOCOL="https",
+        GIT_NO_REPLACE_OBJECTS="1",
     )
     return env
 
@@ -98,16 +103,28 @@ def check_commit(commit):
 class Repository:
     """Read objects, never a worktree; paths and revisions always follow --."""
 
-    def __init__(self, directory, commit, timeout=300, limit=50 << 20):
+    def __init__(self, directory, commit, timeout=300, limit=50 << 20, fetched=False):
         check_commit(commit)
         self.directory, self.commit = Path(directory), commit
         self.timeout, self.limit = timeout, limit
         self._blobs = {}
+        self._blob_bytes = 0
+        self.fetched = fetched
         if self.run("cat-file", "-t", "--", commit).strip() != b"commit":
             raise ResolutionError("pin does not identify a commit")
 
     def run(self, *args):
         return git(self.directory, list(args), self.timeout, self.limit)
+
+    def check_object_budget(self):
+        if self.fetched:
+            size = sum(
+                p.stat().st_size
+                for p in (self.directory / ".git").rglob("*")
+                if p.is_file()
+            )
+            if size > self.limit:
+                raise LimitExceeded("size limit exceeded by fetched objects")
 
     def entry(self, path):
         """Return (mode, kind, object id); literal paths only, no pathspec matching."""
@@ -129,10 +146,10 @@ class Repository:
                     found = tuple(meta.decode("ascii").split())
                     break
             if found is None:
-                raise ResolutionError(f"{path}: path does not exist at {self.commit}")
+                raise ContentError(f"{path}: path does not exist at {self.commit}")
             mode, _, tree = found
             if mode not in ("040000", "100644", "100755"):
-                raise ResolutionError(
+                raise ContentError(
                     f"{path}: symlinks and submodules are not source files"
                 )
         return found
@@ -141,11 +158,17 @@ class Repository:
         if path not in self._blobs:
             _, kind, oid = self.entry(path)
             if kind != "blob" or path.endswith("/"):
-                raise ResolutionError(f"{path}: expected a file")
+                raise ContentError(f"{path}: expected a file")
             size = int(self.run("cat-file", "-s", "--", oid))
-            if size > self.limit:
-                raise LimitExceeded(f"{path}: blob exceeds size limit")
-            self._blobs[path] = self.run("cat-file", "blob", "--", oid)
+            self.check_object_budget()
+            if self._blob_bytes + size > self.limit:
+                raise LimitExceeded(f"{path}: cumulative blob size limit exceeded")
+            raw = self.run("cat-file", "blob", "--", oid)
+            self.check_object_budget()
+            if self._blob_bytes + len(raw) > self.limit:
+                raise LimitExceeded(f"{path}: cumulative blob size limit exceeded")
+            self._blobs[path] = raw
+            self._blob_bytes += len(raw)
         return self._blobs[path]
 
     def lines(self, path):
@@ -153,7 +176,7 @@ class Repository:
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
-            raise ResolutionError(
+            raise ContentError(
                 f"{path}: source is not UTF-8; supply decompiled DT text"
             ) from exc
         lines = text.split("\n")
@@ -189,7 +212,7 @@ def fetch(entry, directory, timeout=300, limit=50 << 20):
     size = sum(p.stat().st_size for p in (directory / ".git").rglob("*") if p.is_file())
     if size > limit:
         raise LimitExceeded("size limit exceeded by fetched objects")
-    return Repository(directory, entry["commit"], timeout, limit)
+    return Repository(directory, entry["commit"], timeout, limit, fetched=True)
 
 
 def symbol_in(lines, symbol, first, last):
@@ -206,7 +229,7 @@ def node_range(lines, node):
     source = "\n".join(lines)
     tokens = list(
         re.finditer(
-            r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|[A-Za-z0-9_.,@/#+-]+|[{}:;=]',
+            r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|&(?:\{[^}]+\}|[A-Za-z0-9_.,@/#+-]+)|[A-Za-z0-9_.,@/#+-]+|[{}:;=]',
             source,
             re.S,
         )
@@ -218,18 +241,19 @@ def node_range(lines, node):
             continue
         if word == "{":
             name = prefix[-1] if prefix else ""
-            label = prefix[-3] if len(prefix) >= 3 and prefix[-2] == ":" else None
+            labels = [prefix[i - 1] for i in range(1, len(prefix)) if prefix[i] == ":"]
+            override = name.startswith("&") or bool(stack and stack[-1][4])
             full = "/" + "/".join(
                 [s[0] for s in stack if s[0] != "/"] + ([name] if name != "/" else [])
             )
             start = source.count("\n", 0, token.start()) + 1
-            stack.append((name, label, full, start))
+            stack.append((name, labels, full, start, override))
             prefix = []
         elif word == "}":
             if not stack:
-                raise ResolutionError("unbalanced DT node braces")
-            name, label, full, start = stack.pop()
-            if node == full or (not node.startswith("/") and node in (name, label)):
+                raise ContentError("unbalanced DT node braces")
+            name, labels, full, start, override = stack.pop()
+            if not override and (node == full or (not node.startswith("/") and node in [name, *labels])):
                 matches.append([start, source.count("\n", 0, token.end()) + 1])
             prefix = []
         elif word == ";":
@@ -237,35 +261,35 @@ def node_range(lines, node):
         else:
             prefix.append(word)
     if stack or len(matches) != 1:
-        raise ResolutionError(f"DT node {node!r} does not resolve uniquely")
+        raise ContentError(f"DT node {node!r} does not resolve uniquely")
     return matches[0]
 
 
 def cited_lines(repo, anchor):
     """Return (range, lines); search returns no lines and never runs its prose."""
     if "stale" in anchor:
-        raise ResolutionError(
+        raise ContentError(
             f"stale anchor (was {anchor['stale']['was']}); re-verify it"
         )
     if "search" in anchor:
         _, kind, _ = repo.entry(anchor["path"])
         expected = "tree" if anchor["path"].endswith("/") else "blob"
         if kind != expected:
-            raise ResolutionError("search path kind differs from its trailing slash")
+            raise ContentError("search path kind differs from its trailing slash")
         return None, []
     lines = repo.lines(anchor["path"])
     span = anchor.get("lines")
     if "node" in anchor:
         node_span = node_range(lines, anchor["node"])
         if span and not (node_span[0] <= span[0] <= span[1] <= node_span[1]):
-            raise ResolutionError("cited lines are outside the DT node")
+            raise ContentError("cited lines are outside the DT node")
         span = span or node_span
     if not span or not (1 <= span[0] <= span[1] <= len(lines)):
-        raise ResolutionError(f"line range is outside the file's {len(lines)} lines")
+        raise ContentError(f"line range is outside the file's {len(lines)} lines")
     if "symbol" in anchor and not symbol_in(
         lines, anchor["symbol"], span[0] - SYMBOL_BEFORE, span[1]
     ):
-        raise ResolutionError(
+        raise ContentError(
             f"symbol {anchor['symbol']!r} is not near the cited range"
         )
     return span, lines[span[0] - 1 : span[1]]
@@ -290,30 +314,50 @@ def check_license(repo, entry, anchor):
     path = anchor["path"]
     listed = [item for item in entry.get("files", []) if item["path"] == path]
     if len(listed) != 1:
-        raise ResolutionError(
+        raise ContentError(
             f"{path}: must occur exactly once in the closed files list"
         )
     if path.endswith("/"):
         return
     spdx = speccheck.load_spdx()
     declarations = []
-    for line in repo.lines(path):
-        if "SPDX-License-Identifier:" in line:
-            expression = line.split("SPDX-License-Identifier:", 1)[1].strip()
+    closing = None
+    for line in repo.lines(path)[:5]:
+        text = line.strip()
+        if not text or text.startswith("#!"):
+            continue
+        if closing is not None:
+            comment = text
+        elif text.startswith(("//", "#", ";")):
+            comment = text
+        elif text.startswith("/*"):
+            closing, comment = "*/", text
+        elif text.startswith("<!--"):
+            closing, comment = "-->", text
+        else:
+            break
+        if "SPDX-License-Identifier:" in comment:
+            expression = comment.split("SPDX-License-Identifier:", 1)[1].strip()
             expression = re.sub(r"\s*(?:\*/|-->)\s*$", "", expression).strip()
             declarations.append(expression)
+            break
+        if closing and closing in comment:
+            tail = comment.split(closing, 1)[1].strip()
+            closing = None
+            if tail:
+                break
     if not declarations and listed[0]["license_from"] == "spdx-line":
-        raise ResolutionError(f"{path}: declared spdx-line but no SPDX line exists")
+        raise ContentError(f"{path}: declared spdx-line but no SPDX line exists")
     try:
         expected = license_key(spdx.parse(entry["license"]))
         for expression in declarations:
             if license_key(spdx.parse(expression)) != expected:
-                raise ResolutionError(
+                raise ContentError(
                     f"{path}: SPDX line {expression!r} differs from "
                     f"entry license {entry['license']!r}"
                 )
     except spdx.SpdxError as exc:
-        raise ResolutionError(f"{path}: invalid SPDX expression: {exc}") from exc
+        raise ContentError(f"{path}: invalid SPDX expression: {exc}") from exc
 
 
 def hex_values(text):
@@ -341,6 +385,18 @@ def bindings(values):
     return result
 
 
+def check_bindings(local):
+    import spec
+
+    for name, path in local.items():
+        try:
+            top = git(path, ["rev-parse", "--show-toplevel"], 30, 1 << 20)
+        except ResolutionError as exc:
+            raise spec.Usage(f"--repo {name}: expected the top level of a checkout: {exc}") from exc
+        if Path(os.fsdecode(top).strip()).resolve() != path.resolve():
+            raise spec.Usage(f"--repo {name}: expected the top level of a checkout")
+
+
 def prepare(args):
     """Validate every input before any source command can run."""
     import spec
@@ -365,7 +421,17 @@ def prepare(args):
     }
     if local.keys() - names and not findings:
         raise spec.Usage("--repo names an entry absent from the input files")
+    if not findings:
+        check_bindings(local)
     return files, findings, local
+
+
+def display_line(line):
+    """Render terminal controls as printable escapes, preserving tabs."""
+    return "".join(
+        f"\\x{ord(char):02x}" if (ord(char) < 0x20 and char != "\t") or ord(char) == 0x7f else char
+        for char in line.removesuffix("\r")
+    )
 
 
 def result_object(files, findings, anchors, facts):
@@ -390,7 +456,7 @@ def result_object(files, findings, anchors, facts):
                 f"  {citation['repo']}:{citation['path']} [{citation['status']}]"
             )
             for number, line in citation.get("source", []):
-                text.append(f"  {number}: {line}")
+                text.append(f"  {number}: {display_line(line)}")
             if citation.get("search"):
                 text.append(
                     f"  Search scope only (re-verify manually): {citation['search']}"
@@ -495,7 +561,10 @@ def run(args):
                         item.update(
                             status="resolved",
                             commit=entry["commit"],
-                            source=list(enumerate(lines, span[0])) if span else [],
+                            source=[
+                                (number, line.removesuffix("\r"))
+                                for number, line in enumerate(lines, span[0])
+                            ] if span else [],
                         )
                         if "search" in anchor:
                             item["search"] = anchor["search"]

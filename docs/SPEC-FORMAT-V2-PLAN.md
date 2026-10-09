@@ -60,7 +60,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **User overrides:** none.
 - **Implementers:** one fresh implementer per milestone. By unit (user decision 2026-10-08,
   revised the same evening after a larger Codex allowance): Opus 5.5 subagents for SF2-1 to
-  SF2-3 and SF2-G; **Codex** (`codex exec`, its own worktree, `quota-strategy`'s launch recipe)
+  SF2-3 and SF2-G; **Codex** (through `utilities/codex-implement.py`, its own worktree)
   for SF2-4 to SF2-12. Reviewers stay as the review method says (an Opus reviewer plus a Codex
   review). The orchestrator holds pushes, merges, Codex runs and user questions.
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):

@@ -47,6 +47,9 @@ follows them. Where the body depends on one, it names it (D1–D22).
   Markdown view, is where a cited fact is guaranteed to look different from prose.
 - **Canonical form** — one fixed serialization of parsed YAML data (sorted keys, no whitespace),
   so that two files holding the same data hash the same whatever their layout.
+- **File links and modes** — a symbolic link points to another path; hard links are multiple
+  names for one file. Mode bits are Unix permission flags; setuid/setgid can give an executable
+  its owner's user/group identity. A data path names a value by keys and list positions.
 
 New terms are in the [glossary](../GLOSSARY.md).
 
@@ -1029,7 +1032,16 @@ names the file line, which keeps the format writable by agents and people alike.
 
 - **YAML**: PyYAML, already used in this repository (`campaign-review`, the frozen evaluations).
   `spec.py drift --rewrite` edits anchors in place by replacing the scalar spans PyYAML's node
-  marks locate, so comments and layout survive without a round-trip library (D9).
+  marks locate (D9). Before replacement, the same strict loader parses the rewritten bytes and
+  the schema validates them. The parsed data must match the original data with exactly the
+  selected repos entry's new commit, each moved anchor's new `lines`, and each changed anchor's
+  `stale: {was: <old commit>}` applied. Keys, values and types must match; no other data may
+  differ. A mismatch refuses the rewrite, names the first differing data path, exits 1 and
+  retains the original bytes. Comment bytes and the leading SPDX header must also match
+  byte for byte; comparing text with comments removed is insufficient.
+  Rewriting refuses a symbolic link (a pointer to another path), multiple hard links (names for
+  the same file), missing user write permission, or setuid/setgid flags (special Unix modes)
+  with exit 1 before source access. Other mode bits are preserved.
 - **JSON Schema validator** (D8), candidates: `jsonschema` (python-jsonschema; supports 2020-12;
   pulls in `attrs`, `referencing`, `jsonschema-specifications` and the compiled `rpds-py`);
   `jschon` (pure Python, supports 2020-12). `fastjsonschema` is excluded: it does not support
@@ -1895,7 +1907,7 @@ left open, also decided by the user on 2026-10-08.
 | D6 | Scalar types | The loader resolves only `true`, `false`, `null` and decimal integers; hex values are strings with patterns | no implicit-typing surprises; values keep their spelling |
 | D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
 | D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
-| D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces scalar spans found by node marks | one library, already used here; comments and the SPDX header survive |
+| D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces spans found by node marks, then strictly loads, validates and compares the result with exactly the intended data changes | user decision 2026-10-09: refuse unintended key, value or type changes with the first differing path; preserve comment/SPDX bytes and the original on refusal |
 | D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
 | D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no mixed v1 and v2 composition, and no second parser left behind |
 | D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |

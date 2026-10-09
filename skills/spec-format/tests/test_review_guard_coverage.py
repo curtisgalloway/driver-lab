@@ -13,6 +13,33 @@ import resolve
 
 class SurvivingMutantCoverage(GitFixture):
 
+    def test_spdx_tag_on_line_five_is_checked(self):
+        for license_id in ("MIT", "BSD-2-Clause"):
+            (self.repo / "code.c").write_text(
+                "int VALUE = 0x10;\n// second\n// third\n// fourth\n"
+                f"// SPDX-License-Identifier: {license_id}\n"
+            )
+            self.entry["commit"] = self.commit_all()
+            self.anchor["lines"] = [1, 1]
+            code, result = self.run_cli()
+            self.assertEqual(code, int(license_id != "MIT"), result)
+            if code:
+                self.assertIn("differs", str(result))
+
+    def test_absolute_dt_override_is_one_token(self):
+        lines = ["/ { soc { uart: uart@0 {}; }; };",
+                 "&{/soc/uart@0} { new: child@1 {}; };"]
+        self.assertEqual(resolve.node_range(lines, "new"), [2, 2])
+        self.assertEqual(resolve.node_range(lines, "child@1"), [2, 2])
+        self.assertEqual(resolve.node_range(lines, "/soc/uart@0"), [1, 1])
+        try:
+            root = resolve.node_range(lines, "/")
+        except resolve.ContentError as exc:
+            root = str(exc)
+        self.assertEqual(root, [1, 1], "an absolute override must not create phantom roots")
+        with self.assertRaises(resolve.ContentError):
+            resolve.node_range(lines, "/child@1")
+
     def test_git_hooks_prompt_and_system_config(self):
         with mock.patch.dict(os.environ, {"GIT_CONFIG_COUNT": "0"}), mock.patch.object(resolve.subprocess, "run", wraps=subprocess.run) as run:
             resolve.git(self.repo, ["rev-parse", "--show-toplevel"], 30, 1 << 20)

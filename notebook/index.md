@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T15:17:54-07:00
+Updated: 2026-10-09T15:53:47-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,11 +22,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-6 — Resolve, show and drift](SF2-6.md)
-Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T15:17:54-07:00
-Outcome: open; review round 2 fixes implemented, awaiting orchestrator review.
-D12 uses the first tag anywhere in five lines. Drift uses one snapshot and
-atomic replacement; spec-only errors precede source access. Nested override
-definitions resolve by label; text output escapes nonprinting Unicode.
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T15:53:47-07:00
+Outcome: open; review round 3 redesign implemented, awaiting orchestrator review.
+D9 verifies parsed keys, values and types after rewriting; unintended changes
+refuse with a data path. Link, permission and special-mode checks protect
+replacement; preflight checks only the selected pin’s anchors. D12 remains
+the first tag anywhere in five lines; N28 and M05 now have assertion coverage.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

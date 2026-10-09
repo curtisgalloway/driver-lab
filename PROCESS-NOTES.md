@@ -651,3 +651,29 @@ path-kind change. The preliminary fail-before summary was corrected after
 counting distinct failed methods. Prevention belongs in mutation-test guidance:
 an internal error does not count, and every regression method needs its own
 fail-before evidence. Status: fixed in the round-2 tests and scratch runner.
+
+## 2026-10-09T15:44:41-07:00 — SF2-6: round-3 test expectations
+
+The first layout run treated a valid unchanged-pin rewrite as a refusal, and
+a shallow fixture copy caused PyYAML to emit a forbidden alias. Ten assertion
+failures exposed these test defects; accept a verified no-op and deep-copy
+the duplicate anchor fixture. The implementation did not change for either
+case. Prevent this in fixture design, not in the loader.
+
+The blanket fail-before instruction cannot apply to coverage for guards that
+already work: line-5 SPDX and absolute DT override tokenization. Report those
+two pass-before tests separately with their assertion-killed mutations, as
+in round 1; do not manufacture a failing baseline.
+
+## 2026-10-09T15:51:36-07:00 — SF2-6: round-3 environment and mutation feedback
+
+A targeted read guessed a campaign test filename and failed once; list names
+before reading. The first mutation pass had two survivors, not kills: normal
+user access hid the mode check, and short DT names did not expose phantom
+roots. Strengthen the assertions before scoring the repeated pass.
+
+Utility tests encounter a Git marker in the scratch parent. Two assertions
+fail in the export; a scratch checkout adds a third because its README is now
+inside the configured temporary directory. Campaign-review passes in that
+checkout, but moving utility tests there cannot remove their parent-marker
+assumption. Leave these unchanged tools for the orchestrator’s environment.

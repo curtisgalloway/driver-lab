@@ -22,6 +22,102 @@ import resolve
 import speccheck
 
 
+def rewrite_file_check(path):
+    """Refuse replacements that would break links, permissions or special modes."""
+    info = path.lstat()
+    if stat.S_ISLNK(info.st_mode):
+        raise resolve.ResolutionError("cannot rewrite a symbolic link spec file")
+    if info.st_nlink > 1:
+        raise resolve.ResolutionError("cannot rewrite a spec file with more than one hard link")
+    if info.st_mode & (stat.S_ISUID | stat.S_ISGID):
+        raise resolve.ResolutionError("cannot rewrite a setuid or setgid spec file")
+    if not info.st_mode & 0o222 or not os.access(path, os.W_OK):
+        raise resolve.ResolutionError("cannot rewrite a spec file not writable by the user")
+    return stat.S_IMODE(info.st_mode)
+
+
+def first_difference(expected, actual, at=()):
+    """First unequal path, including type, key and sequence-length differences."""
+    if type(expected) is not type(actual):
+        return at
+    if isinstance(expected, dict):
+        for key in expected:
+            if key not in actual:
+                return at + (key,)
+            difference = first_difference(expected[key], actual[key], at + (key,))
+            if difference is not None:
+                return difference
+        for key in actual:
+            if key not in expected:
+                return at + (key,)
+    elif isinstance(expected, list):
+        for i, (left, right) in enumerate(zip(expected, actual)):
+            difference = first_difference(left, right, at + (i,))
+            if difference is not None:
+                return difference
+        if len(expected) != len(actual):
+            return at + (min(len(expected), len(actual)),)
+    elif expected != actual:
+        return at
+    return None
+
+
+def expected_rewrite(data, commit_at, commit, changes, was):
+    """Independent data update; never infer intended values from rewritten text."""
+    expected = copy.deepcopy(data)
+
+    def value(at):
+        found = expected
+        for key in at:
+            found = found[key]
+        return found
+
+    value(commit_at[:-1])[commit_at[-1]] = commit
+    for at, status, span in changes:
+        if status == "moved":
+            value(at)["lines"] = list(span)
+        elif status == "stale":
+            value(at)["stale"] = {"was": was}
+    return expected
+
+
+def comment_bytes(source):
+    """Comment bytes outside YAML tokens; hashes inside scalars are data."""
+    import yaml
+
+    comments, end = [], 0
+    for token in yaml.scan(source, Loader=yaml.BaseLoader):
+        start = token.start_mark.index
+        if start > end:
+            comments.extend(re.findall(r"#[^\n]*", source[end:start]))
+        end = max(end, token.end_mark.index)
+    comments.extend(re.findall(r"#[^\n]*", source[end:]))
+    return [comment.encode("utf-8") for comment in comments]
+
+
+def header_bytes(source):
+    """Preserve the leading comment header, including SPDX and its line endings."""
+    header = []
+    for line in source.splitlines(keepends=True):
+        if line.strip() and not line.lstrip().startswith("#"):
+            break
+        header.append(line)
+    return "".join(header).encode("utf-8")
+
+
+def verify_rewrite(source, replacement, expected, actual):
+    difference = first_difference(expected, actual)
+    if difference is not None:
+        path = "$" + "".join(f"[{key!r}]" for key in difference)
+        raise resolve.ResolutionError(
+            f"rewritten spec failed validation: data differs at {path}; original retained"
+        )
+    if comment_bytes(source) != comment_bytes(replacement):
+        raise resolve.ResolutionError("rewritten spec changed comment bytes; original retained")
+    if header_bytes(source) != header_bytes(replacement):
+        raise resolve.ResolutionError("rewritten spec changed SPDX header bytes; original retained")
+
+
 def compare(old, new, anchor):
     """Return (same|moved|stale|search-changed, new span or None)."""
     span, cited = resolve.cited_lines(old, anchor)
@@ -161,13 +257,13 @@ def rewrite(source, commit_at, commit, changes, was):
 
 def replace_snapshot(path, original, replacement):
     """Stage with O_EXCL beside the original, then compare and atomically replace."""
-    mode = stat.S_IMODE(path.stat().st_mode)
+    mode = rewrite_file_check(path)
     staged = path.parent / ("spec-rewrite-" + secrets.token_hex(16))
     fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     try:
         with os.fdopen(fd, "wb") as stream:
-            os.fchmod(stream.fileno(), mode)
             stream.write(replacement)
+            os.fchmod(stream.fileno(), mode)
             stream.flush()
             os.fsync(stream.fileno())
         if path.read_bytes() != original:
@@ -186,8 +282,17 @@ def run(args):
         resolve.check_commit(args.revision)
     except resolve.ResolutionError as exc:
         raise spec.Usage(str(exc)) from exc
+    if args.rewrite:
+        try:
+            rewrite_file_check(args.files[0])
+        except FileNotFoundError:
+            pass  # prepare reports a missing input as a usage error.
+        except (resolve.ResolutionError, OSError) as exc:
+            return resolve.result_object(args.files, [dict(
+                path=str(args.files[0]), line=1, column=1, level="error", message=str(exc)
+            )], [], [])
     files, validation, local = resolve.prepare(args)
-    findings = [f.as_dict() for f in validation]
+    findings = resolve.validation_findings(validation)
     output = []
     if validation:
         return resolve.result_object(args.files, findings, [], [])
@@ -198,18 +303,8 @@ def run(args):
         for r, base in resolve.records(data)
         for a, at in speccheck.anchors(r, base)
     ]
-    names = {a["repo"] for a, _ in all_anchors}
-    pin = args.pin or (next(iter(names)) if len(names) == 1 else None)
-    if pin not in names:
-        raise spec.Usage("--pin must select one cited repos entry")
-    entries = [
-        (i, entry)
-        for i, entry in enumerate(data.get("resources", {}).get("repos", []))
-        if entry["name"] == pin
-    ]
-    if len(entries) != 1:
-        raise spec.Usage("--pin must select exactly one repos entry")
-    index, entry = entries[0]
+    index, entry = resolve.select_pin(data, args.pin)
+    pin = entry["name"]
     changes = []
     try:
         original = loaded.raw
@@ -265,9 +360,15 @@ def run(args):
                     if args.root
                     else None
                 )
-                valid, _, _ = spec.validate_file(
+                valid, _, rewritten = spec.validate_file(
                     path, spec.load_schemas(), extension, raw, raw=encoded
                 )
+                expected = expected_rewrite(
+                    data, ("resources", "repos", index, "commit"),
+                    args.revision, changes, entry["commit"]
+                )
+                if rewritten is not None:
+                    verify_rewrite(source, replacement, expected, rewritten.data)
                 if not valid or raw:
                     raise resolve.ResolutionError(
                         "rewritten spec failed validation; original retained"

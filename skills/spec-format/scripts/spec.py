@@ -895,7 +895,7 @@ def main(argv: list[str] | None = None) -> int:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
-                if command in ("resolve", "show", "drift"):
+                if command in ("validate", "resolve", "show", "drift"):
                     import resolve
 
                     m = resolve.display_line(m)

@@ -419,6 +419,32 @@ def check_bindings(local):
             raise spec.Usage(f"--repo {name}: expected the top level of a checkout")
 
 
+def select_pin(data, requested):
+    """Select drift's single cited entry before checking its anchors."""
+    import spec
+
+    names = {
+        anchor["repo"]
+        for record, base in records(data)
+        for anchor, _ in speccheck.anchors(record, base)
+    }
+    pin = requested or (next(iter(names)) if len(names) == 1 else None)
+    if pin not in names:
+        raise spec.Usage("--pin must select one cited repos entry")
+    entries = [
+        (i, entry)
+        for i, entry in enumerate(data.get("resources", {}).get("repos", []))
+        if entry["name"] == pin
+    ]
+    if len(entries) != 1:
+        raise spec.Usage("--pin must select exactly one repos entry")
+    return entries[0]
+
+
+def validation_findings(findings):
+    return [dict(f.as_dict(), level="error") for f in findings]
+
+
 def prepare(args):
     """Validate every input before any source command can run."""
     import spec
@@ -447,18 +473,29 @@ def prepare(args):
         by_name = {}
         for entry in loaded.data.get("resources", {}).get("repos", []):
             by_name.setdefault(entry["name"], []).append(entry)
+        pin = None
+        if args.command == "drift" and not findings:
+            _, selected = select_pin(loaded.data, args.pin)
+            pin = selected["name"]
+            for name, entries in by_name.items():
+                if len(entries) > 1:
+                    findings.append(spec.Finding(
+                        path, 1, 1, f"duplicate repos entry name: {name}"
+                    ))
         for record, base in records(loaded.data):
             for anchor, at in speccheck.anchors(record, base):
+                if args.command == "drift" and anchor["repo"] != pin:
+                    continue
                 try:
                     choices = by_name.get(anchor["repo"], [])
                     if len(choices) != 1:
-                        if args.command == "drift":
-                            raise spec.Usage("--pin must select exactly one repos entry")
                         raise ContentError("anchor repo must name exactly one repos entry")
                     check_anchor(choices[0], anchor)
                 except ResolutionError as exc:
                     mark = loaded.mark(at)
-                    findings.append(spec.Finding(path, mark.line, mark.column, str(exc)))
+                    findings.append(spec.Finding(
+                        path, mark.line, mark.column, f"{record['id']}: {exc}"
+                    ))
     if not findings:
         check_bindings(local)
     return files, findings, local
@@ -520,7 +557,7 @@ def result_object(files, findings, anchors, facts):
 def run(args):
     """Shared resolve/show command; strict validation precedes all source work."""
     files, validation, local = prepare(args)
-    findings = [f.as_dict() for f in validation]
+    findings = validation_findings(validation)
     anchors, facts = [], []
     if validation:
         return result_object(args.files, findings, anchors, facts)

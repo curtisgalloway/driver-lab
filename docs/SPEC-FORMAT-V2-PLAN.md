@@ -66,6 +66,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
   changes as `codex-<stamp>.patch` plus a `codex-<stamp>.refused.txt` list in RUN_DIR. The
   orchestrator reads both before `git apply` in the milestone worktree. Reviewers stay as the review method says (an Opus reviewer plus a Codex
   review). The orchestrator holds pushes, merges, Codex runs and user questions.
+  Mechanical steps (the patch gate, git sequences, review archiving) go to Haiku runners,
+  and each milestone's close-out (evidence, plan row, notebook close, checks list) to a
+  Sonnet subagent, per AGENTS.md "Delegation in orchestrated runs" (user, 2026-10-09).
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh
     subagent that runs the checks, writes break cases including degenerate inputs: empty,

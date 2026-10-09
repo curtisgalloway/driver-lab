@@ -75,7 +75,40 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
   table, limitations, and consequential findings with their resolutions; the notebook holds
   short chronological discoveries and dead ends; the plan and the notebook index hold status
   and links. Do not repeat findings tables or conclusions across them.
-- **Implementers** are fresh subagents whose model the user selects.
+- **Implementers** are fresh subagents whose model the user selects. A Codex implementer runs
+  only through `python3 -I utilities/codex-implement.py BASE RUN_DIR BRIEF`. It returns a
+  patch and a list of refused files; it never commits.
+- **Delegation in orchestrated runs** (user approved 2026-10-09). The orchestrator keeps the
+  decisions: fix briefs, stop-rule calls, the judgment on any risky-pattern hit in a patch,
+  commit messages, pull request bodies and conflict resolution. Mechanical steps go to cheaper
+  subagents with a fixed brief and a report of ten lines or fewer:
+  - **Patch gate (Haiku), after each Codex run.**
+    - Read the refused list.
+    - Grep the patch's added lines for risky patterns: shell or eval calls, network calls,
+      subprocess use, home or absolute user paths, dotfiles, agent configuration.
+    - Apply the patch with `git apply` in the milestone worktree.
+    - Build a fresh `.venv-sf2` with `--require-hashes`.
+    - Run the spec-format and utility suites, plus `check-no-private-paths.py` and
+      `check-open-side.py`.
+    - Grep new untracked files for home paths.
+    - Report pass or fail, test counts, the number of refused files, and every pattern hit
+      verbatim.
+    - It does not commit; the orchestrator reads any hits, then commits.
+  - **Git sequences (Haiku), through the `git-delegate` skill:** committing applied changes,
+    merging `origin/main` into a branch, push, `gh pr create`, merge and the `git cherry`-gated
+    cleanup. A push or merge is named on the brief's approved line.
+  - **Review archiving (Haiku):** copying a Codex review's brief and log into the run store's
+    `review/<name>/`, extracting its final answer, and appending ledger lines. This can share
+    a brief with the patch gate.
+  - **Reviewers save their own reports.** A reviewer subagent writes its full report to
+    `review/<name>/report.md` in the run store (with the shell when the harness refuses file
+    writes). It returns a summary of at most about fifteen lines: blockers, should-fix titles,
+    and whether a blocker repeats an earlier round's kind.
+  - **Milestone close-out (Sonnet):** the evidence file, the plan row, closing the notebook and
+    its index, and the full checks list (the checks list alone may go to Haiku).
+  - Reviewers, spec verifiers and spec drafting keep the models the plan names.
+  - After a runner reports a write, verify it with one cheap command of your own before
+    pushing or reporting it.
 - **Open side only** (license split, requirement LS-R20): outside the frozen archive, this
   repository describes only the open method. `utilities/check-open-side.py` names the terms it
   refuses and the archive it allows; a rule or text that needs those terms belongs in the

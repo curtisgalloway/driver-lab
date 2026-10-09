@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
 format: 2
-layer: <layer>
-name: <root-name>
-license: <root-license>
-accepts: [<accepted-license>]
+layer: public
+name: <base-root>
+license: <docs-license>
+accepts: []

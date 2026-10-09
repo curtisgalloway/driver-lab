@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: <chip-id>
+name: "<chip-name>"
+triggers: ["<chip-trigger>"]
+cache: <chip-id>-resources
+resources:
+  documents:
+    - name: chip-datasheet
+      class: databook
+      title: "<chip-datasheet-title>"
+      url: "<chip-datasheet-url>"
+      access: public
+orientation: >-
+  <chip-orientation>
+facts:
+  - id: host-link
+    section: quick-facts
+    title: How it is reached
+    claim: >-
+      <host-link-claim>
+    support:
+      - class: databook
+        doc: chip-datasheet
+        at: [{section: "<host-link-section>"}]
+
+  - id: address-window
+    section: quick-facts
+    title: Address window
+    claim: Host-visible translation is not established.
+    todo:
+      check: hardware
+      text: "<address-window-check>"
+
+  - id: chip-blocks
+    section: quick-facts
+    title: Contained blocks
+    claim: Internal blocks and their offsets are not established.
+    todo:
+      check: hardware
+      text: "<chip-blocks-check>"
+
+  - id: chip-handoff
+    section: quick-facts
+    title: Firmware hand-off state
+    claim: Link and reset state are not established.
+    todo:
+      check: hardware
+      text: "<chip-handoff-check>"
+
+  - id: chip-gotcha
+    section: gotchas
+    title: Chip-specific caveat
+    claim: Companion bring-up limitations are not established.
+    todo:
+      check: hardware
+      text: "<chip-gotcha-check>"

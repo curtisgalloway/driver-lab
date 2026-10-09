@@ -563,8 +563,10 @@ working directory and arguments in that skill. Commands are declarations only:
 neither checker nor sweep executes them or interpolates shell strings. No plugin
 loader, scheduler, source-refresh executor or universal invocation wrapper is added.
 
-Producer classes come from the provenance definitions in SPEC-FORMAT.md.
-`--target-spec PATH` additionally reads the explicitly supplied spec's tag-table
+Producer classes come from the support class enum in
+`skills/spec-format/schema/spec.schema.json`, the format 2 contract's authoritative
+list. `--target-spec PATH` retains the format 1 extension path: it additionally
+reads the explicitly supplied spec's tag-table
 rows (`| \`[class]\` | ... |`); prose mentions do not define a class. Thus
 `kernel` passes with the e1000 spec's table, but is not globally promoted.
 No filesystem search discovers private specs or plugins.

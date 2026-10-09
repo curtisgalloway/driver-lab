@@ -21,6 +21,9 @@ where one exists. Default everything else and say so.**
 - **Gap** — a missing fact that only makes the result less complete. Gaps are defaulted and marked,
   never asked about.
 
+The shared shapes and evidence rules are in [spec-format](../spec-format/SKILL.md); terms
+are in the [glossary](../../GLOSSARY.md).
+
 ## Who asks
 
 | Skill | Role | Behavior |
@@ -53,8 +56,8 @@ the options come from → default, if any.
    - The board name matched several specs or variants → "Which one: <base>, <variant>, ...?"
      Options from the matching specs' `name`, `aliases`, and `variants[].name`. No default. A match
      on a base spec whose `variants:` list a model named in the question is the same fork. A spec
-     whose `not_triggers` the question contains is not a candidate at all (`SPEC-FORMAT.md` §
-     Trigger matching): "pixel 10a" never offers the `pixel10` spec.
+     whose `not_triggers` the question contains is not a candidate at all (board-expert,
+     Resolve the spec): "pixel 10a" never offers the `pixel10` spec.
    - The board revision changes the facts (different SoC stepping, different PMIC) → "Which
      revision?" Options from the board spec's `variants:` if it lists them. Default: the latest,
      stated.
@@ -65,8 +68,8 @@ the options come from → default, if any.
 2. **Which instance.** The IP resolves and the SoC has several placements → "Which `<ip>`
    instance: <name (role)> ...?" Options from `instances:` rows with matching `ip`. Default: none,
    unless exactly one row has a `role` matching the question.
-3. **Which tree and ref.**
-   - Anchored or generic → "Anchor to <board>'s kernel at <ref>, or generic from mainline at head?"
+3. **Which tree and revision.**
+   - Anchored or generic → "Use <board>'s pinned kernel, or the generic IP spec's pinned mainline tree?"
      Default: anchored when a board was named, generic otherwise.
    - The board spec lists two Linux repositories → "Lead with <vendor tree> or <mainline>?"
      Default: the vendor tree, mainline for provenance.
@@ -74,8 +77,10 @@ the options come from → default, if any.
      "Lead with mainline, or with <public mirror>?" Default: mainline (and any unmerged series) as
      the citable map, the most complete public mirror for what mainline lacks, each fact saying
      which.
-   - A ref pin is wanted for reproducibility → "Pin to <tag> or read head?" Default: head, commit
-     recorded.
+   - No immutable pin is available → "Resolve the named branch to its current commit
+     (recommended), or use a specific release commit?" Record the full commit actually read.
+     Format 2 citations use `commit`; branch `ref` entries are maps only. Format 1 roots keep
+     their existing `ref` reading until SF2-12.
 4. **Which root, layer, and names.** For the scaffold and for overlays.
    - "Write the spec under: this repository's public root, the tree root next to the driver, a
      vendor root, or a new root?" Options from the roots collected. Default: the tree root if the
@@ -92,7 +97,7 @@ the options come from → default, if any.
    - "Full driver spec, quick-facts only, or answer the one question?" Default: what the caller
      asked for; if nothing was asked for, quick-facts.
    - For the scaffold: "Research-fill the facts from the public sources, or write the spec with
-     TODO stubs for the user to fill?" Default: research-fill whenever the sources are public.
+     gap records with TODOs?" Default: research-fill whenever the sources are public.
    - For the scaffold: "Verify the spec now (a fresh verifier re-derives every fact from its
      sources and writes the record, per `spec-verifier`), or later?" Default: now; a spec without a
      record is reported as unverified by the checker and by `board-expert`.
@@ -101,8 +106,8 @@ the options come from → default, if any.
    `variants:` rows when the SoC and console are shared and only capacity, radios, or size differ;
    their own specs when the board facts differ materially; left out when nothing public is known.
 
-Anything not in the catalog is a gap: default it, mark it `TODO (verify on hardware)` or "not
-established", and move on.
+Anything not in the catalog is a gap: default it, mark it with a structured `todo` or "not
+established", and move on. Format 1 reports keep their legacy TODO wording until SF2-12.
 
 ## The `Needs decision` block
 

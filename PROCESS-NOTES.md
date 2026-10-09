@@ -576,3 +576,33 @@ clean `git archive` export now runs the suite.
 Cost: one follow-up commit.
 Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
 Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.
+
+### 2026-10-09T16:26-07:00 — exported implementation needs temporary hash-pinned setup
+Chapter: [SF2-8a](notebook/SF2-8a.md)
+What happened: the system Python venv lacked ensurepip. The brief also named an in-tree
+virtual environment while the direct request forbade dot-directories. A seeded uv environment
+in temporary storage installed the pinned requirements with pip's hash check.
+Cost: one failed setup command; no dependency or repository configuration change.
+Prevention: an export brief should name temporary storage for its environment and the seeded
+uv command when system Python lacks ensurepip.
+Fix belongs in: the orchestrator's exported-implementation brief.
+
+### 2026-10-09T16:26-07:00 — scaffold test helper confused syntax with a placeholder
+Chapter: [SF2-8a](notebook/SF2-8a.md)
+What happened: the first helper rejected YAML's folding indicator as an angle-bracket remainder,
+then treated load_strict's dictionary as a wrapper object. Inspection corrected both assumptions.
+A delete-and-add patch on one path was also refused; a single rewrite replaced that operation.
+Cost: two failed test passes and one refused editing call before the new checks passed.
+Prevention: inspect loader return values and match complete placeholder delimiters before using
+a helper as a gate; use one update operation for an existing path.
+Fix belongs in: this unit's implementation practice; the helper is corrected here.
+
+### 2026-10-09T16:26-07:00 — sandbox git-tree detection differs from a working checkout
+Chapter: [SF2-8a](notebook/SF2-8a.md)
+What happened: utility tests detected git entries in both temporary storage and the export, while
+campaign stand-in tests could not list files with git. The implementation did not add metadata
+or alter the unrelated safety tools to make those tests pass.
+Cost: two utility failures and ten campaign-suite errors remain environment-limited; they need
+an orchestrator rerun in a real checkout. Non-git tests still establish their own results.
+Prevention: state checkout-dependent test limits in export briefs or run them at the orchestrator.
+Fix belongs in: the export harness/brief and the orchestrator's final check gate.

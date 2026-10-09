@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: overlay
+overlays: <soc-id>
+resources:
+  repos:
+    - name: source-tree
+      url: "<repo-url>"
+      commit: "<commit>"
+      license: <source-license>
+      role: source
+      files:
+        - {path: "<dt-path>", license_from: <dt-license-from>}
+        - {path: "<driver-path>", license_from: <driver-license-from>}
+facts:
+  - id: address-map-in-tree
+    section: quick-facts
+    title: Address map declared by the tree
+    claim: >-
+      <dt-map-claim>
+    support:
+      - class: DT
+        anchors:
+          - {repo: source-tree, path: "<dt-path>", lines: [<dt-first>, <dt-last>], node: "<dt-node>"}
+  - id: driver-initialization
+    section: quick-facts
+    title: Initialization in the driver
+    claim: >-
+      <driver-init-claim>
+    support:
+      - class: src
+        anchors:
+          - {repo: source-tree, path: "<driver-path>", lines: [<driver-first>, <driver-last>], symbol: "<driver-symbol>"}
+  - id: map-agrees-with-document
+    section: gotchas
+    title: Tree and document map comparison
+    claim: >-
+      <map-comparison-claim>
+    support:
+      - class: inference
+        premises:
+          - fact: "#address-map-in-tree"
+          - fact: "<soc-id>@<base-root>#addressing-model"
+        derivation: >-
+          <map-derivation>
+    todo:
+      check: hardware
+      text: "<map-comparison-check>"

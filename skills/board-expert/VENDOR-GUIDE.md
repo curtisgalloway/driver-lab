@@ -7,22 +7,24 @@ SPDX-License-Identifier: Apache-2.0
 
 For an engineer inside an organization that holds material the public specs cannot: NDA databooks,
 internal BSP trees, lab rigs, errata trackers. Nothing here assumes you have read the rest of this
-repository; `SPEC-FORMAT.md` is the reference when a term below needs its full definition.
+repository; [spec-format](../spec-format/SKILL.md) is the format 2 contract, and the
+[glossary](../../GLOSSARY.md) defines shared terms.
 
 ## Terms
 
 - **Public spec** — a board, SoC, chip, or IP spec under a root whose layer is `public`. Everything
   in it is citable from the public internet.
-- **Overlay** — a file that adds to a public spec (`overlays: <id>`) without copying it. Your
+- **Overlay** — a `kind: overlay` YAML file adding to a public spec (`overlays: <id>`) without copying it. Your
   internal facts, documents, and tools live in overlays.
 - **Root** — a directory with a `board-specs.yaml` marker declaring its `layer`. Overlays live under
   your roots; the reader finds roots only through pointers, never by searching.
 - **Layer** — the merge position of a root: `public` < `ip-vendor` < `soc-vendor` < `product` <
-  `local`. Later layers win on conflicting scalars; lists concatenate; body sections append under a
-  heading naming the layer.
+  `local`. Later layers win on conflicting scalars; resource lists concatenate; added fact records keep their full references
+  and appear under headings naming the layer and root.
 - **Vendor skill** — `<vendor>-board-tools`: the one skill that knows how to reach your internal
   resources and declares your roots. The expert loads it beside `board-expert`.
-- **`via:`** — the key on a resource entry naming the skill that knows how to reach it.
+- **`via:`** — the key on a `resources.tools` entry naming its driving skill. Documents and
+  repos have no invocation `via`; retrieval `via` is only a fetch-method description.
 
 ## 1. Pick your layers
 
@@ -42,18 +44,20 @@ lets an IP-vendor overlay and yours compose without either editing the other.
 
 ```
 vendor/<vendor>/board-specs/            any directory you control
-  board-specs.yaml                      layer: product
-                                        name: <vendor>-product
-  pixel-10.spec.md                      overlays: pixel-10
-  tensor-g5.spec.md                     overlays: tensor-g5       (only if the SoC is yours: soc-vendor root instead)
+  board-specs.yaml                      format: 2, layer: product, name: <vendor>-product
+                                        license and accepts required
+  pixel-10.spec.yaml                    kind: overlay, overlays: pixel-10
+  tensor-g5.spec.yaml                   kind: overlay, overlays: tensor-g5 (use soc-vendor root)
 ```
 
-- One overlay file per spec id. The file carries only `overlays: <id>` and what you add; never copy
-  the public spec's content in.
+- Prefer one overlay file per target per root. It declares `format: 2`, `kind: overlay`,
+  `overlays: <id>`, and added fact records/resources. Never copy the public spec. Use the
+  scaffold's YAML overlay templates and match the root's license header.
 - In a source tree, the root can be the vendor directory itself so the overlay sits next to the
   vendor's board code and lands in the same review.
-- Two overlays for the same id in the same layer produce a checker warning and an undefined order.
-  Merge them.
+- Overlay facts have distinct ids within the target spec id and root. Across roots, cite the
+  full `spec@root#fact` reference. Consolidate competing overlays within one root rather than
+  relying on an undefined replacement order. Check the root with `spec.py check`.
 
 ## 3. Write the vendor skill
 
@@ -66,8 +70,8 @@ in your internal skills repository, and fill in:
   like (title, revision, section). The expert cites internal documents by title and section exactly
   as it cites public ones.
 - **Code search and repositories.** How to check out the internal BSP or kernel, which branch is
-  the product branch, and the cache path convention (`~/src/<cache>/` from the board spec; your
-  internal trees go in the same cache under their own subdirectory).
+  the product branch and full commit pins, and the user's cache convention. Internal trees
+  use separate subdirectories in that cache; local paths never go into public artifacts.
 - **Lab rig.** How to find the target for a board id and how to drive it. If the rig has its own
   skill, name it and say nothing else; the overlay's `tools:` entry points at it with `via:`.
 - **Errata and bug tracker.** How to query errata for a part; how to cite an erratum.
@@ -81,11 +85,12 @@ matching offers it for your boards and never installs it elsewhere.
 A tool is declared in the overlay and driven by a skill. The overlay says the tool exists:
 
 ```yaml
-tools:
-  - kind: bench
-    name: lab-pixel10-3
-    via: skill:<vendor>-board-tools
-    note: serial, power, fastboot; no display capture
+resources:
+  tools:
+    - kind: bench
+      name: <bench-role>
+      via: skill:<vendor>-board-tools
+      note: serial, power, fastboot; no display capture
 ```
 
 The skill named by `via:` owns invocation, authentication, and safety rules. `board-expert` never
@@ -108,7 +113,7 @@ that report:
   forbids.
 - **Tagging:** every fact from your roots reaches the report tagged with its layer, so a downstream
   verifier can see that a citation is not publicly checkable. Facts from an NDA databook
-  keep the `[databook]` tag; the layer says it is internal.
+  keep `class: databook` support; the full fact reference and layer say where they originate.
 - **The one-way rule:** nothing from a vendor or local root is ever copied into a public-layer spec.
   If a fact turns out to be publicly documented, cite the public document and add it to the public
   spec on its own merits.
@@ -133,4 +138,8 @@ An IP vendor's overlay on `dwc3` and your product overlay on `pixel-10` compose 
 reader resolves the board, its SoC, its instances, and the IP each instance names, then applies every
 overlay for every id in that composition in layer order. You never edit their files and they never
 edit yours. When both overlay the same id, the higher layer wins on scalars, and both sets of facts
-appear in the body under their own layer headings.
+appear in the generated view under their own layer headings. An overlay never edits a base
+fact; it adds a relationship or conflict. Each file has its own YAML verification record.
+
+Existing format 1 vendor roots remain readable by board-expert until SF2-12; do not mix them
+with a format 2 composition or use their Markdown rules for new authoring.

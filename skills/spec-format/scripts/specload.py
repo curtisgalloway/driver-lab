@@ -37,6 +37,7 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
+from textnames import NAME_CATEGORIES, visible_name
 
 import yaml
 from yaml.composer import Composer
@@ -69,15 +70,6 @@ class Mark:
 
     line: int
     column: int
-
-
-NAME_CATEGORIES = frozenset(("Cc", "Cf", "Zl", "Zp", "Co", "Cs", "Cn"))
-
-
-def visible_name(value) -> str:
-    """Make terminal controls and invisible filename characters printable."""
-    return "".join((f"\\u{ord(c):04x}" if ord(c) <= 0xffff else f"\\U{ord(c):08x}")
-                   if unicodedata.category(c) in NAME_CATEGORIES else c for c in str(value))
 
 
 class LoadError(Exception):

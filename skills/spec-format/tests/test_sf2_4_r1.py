@@ -102,6 +102,8 @@ class ReviewRound1(unittest.TestCase):
                         stack.pop()
                     elif token.nesting == 1:
                         stack.append(token.type)
+                    elif token.type == "fence" and "author item" in token.content:
+                        author.append(tuple(stack))
                     elif token.type == "inline":
                         visible = "".join(c.content for c in token.children)
                         if "author item" in visible:
@@ -109,7 +111,7 @@ class ReviewRound1(unittest.TestCase):
                         elif any(s in visible for s in ("databook:", "widgetchip@root_name#", "derivation:",
                                                        "generated TODO", "starred", "inference, from:")):
                             generated.append((visible, tuple(stack)))
-                self.assertEqual(author, [("bullet_list_open", "list_item_open", "paragraph_open")])
+                self.assertEqual(author, [()])
                 for visible, parents in generated:
                     self.assertEqual(parents[-2:], ("list_item_open", "paragraph_open"), visible)
                     self.assertNotIn("blockquote_open", parents)
@@ -117,7 +119,7 @@ class ReviewRound1(unittest.TestCase):
                         self.assertEqual(parents, ("bullet_list_open", "list_item_open", "paragraph_open"), visible)
                 self.assertTrue(any("generated TODO" in t for t, _ in generated))
                 if case != "toplevel-note-list-absorbs":
-                    self.assertTrue(any("starred" in t and p.count("list_item_open") == 2 for t, p in generated))
+                    self.assertTrue(any("starred" in t.content and t.level == 0 for t in tokens if t.type == "fence"))
                     self.assertTrue(any("#p" in t and p.count("list_item_open") == 2 for t, p in generated))
                     self.assertFalse(any(t.type == "code_block" for t in tokens))
 
@@ -146,7 +148,10 @@ class ReviewRound1(unittest.TestCase):
         checker = checked(self.root)
         self.path.write_text(chip().replace("C reset.", "Changed after checking."))
         with patch.object(Path, "read_bytes", return_value=b"second read") as reader:
-            out = render_md.render(checker)
+            try:
+                out = render_md.render(checker)
+            except ValueError as exc:
+                self.fail(str(exc))
         reader.assert_not_called()
         self.assertIn(hashlib.sha256(original).hexdigest(), out)
         self.assertIn("C reset.", out)

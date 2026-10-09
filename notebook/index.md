@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T15:25:08-07:00
+Updated: 2026-10-09T16:00:03-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,12 +22,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
-Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T15:25:08-07:00
-Outcome: open, round-1 fixes awaiting review. Reject cross-field reference definitions and check
-assembled containment. Keep author notes after complete provenance lists; source/tool commits
-are explicit and hashes use checked bytes. Record notes and unsafe filenames are checked.
-The design slice follows the fixture; 282 tests pass and all 77 mutants fail by assertion.
-Checkout-dependent checks still need the orchestrator’s worktree.
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T16:00:03-07:00
+Outcome: open, round-2 stop-rule redesign awaiting review. Author fields are inert top-level
+fences; generated syntax and autolink candidates use code spans. Depth is capped at 16 and
+footnotes are rejected for the HTML viewer. Source commits are per root; text diagnostics
+encode unsafe names. The GFM battery preserves generated content; 293 tests pass and all 101
+mutants fail by assertion. Checkout-dependent checks still need the orchestrator’s worktree.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

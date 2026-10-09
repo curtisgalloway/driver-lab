@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate a Markdown reading view from checked format 2 data, never from parsed prose.
 
-Author claims can imitate the generated provenance block. This view provides no visual
-authenticity guarantee; the HTML viewer supplies that distinction (SF2-5). Images in author
-Markdown remain verbatim here; the viewer's image-to-link policy is also SF2-5.
+Author Markdown is verbatim, inert fenced text. Generated values cannot become links,
+images or HTML, including under GFM. The HTML viewer renders author Markdown (SF2-5).
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ import json
 from collections import Counter
 import re
 import string
+from pathlib import Path
 
 import records
 import speccheck
@@ -25,6 +25,8 @@ import textcheck
 def escape(value) -> str:
     """Literal generated text, including table delimiters and HTML/entity punctuation."""
     text = specload.visible_name(str(value).replace("\n", " ").replace("\r", " ")).lstrip()
+    if re.search(r"[@:|*_`<\[]|www\.", text, re.IGNORECASE):
+        return code(text)
     return re.sub(r"([" + re.escape(string.punctuation) + r"])", r"\\\1", text)
 
 
@@ -53,8 +55,6 @@ class View(list):
         self.line = 0
 
     def append(self, value):
-        if re.match(r"^#{1,6} ", value):
-            self.expected[(self.line, "heading_open", "")] += 1
         super().append(value)
         self.line += value.count("\n") + 1
 
@@ -62,31 +62,32 @@ class View(list):
         for value in values:
             self.append(value)
 
-    def author(self, value):
-        for (line, kind, destination), count in specmd.constructs(value).items():
-            if kind in ("link_open", "image"):
-                self.expected[(self.line + line, kind, destination)] += count
-        super().append(value)
-        self.line += value.count("\n") + 1
-        self.append("")
+    def heading(self, level, value):
+        self.expected[(self.line, "heading_open", "")] += 1
+        self.extend(["#" * level + " " + value, ""])
+
+    def author(self, value, label="Author text"):
+        self.extend([label + " (author text):", ""])
+        fence = "`" * max(3, max((len(m[0]) + 1 for m in re.finditer(r"`+", value)), default=3))
+        content = value + ("\n" if value and not value.endswith("\n") else "")
+        self.expected[(self.line, "fence", content)] += 1
+        self.extend([fence + "\n" + content + fence, ""])
 
 
-def _author(out, value):
-    if isinstance(out, View):
-        out.author(value)
-    else:
-        out.extend([value, ""])
+def _author(out, value, label="Author text"):
+    out.author(value, label)
 
 
 def _table(out, title, entries):
     if not entries:
         return
-    out.extend(["### " + escape(title), ""])
+    out.heading(3, escape(title))
     keys = list(dict.fromkeys(k for e in entries for k in e if k not in ("note", "files")))
-    out.extend(["| " + " | ".join(escape(k) for k in keys) + " |",
+    out.extend(["| " + " | ".join(escape(k).replace("|", "\\|") for k in keys) + " |",
                 "| " + " | ".join("---" for _ in keys) + " |"])
     for entry in entries:
-        out.append("| " + " | ".join(escape(_value(entry.get(k, ""))) for k in keys) + " |")
+        out.append("| " + " | ".join(escape(_value(entry.get(k, ""))).replace("|", "\\|")
+                                      for k in keys) + " |")
     out.append("")
     for entry in entries:
         if "note" in entry:
@@ -99,7 +100,7 @@ def _table(out, title, entries):
 
 def _resources(out, file):
     if file.data.get("resources"):
-        out.extend(["## Resources: " + escape(file.root.label), ""])
+        out.heading(2, "Resources: " + escape(file.root.label))
         for group, entries in file.data["resources"].items():
             _table(out, group.capitalize(), entries)
 
@@ -161,7 +162,9 @@ def _support(out, checker, file, entries, prefix="- ", notes=None):
                         text += ": " + escape(premise["uses"])
                     out.append(indent + "  - " + text)
                 elif "states" in premise:
-                    out.append(indent + "  - " + escape(premise["states"]))
+                    out.append(indent + "  - Stated premise (author text below)")
+                    if notes is not None:
+                        notes.append(("States", premise["states"]))
                     _support(out, checker, file, premise["support"], indent + "    - ", notes)
                 else:
                     assumption = file.data["assumptions"][file.assumptions[premise["assumption"]][1]]
@@ -171,21 +174,21 @@ def _support(out, checker, file, entries, prefix="- ", notes=None):
             if "confidence" in entry:
                 out.append(prefix + "confidence: " + escape(entry["confidence"]))
         if "note" in entry and notes is not None:
-            notes.append(entry["note"])
+            notes.append(("Support note", entry["note"]))
 
 
 def _fact(out, checker, rec, status, with_status):
     data, file = rec.data, rec.file
-    out.extend(["#### " + escape(data.get("title", data.get("name", rec.id))), ""])
+    out.heading(4, escape(data.get("title", data.get("name", rec.id))))
     if "claim" in data:
-        _author(out, data["claim"])
+        _author(out, data["claim"], "Claim")
     else:
         # Instance and variant rows remain visible, using their structured fields.
         for key, value in data.items():
             if key not in ("id", "support", "note", "todo", "title", "name"):
                 out.append("- " + escape(key) + ": " + escape(_value(value)))
         out.append("")
-    out.extend(["**Provenance** (generated):", ""])
+    out.extend(["Provenance (generated):", ""])
     if not data.get("support"):
         out.append("- Gap")
     notes = []
@@ -210,6 +213,8 @@ def _fact(out, checker, rec, status, with_status):
         out.append("- conflict" + (" (contested)" if "resolution" not in conflict else "") +
                    ": " + escape(conflict["reading"]))
         _support(out, checker, file, conflict["support"], "  - ", notes)
+        if "note" in conflict:
+            notes.append(("Conflict note", conflict["note"]))
         for key in ("resolution", "assumption", "decided"):
             if key in conflict:
                 out.append("  - " + key + ": " + escape(_value(conflict[key])))
@@ -229,12 +234,13 @@ def _fact(out, checker, rec, status, with_status):
             status_notes.append("second reader missing")
         if status_notes:
             text += " (" + escape("; ".join(status_notes)) + ")"
+        if verdict and "note" in verdict:
+            notes.append(("Record note", verdict["note"]))
     out.extend([text, ""])
     if "note" in data:
-        notes.append(data["note"])
-    for note in notes:
-        out.extend(["Note (not evidence):", ""])
-        _author(out, note)
+        notes.append(("Fact note", data["note"]))
+    for label, note in notes:
+        _author(out, note, label)
 
 
 def render(checker, *, spec_id=None, merged=False, with_status=False,
@@ -253,6 +259,24 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         groups = [[f for f in checker.files if f.spec_id == sid] for sid in ids]
     else:
         groups = [[f] for f in selected]
+    roots = {f.root.given.absolute() for group in groups for f in group}
+    commits = {}
+    values = [source_commit] if isinstance(source_commit, str) else (source_commit or [])
+    for value in values:
+        if "=" in value:
+            name, sha = value.rsplit("=", 1)
+            root = Path(name).absolute()
+            if not name or root not in roots:
+                raise speccheck.UsageError("--source-commit ROOT must name a rendered root directory")
+        else:
+            if len(roots) != 1:
+                raise speccheck.UsageError("bare --source-commit requires exactly one rendered root")
+            root, sha = next(iter(roots)), value
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise speccheck.UsageError("commit must be 40 lowercase hex characters")
+        if root in commits:
+            raise speccheck.UsageError("--source-commit given twice for a root")
+        commits[root] = sha
     for group in groups:
         group.sort(key=lambda f: (f.is_overlay, f.root.rank, f.root.order, str(f.path)))
         for file in group:
@@ -266,32 +290,34 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         base = group[0]
         if out:
             out.extend(["Generated view:", ""])
-        out.extend(["> Generated by " + code("spec.py render") + ". Do not edit.",
-                    "> Canonical form " + code(records.CANONICAL) + "; driver-lab " +
-                    escape(tool_commit or "unavailable") + "."])
+        out.extend(["Generated by " + code("spec.py render") + ". Do not edit.", "",
+                    "Canonical form " + code(records.CANONICAL) + "; driver-lab " +
+                    escape(tool_commit or "unavailable") + ".", ""])
         for file in group:
             relative = file.path.relative_to(file.root.given).as_posix()
             digest = hashlib.sha256(file.loaded.source_bytes).hexdigest()
-            out.append("> Source " + code(file.root.label + ":" + relative) + "; commit " +
-                       escape(source_commit or "unavailable") + "; SHA256 " + code(digest) + ".")
-        out.extend(["", "# " + escape(base.data.get("name", base.spec_id)), "",
-                    code(base.spec_id) + " · " + escape(base.kind) + " · triggers: " +
+            out.extend(["Source " + code(file.root.label + ":" + relative) + "; commit " +
+                        escape(commits.get(file.root.given.absolute(), "unavailable")) +
+                        "; SHA256 " + code(digest) + ".", ""])
+        out.heading(1, escape(base.data.get("name", base.spec_id)))
+        out.extend([code(base.spec_id) + " · " + escape(base.kind) + " · triggers: " +
                     ", ".join(escape(t) for t in base.data.get("triggers", [])), ""])
         for key in ("aliases", "not_triggers", "parts", "variant_of", "cache", "overlays"):
             if key in base.data:
                 out.extend([escape(key) + ": " + escape(_value(base.data[key])), ""])
         for file in group:
             _resources(out, file)
-        if any(f.data.get("orientation") for f in group):
-            out.extend(["## Context (not facts)", ""])
+        if any(any(key in f.data for key in ("orientation", "milestones", "notes")) for f in group):
+            out.heading(2, "Context (not facts)")
             for file in group:
-                if "orientation" in file.data:
+                if any(key in file.data for key in ("orientation", "milestones", "notes")):
                     if file.is_overlay:
-                        out.extend(["### Overlay: " + escape(file.root.layer) + " (" +
-                                    escape(file.root.label) + ")", ""])
+                        out.heading(3, "Overlay: " + escape(file.root.layer) + " (" + escape(file.root.label) + ")")
                     if file != group[0] and not file.is_overlay:
                         out.extend(["Context (not facts):", ""])
-                    _author(out, file.data["orientation"])
+                    for key in ("orientation", "milestones", "notes"):
+                        if key in file.data:
+                            _author(out, file.data[key], key.capitalize())
         sections = speccheck.SECTIONS.get(base.kind, ("facts",))
         if base.is_overlay:
             original = next(f for f in checker.files if f.spec_id == base.spec_id and not f.is_overlay)
@@ -299,29 +325,26 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         for section in sections:
             if not any(r.data.get("section") == section for f in group for r in f.records.values()):
                 continue
-            out.extend(["## " + escape(section.capitalize()), ""])
+            out.heading(2, section.capitalize())
             for file in group:
                 facts = [r for r in file.records.values() if r.data.get("section") == section]
                 if facts and file.is_overlay:
-                    out.extend(["### Overlay: " + escape(file.root.layer) + " (" +
-                                escape(file.root.label) + ")", ""])
+                    out.heading(3, "Overlay: " + escape(file.root.layer) + " (" + escape(file.root.label) + ")")
                 for rec in facts:
                     _fact(out, checker, rec, status, with_status)
         for kind in ("instances", "variants"):
             for file in group:
                 rows = [r for r in file.records.values() if r.path[0] == kind]
                 if rows:
-                    out.extend(["## " + escape(kind.capitalize()) + ": " + escape(file.root.label), ""])
+                    out.heading(2, kind.capitalize() + ": " + escape(file.root.label))
                     for rec in rows:
                         _fact(out, checker, rec, status, with_status)
         for file in group:
             if "notices" in file.data:
-                out.extend(["## Source notices: " + escape(file.root.label), ""])
+                out.heading(2, "Source notices: " + escape(file.root.label))
                 for notice in file.data["notices"]:
                     out.extend([code(notice["repo"] + ":" + notice["path"]), ""])
-                    fence = "`" * max(3, max((len(m[0]) + 1 for m in re.finditer(
-                        r"`+", notice["text"])), default=3))
-                    out.extend([fence + "text", notice["text"], fence, ""])
+                    _author(out, notice["text"], "Notice")
     view = "\n".join(out).rstrip() + "\n"
     specmd.check_view(view, out.expected)
     return view

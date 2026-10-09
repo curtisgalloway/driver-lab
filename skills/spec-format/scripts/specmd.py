@@ -16,6 +16,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 _PARSER = None
+MAX_DEPTH = 16
 
 # What breaks a run of text: code, an autolink. It matches no placeholder character, so a
 # placeholder never spans it, and it is not a line break, so line counts stay the source's.
@@ -35,7 +36,9 @@ def _parser():
         from markdown_it.rules_block import fence
         from markdown_it.rules_inline import autolink, html_inline, image, link
 
-        _PARSER = MarkdownIt("commonmark")
+        # Stop parsing before Python's recursion ceiling, but well past the field limit.
+        # Any parser truncation leaves tokens deeper than MAX_DEPTH and is an error.
+        _PARSER = MarkdownIt("commonmark", {"maxNesting": 64})
         # Recognize even unsafe destinations, rather than silently treating their Markdown
         # as ordinary text. Nothing renders HTML with this parser; findings reject the URL.
         _PARSER.validateLink = lambda url: True
@@ -52,7 +55,8 @@ def _parser():
                     start + 1, state.line, indent, True)
             return accepted
 
-        _PARSER.block.ruler.at("fence", checked_fence)
+        _PARSER.block.ruler.at("fence", checked_fence,
+                               {"alt": ["paragraph", "reference", "blockquote", "list"]})
 
         def positioned(rule):
             def wrapped(state, silent):
@@ -98,10 +102,20 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
     def add(line, kind, message, level="error"):
         out.append(TextFinding(line, kind, message, level))
 
-    def inline(children, first):
+    def inline(children, first, depth=0):
         tags = []
+        level = depth
         for child in children or []:
             line = first + child.meta.get("field_line", 0)
+            if child.nesting == 1:
+                level += 1
+            if level > MAX_DEPTH:
+                add(line, "nesting", f"nesting deeper than {MAX_DEPTH}")
+                return
+            if child.nesting == -1:
+                level -= 1
+            if child.type == "text" and re.search(r"\[\^[^\]\n]+\]", child.content):
+                add(line, "footnote", "footnote reference or definition inside a field")
             if child.type == "html_inline":
                 tag = re.fullmatch(r"<(\/?)([A-Za-z][\w-]*)\s*[^>]*>", child.content)
                 if tag and tag[1] and tag[2].lower() in tags:
@@ -115,14 +129,18 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
                 if not allowed_link(url):
                     add(line, "link", f"disallowed link destination {url!r}")
             if child.children:
-                inline(child.children, line)
+                inline(child.children, line, level + 1)
 
     env = {}
     tokens = _parser().parse(text, env)
     for ref in list(env.get("references", {}).values()) + env.get("duplicate_refs", []):
         add(ref["map"][0] + 1, "reference", "link reference definition inside a field")
+        if re.search(r"\[\^[^\]\n]+\]:", text.splitlines()[ref["map"][0]]):
+            add(ref["map"][0] + 1, "footnote", "footnote reference or definition inside a field")
     for token in tokens:
         line = token.map[0] + 1 if token.map else 1
+        if token.level > MAX_DEPTH:
+            add(line, "nesting", f"nesting deeper than {MAX_DEPTH}")
         if token.type == "html_block":
             add(line, "html", "raw HTML")
         elif token.type == "heading_open":
@@ -223,6 +241,8 @@ def constructs(text: str) -> Counter:
         line = token.map[0] if token.map else 0
         if token.type in ("heading_open", "html_block"):
             result[(line, token.type, "")] += 1
+        elif token.type == "fence":
+            result[(line, "fence", token.content)] += 1
         elif token.type == "inline":
             inline(token.children, line)
     for ref in list(env.get("references", {}).values()) + env.get("duplicate_refs", []):
@@ -231,7 +251,24 @@ def constructs(text: str) -> Counter:
 
 
 def check_view(text: str, expected: Counter):
-    """Reject a link, image, HTML, heading or definition not placed by the view builder."""
+    """Only generated constructs outside exact, top-level, closed author fences.
+
+    No GFM plugins are pinned; the CommonMark preset is the shared parser. Fenced content
+    stays inert under both parsers. Expected positions and contents come from the builder,
+    never from parsing author Markdown.
+    """
+    blocks = {"heading_open", "heading_close", "paragraph_open", "paragraph_close",
+              "bullet_list_open", "bullet_list_close", "ordered_list_open",
+              "ordered_list_close", "list_item_open", "list_item_close", "inline", "fence",
+              "table_open", "table_close", "thead_open", "thead_close", "tbody_open",
+              "tbody_close", "tr_open", "tr_close", "th_open", "th_close", "td_open", "td_close"}
+    for token in _parser().parse(text):
+        if token.type not in blocks or (token.type == "fence" and (
+                token.level != 0 or token.info or not token.meta["closed"])):
+            raise ValueError("assembled Markdown containment failed")
+        if token.type == "inline" and any(c.type not in ("text", "code_inline", "softbreak")
+                                           for c in token.children or []):
+            raise ValueError("assembled Markdown containment failed")
     actual = constructs(text)
     if actual != expected:
         raise ValueError("assembled Markdown containment failed")

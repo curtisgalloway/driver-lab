@@ -14,6 +14,11 @@ evaluation; add other terms as the documents that use them are updated.
 | Skill | Instructions and optional supporting tools that guide an agent through a task. |
 | Plugin | A package of related skills and optional tools. |
 | Specification (spec) | A document describing hardware behavior precisely enough to implement a driver. |
+| CommonMark | A defined set of Markdown rules for interpreting headings, lists, links and code. |
+| GFM | GitHub Flavored Markdown: GitHub's Markdown rules, which add tables, footnotes and automatic links to CommonMark. |
+| Code span / code fence | Literal inline text between backticks / a literal block between delimiter lines. The view sizes delimiters so content cannot close them. |
+| Autolink | Text a Markdown renderer turns into a link automatically, such as a URL or email address. |
+| Nesting depth | How many Markdown containers or inline constructs surround a piece of text. |
 | Driver | Software through which an operating system controls a device. |
 | OS / kernel | Operating system / its core that manages hardware and supplies driver interfaces. |
 | API | An interface a program uses to call another software component. |

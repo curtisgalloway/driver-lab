@@ -34,10 +34,10 @@ MUTATIONS = [
     ("lint", "specmd", 'if lint:\n                visible', 'if False:\n                visible'),
     ("lint-warning", "specmd", 'f"format 1 tag {match.group(0)!r} in author text", "warning"', 'f"format 1 tag {match.group(0)!r} in author text", "error"'),
     ("notice-exemption", "textcheck", 'if key == "notices" and not path:', 'if False:'),
-    ("select-claims", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes")', '("title", "note", "orientation", "milestones", "notes")'),
-    ("select-titles", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes")', '("claim", "note", "orientation", "milestones", "notes")'),
-    ("select-notes", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes")', '("claim", "title", "orientation", "milestones", "notes")'),
-    ("select-prose", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes")', '("claim", "title", "note")'),
+    ("select-claims", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("title", "note", "orientation", "milestones", "notes")'),
+    ("select-titles", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("claim", "note", "orientation", "milestones", "notes")'),
+    ("select-notes", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("claim", "title", "orientation", "milestones", "notes")'),
+    ("select-prose", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("claim", "title", "note")'),
     ("field-traversal", "textcheck", 'yield from fields(value, at)', 'yield from ()'),
     ("enable-field-lint", "textcheck", 'specmd.findings(value, lint=lint)', 'specmd.findings(value, lint=False)'),
     ("checker-integration", "speccheck", 'textcheck.check_file(self, f)', 'pass'),
@@ -149,7 +149,7 @@ MUTATIONS.extend([
     ),
     (
         'table-key-unescaped', 'render_md',
-        '" | ".join(escape(k) for k in keys)',
+        '" | ".join(escape(k).replace("|", "\\\\|") for k in keys)',
         '" | ".join(k for k in keys)',
     ),
     (
@@ -199,7 +199,7 @@ MUTATIONS.extend([
     ),
     (
         'support-note-dropped', 'render_md',
-        'notes.append(entry["note"])',
+        'notes.append(("Support note", entry["note"]))',
         'pass',
     ),
     (
@@ -228,7 +228,7 @@ MUTATIONS.extend([
         'if any(unicodedata.category(c) in () for c in str(path)):',
     ),
     (
-        'filename-visible', 'specload',
+        'filename-visible', 'textnames',
         'if unicodedata.category(c) in NAME_CATEGORIES else c',
         'if False else c',
     ),
@@ -239,7 +239,7 @@ MUTATIONS.extend([
     ),
     (
         'note-collection', 'render_md',
-        'notes.append(entry["note"])',
+        'notes.append(("Support note", entry["note"]))',
         'out.extend(["", "Note (not evidence):", "", entry["note"], ""])',
     ),
     (
@@ -269,7 +269,43 @@ MUTATIONS.append((
     "notes = []\n        status_notes = []",
 ))
 
+# These old punctuation omissions are unreachable for pipes/backticks now: escape routes
+# them through code(), whose guards remain mutated below. Do not score them as kills.
+MUTATIONS = [m for m in MUTATIONS if m[0] not in ("escape-no-pipe", "escape-no-backtick")]
+MUTATIONS.extend([
+    ("block-depth", "specmd", "if token.level > MAX_DEPTH:", "if False:"),
+    ("inline-depth", "specmd", "if level > MAX_DEPTH:", "if False:"),
+    ("parser-max-nesting", "specmd", '{"maxNesting": 64}', '{"maxNesting": 20}'),
+    ("fence-interrupts-paragraph", "specmd",
+     '{"alt": ["paragraph", "reference", "blockquote", "list"]}', '{"alt": []}'),
+    ("footnote-reference", "specmd", 'if child.type == "text" and re.search', 'if False and re.search'),
+    ("footnote-definition", "specmd", r'if re.search(r"\[\^[^\]\n]+\]:", text.splitlines()[ref["map"][0]]):', 'if False:'),
+    ("generated-special-code", "render_md", r'if re.search(r"[@:|*_`<\[]|www\.", text, re.IGNORECASE):', 'if False:'),
+    ("author-fence-content", "render_md", 'content = value +', 'content = "changed" +'),
+    ("view-author-line-offset", "render_md", 'self.expected[(self.line, "fence", content)]', 'self.expected[(0, "fence", content)]'),
+    ("view-author-links-unexpected", "specmd", 'result[(line, "fence", token.content)] += 1',
+     'result[(line, "fence", token.content)] += 1\n            inline(_parser().parseInline(token.content)[0].children, line)'),
+    ("constructs-no-html-inline", "specmd", 'if child.type in ("link_open", "image", "html_inline"):', 'if child.type in ("link_open", "image"):'),
+    ("view-fences-untracked", "specmd", 'elif token.type == "fence":\n            result', 'elif False:\n            result'),
+    ("view-allowed-blocks", "specmd", 'if token.type not in blocks or', 'if False or'),
+    ("view-allowed-inlines", "specmd", 'if token.type == "inline" and any', 'if False and any'),
+    ("source-commit-single-root", "render_md", 'if len(roots) != 1:', 'if False:'),
+    ("source-commit-root-association", "render_md", 'commits.get(file.root.given.absolute(), "unavailable")', 'next(iter(commits.values()), "unavailable")'),
+    ("source-commit-duplicate", "render_md", 'if root in commits:', 'if False:'),
+    ("source-commit-unknown-root", "render_md", 'if not name or root not in roots:', 'if False:'),
+    ("text-finding-visible", "speccheck", 'return specload.visible_name(', 'return str('),
+    ("validate-finding-visible", "spec", 'return visible_name(f"{self.path}', 'return str(f"{self.path}'),
+    ("text-output-visible", "spec", 'print(visible_name(line))', 'print(line)'),
+    ("conflict-notes-dropped", "render_md", '_support(out, checker, file, conflict["support"], "  - ", notes)', '_support(out, checker, file, conflict["support"], "  - ")'),
+    ("fact-note-before-support-notes", "render_md", 'notes.append(("Fact note", data["note"]))', 'notes.insert(0, ("Fact note", data["note"]))'),
+    ("render-precheck-claims-only", "render_md", 'for path, value, _ in textcheck.fields(file.data):', 'for path, value, _ in [x for x in textcheck.fields(file.data) if x[0][-1] == "claim"]:'),
+    ("states-unfenced", "render_md", 'notes.append(("States", premise["states"]))', 'pass'),
+    ("record-note-dropped", "render_md", 'notes.append(("Record note", verdict["note"]))', 'pass'),
+])
+
 EQUIVALENT = {
+    "escape-no-pipe": "Pipes now route through code spans and GFM table-cell escaping.",
+    "escape-no-backtick": "Backticks now route through code spans with sized delimiters.",
     "escape-no-amp": "The semicolon is still escaped, preventing entity decoding.",
     "escape-no-lt": "The closing angle bracket is still escaped, preventing an HTML tag.",
     "escape-keep-cr": "The strict loader rejects CR in author/structured strings.",
@@ -288,7 +324,7 @@ def main():
     (tree / "docs").mkdir()
     shutil.copyfile(REPO / "docs/SPEC-FORMAT-V2.md", tree / "docs/SPEC-FORMAT-V2.md")
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(destination / "tests"))
-    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_sf2_4_r1"]
+    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_sf2_4_r1", "test_sf2_4_r2"]
     baseline = subprocess.run(cmd, cwd=tree, env=env, capture_output=True, text=True, check=False)
     (run / "baseline.log").write_text(baseline.stdout + baseline.stderr)
     if baseline.returncode:

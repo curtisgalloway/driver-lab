@@ -623,3 +623,26 @@ the containment test valid. Self-review caught a status-variable collision in th
 focused reruns and a repeated mutation pass. Prevention: inspect schema branches before
 editing fixtures, test optional modes, and distinguish assertion kills from crashes. Fix
 belongs in implementation and test authoring guidance.
+
+### 2026-10-09T15:53:34-07:00 — round-2 environment and fixture corrections
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. System Python again lacked ensurepip;
+used the recorded seeded Python 3.12 temporary environment. Initial reads exceeded their
+output budget. A missing local import broke diagnostic formatting; importing the loader
+in the dependency-failure handler also broke the no-site-packages exit contract. Moved
+visible-name encoding to a dependency-free shared module. A fixture placed a note on an
+inference support entry, whose schema forbids it; moved it to the nested document citation.
+An accidental indented scratch command failed before running. Cost: focused reruns and
+corrected reads. Prevention: follow the chapter environment recipe, budget output, verify
+schema branches and exercise dependency failures. Fix belongs in implementation guidance.
+
+### 2026-10-09T15:59:28-07:00 — mutation scoring and GFM audit imports
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Two containment mutations made
+direct-render tests raise ValueError instead of failing an assertion; a redundant diagnostic
+formatting layer had no independent boundary test. Added explicit assertion conversions
+and a text-output probe, then reran all mutations. The first standalone GFM audit imported
+render_md before adding the script path and failed immediately; corrected PYTHONPATH. Cost:
+one complete mutation rerun and one audit rerun. Prevention: score crashes separately,
+exercise output boundaries independently, and establish import paths before imports. Fix
+belongs in test and validation tooling.

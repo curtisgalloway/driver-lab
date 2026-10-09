@@ -25,6 +25,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from textnames import visible_name
 
 EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 100
 
@@ -55,7 +56,7 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stale] [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
-        [--spec <id>] [--merged] [--with-status] [--source-commit <40-hex>]
+        [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
         [--tool-commit <40-hex>] --format md [--json]
 
 Run it in a venv made with
@@ -114,14 +115,17 @@ check error; 2 usage; 3 a pinned dependency missing or at another version, or a 
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 
 `check` also rejects raw HTML, disallowed links (including images), link reference definitions,
-headings and unclosed fences in CommonMark author fields, including verification-record notes.
+footnotes, nesting deeper than 16, headings and unclosed fences in CommonMark author fields,
+including verification-record notes.
 Format 1 tag spellings in claims and prose are warnings.
 `render` runs that check and repeats containment before emitting a view. Generated text is
-escaped, author Markdown is preserved; it can imitate a provenance block. The Markdown view
-does not guarantee visual separation of prose and provenance (the HTML viewer does). Without
+literal, and author Markdown is verbatim in labeled top-level fences with no info string.
+Generated syntax and values that GFM might autolink use code spans. Without
 explicit `--source-commit` and `--tool-commit` values the banner states that commits are
 unavailable and includes each checked YAML's SHA256. Both arguments require 40 lowercase hex
-characters; no Git subprocess runs. The source commit applies to all selected source files.
+characters; no Git subprocess runs. Repeat `--source-commit ROOT=SHA` once per rendered root
+directory; a bare SHA is accepted only when one root is rendered. Each omitted root is
+unavailable. `--tool-commit` identifies the rendering tool separately.
 `--merged` includes context files for the selected ids, ordered by layer; without it each
 checked file gets its own view. Errors print diagnostics instead of a partial view; `--json`
 returns `{"ok", "markdown", "findings"}` (`markdown` is null on error).
@@ -237,7 +241,7 @@ class Finding:
                 "message": self.message}
 
     def __str__(self):
-        return f"{self.path}:{self.line}:{self.column}: {self.message}"
+        return visible_name(f"{self.path}:{self.line}:{self.column}: {self.message}")
 
 
 # --- schemas -------------------------------------------------------------------------------
@@ -821,6 +825,11 @@ def commit_arg(value):
     return value
 
 
+def source_commit_arg(value):
+    commit_arg(value.rsplit("=", 1)[-1])
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
@@ -869,7 +878,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--spec", help="render only this spec id")
     rd.add_argument("--merged", action="store_true", help="include context bases and overlays")
     rd.add_argument("--with-status", action="store_true", help="include verdict and freshness")
-    rd.add_argument("--source-commit", type=commit_arg, help="source commit (40 lowercase hex)")
+    rd.add_argument("--source-commit", type=source_commit_arg, action="append",
+                    help="ROOT=SHA, once per rendered root; bare SHA only with one root")
     rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
     rd.add_argument("--format", required=True, choices=("md",))
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
@@ -909,7 +919,7 @@ def main(argv: list[str] | None = None) -> int:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
-                print(f"{label}: {m}", file=sys.stderr)
+                print(visible_name(f"{label}: {m}"), file=sys.stderr)
             if hint:
                 print(hint, file=sys.stderr)
         return code
@@ -956,7 +966,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, sort_keys=True))
     elif args.command in ("check", "status", "render"):
         for line in text:
-            print(line)
+            if args.command == "render" and code == EXIT_OK:
+                print(line)
+            else:
+                print(visible_name(line))
     else:
         for line in text:
             print(line)

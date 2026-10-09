@@ -19,7 +19,7 @@ def fields(data, path=()):
             if key == "notices" and not path:
                 continue
             at = path + (key,)
-            if key in ("claim", "title", "note", "orientation", "milestones", "notes"):
+            if key in ("claim", "title", "note", "orientation", "milestones", "notes", "states"):
                 if isinstance(value, str):
                     yield at, value, key in ("claim", "orientation", "milestones", "notes")
             else:

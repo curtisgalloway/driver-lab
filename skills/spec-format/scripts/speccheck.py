@@ -107,7 +107,10 @@ class Finding:
         return dataclasses.asdict(self)
 
     def __str__(self):
-        return f"{self.path}:{self.line}:{self.column}: {self.level}: {self.message}"
+        import specload
+
+        return specload.visible_name(
+            f"{self.path}:{self.line}:{self.column}: {self.level}: {self.message}")
 
 
 @dataclasses.dataclass(eq=False)

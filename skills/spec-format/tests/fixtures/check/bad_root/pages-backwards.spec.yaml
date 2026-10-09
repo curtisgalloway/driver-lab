@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a page range written last first.
+format: 2
+kind: chip
+id: pages-backwards
+name: Pages-Backwards
+triggers: [pages-backwards]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: cited
+    section: quick-facts
+    title: Cited
+    claim: A cited value.
+    support: [{class: databook, doc: widget-trm, at: [{pages: ["9", "4"]}]}]

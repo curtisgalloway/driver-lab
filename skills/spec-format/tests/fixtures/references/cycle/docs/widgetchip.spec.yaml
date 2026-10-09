@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Two inferences resting on each other: a premise cycle fails.
+format: 2
+kind: chip
+id: widgetchip
+name: Widget Chip
+triggers: [widgetchip]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: addressing
+    section: quick-facts
+    title: Addressing
+    claim: Peripherals sit at 0x7e000000 in the legacy view.
+    support: [{class: databook, doc: widget-trm, at: [{section: "1.2", page: "4"}]}]
+  - id: mode-a
+    section: quick-facts
+    title: Peripheral mode
+    claim: The tree describes Low Peripheral mode.
+    support:
+      - class: inference
+        premises:
+          - fact: "#addressing"
+          - fact: "#mode-b"
+        derivation: the tree's targets fall in the low window
+    todo: {check: hardware, text: compare the live tree on a board.}
+  - id: mode-b
+    section: quick-facts
+    title: Peripheral mode
+    claim: The tree describes Low Peripheral mode.
+    support:
+      - class: inference
+        premises:
+          - fact: "#mode-a"
+        derivation: the tree's targets fall in the low window
+    todo: {check: hardware, text: compare the live tree on a board.}

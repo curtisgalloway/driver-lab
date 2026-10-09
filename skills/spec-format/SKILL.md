@@ -21,7 +21,7 @@ contract is the approved design, [docs/SPEC-FORMAT-V2.md](../../docs/SPEC-FORMAT
 [docs/SPEC-FORMAT-V2-PLAN.md](../../docs/SPEC-FORMAT-V2-PLAN.md). The skills still read format 1
 (`board-expert/SPEC-FORMAT.md`) until the spec repositories cut over (SF2-11).
 
-What exists so far (SF2-1):
+What exists so far (SF2-1, SF2-2):
 
 - `scripts/specload.py`: `load_strict(path)`, the one loader every format 2 tool uses (the
   design's loader table: four plain-scalar types, integers within 64 bits, no anchors,
@@ -34,5 +34,20 @@ What exists so far (SF2-1):
 - `scripts/spec.py validate <file>... [--root <dir>] [--json]`; `spec.py --skill` prints how
   to drive it. Exit 0 valid, 1 invalid, 2 usage, 3 a pinned dependency missing, 100 an internal
   error.
+- `scripts/spec.py check <root>... [--context-root <dir>]... [--require-license]
+  [--public-skill <name>]... [--stub <SKILL.md>]... [--stubs-from <dir>]... [--json]`
+  (`scripts/speccheck.py`): discovers every `*.spec.yaml` below each root, validates it, then
+  checks names, ids, composition, overlays, the three reference forms with layer order and no
+  premise cycles, and the license gate direct and through references (D1, D12, D13). Findings in
+  a `--context-root`'s own files are warnings. Exit 0 no error, 1 an error, 2 usage, 3 a missing
+  marker or dependency, 100 internal. The license gate fails closed: a reference may only rest on a
+  root that checks clean. A root with any error of its own (before context downgrading) is
+  untrusted, and every reference into it, direct or transitive, is an error on the citing file;
+  so is a reference that dangles or is ambiguous, and, while any marker is unreadable, every
+  root-qualified reference. A template placeholder is `<`, a letter, then letters, digits,
+  spaces, `-` or `_`, then `>`, outside code; an extension fragment may not declare the citation
+  fields `repo`, `path`, `doc`, `anchors`, `lines`, `symbol`, `node`, `url`.
+- `scripts/specmd.py`: the one CommonMark parse (markdown-it-py), used so far only to find text
+  outside code for the placeholder check; SF2-4 adds the D20–D22 checks there.
 - `requirements.txt`: PyYAML, jsonschema and markdown-it-py with their dependencies, pinned by
   hash. Install with `pip install --require-hashes -r skills/spec-format/requirements.txt`.

@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: one fact named twice in a premise list, in two spellings.
+format: 2
+kind: chip
+id: dup-premise
+name: Dup-Premise
+triggers: [dup-premise]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]
+  - id: derived
+    section: quick-facts
+    title: Derived
+    claim: Ten microseconds suffice.
+    support:
+      - class: inference
+        premises:
+          - fact: "#reset-time"
+          - fact: "dup-premise#reset-time"
+        derivation: the reset time
+    todo: {check: hardware, text: time it.}

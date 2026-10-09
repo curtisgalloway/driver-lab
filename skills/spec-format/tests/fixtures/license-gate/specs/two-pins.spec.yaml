@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Two repos entries: BSD firmware and a GPL-2.0-only kernel (synthetic license-gate fixture; format 2 of the v1 two-pins-spec.md)
+format: 2
+kind: ip
+id: gate-two-pins
+name: Widget block, two-pins
+triggers: [gate two pins]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: tools
+      url: https://example.invalid/tools
+      commit: "1111111111111111111111111111111111111111"
+      license: BSD-3-Clause
+      files: [{path: armstubs/armstub8.S, license_from: spdx-line}]
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "1111111111111111111111111111111111111111"
+      license: GPL-2.0-only
+      files: [{path: drivers/widget.c, license_from: spdx-line}]
+facts:
+  - id: stub-magic
+    section: programming-model
+    title: Stub magic
+    claim: The stub magic is at 0xF0.
+    support:
+      - class: src
+        anchors: [{repo: tools, path: armstubs/armstub8.S, lines: [2, 2], symbol: stub_magic}]
+  - id: ctrl-offset
+    section: programming-model
+    title: CTRL offset
+    claim: CTRL is at offset 0x10.
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/widget.c, lines: [2, 2], symbol: WIDGET_CTRL}]

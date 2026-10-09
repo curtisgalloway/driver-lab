@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# An overlay with a src fact anchored to a BSD-3-Clause repos entry at a commit: fits the GPL and
+# permissive roots; the docs root accepts no anchor, so it fails there with or without
+# --require-license.
+format: 2
+kind: overlay
+overlays: widgetchip
+resources:
+  repos:
+    - name: tools
+      url: https://example.invalid/tools
+      commit: "439b6198a9b340de5998dd14a26a0d9d38a6bcac"
+      license: BSD-3-Clause
+      files: [{path: armstubs/armstub8.S, license_from: notice}]
+facts:
+  - id: stub-magic
+    section: gotchas
+    title: Stub magic
+    claim: The stub magic is at 0xF0.
+    support:
+      - class: src
+        anchors: [{repo: tools, path: armstubs/armstub8.S, lines: [30, 30], symbol: stub_magic}]

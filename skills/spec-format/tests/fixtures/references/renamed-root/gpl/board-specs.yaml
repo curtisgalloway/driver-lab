@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+layer: public
+name: ref-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only, BSD-3-Clause]

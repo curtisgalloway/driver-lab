@@ -235,7 +235,8 @@ class Output(unittest.TestCase):
     def test_json_findings(self):
         with tempfile.TemporaryDirectory() as tmp:
             bad = pathlib.Path(tmp) / "board-specs.yaml"
-            bad.write_text("format: 2\nlayer: public\nname: X\naccepts: []\n", encoding="utf-8")
+            bad.write_text("format: 2\nlayer: public\nname: X\nlicense: MIT\naccepts: []\n",
+                           encoding="utf-8")
             code, out, _ = run(["validate", "--json", str(bad)])
         self.assertEqual(code, 1)
         result = json.loads(out)

@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# The same root, its spec failing the schema (one unknown key).
+format: 2
+layer: public
+name: fc-gpl
+license: GPL-2.0-only
+accepts: [GPL-2.0-only]

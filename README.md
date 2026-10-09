@@ -185,7 +185,8 @@ every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" s
 
 - **`spec-format`** (reference, being built): spec format 2, facts as YAML records validated
   by JSON Schemas ([design](docs/SPEC-FORMAT-V2.md), [plan](docs/SPEC-FORMAT-V2-PLAN.md)). So far
-  its strict loader, schemas and `spec.py validate`; the skills above still read format 1.
+  its strict loader, schemas, `spec.py validate` and `spec.py check` (composition, references
+  and the license gate); the skills above still read format 1.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand

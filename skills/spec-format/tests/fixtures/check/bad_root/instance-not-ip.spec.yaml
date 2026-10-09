@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an instance whose ip names a board spec.
+format: 2
+kind: soc
+id: instance-not-ip
+name: Instance-Not-Ip
+triggers: [instance-not-ip]
+instances:
+  - id: uart1
+    name: uart1
+    ip: fineboard
+    reg: null
+    irq: null
+    clocks: []
+    todo: {check: document, text: find the block.}
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

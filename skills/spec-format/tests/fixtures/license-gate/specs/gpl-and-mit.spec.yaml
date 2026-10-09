@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A source under GPL-2.0-only AND MIT (synthetic license-gate fixture; format 2 of the v1 gpl-and-mit-spec.md)
+format: 2
+kind: ip
+id: gate-gpl-and-mit
+name: Widget block, gpl-and-mit
+triggers: [gate gpl and mit]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: mixed
+      url: https://example.invalid/mixed
+      commit: "3333333333333333333333333333333333333333"
+      license: GPL-2.0-only AND MIT
+      files: [{path: drivers/mixed.c, license_from: spdx-line}]
+facts:
+  - id: fifo-depth
+    section: programming-model
+    title: FIFO depth
+    claim: The FIFO is 64 entries deep.
+    support:
+      - class: src
+        anchors: [{repo: mixed, path: drivers/mixed.c, lines: [2, 2], symbol: MIXED_FIFO}]

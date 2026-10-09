@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Clean base: gfact cites a document.
+format: 2
+kind: chip
+id: gchip
+name: Gchip
+triggers: [gchip]
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+facts:
+  - id: gfact
+    section: quick-facts
+    title: Gfact
+    claim: A documented value.
+    support: [{class: databook, doc: trm, at: [{section: "1"}]}]

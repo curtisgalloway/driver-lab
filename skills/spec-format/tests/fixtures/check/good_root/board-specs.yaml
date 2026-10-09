@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# All clean: format 2 of board-expert's good_root.
+format: 2
+layer: public
+name: good
+license: Apache-2.0
+accepts: [GPL-2.0-only, BSD-3-Clause]

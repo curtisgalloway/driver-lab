@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A GPL-2.0-only repos entry that no anchor cites (synthetic license-gate fixture; format 2 of the v1 uncited-gpl-pin-spec.md)
+format: 2
+kind: ip
+id: gate-uncited-gpl-pin
+name: Widget block, uncited-gpl-pin
+triggers: [gate uncited gpl pin]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "1111111111111111111111111111111111111111"
+      license: GPL-2.0-only
+facts:
+  - id: reset-time
+    section: programming-model
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

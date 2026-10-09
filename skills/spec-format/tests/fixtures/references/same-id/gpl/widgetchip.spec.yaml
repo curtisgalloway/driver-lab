@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A fact named addressing in a second root, and an inference naming both: passes (ids are unique per spec id per root).
+format: 2
+kind: overlay
+overlays: widgetchip
+resources:
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "8d3ae59288f1e7d58d76558a6ee96d533bc5019f"
+      license: GPL-2.0-only
+      files: [{path: arch/arm/boot/dts/widget.dtsi, license_from: spdx-line}]
+facts:
+  - id: addressing
+    section: quick-facts
+    title: Tree ranges
+    claim: The tree maps the legacy window to 0xfe000000.
+    support:
+      - class: DT
+        anchors: [{repo: linux, path: arch/arm/boot/dts/widget.dtsi, lines: [34, 45], node: soc}]
+  - id: low-mode
+    section: quick-facts
+    title: Peripheral mode
+    claim: The tree describes Low Peripheral mode.
+    support:
+      - class: inference
+        premises:
+          - fact: "#addressing"
+          - fact: "widgetchip@ref-docs#addressing"
+        derivation: the tree's targets fall in the low window
+    todo: {check: hardware, text: compare the live tree on a board.}

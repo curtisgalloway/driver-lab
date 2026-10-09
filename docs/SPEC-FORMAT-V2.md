@@ -303,7 +303,7 @@ one `if`/`then` per class (an excerpt is in [Validation](#validation-schema-and-
 | `emulated` | `model`, `version`, and `runs` or `observation` (a fact id holding a numbered observation) | `note` | yes | no | never the only class of a fact; phrased as an observation from outside the model |
 | `press` | `title`, `url` | `date`, `note` | yes | no | third-party reporting; a lead |
 | `inference` | `premises`, `derivation` | `confidence` (`high`, `medium`, `low`) | yes | through its premises | concluded rather than read; stands alone in `support` |
-| `source-observed` | defined by the extension that uses it | | yes | per the extension | kept as the one extension class in use (D15) |
+| `source-observed` | defined by the extension that uses it; never the citation fields `repo`, `path`, `doc`, `anchors`, `lines`, `symbol`, `node`, `url`, at any depth (SF2-2 review: the gate reads citations only from core fields) | | yes | per the extension | kept as the one extension class in use (D15) |
 
 ### Locators (`at`)
 
@@ -480,7 +480,8 @@ The rules of [SPEC-FORMAT.md](../skills/board-expert/SPEC-FORMAT.md) ("Roots and
 the license split carry over. Restated for format 2:
 
 - **Root marker.** `board-specs.yaml` keeps its name and fields (`layer`, `name`, `roots`,
-  `license`, `accepts`) and gains `format: 2`. `accepts` becomes required, and `accepts: []`
+  `license`, `accepts`) and gains `format: 2`. `license` and `accepts` become required (`license`:
+  orchestrator decision during SF2-2's review, 2026-10-08), and `accepts: []`
   means documents only (orchestrator decision, 2026-10-08; format 1 read an absent `accepts` as
   undeclared, with a warning). `name` becomes required, because root-qualified
   references name it (D1): the three repositories' markers already declare
@@ -507,6 +508,18 @@ the license split carry over. Restated for format 2:
   structure: there is no second scanner, so there is no second reading to disagree with the
   first. What v1 gated only for `[src:]` anchors now covers `DT` too, which is what kept every
   BCM2711 device-tree fact out of the docs and permissive roots by hand during RG1.
+- **A reference may only rest on a root that checks clean** (user decision, 2026-10-08, during
+  SF2-2's review). The gate fails closed: what it cannot establish is an error on the checked
+  citing file. A root whose own check produced any error is *untrusted*, counting errors from
+  before a context root's findings are reported as warnings: a file that fails to load or
+  validate, a file named like a spec that discovery passes over (`.spec.yml`, a case variant,
+  a backup such as `.bak` or `~`, a format 1 `.spec.md`), a nested marker, a duplicate name, an
+  unlistable directory, a failing reference. Every reference into an untrusted root, direct or
+  reached through other facts, is an error, and that error makes the citing root untrusted in
+  turn. A reference that resolves to nothing, or to more than one fact, is an error too. A
+  marker that cannot be read leaves its root's name unknown, so while any given marker is
+  unreadable, every root-qualified reference fails. `parts` and `instances[].ip` into another
+  root are composition, not a fact resting on a source, and are not gated.
 
 ## Verification records
 
@@ -785,7 +798,7 @@ copies its records into the spec unchanged, ids included.
 | License gate (SPDX expression logic), direct and transitive | | yes | |
 | `parts`, `overlays`, `variant_of`, `instances[].ip` resolve; stubs resolve | | yes | |
 | Public-layer privacy (`access: internal`, `via:` to a private skill) | | yes | |
-| Template placeholders left in | | yes | |
+| Template placeholders left in: `<`, a letter, then letters, digits, spaces, `-` or `_`, then `>`, outside code (`<linux/of.h>`, `<a@b>` and URLs are not placeholders; SF2-2 review) | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |
 | Markdown view and viewer build, every claim self-contained (publish step, D5) | | yes (`render`) | |
 | Anchors resolve at the pin: path, line range, symbol near the range | | | yes |
@@ -1077,7 +1090,7 @@ specs build on the same data later; this design covers the first static version 
 | `skills/hardware-investigator/examples/` | expected facts files | rewritten as `kind: facts` |
 | `skills/board-spec-scaffold/templates/` | 6 spec templates and the root marker | rewritten as YAML templates |
 | `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2`; keeps its `name` |
-| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name` and `accepts` (both already present) are now required; references use `name` |
+| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name`, `license` and `accepts` (all already present) are now required; references use `name` |
 | The three spec repositories' CI | `scripts/checks.sh`, one workflow | `checks.sh` on format 2, plus a publish workflow for the Pages site (D5); nothing generated is committed |
 
 ### Converting a spec

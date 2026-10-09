@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A product layer: an internal overlay (allowed here), a second overlay of the same id in this
+# root (a warning on both), and a dangling one. Format 2 of board-expert's vendor_root.
+format: 2
+layer: product
+name: acme
+license: LicenseRef-acme-proprietary
+accepts: []

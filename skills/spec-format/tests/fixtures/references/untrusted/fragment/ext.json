@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"evidence": {"type": "object", "patternProperties": {"repo|path": {"type": "string"}}, "additionalProperties": false}}}

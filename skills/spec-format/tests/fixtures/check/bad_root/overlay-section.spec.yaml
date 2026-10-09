@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an overlay of an ip spec using a board section.
+format: 2
+kind: overlay
+overlays: fineip
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: overlay-reset
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

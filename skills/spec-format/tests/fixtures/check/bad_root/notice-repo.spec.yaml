@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a notice naming no repos entry.
+format: 2
+kind: chip
+id: notice-repo
+name: Notice-Repo
+triggers: [notice-repo]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]
+notices:
+  - {repo: linux, path: drivers/widget.c, text: Copyright the authors}

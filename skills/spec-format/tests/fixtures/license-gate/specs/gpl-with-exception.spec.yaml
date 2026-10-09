@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A GPL-2.0 WITH Linux-syscall-note source (synthetic license-gate fixture; format 2 of the v1 gpl-with-exception-spec.md)
+format: 2
+kind: ip
+id: gate-gpl-with-exception
+name: Widget block, gpl-with-exception
+triggers: [gate gpl with exception]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  repos:
+    - name: uapi
+      url: https://example.invalid/uapi
+      commit: "1111111111111111111111111111111111111111"
+      license: GPL-2.0 WITH Linux-syscall-note
+      files: [{path: include/uapi/widget.h, license_from: spdx-line}]
+facts:
+  - id: ioctl-number
+    section: programming-model
+    title: Ioctl number
+    claim: The ioctl number is 0x40.
+    support:
+      - class: src
+        anchors: [{repo: uapi, path: include/uapi/widget.h, lines: [2, 2], symbol: WIDGET_IOC}]

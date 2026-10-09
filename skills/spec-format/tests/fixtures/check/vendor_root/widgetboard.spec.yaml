@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: overlay
+overlays: widgetboard
+resources:
+  documents:
+    - {name: errata, class: databook, title: Widget Board internal errata, url: "https://intranet.example.invalid/errata", access: internal}
+  tools:
+    - {kind: bench, name: lab-widget-1, via: "skill:acme-board-tools"}
+facts:
+  - id: erratum-7
+    section: quick-facts
+    title: Erratum 7
+    claim: Reset twice.
+    support: [{class: databook, doc: errata, at: [{section: "7"}]}]

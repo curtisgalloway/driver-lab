@@ -4,7 +4,7 @@
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 root marker, board-specs.yaml (design: Roots, layers, overlays and the license gate; D1, D15).",
   "title": "Spec format 2: root marker (board-specs.yaml)",
   "type": "object",
-  "required": ["format", "layer", "name", "accepts"],
+  "required": ["format", "layer", "name", "license", "accepts"],
   "properties": {
     "format": {"const": 2},
     "layer": {"enum": ["public", "ip-vendor", "soc-vendor", "product", "local"]},
@@ -20,7 +20,7 @@
       "uniqueItems": true,
       "items": {"$ref": "spec.schema.json#/$defs/line"}
     },
-    "license": {"$ref": "spec.schema.json#/$defs/spdxExpression"},
+    "license": {"$comment": "Required in format 2 (orchestrator decision 2026-10-08, SF2-2 review): the root's own SPDX expression.", "$ref": "spec.schema.json#/$defs/spdxExpression"},
     "accepts": {
       "$comment": "Required in format 2 (orchestrator decision 2026-10-08): single SPDX identifiers, no expressions; [] means documents only, accepting no source tree.",
       "type": "array",

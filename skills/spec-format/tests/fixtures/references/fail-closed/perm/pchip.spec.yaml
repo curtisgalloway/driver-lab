@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A permissive fact resting on the GPL root's gfact.
+format: 2
+kind: chip
+id: pchip
+name: Pchip
+triggers: [pchip]
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+facts:
+  - id: p
+    section: quick-facts
+    title: T p
+    claim: C p.
+    support:
+      - class: inference
+        premises:
+          - fact: "gchip@fc-gpl#gfact"
+        derivation: it follows
+    todo: {check: hardware, text: check it.}

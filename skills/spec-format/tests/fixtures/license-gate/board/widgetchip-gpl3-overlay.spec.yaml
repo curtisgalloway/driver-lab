@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# An overlay adding a GPL-3.0-only repos entry: fits no root under --require-license.
+format: 2
+kind: overlay
+overlays: widgetchip
+resources:
+  repos:
+    - name: gnutool
+      url: https://example.invalid/gnutool
+      commit: "3333333333333333333333333333333333333333"
+      license: GPL-3.0-only
+facts:
+  - id: gpl3-note
+    section: gotchas
+    title: Host tool
+    claim: A host tool reads the chip's configuration.
+    support: [{class: hardware, board: Widget Board rev B, method: ran the tool against a board, date: 2026-10-01}]

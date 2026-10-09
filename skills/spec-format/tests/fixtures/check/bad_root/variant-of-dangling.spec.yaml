@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: variant_of names no spec.
+format: 2
+kind: board
+id: variant-of-dangling
+name: Variant-Of-Dangling
+triggers: [variant-of-dangling]
+parts: [finechip]
+variant_of: nosuchbase
+cache: variant-of-dangling-resources
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

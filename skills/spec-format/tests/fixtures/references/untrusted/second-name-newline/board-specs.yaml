@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A second fc-gpl whose marker cannot be read (second-name-newline).
+format: 2
+layer: public
+name: "fc-gpl\n"
+license: GPL-2.0-only
+accepts: [GPL-2.0-only]

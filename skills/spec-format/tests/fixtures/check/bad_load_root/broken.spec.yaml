@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: YAML that does not parse.
+format: 2
+kind: chip
+id: broken
+name: [unterminated

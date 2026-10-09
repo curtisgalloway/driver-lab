@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Synthetic root shaped like hardware-specs-docs (format 2 of the v1 license-gate root).
+# No source tree: documents only.
+format: 2
+layer: public
+name: hardware-specs-docs
+license: CC-BY-4.0
+accepts: []

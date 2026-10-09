@@ -178,7 +178,8 @@ def facts_file(**changes) -> dict:
 
 
 def marker(**changes) -> dict:
-    return apply({"format": 2, "layer": "public", "name": "r", "accepts": ["MIT"]}, changes)
+    return apply({"format": 2, "layer": "public", "name": "r", "license": "MIT", "accepts": ["MIT"]},
+                 changes)
 
 
 def verdict(**changes) -> dict:
@@ -247,7 +248,8 @@ class ValidFixtures(Validator):
 
     def test_worked_example_validates(self):
         files = sorted(str(p) for p in WORKED.rglob("*.yaml"))
-        self.assertEqual(len(files), 4)
+        # three slices and the record, plus the three root markers SF2-2 added for spec.py check
+        self.assertEqual(len(files), 7)
         code, result = run(["validate", "--json"] + files)
         self.assertEqual(code, 0, json.dumps(result["findings"], indent=1))
 
@@ -657,6 +659,40 @@ class SourceObserved(Validator):
              "field name 'anchors' is a core field"),
             ("a core field: url", dict(FRAGMENT, properties={"url": {"type": "string"}}),
              "field name 'url' is a core field"),
+            ("a citation field: repo", dict(FRAGMENT, properties={"repo": {"type": "string"}}),
+             "field name 'repo' at properties carries a citation"),
+            ("a citation field: path, nested", dict(FRAGMENT, properties={"where": {
+                "type": "object", "properties": {"path": {"type": "string"}}}}),
+             "field name 'path' at properties/where/properties carries a citation"),
+            ("a citation field: lines, in items", dict(FRAGMENT, properties={"spots": {
+                "type": "array", "items": {"type": "object", "properties": {"lines": {}}}}}),
+             "field name 'lines' at properties/spots/items/properties carries a citation"),
+            ("nested patternProperties (Codex round 2)", dict(FRAGMENT, properties={"evidence": {
+                "type": "object", "patternProperties": {"repo|path": {"type": "string"}},
+                "additionalProperties": False}}),
+             "patternProperties at properties/evidence/patternProperties not allowed"),
+            ("nested dependentSchemas", dict(FRAGMENT, properties={"evidence": {
+                "type": "object", "dependentSchemas": {"x": {"required": ["repo"]}}}}),
+             "dependentSchemas at properties/evidence/dependentSchemas not allowed"),
+            ("nested dependentRequired", dict(FRAGMENT, properties={"e": {
+                "type": "object", "dependentRequired": {"x": ["y"]}}}),
+             "dependentRequired at properties/e/dependentRequired not allowed"),
+            ("nested propertyNames", dict(FRAGMENT, properties={"e": {
+                "type": "object", "propertyNames": {"pattern": "r"}}}),
+             "propertyNames at properties/e/propertyNames not allowed"),
+            ("nested if/then", dict(FRAGMENT, properties={"e": {
+                "type": "object", "if": {"required": ["a"]}, "then": {"required": ["b"]}}}),
+             "if at properties/e/if not allowed"),
+            ("additionalProperties schema", dict(FRAGMENT, properties={"e": {
+                "type": "object", "additionalProperties": {"type": "string"}}}),
+             "additionalProperties at properties/e/additionalProperties not allowed with a "
+             "schema value"),
+            ("unevaluatedProperties schema", dict(FRAGMENT, properties={"e": {
+                "type": "object", "unevaluatedProperties": {"type": "string"}}}),
+             "unevaluatedProperties at properties/e/unevaluatedProperties not allowed with a "
+             "schema value"),
+            ("items as a list", dict(FRAGMENT, properties={"e": {
+                "type": "array", "items": [{"type": "string"}]}}), "items at properties/e/items"),
             ("required not strings", dict(FRAGMENT, required=[{}]), "required lists only"),
             ("no type", apply(FRAGMENT, {"type": DROP}), 'declares "type": "object"'),
             ("no properties", apply(FRAGMENT, {"properties": DROP, "required": DROP}),
@@ -674,6 +710,19 @@ class SourceObserved(Validator):
                 messages = [f["message"] for f in result["findings"]]
                 self.assertEqual(code, 1)
                 self.assertTrue(any(expected in m for m in messages), messages)
+
+    def test_plain_nested_fragment_is_allowed(self):
+        frag = dict(FRAGMENT, properties={"observer": {"type": "string", "pattern": "\\S"},
+                                          "where": {"type": "object", "required": ["board"],
+                                                    "properties": {"board": {"enum": ["a", "b"]},
+                                                                   "pins": {"type": "array",
+                                                                            "items": {"type": "integer",
+                                                                                      "minimum": 0}}},
+                                                    "additionalProperties": False}})
+        entry = soc(facts=[fact(support=[{"class": "source-observed", "observer": "o",
+                                          "where": {"board": "a", "pins": [1]}}], todo=TODO)])
+        code, result = self.validate(entry, fragment=frag)
+        self.assertEqual(code, 0, result["findings"])
 
     def test_fragment_outside_the_root(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -824,6 +873,7 @@ class RootMarker(Validator):
             ("no format", marker(format=DROP), "'format' is a required"),
             ("v1 marker", marker(format=1), "2 was expected"),
             ("no name", marker(name=DROP), "'name' is a required"),
+            ("no license", marker(license=DROP), "'license' is a required"),
             ("blank name", marker(name=""), "does not match"),
             ("name with a space", marker(name="hardware specs"), "does not match"),
             ("name with @", marker(name="a@b"), "does not match"),
@@ -1393,7 +1443,8 @@ class RoundThree(Validator):
                     fragment=frag(pattern))
 
     def test_unknown_key_under_alternatives(self):
-        """Codex 2: names count only from the anyOf/oneOf branches the value satisfies."""
+        """Codex 2 (SF2-1): a fragment's anyOf/oneOf could admit keys no check sees. Since the
+        SF2-2 round-2 user decision a fragment uses plain properties only, so it is refused."""
         for combinator in ["anyOf", "oneOf"]:
             observer = {
                 "type": "object",
@@ -1408,7 +1459,8 @@ class RoundThree(Validator):
             entry = soc(facts=[fact(support=[{"class": "source-observed", "observer": {
                 "kind": "a", "b": 1, "n": "bad"}}], todo=TODO)])
             with self.subTest(combinator):
-                self.assert_invalid(entry, "unknown key 'b'", fragment=frag)
+                self.assert_invalid(entry, f"{combinator} at properties/observer/{combinator} "
+                                           f"not allowed", fragment=frag)
 
     def test_commit_spelled_as_ref_in_either_case(self):
         for ref in ["A" * 40, "Ab" * 32, COMMIT.upper()]:

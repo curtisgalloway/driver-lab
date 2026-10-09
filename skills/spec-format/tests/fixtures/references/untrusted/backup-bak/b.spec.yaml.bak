@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Never discovered (b.spec.yaml.bak).
+format: 2
+kind: overlay
+overlays: gchip
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "8d3ae59288f1e7d58d76558a6ee96d533bc5019f"
+      license: GPL-2.0-only
+      files: [{path: drivers/w.c, license_from: spdx-line}]
+facts:
+  - id: gfact2
+    section: quick-facts
+    title: Gfact
+    claim: A value the GPL tree defines.
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/w.c, lines: [1, 2], symbol: S}]

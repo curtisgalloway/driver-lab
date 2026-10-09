@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# An SoC with one structured instance, an assumption, an inference over a fact of this file and
+# one of the IP spec, a conflict entry, and a notice.
+format: 2
+kind: soc
+id: widgetsoc
+name: Widget SoC
+triggers: [widget soc]
+cache: widget-resources
+instances:
+  - id: uart0
+    name: uart0
+    ip: widgetuart
+    reg: "0x7e201000"
+    irq: {kind: SPI, number: 121, intid: 153}
+    clocks: [uartclk]
+    support:
+      - class: DT
+        anchors: [{repo: widget-linux, path: arch/arm64/boot/dts/widget.dtsi, lines: [40, 48], node: serial@7e201000}]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget SoC TRM, url: "https://example.invalid/widget-trm.pdf", pages: 120}
+  repos:
+    - name: widget-linux
+      url: https://example.invalid/widget-linux
+      commit: "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+      license: GPL-2.0-only
+      files:
+        - {path: arch/arm64/boot/dts/widget.dtsi, license_from: spdx-line}
+        - {path: drivers/tty/serial/, license_from: license-file}
+assumptions:
+  - id: same-silicon
+    text: the rev B board carries the silicon the manual describes
+facts:
+  - id: uart-base
+    section: quick-facts
+    title: UART base
+    claim: UART0 sits at legacy 0x7e201000.
+    support: [{class: databook, doc: widget-trm, at: [{section: "6.1", pages: ["92", "93"]}]}]
+    assumes: [same-silicon]
+  - id: uart-fifo
+    section: gotchas
+    title: UART FIFO trigger
+    claim: The receive interrupt fires at half the FIFO.
+    support:
+      - class: inference
+        premises:
+          - fact: "#uart-base"
+          - fact: "widgetuart#fifo-depth"
+            uses: the FIFO holds 16 entries
+          - states: no other driver changes the trigger level
+            support:
+              - class: src
+                anchors: [{repo: widget-linux, path: drivers/tty/serial/, search: no other driver writes the trigger level}]
+          - assumption: same-silicon
+        derivation: half of 16 is 8
+    todo: {check: hardware, text: count bytes at the first interrupt.}
+    conflicts:
+      - reading: a press article says the FIFO holds 32 entries
+        support: [{class: press, title: Widget review, url: "https://example.invalid/review"}]
+notices:
+  - repo: widget-linux
+    path: arch/arm64/boot/dts/widget.dtsi
+    text: Copyright (c) 2026 Widget contributors <maintainers@example.invalid>

@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Overlay two.
+format: 2
+kind: overlay
+overlays: gchip
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf"}
+facts:
+  - id: note-c
+    section: quick-facts
+    title: Gfact
+    claim: A documented value.
+    support: [{class: databook, doc: trm, at: [{section: "1"}]}]

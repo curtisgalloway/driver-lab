@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: a tool driven by a skill not named public.
+format: 2
+kind: chip
+id: private-tool
+name: Private-Tool
+triggers: [private-tool]
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+  tools:
+    - {kind: bench, name: lab-widget-1, via: "skill:acme-board-tools"}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

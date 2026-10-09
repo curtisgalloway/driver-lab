@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T17:52-07:00
+Updated: 2026-10-08T18:32-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,8 +22,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
-Entries: 2026-10-08T17:52-07:00 through 2026-10-08T17:52-07:00
-Outcome: in progress; implemented, awaiting review.
+Entries: 2026-10-08T17:52-07:00 through 2026-10-08T18:32-07:00
+Outcome: in progress; implemented, mutation pass complete, awaiting review. The orchestrator
+accepted the `upstream` map, cycles hashed as one component, and `unknown` as a fifth status.
+Score a mutant that does not compile as invalid, and a failure during an internal error as a
+crash, not a kill.
 
 ### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
 Entries: 2026-10-08T14:58-07:00 through 2026-10-08T17:38-07:00

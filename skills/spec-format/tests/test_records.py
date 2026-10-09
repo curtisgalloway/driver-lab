@@ -1704,6 +1704,66 @@ class ReviewRound2(Roots):
         self.assertTrue(f["path"].endswith("resources/b.verify.yaml"))
 
 
+class ReviewRound3(Roots):
+    """Pins from SF2-3's review round 3 (should-fix S1): every anchored class (src, DT, rtl)
+    brings its cited files items into the basis, an rtl support's `doc` counts as well, and a
+    document cited only from a premise's read support or only from a conflict's support counts
+    like one cited from the fact's own support."""
+
+    D2 = ('    - {name: d2, class: databook, title: Second, url: '
+          '"https://example.invalid/d2.pdf", pages: 10}\n')
+    DT = ("    support:\n      - class: DT\n        anchors: [{repo: linux, "
+          "path: drivers/w.c, node: soc}]\n")
+    RTL = ("    support:\n      - class: rtl\n        design: d\n        revision: r1\n"
+           '        module: m\n        doc: trm\n        at: [{section: "1"}]\n'
+           "        anchors: [{repo: linux, path: drivers/w.c, lines: [1, 2]}]\n")
+    PREMISE = ("    support:\n      - class: inference\n        premises:\n"
+               "          - states: s\n            support: [{class: databook, doc: d2, "
+               'at: [{section: "1"}]}]\n        derivation: it follows\n'
+               "    todo: {check: hardware, text: check it.}\n")
+    CONFLICT = ("    conflicts:\n      - reading: other\n        support: [{class: databook, "
+                'doc: d2, at: [{section: "1"}]}]\n')
+
+    def after_edit(self, spec, old, new):
+        """(x's status, y's status) after replacing old by new in a root verified before."""
+        r = self.root(f"k{len(list(self.tmp.iterdir()))}", {
+            "board-specs.yaml": marker("r", accepts="[GPL-2.0-only]", lic="GPL-2.0-only"),
+            "w.spec.yaml": spec})
+        self.assertEqual(errors(check(r)[1]), [])
+        self.verify_all(r, "widgetchip", "w.spec.yaml", r)
+        st = rows(status(r)[1])
+        self.assertEqual({k: v["status"] for k, v in st.items()},
+                         {"widgetchip@r#x": "current", "widgetchip@r#y": "current"})
+        self.assertEqual(spec.count(old), 1, old)
+        self.write(r, "w.spec.yaml", spec.replace(old, new))
+        st = rows(status(r)[1])
+        return st["widgetchip@r#x"]["status"], st["widgetchip@r#y"]["status"]
+
+    def test_every_anchored_class_brings_its_files_item_into_the_basis(self):
+        for name, support in (("DT", self.DT), ("rtl", self.RTL)):
+            with self.subTest(name):
+                spec = chip(facts=fact("x", support=support) + ref_fact("y", "#x"),
+                            repos=LINUX)
+                self.assertEqual(
+                    self.after_edit(spec, "{path: drivers/w.c, license_from: spdx-line}",
+                                    "{path: drivers/w.c, license_from: notice}"),
+                    ("stale", "stale"))
+
+    def test_an_rtl_supports_doc_counts(self):
+        spec = chip(facts=fact("x", support=self.RTL) + ref_fact("y", "#x"), repos=LINUX)
+        self.assertEqual(self.after_edit(spec, "title: Widget TRM", "title: Widget TRM v2"),
+                         ("stale", "stale"))
+
+    def test_a_document_cited_only_from_a_premise_or_a_conflict_counts(self):
+        cases = {"premise": fact("x", support=self.PREMISE),
+                 "conflict": fact("x", extra=self.CONFLICT)}
+        for name, x in cases.items():
+            with self.subTest(name):
+                spec = chip(facts=x + ref_fact("y", "#x"), docs=TRM + self.D2)
+                self.assertEqual(self.after_edit(spec, "title: Second", "title: Second v2"),
+                                 ("stale", "stale"))
+
+
 class StatusCommand(Roots):
     def test_text_and_exit_codes(self):
         code, out, _ = run("status", VROOT)

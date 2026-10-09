@@ -154,7 +154,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Locator | The structured place in a document a citation points at: section, page, table, figure, clause or heading. |
 | Named assumption | An assumption stated once in a spec's `assumptions` list and named by every fact that rests on it, so it is visible and invalidates those facts when it changes. |
 | Gap fact | A fact record with no support and a TODO: something the spec records as unknown. |
-| Basis hash | A fingerprint of everything one verdict depends on: the fact record, the identity fields of the resources it cites, its named assumptions, and the basis hashes of the facts it references. A verdict whose basis hash no longer matches is stale. |
+| Basis hash | A fingerprint of everything one verdict depends on: the fact record, the resource entries it cites and its named assumptions (each whole, except a short named list of bookkeeping fields such as `verified` and `note`), and the basis hashes of the facts it references. A verdict whose basis hash no longer matches is stale. |
 | Canonical form | One fixed serialization of parsed data (sorted keys, no whitespace), so files holding the same data hash the same whatever their layout. |
 | Rendered view | Markdown generated from a format 2 spec for people to read, built and published by CI; never committed, edited or parsed for meaning. It cannot stop prose from imitating a cited fact. |
 | Viewer / badge | The published HTML view of format 2 specs / a label in it drawn from a fact's structured fields (class, verdict, TODO, origin), placed outside the author's text, which author text cannot produce. |

@@ -8,18 +8,20 @@ the fact's **basis hash** when it was reached (D2):
 
     basis(fact) = sha256( "fact-v1\\n"
                           + canonical(fact without `section`)
-                          + "\\n" + canonical(the resource entries the fact cites, identity fields)
+                          + "\\n" + canonical(the resource entries the fact cites, all but
+                                              bookkeeping fields)
                           + "\\n" + canonical(the assumptions it names)
                           + "\\n" + sorted "<full reference> <basis(ref)>" lines, one per fact
                                     it references )
 
 *canonical* is JSON with keys sorted by code point, no insignificant white space, UTF-8, every
 string and key in NFC; the data holds only strings, integers, booleans, null, lists and mappings
-(anything else is a bug, never hashed). The resource part is `{"documents": {name: identity},
-"repos": {name: identity}}`, identity fields only (documents: url, revision, commit, sha256,
-pages, page_numbering; repos: url, commit, license, and `files`, the path and license_from of
-each entry the fact cites, by path). The assumption part is `{id: entry}`. A fact references facts through inference
-premises, `relates` and an emulated entry's `observation`.
+(anything else is a bug, never hashed). The resource part is `{"documents": {name: entry},
+"repos": {name: entry}}` and the assumption part `{id: entry}`: each cited entry whole, minus the
+named bookkeeping fields of its kind (BOOKKEEPING), so a field not named there, a future one
+included, counts. A repos entry's `files` holds only the entries of the paths the fact cites,
+by path, each minus its own bookkeeping. A fact references facts through inference premises,
+`relates` and an emulated entry's `observation`.
 
 References form a graph that `relates` can make cyclic (`same-as` both ways). A fact on a cycle
 (a strongly connected component of more than one fact, or one naming itself) cannot take its
@@ -31,8 +33,9 @@ neighbors' bases first, so the component is hashed as one: its digest is
 and a member's line for another member carries that digest in place of a basis. Outside cycles
 this is exactly the formula above; on one, any change to any member stales every member.
 
-A basis that cannot be established (a reference the check rejected, a cited name the file does
-not list or lists twice, a fact resting on such a fact) is **unknown**: never current.
+A basis that cannot be established (a reference or citation the check rejected, a cited name the
+file does not list or lists twice, a cited repos entry pinned by `ref` rather than `commit`, a
+fact resting on such a fact) is **unknown**: never current.
 
 Freshness of a verdict: **current** (its basis equals the fact's), **stale**, **upstream-stale**
 (stale only because facts in other roots changed, reached through references that stay in the
@@ -48,9 +51,15 @@ import json
 import unicodedata
 
 CANONICAL = "fact-v1"
-DOC_IDENTITY = ("url", "revision", "commit", "sha256", "pages", "page_numbering")
-REPO_IDENTITY = ("url", "commit", "license")
-FILE_IDENTITY = ("path", "license_from")  # a repos entry's `files` item; `note` is bookkeeping
+# The only fields a basis leaves out of a cited entry, per kind: a closed list, each named in the
+# design. Every other field, one the schema adds later included, is hashed (review round 2, the
+# user's decision of 2026-10-08: "hash all but bookkeeping").
+BOOKKEEPING = {
+    "documents": frozenset({"verified", "fetch", "note"}),
+    "repos": frozenset({"verified", "fetch", "fetch_via", "note"}),
+    "files": frozenset({"note"}),  # a repos entry's `files` item
+    "assumptions": frozenset({"todo"}),
+}
 SUMMARY = {"pass": "PASS", "fail": "FAIL", "unverifiable": "UNVERIFIABLE", "gap": "GAP",
            "adjudicate": "ADJUDICATE"}
 STATUSES = ("current", "stale", "upstream-stale", "unverified", "unknown")
@@ -93,10 +102,16 @@ def sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _entry(kind: str, entry: dict) -> dict:
+    """A cited entry as its basis reads it: every field but the bookkeeping of its kind."""
+    return {k: v for k, v in entry.items() if k not in BOOKKEEPING[kind]}
+
+
 def local_part(rec):
     """(text, None) for the part of a record's basis its own file decides: the record without
-    `section`, the identity of the resources it cites, and the assumptions it names; or
-    (None, why) when a cited name is not in its file, so the part cannot be established."""
+    `section`, the resource entries it cites and the assumptions it names, each without its
+    bookkeeping fields; or (None, why) when a cited name is not in its file or is listed twice,
+    or a cited repos entry pins a ref, so the part cannot be established."""
     import speccheck
 
     f = rec.file
@@ -110,7 +125,7 @@ def local_part(rec):
             if name not in f.documents:
                 return None, f"{rec.full}: document {name!r} is not in its file's resources"
             doc = f.documents[name][0]
-            documents[name] = {k: doc[k] for k in DOC_IDENTITY if k in doc}
+            documents[name] = _entry("documents", doc)
         if entry.get("class") in speccheck.ANCHORED:
             for anchor in entry.get("anchors", []):
                 name = anchor["repo"]
@@ -121,6 +136,9 @@ def local_part(rec):
                 paths.setdefault(name, set()).add(anchor["path"])
     for name, cited in paths.items():
         entry = f.repos[name][0]
+        if "commit" not in entry:
+            return None, (f"{rec.full}: repos entry {name!r} pins a ref, not a commit, so what "
+                          f"the fact cites through it is not fixed")
         listed = {item["path"]: item for item in entry.get("files", [])}
         missing = sorted(cited - set(listed))
         if missing:
@@ -130,10 +148,9 @@ def local_part(rec):
         if twice:
             return None, (f"{rec.full}: repos entry {name!r} lists {twice[0]!r} twice in "
                           f"files, so its license entry is ambiguous")
-        identity = {k: entry[k] for k in REPO_IDENTITY if k in entry}
-        identity["files"] = [{k: listed[p][k] for k in FILE_IDENTITY if k in listed[p]}
-                             for p in sorted(cited)]
-        repos[name] = identity
+        entry = _entry("repos", entry)
+        entry["files"] = [_entry("files", listed[p]) for p in sorted(cited)]
+        repos[name] = entry
     names = list(rec.data.get("assumes", []))
     for entry in rec.data.get("support", []):
         names += [p["assumption"] for p in entry.get("premises", []) if "assumption" in p]
@@ -143,7 +160,7 @@ def local_part(rec):
             return None, f"{rec.full}: assumption {name!r} is declared twice in its file"
         if name not in f.assumptions:
             return None, f"{rec.full}: assumption {name!r} is not in its file's assumptions"
-        assumptions[name] = f.data["assumptions"][f.assumptions[name][1]]
+        assumptions[name] = _entry("assumptions", f.data["assumptions"][f.assumptions[name][1]])
     return (canonical(fact) + "\n" + canonical({"documents": documents, "repos": repos}) + "\n"
             + canonical(assumptions)), None
 
@@ -245,13 +262,18 @@ class Freshness:
     """Bases, frontiers and verdict freshness over one checker's resolved references.
 
     failed: (file, path) of references the check failed; with it, such a reference counts as
-    not resolving (its target's basis is not one a verdict may rest on)."""
+    not resolving (its target's basis is not one a verdict may rest on). failed_cites: (file,
+    path) of citations the check failed; a record with one under its path is unknown."""
 
-    def __init__(self, checker, failed=None):
+    def __init__(self, checker, failed=None, failed_cites=None):
         import speccheck
 
         self.checker = checker
         self.failed = failed
+        self.cites: dict = {}
+        for f, path in failed_cites or ():
+            self.cites.setdefault(f, []).append(path)
+        self._where = speccheck._where
         self._refs = speccheck.references
         self.bases: dict = {}
         self._edges: dict = {}
@@ -267,12 +289,24 @@ class Freshness:
             self._edges[rec] = out
         return self._edges[rec]
 
+    def local(self, rec):
+        """local_part, or unknown when the check rejected one of the record's citations."""
+        text, why = local_part(rec)
+        if text is None:
+            return text, why
+        n = len(rec.path)
+        bad = sorted((p for p in self.cites.get(rec.file, ()) if p[:n] == rec.path), key=repr)
+        if bad:
+            return None, (f"{rec.full}: the citation at {self._where(bad[0])} failed the check "
+                          f"(see the error there)")
+        return text, None
+
     def all(self, records):
-        compute(records, self.edges, local_part, {}, self.bases)
+        compute(records, self.edges, self.local, {}, self.bases)
 
     def basis(self, rec):
         if rec not in self.bases:
-            compute([rec], self.edges, local_part, {}, self.bases)
+            compute([rec], self.edges, self.local, {}, self.bases)
         return self.bases[rec]
 
     def frontier(self, rec) -> dict:
@@ -333,7 +367,7 @@ class Freshness:
         if self.returns_home(rec, frontier):
             return "stale", None  # the closure beyond the frontier re-enters the own root
         fixed = {t: recorded[full] for full, t in frontier.items()}
-        again = compute([rec], self.edges, local_part, fixed, {})
+        again = compute([rec], self.edges, self.local, fixed, {})
         if again.get(rec, (None,))[0] != verdict["basis"]:
             return "stale", None
         changed = sorted(full for full, t in frontier.items()
@@ -495,10 +529,12 @@ def first_pass(checker):
 def second_pass(checker, mode):
     """After the trust pass: freshness of every verdict in the checked roots, as warnings, or
     as errors under --require-verified (`pr`: all; `main`: all but upstream-stale, D19). A
-    reference the check failed counts as not resolving, so a fact resting on it is unknown.
+    reference or citation the check failed counts as not resolving, so a fact resting on it is
+    unknown.
     These findings are a policy on the checked root, not a defect that could change what a
     reference resolves to, so they come after the trust pass."""
-    fresh = Freshness(checker, failed=set(checker._failed_refs))
+    fresh = Freshness(checker, failed=set(checker._failed_refs),
+                      failed_cites=set(checker._failed_cites))
     fresh.all([r for f in checker.files for r in f.records.values()])
     checker.status = []
 

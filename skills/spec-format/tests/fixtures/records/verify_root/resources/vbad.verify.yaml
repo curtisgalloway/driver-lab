@@ -8,7 +8,7 @@ canonical: fact-v1
 sources: []
 verdicts:
   reset:
-    basis: eee295105d5b4b123864ec8287d683d23d227570f2dd01f6bce81507f27c447f
+    basis: 1aa486d65b8ab1c147beedd2bdc7bcc25132ac13adab3ecc999c1dba577e2a7c
     verdict: MAYBE
     date: yesterday
     verifier: "a model"

@@ -250,6 +250,10 @@ class Checker:
         # (file, path) of every reference the check rejected: the one record of "this reference
         # failed", read by the trust pass and by freshness (a fact resting on one is unknown)
         self._failed_refs: set = set()
+        # (file, path) of every citation (a document citation, an anchor, an assumption name)
+        # the check rejected, under the citing record's path: freshness reads the record as
+        # unknown (review round 2)
+        self._failed_cites: set = set()
         self._reach: dict = {}
 
     # --- findings ----------------------------------------------------------------------------
@@ -273,9 +277,10 @@ class Checker:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
 
-    def reject(self, f, path: tuple, message: str):
-        """An error at a reference: reported, and recorded as failed, in one step."""
-        self._failed_refs.add((f, path))
+    def reject(self, f, path: tuple, message: str, *, citation=False):
+        """An error at a reference, or at a citation (citation=True): reported, and recorded as
+        failed, in one step."""
+        (self._failed_cites if citation else self._failed_refs).add((f, path))
         self.add(f, path, message)
 
     def _schema_findings(self, raw, root):
@@ -505,21 +510,22 @@ class Checker:
             name = anchor["repo"]
             cited.add(name)
             if "lines" in anchor and anchor["lines"][0] > anchor["lines"][1]:
-                self.add(f, path + ("lines",), f"{what}: lines [{anchor['lines'][0]}, "
+                self.reject(f, path + ("lines",), f"{what}: lines [{anchor['lines'][0]}, "
                                                f"{anchor['lines'][1]}] run backwards; write "
-                                               f"[first, last]")
-            if not self.gate_name(f, path + ("repo",), name, f"{what}: an anchor"):
+                                               f"[first, last]", citation=True)
+            if not self.gate_name(f, path + ("repo",), name, f"{what}: an anchor",
+                                  citation=True):
                 continue
             entry, epath = f.repos[name]
             if "commit" not in entry:
-                self.add(f, path + ("repo",), f"{what}: anchor names repos entry {name!r}, "
-                                              f"which pins a ref, not a commit; a cited entry "
-                                              f"carries the full commit")
+                self.reject(f, path + ("repo",), f"{what}: anchor names repos entry {name!r}, "
+                                                 f"which pins a ref, not a commit; a cited entry "
+                                                 f"carries the full commit", citation=True)
             listed = {item["path"] for item in entry.get("files", [])}
             if anchor["path"] not in listed:
-                self.add(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the files "
-                                              f"of repos entry {name!r} (the closed list of "
-                                              f"cited paths, D12)")
+                self.reject(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the "
+                                                 f"files of repos entry {name!r} (the closed "
+                                                 f"list of cited paths, D12)", citation=True)
         names = [(a, rec.path + ("assumes", i)) for i, a in enumerate(rec.data.get("assumes", []))]
         for i, entry in enumerate(rec.data.get("support", [])):
             for j, premise in enumerate(entry.get("premises", [])):
@@ -528,8 +534,8 @@ class Checker:
                                   rec.path + ("support", i, "premises", j, "assumption")))
         for name, path in names:
             if name not in f.assumptions:
-                self.add(f, path, f"{what}: assumption {name!r} is not in this file's "
-                                  f"assumptions")
+                self.reject(f, path, f"{what}: assumption {name!r} is not in this file's "
+                                     f"assumptions", citation=True)
         irq = rec.data.get("irq")
         if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
             want = irq["number"] + IRQ_OFFSET[irq["kind"]]
@@ -539,25 +545,30 @@ class Checker:
                          f"{irq['number']} (INTID {want})")
 
     def check_citation(self, f: SpecFile, what: str, entry: dict, path: tuple):
+        """A document citation's checks; every error here is a rejected citation."""
         name, cls = entry["doc"], entry["class"]
+
+        def add(where, message):
+            self.reject(f, where, message, citation=True)
+
         if name not in f.documents:
-            self.add(f, path + ("doc",), f"{what}: document {name!r} is not in this file's "
-                                         f"resources.documents")
+            add(path + ("doc",), f"{what}: document {name!r} is not in this file's "
+                                 f"resources.documents")
             return
         doc, _ = f.documents[name]
         if doc.get("cite") is False:
-            self.add(f, path + ("doc",), f"{what}: document {name!r} is marked cite: false "
-                                         f"(a map only); it cannot be cited")
+            add(path + ("doc",), f"{what}: document {name!r} is marked cite: false "
+                                 f"(a map only); it cannot be cited")
         if cls in DOC_CLASS and doc["class"] != DOC_CLASS[cls]:
-            self.add(f, path + ("doc",), f"{what}: a {cls} citation names document {name!r} "
-                                         f"of class {doc['class']}")
+            add(path + ("doc",), f"{what}: a {cls} citation names document {name!r} "
+                                 f"of class {doc['class']}")
         count = doc.get("pages")
         for i, loc in enumerate(entry.get("at", [])):
             lpath = path + ("at", i)
             if cls == "standard" and count is not None and not any(k in loc for k in PRECISE):
-                self.add(f, lpath, f"{what}: document {name!r} is paged, so a standard "
-                                   f"locator needs a section, page, pages, table, figure or "
-                                   f"clause, not a heading alone")
+                add(lpath, f"{what}: document {name!r} is paged, so a standard "
+                           f"locator needs a section, page, pages, table, figure or "
+                           f"clause, not a heading alone")
             numbers = []
             if "page" in loc:
                 numbers.append((loc["page"], lpath + ("page",)))
@@ -567,17 +578,18 @@ class Checker:
                 if not DIGITS.fullmatch(value):
                     continue
                 if len(value) > 1 and value[0] == "0":
-                    self.add(f, vpath, f"{what}: page {_short(value)}: write "
-                                       f"{_short(value.lstrip('0') or '0')} (no leading zeros)")
+                    add(vpath, f"{what}: page {_short(value)}: write "
+                               f"{_short(value.lstrip('0') or '0')} (no leading zeros)")
                 if count is not None and not (_number(value) >= _number("1")
                                               and _number(value) <= _number(str(count))):
-                    self.add(f, vpath, f"{what}: page {_short(value)} is outside the {count} "
-                                       f"pages of document {name!r}")
+                    add(vpath, f"{what}: page {_short(value)} is outside the {count} "
+                               f"pages of document {name!r}")
             if "pages" in loc and all(DIGITS.fullmatch(p) for p in loc["pages"]):
                 first, last = (_number(p) for p in loc["pages"])
                 if first > last:
-                    self.add(f, lpath + ("pages",), f"{what}: pages [{_short(loc['pages'][0])}, {_short(loc['pages'][1])}] run "
-                                                    f"backwards; write [first, last]")
+                    add(lpath + ("pages",), f"{what}: pages [{_short(loc['pages'][0])}, "
+                                            f"{_short(loc['pages'][1])}] run backwards; "
+                                            f"write [first, last]")
 
     def check_public(self, f: SpecFile):
         for group, entries in f.data.get("resources", {}).items():
@@ -626,16 +638,19 @@ class Checker:
         shown = ", ".join(sorted(accepts)) or "none: documents only"
         return f"{tree} is not accepted by root {root.label} (accepts: {shown})"
 
-    def gate_name(self, f: SpecFile, path: tuple, name: str, what: str) -> bool:
+    def gate_name(self, f: SpecFile, path: tuple, name: str, what: str, *,
+                  citation=False) -> bool:
         """Direct gate for one anchor or notice: the repos entry it names, in its own file,
-        against its file's root. False when the name resolves to nothing."""
+        against its file's root. False when the name resolves to nothing. An anchor's
+        failure is a rejected citation (citation=True)."""
         if name not in f.repos:
-            self.add(f, path, f"{what} names repos entry {name!r}, which is not in this file's "
-                              f"resources.repos")
+            self.reject(f, path, f"{what} names repos entry {name!r}, which is not in this "
+                                 f"file's resources.repos", citation=citation)
             return False
         reason = self.gate(f.root, f.repos[name][0]["license"])
         if reason:
-            self.add(f, path, f"{what} names repos entry {name!r}: {reason}")
+            self.reject(f, path, f"{what} names repos entry {name!r}: {reason}",
+                        citation=citation)
         return True
 
     def reach(self, rec: Record):

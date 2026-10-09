@@ -14,6 +14,6 @@ verdicts:
     verifier: "a model, a harness"
     contrary_evidence: none-found
     citation_precision: exact
-    basis: c46f5e5b5e41ab6c200331fa25ef55bf4384f2621d5764a43831e212a0b64a98
+    basis: 0d5c4a6cdea8ddf1e078589761dc1493617d1c8a27d33529b273b92d42b1f8cd
     verdict: FAIL
     correction: section 1 states 10 cycles

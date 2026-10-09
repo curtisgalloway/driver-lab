@@ -37,6 +37,9 @@ import spec as spec_cli  # noqa: E402
 
 HDR = "# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: Apache-2.0\n"
 COMMIT = "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+# TRM as its citing fact's basis reads it: every field but the bookkeeping (verified, fetch)
+TRM_HASHED = {"name": "trm", "class": "databook", "title": "Widget TRM",
+              "url": "https://example.invalid/trm.pdf", "pages": 80}
 TRM = ('    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf",'
        ' pages: 80, verified: 2026-10-01, fetch: ok}\n')
 LINUX = ("    - name: linux\n      url: https://example.invalid/linux\n"
@@ -240,15 +243,16 @@ class BasisFormula(Roots):
         bases = self.bases(r)
         a = self.model({"id": "a", "title": "T a", "claim": "C a.", "assumes": ["same-silicon"],
                         "support": [{"class": "databook", "doc": "trm", "at": [{"section": "1"}]}]},
-                       {"trm": {"url": "https://example.invalid/trm.pdf", "pages": 80}}, {},
+                       {"trm": TRM_HASHED}, {},
                        {"same-silicon": {"id": "same-silicon",
                                          "text": "the parts are the same die"}}, [])
         b = self.model({"id": "b", "title": "T b", "claim": "C b.",
                         "support": [{"class": "src", "anchors": [{
                             "repo": "linux", "path": "drivers/w.c", "lines": [3, 4],
                             "symbol": "w_probe"}]}]},
-                       {}, {"linux": {"url": "https://example.invalid/linux", "commit": COMMIT,
-                                      "license": "GPL-2.0-only", "files": [
+                       {}, {"linux": {"name": "linux", "url": "https://example.invalid/linux",
+                                      "commit": COMMIT, "license": "GPL-2.0-only",
+                                      "role": "source", "files": [
                                           {"path": "drivers/w.c", "license_from": "spdx-line"}]}},
                        {}, [])
         c = self.model({"id": "c", "title": "T c", "claim": "C c.",
@@ -333,17 +337,16 @@ class Invariance(Roots):
                 self.assertEqual(self.changed(edited), [])
 
     def test_bookkeeping_changes_nothing(self):
+        """Only the named bookkeeping fields (records.BOOKKEEPING); ReviewRound2 shows every
+        other field counts."""
         variants = {
-            "document verified, fetch, title, retrieval, access, class note": self.spec(
+            "document verified, fetch, note": self.spec(
                 trm=TRM.replace("verified: 2026-10-01, fetch: ok", "verified: 2026-10-07, "
-                                "fetch: blocked, access: public, note: n, retrieval: "
-                                '[{url: "https://example.invalid/r", via: a mirror}]')
-                .replace("Widget TRM", "The Widget TRM")),
-            "repos verified, fetch, fetch_via, note, role": self.spec(
+                                "fetch: blocked, note: n")),
+            "repos verified, fetch, fetch_via, note": self.spec(
                 linux=LINUX.replace("verified: 2026-10-01\n      fetch: ok\n",
                                     "verified: 2026-10-07\n      fetch: partial\n"
-                                    "      fetch_via: git\n      note: n\n")
-                .replace("role: source", "role: ref")),
+                                    "      fetch_via: git\n      note: n\n")),
             "a cited files entry's note": self.spec(linux=LINUX.replace(
                 "{path: drivers/w.c, license_from: spdx-line}",
                 "{path: drivers/w.c, license_from: spdx-line, note: Read for reset}")),
@@ -433,8 +436,7 @@ class Cycles(Roots):
         def h(text):
             return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-        res = c({"documents": {"trm": {"url": "https://example.invalid/trm.pdf", "pages": 80}},
-                 "repos": {}})
+        res = c({"documents": {"trm": TRM_HASHED}, "repos": {}})
         local = {}
         for me, other in (("a", "b"), ("b", "a")):
             local[me] = (c({"id": me, "title": f"T {me}", "claim": f"C {me}.",
@@ -1391,6 +1393,286 @@ class ReviewRound1(Roots):
         self.assertIn("w.verify.yaml:", found[0])
         self.assertIn("error", found[0])
         self.assertTrue(out.splitlines()[-1].endswith("the check found 1 error(s), 0 warning(s)"))
+
+
+SCHEMA = json.loads((HERE.parent / "schema" / "spec.schema.json").read_text())["$defs"]
+
+
+def flow(entry, indent="    "):
+    """One list item as a JSON flow mapping (JSON is YAML the strict loader reads)."""
+    return f"{indent}- {json.dumps(entry)}\n"
+
+
+class ReviewRound2(Roots):
+    """The fixes of SF2-3's review round 2: a basis hashes every field of a cited entry but the
+    named bookkeeping (the user's decision of 2026-10-08), a cited repos entry pinned by a ref
+    is unknown, and a citation the check rejects makes the citing fact unknown."""
+
+    DOC = {"name": "trm", "class": "databook", "title": "Widget TRM", "revision": "r1",
+           "url": "https://example.invalid/trm.pdf",
+           "retrieval": [{"url": "https://example.invalid/r.pdf", "via": "a mirror"}],
+           "commit": "b" * 40, "sha256": "a" * 64, "pages": 80, "page_numbering": "printed",
+           "access": "public", "verified": "2026-10-01", "fetch": "ok", "note": "n"}
+    CITED = {"path": "drivers/w.c", "license_from": "spdx-line", "status": "merged",
+             "note": "n"}
+    REPO = {"name": "linux", "url": "https://example.invalid/linux", "commit": COMMIT,
+            "license": "GPL-2.0-only", "role": "source", "status": "merged",
+            "files": [CITED, {"path": "drivers/x.c", "license_from": "spdx-line"}],
+            "verified": "2026-10-01", "fetch": "ok", "fetch_via": "git", "note": "n"}
+    ASSUMPTION = {"id": "same-silicon", "text": "the parts are the same die",
+                  "todo": {"check": "hardware", "text": "check it."}}
+    ANCHOR = ("    support:\n      - class: src\n        anchors: [{repo: linux, "
+              "path: drivers/w.c, lines: [1, 2], symbol: s}]\n")
+
+    def spec(self, doc=None, repo=None, assumption=None, cite=None):
+        """x cites the entry under test (the document, the repos entry and its files entry
+        drivers/w.c, or the assumption); y rests on x."""
+        if cite == "doc":
+            x = fact("x")
+        elif cite == "repo":
+            x = fact("x", support=self.ANCHOR)
+        else:
+            x = fact("x", extra="    assumes: [same-silicon]\n")
+        return chip(docs=flow(doc or self.DOC), repos=flow(repo or self.REPO),
+                    head="assumptions:\n" + flow(assumption or self.ASSUMPTION, "  "),
+                    facts=x + ref_fact("y", "#x"))
+
+    def outcomes(self, cite, edits):
+        """{name: (x's status, y's status)} after each edit, from a root verified before it."""
+        out = {}
+        for name, kwargs in edits.items():
+            r = self.root(f"k{len(list(self.tmp.iterdir()))}", {
+                "board-specs.yaml": marker("r", accepts="[GPL-2.0-only]", lic="GPL-2.0-only"),
+                "w.spec.yaml": self.spec(cite=cite)})
+            self.verify_all(r, "widgetchip", "w.spec.yaml", r)
+            self.assertEqual(check(r, "--require-verified", "pr")[1]["findings"], [], name)
+            self.write(r, "w.spec.yaml", self.spec(cite=cite, **kwargs))
+            st = rows(status(r)[1])
+            out[name] = (st["widgetchip@r#x"]["status"], st["widgetchip@r#y"]["status"])
+        return out
+
+    def every_field(self, kind, schema_def, base, arg, cite, changes):
+        """Every property of the schema's definition is changed once: a bookkeeping field
+        leaves both facts current, any other field stales them (or makes them unknown, where
+        the change is also a citation the check rejects). A property the schema gains fails
+        here until it is listed, and a field counts unless records.BOOKKEEPING names it."""
+        self.assertEqual(set(changes), set(schema_def["properties"]))
+        edits = {}
+        for field, (value, _) in changes.items():
+            entry = json.loads(json.dumps(base))
+            if callable(value):
+                value(entry)
+            else:
+                entry[field] = value
+            self.assertNotEqual(entry, base, field)
+            edits[field] = {arg: entry}
+        got = self.outcomes(cite, edits)
+        for field, (_, want) in changes.items():
+            with self.subTest(f"{kind}: {field}"):
+                self.assertEqual(got[field], (want, want))
+        self.assertEqual(records.BOOKKEEPING[kind],
+                         {k for k, (_, want) in changes.items() if want == "current"})
+
+    def test_every_document_field_but_bookkeeping_counts(self):
+        self.every_field("documents", SCHEMA["document"], self.DOC, "doc", "doc", {
+            "name": ("trm2", "unknown"),  # the citation no longer names a listed document
+            "class": ("standard", "unknown"),  # a databook citation of a standard: rejected
+            "title": ("Widget TRM, second edition", "stale"),
+            "revision": ("r2", "stale"),
+            "url": ("https://example.invalid/trm2.pdf", "stale"),
+            "retrieval": ([{"url": "https://example.invalid/r2.pdf", "via": "a mirror"}],
+                          "stale"),
+            "commit": ("c" * 40, "stale"),
+            "sha256": ("d" * 64, "stale"),
+            "pages": (81, "stale"),
+            "page_numbering": ("pdf", "stale"),
+            "access": ("internal", "stale"),
+            "cite": (False, "unknown"),  # citing a map-only document: rejected
+            "verified": ("2026-10-07", "current"),
+            "fetch": ("blocked", "current"),
+            "note": ("m", "current"),
+        })
+
+    def test_every_repos_field_but_bookkeeping_counts(self):
+        def ref(entry):
+            del entry["commit"]
+            entry["ref"] = "main"
+
+        def files(entry):
+            entry["files"][0]["license_from"] = "notice"
+
+        self.every_field("repos", SCHEMA["repo"], self.REPO, "repo", "repo", {
+            "name": ("linux2", "unknown"),
+            "url": ("https://example.invalid/linux2", "stale"),
+            "commit": ("f" * 40, "stale"),
+            "ref": (ref, "unknown"),  # pinned by a ref, not a commit (review round 2, S1)
+            "license": ("GPL-2.0-only OR MIT", "stale"),
+            "role": ("ref", "stale"),
+            "status": ("unmerged", "stale"),
+            "files": (files, "stale"),
+            "verified": ("2026-10-07", "current"),
+            "fetch": ("partial", "current"),
+            "fetch_via": ("a tarball", "current"),
+            "note": ("m", "current"),
+        })
+
+    def test_every_files_entry_field_but_bookkeeping_counts(self):
+        items = SCHEMA["repo"]["properties"]["files"]["items"]
+        changes = {"path": ("drivers/w2.c", "unknown"),  # the cited path is no longer listed
+                   "license_from": ("notice", "stale"),
+                   "status": ("unmerged", "stale"),
+                   "note": ("m", "current")}
+        self.assertEqual(set(changes), set(items["properties"]))
+        edits = {}
+        for field, (value, _) in changes.items():
+            repo = json.loads(json.dumps(self.REPO))
+            repo["files"][0][field] = value
+            edits[field] = {"repo": repo}
+        got = self.outcomes("repo", edits)
+        for field, (_, want) in changes.items():
+            with self.subTest(field):
+                self.assertEqual(got[field], (want, want))
+        self.assertEqual(records.BOOKKEEPING["files"],
+                         {k for k, (_, want) in changes.items() if want == "current"})
+        # a files entry the fact does not cite is not part of its basis
+        repo = json.loads(json.dumps(self.REPO))
+        repo["files"][1]["license_from"] = "notice"
+        self.assertEqual(self.outcomes("repo", {"x.c": {"repo": repo}})["x.c"],
+                         ("current", "current"))
+
+    def test_every_assumption_field_but_bookkeeping_counts(self):
+        self.every_field("assumptions", SCHEMA["assumption"], self.ASSUMPTION, "assumption",
+                         "assumption", {
+                             "id": ("other-silicon", "unknown"),
+                             "text": ("the parts share a die", "stale"),
+                             "todo": ({"check": "document", "text": "find it."}, "current"),
+                         })
+
+    def test_a_field_no_kind_names_is_hashed(self):
+        """An unknown or future field counts by default, in every kind of cited entry: the
+        basis reads the entry whole (the schema refuses such a field today, so the record is
+        built directly)."""
+        import types
+
+        def rec():
+            doc = json.loads(json.dumps(self.DOC))
+            repo = json.loads(json.dumps(self.REPO))
+            data = {"id": "x", "assumes": ["same-silicon"], "support": [
+                {"class": "databook", "doc": "trm", "at": [{"section": "1"}]},
+                {"class": "src", "anchors": [{"repo": "linux", "path": "drivers/w.c",
+                                              "lines": [1, 2], "symbol": "s"}]}]}
+            f = types.SimpleNamespace(ambiguous=set(), documents={"trm": (doc, ())},
+                                      repos={"linux": (repo, ())},
+                                      assumptions={"same-silicon": ("assumptions", 0)},
+                                      data={"assumptions": [dict(self.ASSUMPTION)]})
+            return types.SimpleNamespace(full="widgetchip@r#x", data=data, file=f)
+
+        base, _ = records.local_part(rec())
+        self.assertIsInstance(base, str)
+        for kind, add in (("documents", lambda f: f.documents["trm"][0]),
+                          ("repos", lambda f: f.repos["linux"][0]),
+                          ("files", lambda f: f.repos["linux"][0]["files"][0]),
+                          ("assumptions", lambda f: f.data["assumptions"][0])):
+            with self.subTest(kind):
+                r = rec()
+                add(r.file)["future"] = "a field the schema adds later"
+                text, _ = records.local_part(r)
+                self.assertNotEqual(text, base)
+                self.assertIn("a field the schema adds later", text)
+
+    def test_a_cited_repos_entry_pinned_by_a_ref_is_unknown(self):
+        """S1: a ref names no fixed tree, so nothing the fact cites through it is fixed; the
+        fact and every fact resting on it are unknown, an error under both modes."""
+        repo = dict(self.REPO)
+        del repo["commit"]
+        repo["ref"] = "v1"
+        r = self.root("r", {"board-specs.yaml": marker("r", accepts="[GPL-2.0-only]",
+                                                       lic="GPL-2.0-only"),
+                            "w.spec.yaml": self.spec(repo=repo, cite="repo")})
+        st = rows(status(r)[1])
+        for key in ("x", "y"):
+            row = st[f"widgetchip@r#{key}"]
+            self.assertEqual((row["status"], row["basis"]), ("unknown", None), key)
+        self.assertIn("repos entry 'linux' pins a ref, not a commit, so what the fact cites "
+                      "through it is not fixed", st["widgetchip@r#x"]["reason"])
+        for mode in ("pr", "main"):
+            code, result = check(r, "--require-verified", mode)
+            self.assertEqual(code, 1)
+            self.assertEqual(len(errors(result, "freshness unknown")), 2, mode)
+
+    def test_a_citation_the_check_rejects_makes_the_fact_unknown(self):
+        """Codex should-fix 2: each citation-level rejection, made after the verdict, makes the
+        citing fact unknown and the fact resting on it unknown, with the reason naming the
+        rejected citation; the check reports the rejection itself."""
+        cases = {
+            "cite: false": ({"doc": dict(self.DOC, cite=False)}, "doc", "marked cite: false"),
+            "class mismatch": ({"doc": dict(self.DOC, **{"class": "doc"})}, "doc",
+                               "a databook citation names document 'trm' of class doc"),
+            "license gate": ({"repo": dict(self.REPO, license="MIT")}, "repo",
+                             "MIT is not accepted by root"),
+        }
+        for name, (kwargs, cite, says) in cases.items():
+            with self.subTest(name):
+                r = self.root(f"c{len(list(self.tmp.iterdir()))}", {
+                    "board-specs.yaml": marker("r", accepts="[GPL-2.0-only]",
+                                               lic="GPL-2.0-only"),
+                    "w.spec.yaml": self.spec(cite=cite)})
+                self.verify_all(r, "widgetchip", "w.spec.yaml", r)
+                self.write(r, "w.spec.yaml", self.spec(cite=cite, **kwargs))
+                code, result = check(r)
+                self.assertEqual(code, 1)
+                need(errors(result, says))
+                st = rows(status(r)[1])
+                for key in ("x", "y"):
+                    self.assertEqual(st[f"widgetchip@r#{key}"]["status"], "unknown", key)
+                self.assertIn("widgetchip@r#x: the citation at facts[0].support[0]",
+                              st["widgetchip@r#x"]["reason"])
+                self.assertIn("failed the check", st["widgetchip@r#x"]["reason"])
+        # locator and anchor rejections, with nothing else changed: a page past the document,
+        # backwards lines
+        bad = {"page": fact("x", support=('    support: [{class: databook, doc: trm, '
+                                          'at: [{page: "92"}]}]\n')),
+               "lines": fact("x", support=self.ANCHOR.replace("[1, 2]", "[2, 1]"))}
+        for name, x in bad.items():
+            with self.subTest(name):
+                r = self.root(f"c{len(list(self.tmp.iterdir()))}", {
+                    "board-specs.yaml": marker("r", accepts="[GPL-2.0-only]",
+                                               lic="GPL-2.0-only"),
+                    "w.spec.yaml": chip(docs=flow(self.DOC), repos=flow(self.REPO),
+                                        facts=x + ref_fact("y", "#x"))})
+                st = rows(status(r)[1])
+                for key in ("x", "y"):
+                    self.assertEqual(st[f"widgetchip@r#{key}"]["status"], "unknown",
+                                     (name, key))
+
+    def test_a_gap_verdict_on_a_variant_row_is_an_error(self):
+        """N3: the variant half of the row rule (round 1 tested the instance half)."""
+        soc = (HDR + "format: 2\nkind: soc\nid: wsoc\nname: W\ntriggers: [wsoc]\n"
+               "instances:\n  - {id: uart0, name: uart0, ip: wuart, reg: \"0x1000\", "
+               "irq: {kind: SPI, number: 1}, clocks: [],\n"
+               '     support: [{class: databook, doc: trm, at: [{section: "2"}]}]}\n'
+               "resources:\n  documents:\n" + TRM + "facts:\n" + fact("s"))
+        ip = (HDR + "format: 2\nkind: ip\nid: wuart\nname: U\ntriggers: [wuart]\n"
+              "resources:\n  documents:\n" + TRM + "facts:\n"
+              + fact("u", section="programming-model"))
+        board = (HDR + "format: 2\nkind: board\nid: wboard\nname: W\ntriggers: [wboard]\n"
+                 "parts: [wsoc]\ncache: c1\n"
+                 "variants:\n  - id: v1\n    name: V1\n    triggers: [wv1]\n    shares: [all]\n"
+                 "    differs: x\n"
+                 '    support: [{class: databook, doc: trm, at: [{section: "2"}]}]\n'
+                 "resources:\n  documents:\n" + TRM + "facts:\n" + fact("a"))
+        r = self.root("r", {"board-specs.yaml": marker("r"), "s.spec.yaml": soc,
+                            "u.spec.yaml": ip, "b.spec.yaml": board})
+        b = self.bases(r)
+        self.assertEqual(errors(check(r)[1]), [])
+        self.write(r, "resources/b.verify.yaml", record("wboard", "b.spec.yaml", {
+            "v1": verdict(b["wboard@r#v1"], "GAP"), "a": verdict(b["wboard@r#a"])}))
+        code, result = check(r)
+        self.assertEqual(code, 1)
+        f = only(errors(result))
+        self.assertIn("verdict GAP for variant 'v1': GAP is a gap fact's verdict, and an "
+                      "instance or variant row is never a gap", f["message"])
+        self.assertTrue(f["path"].endswith("resources/b.verify.yaml"))
 
 
 class StatusCommand(Roots):

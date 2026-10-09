@@ -592,20 +592,34 @@ Each verdict records the **basis hash** of its fact at the time of the verdict:
 ```
 basis(fact) = sha256( "fact-v1\n"
                       + canonical(fact without `section`)
-                      + "\n" + canonical(the resource entries the fact cites, identity fields only)
-                      + "\n" + canonical(the assumptions it names)
+                      + "\n" + canonical(the resource entries the fact cites, all but bookkeeping)
+                      + "\n" + canonical(the assumptions it names, all but bookkeeping)
                       + "\n" + sorted "<full reference> <basis(ref)>" lines for every fact it references )
 ```
 
 - *Canonical* is JSON with sorted keys, no insignificant whitespace, UTF-8, strings in Unicode
   NFC. The data holds only strings, integers, booleans, null, lists and mappings (no floats), so
   this is deterministic without a canonicalization library.
-- *Identity fields* are the ones a verdict depends on: for a repos entry `url`, `commit`,
-  `license`, and, for each path the fact cites, its `files` entry's `path` and `license_from`;
-  for a document `url`, `revision`, `commit`, `sha256`, `pages`, `page_numbering`. Bookkeeping
-  (`verified`, `fetch`, `fetch_via`, `note`, a `files` entry's `note`) does not stale a verdict.
-  (A document's `commit` and the `files` entry's fields were named in review round 1,
-  2026-10-08.)
+- *All but bookkeeping*: a cited entry counts whole, except a short, closed list of
+  **bookkeeping** fields per kind, which never stale a verdict:
+
+  | Entry | Bookkeeping fields (everything else counts) |
+  | --- | --- |
+  | a document | `verified`, `fetch`, `note` |
+  | a repos entry | `verified`, `fetch`, `fetch_via`, `note` |
+  | a repos entry's `files` item | `note` |
+  | an assumption | `todo` |
+
+  A field not in the list, including one the schema gains later, counts by default. A repos
+  entry's `files` contributes only the items of the paths the fact cites (each without its
+  `note`), so listing another path stales nothing. A field joins the list only by a recorded
+  decision that names it here. (User decision, 2026-10-08, review round 2: "hash all but
+  bookkeeping". Rounds 1 and 2 each found a field missing from the earlier allow-list of
+  *identity fields* — a document's `commit`, then a `files` item's `status` and a repos entry's
+  `ref`, `status` and `role` — and each time an edit to that field left the verdict current.
+  Inverting the list makes the mistake fail safe: forgetting a field now stales too much, never
+  too little. `records.BOOKKEEPING` holds the list; the tests change every schema property of
+  each kind and fail when the schema gains one the test does not list.)
 - References recurse, so the hash is a Merkle hash over the fact's dependencies: editing the docs
   spec's `addressing-model` stales the GPL overlay's inference that rests on it, and nothing
   else.
@@ -644,9 +658,15 @@ by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` imple
 - **A basis that cannot be established is unknown, never current**: a reference the check
   rejected for any reason (it does not resolve, names the fact itself or a fact its list already
   names, merges in a later layer, fails the license gate or the trust rule, closes a premise
-  cycle), a cited `doc`, `repo` or assumption the file does not list or lists twice, a cited
-  path not in the repos entry's `files` or listed there twice, or a fact resting on such a fact.
-  (Rejections and names listed twice were added in review round 1, 2026-10-08.) Unknown is a
+  cycle), a citation the check rejected for any reason (a `cite: false` document, a document of
+  another class than the citation, a locator outside the document or written wrong, an anchor's
+  backward lines, an anchor naming a repos entry the license gate refuses or one pinned by a
+  ref), a cited `doc`, `repo` or assumption the file does not list or lists twice, a cited
+  repos entry pinned by `ref` rather than `commit` (a ref names no fixed tree), a cited path not
+  in the repos entry's `files` or listed there twice, or a fact resting on such a fact.
+  (Rejections and names listed twice were added in review round 1, 2026-10-08; citation
+  rejections and the ref pin in review round 2, the same day. Citation rejections are recorded
+  by the same `Checker.reject` that records reference rejections.) Unknown is a
   warning, and an error under either `--require-verified` mode.
 
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and

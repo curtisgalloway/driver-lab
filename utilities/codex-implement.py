@@ -60,6 +60,12 @@ the tree Codex wrote, and no tree Codex wrote outlives the script:
      descriptor opened O_DIRECTORY|O_NOFOLLOW, with O_EXCL|O_NOFOLLOW, so a symlink planted in
      RUN_DIR while Codex runs is refused rather than written through.
 
+Scope. The wrapper defends the host against Codex running inside its sandbox. It does not
+defend against a caller who can already run arbitrary commands or set dangerous environment
+variables (LD_PRELOAD before Python starts, say), or who swaps an ancestor directory of the run
+store while a run is in progress; such a caller does not need this wrapper to do harm. The
+permission rule allows only the exact `python3 -I <path> ...` form, with no environment prefix.
+
 Codex's sandbox can still read the whole filesystem, and network access is on, so fetched content
 could steer it to send local files out; run it only where that is acceptable.
 
@@ -480,6 +486,12 @@ def file_diff(rel, old, new):
   return "".join(out)
 
 
+def shown(rel):
+  """rel as printable ASCII: other bytes, and backslash, become \\xNN escapes."""
+  return "".join(chr(b) if 0x20 < b < 0x7f and b != 0x5c else f"\\x{b:02x}"
+                 for b in os.fsencode(rel))
+
+
 def compare(base, tree, skipped):
   """(patch text, refused report text, accepted count, refused count)."""
   patch, refused, diffs = [], [], []
@@ -491,13 +503,13 @@ def compare(base, tree, skipped):
     if reason is None:
       patch.append(file_diff(rel, old, new))
       continue
-    refused.append(f"{rel}\t{reason}\n")
+    refused.append(f"{shown(rel)}\t{reason}\n")
     if reason.startswith("agent instruction"):
       plain = all(e is None or (e[0] == "file" and text_of(e) is not None) for e in (old, new))
-      diffs.append(f"=== {rel} ===\n" + (file_diff(rel, old, new) if plain else
+      diffs.append(f"=== {shown(rel)} ===\n" + (file_diff(rel, old, new) if plain else
                                          "(not a plain text file; inspect by hand)\n"))
   for rel in sorted(skipped):
-    refused.append(f"{rel}/\tnew directory with a dot or unsafe name (contents not read)\n")
+    refused.append(f"{shown(rel)}/\tnew directory with a dot or unsafe name (contents not read)\n")
   report = [f"refused: {len(refused)}\n", *refused]
   if diffs:
     report += ["\nDiffs of refused agent instruction files:\n", *diffs]
@@ -705,8 +717,12 @@ def run(base, brief, codex, outputs):
         stop(proc)
     tree, skipped = walk(work, entries)
     patch, report, accepted, refused = compare(entries, tree, skipped)
-    publish(run_fd, name["patch"], patch.encode("utf-8"))
-    publish(run_fd, name["refused"], report.encode("utf-8"))
+    try:
+      patch_bytes, report_bytes = patch.encode("utf-8"), report.encode("utf-8")
+    except UnicodeEncodeError as exc:
+      raise Failure(f"cannot encode the patch or the refused report: {exc}") from exc
+    publish(run_fd, name["patch"], patch_bytes)
+    publish(run_fd, name["refused"], report_bytes)
     print(f"patch: {outputs['patch']} ({accepted} file(s))\n"
           f"refused: {outputs['refused']} ({refused} path(s))", flush=True)
     message = read_staged(staged)

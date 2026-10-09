@@ -456,6 +456,20 @@ class CodexImplementTest(unittest.TestCase):
     self.assertTrue(os.path.islink(self.output("last")))
     self.assertEqual(os.listdir(self.parent), [])
 
+  def test_non_utf8_filename_is_refused_escaped_and_both_outputs_exist(self):
+    self.fake_codex("printf x > \"$(printf 'bad\\377name')\"\n"
+                    "printf x > \"$(printf 'tab\\tname')\"\n"
+                    "printf 'ok\\n' > fine.txt")
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    report = self.read(self.output("refused"))
+    self.assertIn("bad\\xffname\tdot or unsafe", report)
+    self.assertIn("tab\\x09name\tdot or unsafe", report)
+    patch = self.read(self.output("patch"))
+    self.assertEqual([l for l in patch.splitlines() if l.startswith("diff --git")],
+                     ["diff --git a/fine.txt b/fine.txt"])
+    self.assertEqual(os.listdir(self.parent), [])
+
   def test_oversized_file_is_accepted_only_when_unchanged(self):
     big = "a" * (2 * 1024 * 1024 + 1)
     self.write(os.path.join(self.repo, "big1.txt"), big)

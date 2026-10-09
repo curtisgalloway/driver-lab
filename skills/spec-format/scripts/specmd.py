@@ -5,13 +5,14 @@
 Every format 2 tool that needs to know what a text field looks like as CommonMark asks this
 module, which parses with the pinned markdown-it-py ("commonmark" preset). It never derives
 meaning: no provenance, class, citation, id or value is read from a parse. SF2-2 uses it only to
-find text outside code (for the template-placeholder check); SF2-4 adds the raw-HTML, link-scheme
-and containment checks here, so there stays one parse in one module.
+find text outside code (for the template-placeholder check). Safety and containment findings
+also live here, so there stays one parse in one module.
 """
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 _PARSER = None
 
@@ -30,9 +31,105 @@ def _parser():
     global _PARSER  # pylint: disable=global-statement
     if _PARSER is None:
         from markdown_it import MarkdownIt
+        from markdown_it.rules_block import fence
+        from markdown_it.rules_inline import autolink, html_inline, image, link
 
         _PARSER = MarkdownIt("commonmark")
+        # Recognize even unsafe destinations, rather than silently treating their Markdown
+        # as ordinary text. Nothing renders HTML with this parser; findings reject the URL.
+        _PARSER.validateLink = lambda url: True
+
+        def checked_fence(state, start, end, silent):
+            indent = state.sCount[start]
+            accepted = fence(state, start, end, silent)
+            if accepted and not silent:
+                token = state.tokens[-1]
+                # The rule's content excludes a closing marker, if it consumed one. Comparing
+                # its own source slice observes that decision, including nested containers and
+                # over-indentation, without a second lexical fence scanner.
+                token.meta["closed"] = token.content != state.getLines(
+                    start + 1, state.line, indent, True)
+            return accepted
+
+        _PARSER.block.ruler.at("fence", checked_fence)
+
+        def positioned(rule):
+            def wrapped(state, silent):
+                start, before = state.pos, len(state.tokens)
+                accepted = rule(state, silent)
+                if accepted and not silent:
+                    for token in state.tokens[before:]:
+                        if token.type in ("html_inline", "link_open", "image"):
+                            token.meta.setdefault("field_line", state.src.count("\n", 0, start))
+                return accepted
+            return wrapped
+
+        for name, rule in (("html_inline", html_inline), ("autolink", autolink),
+                           ("link", link), ("image", image)):
+            _PARSER.inline.ruler.at(name, positioned(rule))
     return _PARSER
+
+
+@dataclass(frozen=True)
+class TextFinding:
+    """A safety/layout finding at a 1-based line within one decoded field, never evidence."""
+
+    line: int
+    kind: str
+    message: str
+    level: str = "error"
+
+
+def allowed_link(url: str) -> bool:
+    """D21: only http, https, mailto and in-page anchors (no relative or network paths)."""
+    return url.startswith("#") or bool(re.match(r"^(?:https?|mailto):", url, re.IGNORECASE))
+
+
+def findings(text: str, *, lint=False) -> list[TextFinding]:
+    """Only safety/layout findings; the parse never supplies facts or provenance.
+
+    Inline rules record their source line, including after multiline code spans and inside
+    images. Diagnostics explicitly name a decoded-field line (YAML folding can make that
+    differ from a physical line). Images follow the same URL rule as links.
+    """
+    out = []
+
+    def add(line, kind, message, level="error"):
+        out.append(TextFinding(line, kind, message, level))
+
+    def inline(children, first):
+        for child in children or []:
+            line = first + child.meta.get("field_line", 0)
+            if child.type == "html_inline":
+                add(line, "html", "raw HTML")
+            elif child.type in ("link_open", "image"):
+                url = child.attrGet("href" if child.type == "link_open" else "src") or ""
+                if not allowed_link(url):
+                    add(line, "link", f"disallowed link destination {url!r}")
+            if child.children:
+                inline(child.children, line)
+
+    for token in _parser().parse(text):
+        line = token.map[0] + 1 if token.map else 1
+        if token.type == "html_block":
+            add(line, "html", "raw HTML")
+        elif token.type == "heading_open":
+            add(line, "heading", "heading inside a field")
+        elif token.type == "fence" and not token.meta["closed"]:
+            add(line, "fence", "unclosed code fence")
+        elif token.type == "inline":
+            inline(token.children, line)
+            if lint:
+                visible = _inline_text(token.children)
+                for match in V1_TAG.finditer(visible):
+                    add(line + visible.count("\n", 0, match.start()), "v1-tag",
+                        f"format 1 tag {match.group(0)!r} in author text", "warning")
+    return out
+
+
+V1_TAG = re.compile(
+    r"\[(?:databook|standard|rtl|DT|src|source-observed|doc|hardware|press|inference|emulated)"
+    r"(?:\]|:)", re.IGNORECASE)
 
 
 def _inline_text(children) -> str:

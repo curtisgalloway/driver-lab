@@ -111,7 +111,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
-| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
+| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | in progress (implemented, awaiting review) |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
 | SF2-6 | Resolve, show and drift | SF2-2 | pending |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
@@ -374,7 +374,8 @@ Needs the design's Rendering section and the CommonMark library's token API. Spl
 the renderer (steps 3–4) moves to SF2-5 if the text module and its fixtures take the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-4.md`. Notebook: `notebook/SF2-4.md`.
+Status: in progress (implemented, awaiting review). Evidence: `evidence/SF2-4.md` (orchestrator,
+after review). Notebook: `notebook/SF2-4.md`.
 
 ---
 

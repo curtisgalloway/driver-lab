@@ -4,8 +4,9 @@
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
 Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
-records and freshness from SF2-3, in records.py) and `status` (SF2-3). Later milestones add
-`render`, `resolve`, `show`, `drift`, `inventory` and `migrate`.
+records and freshness from SF2-3, in records.py), `status` (SF2-3) and Markdown `render`
+(SF2-4, in render_md.py). Later milestones add HTML, `resolve`, `show`, `drift`, `inventory`
+and `migrate`.
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -53,6 +54,8 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
         [--stubs-from <skills dir>]... [--require-verified pr|main] [--json]
     python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stale] [--json]
+    python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
+        [--spec <id>] [--merged] [--with-status] --format md [--json]
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -108,6 +111,16 @@ the check found no error, 1 when it did (the report is printed either way).
 Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a file invalid or a
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
+
+`check` also rejects raw HTML, disallowed links (including images), headings and unclosed
+fences in CommonMark author fields. Format 1 tag spellings in claims and prose are warnings.
+`render` runs that check and repeats containment before emitting a view. Generated text is
+escaped, author Markdown is preserved; it can imitate a provenance block. The Markdown view
+does not guarantee visual separation of prose and provenance (the HTML viewer does). Without
+git metadata the banner states that commits are unavailable and includes each YAML's SHA256.
+`--merged` includes context files for the selected ids, ordered by layer; without it each
+checked file gets its own view. Errors print diagnostics instead of a partial view; `--json`
+returns `{"ok", "markdown", "findings"}` (`markdown` is null on error).
 """
 
 
@@ -838,11 +851,24 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--stale", action="store_true",
                     help="only facts a re-verification has to cover")
     st.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    rd = sub.add_parser("render", help="generate a Markdown reading view", allow_abbrev=False)
+    rd.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    rd.add_argument("--context-root", action="append", default=[], type=Path)
+    rd.add_argument("--require-license", action="store_true")
+    rd.add_argument("--public-skill", action="append", default=[])
+    rd.add_argument("--spec", help="render only this spec id")
+    rd.add_argument("--merged", action="store_true", help="include context bases and overlays")
+    rd.add_argument("--with-status", action="store_true", help="include verdict and freshness")
+    rd.add_argument("--format", required=True, choices=("md",))
+    rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
     return parser
 
 
 def _failure(kind: str, messages: list[str], command: str | None = None) -> str:
     """The --json object for a run that judged nothing (usage, precondition, internal)."""
+    if command == "render":
+        return json.dumps({"ok": False, "error": kind, "markdown": None,
+                           "findings": [{"message": m} for m in messages]}, sort_keys=True)
     if command == "status":
         return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
                            "warnings": 0, "specs": [],
@@ -884,7 +910,7 @@ def main(argv: list[str] | None = None) -> int:
         print(SKILL, end="")
         return EXIT_OK
     if args.command is None:
-        return fail("usage", EXIT_USAGE, ["name a subcommand: validate, check, status"])
+        return fail("usage", EXIT_USAGE, ["name a subcommand: validate, check, status, render"])
 
     try:
         problems = check_dependencies()
@@ -898,8 +924,11 @@ def main(argv: list[str] | None = None) -> int:
                     "install: pip install --require-hashes -r skills/spec-format/requirements.txt")
     sys.path.insert(0, str(HERE))
     try:
+        import render_md
+
         code, result = {"check": cmd_check, "status": cmd_status,
-                        "validate": cmd_validate}[args.command](args)
+                        "validate": cmd_validate,
+                        "render": lambda a: render_md.command(sys.modules[__name__], a)}[args.command](args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
@@ -913,7 +942,7 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command in ("check", "status"):
+    elif args.command in ("check", "status", "render"):
         for line in text:
             print(line)
     else:

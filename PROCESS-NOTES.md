@@ -576,3 +576,30 @@ clean `git archive` export now runs the suite.
 Cost: one follow-up commit.
 Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
 Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.
+
+### 2026-10-09T14:27:42-07:00 — export environment setup and oversized reads
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The brief asked for a dot-directory
+venv, but the export instruction forbids creating one; system Python also lacked ensurepip.
+A seeded temporary venv plus pip hash verification worked. Initial document batches exceeded
+the output budget and required targeted reads. Cost: extra setup and read calls. Prevention:
+briefs should prefer temporary venvs in exports; tools should budget combined output before
+batching. Fix belongs in the implementer brief and tool usage.
+
+### 2026-10-09T14:34:50-07:00 — test fixture typing and new diagnostics
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A tag-shaped unquoted claim became a YAML
+list, reused Python objects generated YAML aliases, and generic YAML loading changed a zero
+hash to an integer. New safety findings also invalidated two first-error assumptions. Cost:
+three focused test reruns. Prevention: quote fixture strings, avoid shared objects in YAML
+dumps, use the strict loader for format 2 inputs, and match the relevant diagnostic rather
+than its position. Fix belongs in test authoring guidance.
+
+### 2026-10-09T14:42:46-07:00 — checkout-dependent checks in an export
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Utilities reported two failures and
+campaign-review reported ten errors: directory markers made filesystem checks classify temporary
+paths as git trees, while git could not read a valid repository. Cost: two checks cannot be
+verified here. Prevention: identify checkout-dependent suites in export briefs and rerun them
+in the orchestrator's actual worktree. Fix belongs in the implementer brief; no unrelated
+utility or campaign code was changed.

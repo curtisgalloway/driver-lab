@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T19:50-07:00
+Updated: 2026-10-09T14:43:24-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,13 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T14:43:24-07:00
+Outcome: open, implementation awaiting review. Reuse `specmd.py` as the one CommonMark parser.
+Observe fence closure and inline positions from its rules, not a second scanner. Worked-example
+slices need synthetic omissions before checking; their zero basis hashes render stale. Mutation
+checks exposed two missing cases, now covered; checkout-dependent checks need the real worktree.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

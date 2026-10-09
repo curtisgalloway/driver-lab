@@ -475,6 +475,9 @@ class Checker:
                 seen.add(item["path"])
 
     def check_file(self, f: SpecFile):
+        import textcheck
+
+        textcheck.check_file(self, f)
         cited = set()  # repos names an anchor or a notice of this file names
         for rec in f.records.values():
             self.check_record(f, rec, cited)

@@ -903,7 +903,8 @@ class Rules(TempRoots):
         for what, text in flagged.items():
             code, result = self.one({"x.spec.yaml": text})
             self.assertEqual(code, 1, what)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            self.assertTrue(any("unsubstituted template placeholder" in f["message"]
+                                for f in errors(result)))
         clean = chip(repos=repo(), facts=src_fact("a").replace("symbol: S", "symbol: Foo<T>")
                      + fact("b").replace("claim: C b.", "claim: \"`<type number flags>`, "
                                                         "<https://example.invalid/x>, a <0 0 0>\"")
@@ -925,7 +926,8 @@ class Rules(TempRoots):
         for text in flagged:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual(code, 1, text)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            self.assertTrue(any("unsubstituted template placeholder" in f["message"]
+                                for f in errors(result)))
         for text in clean:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual((code, findings(result)), (0, []), text)

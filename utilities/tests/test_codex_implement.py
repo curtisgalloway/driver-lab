@@ -1,6 +1,12 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for utilities/codex-implement.py: one fixed form, every refusal, and the tamper check."""
+"""Tests for utilities/codex-implement.py: validation, environment, the patch and its refusals.
+
+Hermetic: the module's home directory and REPO are patched to a temporary tree, BASE is a commit
+of a real tiny git repository made here, and `codex` is a fake shell script named by absolute
+path in a test config.toml. The fake dumps its environment, then runs a per-test body inside the
+export it was given.
+"""
 
 import contextlib
 import importlib.util
@@ -8,12 +14,30 @@ import io
 import os
 import shutil
 import stat
+import subprocess
 import tempfile
 import unittest
 from unittest import mock
 
 SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
                       "codex-implement.py")
+STAMP = "20261009T000000Z"
+FAKE = """#!/bin/sh
+work=
+last=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --cd) work="$2"; shift ;;
+    --output-last-message) last="$2"; shift ;;
+  esac
+  shift
+done
+env > '{env_dump}'
+cd "$work" || exit 99
+{body}
+echo 'final message' > "$last"
+exit {code}
+"""
 
 
 def load():
@@ -27,211 +51,371 @@ class CodexImplementTest(unittest.TestCase):
 
   def setUp(self):
     self.tmp = os.path.realpath(tempfile.mkdtemp())
-    self.addCleanup(shutil.rmtree, self.tmp)
+    self.addCleanup(self.force_remove, self.tmp)
     self.mod = load()
-    self.repo = os.path.join(self.tmp, "repo")
     self.home = os.path.join(self.tmp, "home")
     self.store = os.path.join(self.tmp, "store")
     self.run_dir = os.path.join(self.store, "unit-20261009-01")
     os.makedirs(self.run_dir)
     self.brief = os.path.join(self.run_dir, "brief.md")
     self.write(self.brief, "brief\n")
-    self.write(os.path.join(self.home, ".config", "driver-lab", "config.toml"),
-               f'run_store = "{self.store}"\n')
-    self.worktree = self.make_worktree("unit")
+    self.codex = os.path.join(self.tmp, "bin", "codex")
+    self.env_dump = os.path.join(self.tmp, "env.txt")
+    self.fake_codex("true")
+    self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n')
+    self.repo = os.path.join(self.tmp, "repo")
+    self.base = self.make_repo()
     self.mod.REPO = self.repo
-    patcher = mock.patch.object(self.mod, "home", return_value=self.home)
-    patcher.start()
-    self.addCleanup(patcher.stop)
+    for name, value in (("home", self.home), ("stamp", STAMP)):
+      patcher = mock.patch.object(self.mod, name, return_value=value)
+      patcher.start()
+      self.addCleanup(patcher.stop)
+    self.parent = os.path.join(self.home, ".cache", "driver-lab-codex")
 
-  def write(self, path, text):
+  @staticmethod
+  def force_remove(path):
+    for top, dirs, _ in os.walk(path):
+      for name in dirs:
+        full = os.path.join(top, name)
+        if not os.path.islink(full):
+          os.chmod(full, 0o700)
+    shutil.rmtree(path)
+
+  def write(self, path, text, mode=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
       f.write(text)
+    if mode is not None:
+      os.chmod(path, mode)
 
-  def make_worktree(self, name):
-    worktree = os.path.join(self.repo, ".claude", "worktrees", name)
-    meta = os.path.join(self.repo, ".git", "worktrees", name)
-    self.write(os.path.join(worktree, ".git"), f"gitdir: {meta}\n")
-    self.write(os.path.join(meta, "gitdir"), f"{worktree}/.git\n")
-    return worktree
+  def config(self, text):
+    self.write(os.path.join(self.home, ".config", "driver-lab", "config.toml"), text)
 
-  def build(self, *args):
-    return self.mod.build(*args, "20261009T000000Z", "/private/tmpdir")
+  def git(self, *args, cwd=None):
+    env = {"PATH": os.environ["PATH"], "HOME": self.home, "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_CONFIG_GLOBAL": os.devnull, "LANG": "C.UTF-8"}
+    return subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com",
+                           "-c", "init.defaultBranch=main", *args],
+                          cwd=cwd or self.repo, env=env, check=True, capture_output=True,
+                          text=True).stdout.strip()
 
-  def assert_refused(self, *args):
-    with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(io.StringIO()):
-      self.build(*args)
-    self.assertEqual(cm.exception.code, 2, args)
+  def make_repo(self):
+    os.makedirs(self.repo)
+    files = {"README.md": "hello\nworld\n", "data.txt": "delete me\n", "lib/mod.py": "x = 1\n",
+             "AGENTS.md": "rules\n", ".github/ci.yml": "on: push\n"}
+    for rel, text in files.items():
+      self.write(os.path.join(self.repo, rel), text)
+    self.write(os.path.join(self.repo, "tool.sh"), "#!/bin/sh\necho hi\n", 0o755)
+    os.symlink("README.md", os.path.join(self.repo, "readme-link"))
+    self.git("init", "-q")
+    self.git("add", "-A")
+    self.git("commit", "-q", "-m", "base")
+    return self.git("rev-parse", "HEAD")
 
-  def test_fixed_form(self):
-    cmd, worktree, log, last = self.build(self.worktree, self.run_dir, self.brief)
-    self.assertEqual(worktree, self.worktree)
-    self.assertEqual(log, os.path.join(self.run_dir, "codex-20261009T000000Z.log"))
-    self.assertEqual(last, os.path.join(self.run_dir, "last-message-20261009T000000Z.md"))
-    self.assertEqual(cmd[:4], ["codex", "exec", "--sandbox", "workspace-write"])
-    self.assertEqual(cmd[cmd.index("--cd") + 1], self.worktree)
-    adds = [cmd[i + 1] for i, a in enumerate(cmd) if a == "--add-dir"]
-    self.assertEqual(adds, ["/private/tmpdir"])
-    self.assertIn("sandbox_workspace_write.exclude_slash_tmp=true", cmd)
-    self.assertFalse(any(self.store in a for a in cmd[:-3]))
-    self.assertIn("model_reasoning_effort=high", cmd)
-    self.assertTrue(cmd[-1].startswith(f"Read {self.brief} and carry it out"))
-    self.assertIn("do not run git commit", cmd[-1])
-    self.assertFalse(any(".git" in a for a in cmd))
+  def fake_codex(self, body, code=0):
+    self.write(self.codex, FAKE.format(env_dump=self.env_dump, body=body, code=code), 0o755)
 
-  def test_worktree_must_be_a_linked_worktree_under_the_repo(self):
-    self.assert_refused(self.store, self.run_dir, self.brief)
-    self.assert_refused(self.repo, self.run_dir, self.brief)
-    plain = os.path.join(self.repo, ".claude", "worktrees", "plain")
-    os.makedirs(plain)
-    self.assert_refused(plain, self.run_dir, self.brief)
+  def main(self, *args):
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+      try:
+        code = self.mod.main(list(args))
+      except SystemExit as exc:
+        code = exc.code
+    return code, out.getvalue(), err.getvalue()
 
-  def test_worktree_git_file_must_point_at_its_metadata_and_back(self):
-    other = self.make_worktree("other")
-    self.write(os.path.join(other, ".git"), f"gitdir: {self.tmp}\n")
-    self.assert_refused(other, self.run_dir, self.brief)
-    third = self.make_worktree("third")
-    self.write(os.path.join(self.repo, ".git", "worktrees", "third", "gitdir"), "/elsewhere\n")
-    self.assert_refused(third, self.run_dir, self.brief)
-    fourth = self.make_worktree("fourth")
-    os.remove(os.path.join(fourth, ".git"))
-    os.symlink(os.path.join(self.worktree, ".git"), os.path.join(fourth, ".git"))
-    self.assert_refused(fourth, self.run_dir, self.brief)
+  def run_codex(self):
+    return self.main(self.base, self.run_dir, self.brief)
 
-  def test_run_store_comes_from_the_config_file_not_the_environment(self):
-    with mock.patch.dict(os.environ, {"DRIVER_LAB_RUNS": self.tmp, "XDG_CONFIG_HOME": self.tmp,
-                                      "HOME": self.tmp}):
-      self.build(self.worktree, self.run_dir, self.brief)
-      elsewhere = os.path.join(self.tmp, "elsewhere")
-      os.mkdir(elsewhere)
-      self.write(os.path.join(elsewhere, "brief.md"), "brief\n")
-      self.assert_refused(self.worktree, elsewhere, os.path.join(elsewhere, "brief.md"))
+  def output(self, kind):
+    names = {"log": f"codex-{STAMP}.log", "last": f"last-message-{STAMP}.md",
+             "patch": f"codex-{STAMP}.patch", "refused": f"codex-{STAMP}.refused.txt"}
+    return os.path.join(self.run_dir, names[kind])
+
+  def read(self, path):
+    with open(path, encoding="utf-8") as f:
+      return f.read()
+
+  def assert_code(self, expected, *args):
+    code, _, err = self.main(*args)
+    self.assertEqual(code, expected, (args, err))
+
+  # Validation.
+
+  def test_wrong_argument_count(self):
+    self.assert_code(2, self.base, self.run_dir)
+    self.assert_code(2, self.base, self.run_dir, self.brief, "--sandbox=danger-full-access")
+
+  def test_base_must_be_a_full_commit_of_the_repo(self):
+    tree = self.git("rev-parse", "HEAD^{tree}")
+    for bad in ("abc", self.base[:12], self.base.upper(), "0" * 40, tree, "-" + self.base[1:]):
+      with self.subTest(bad=bad):
+        self.assert_code(2, bad, self.run_dir, self.brief)
 
   def test_run_dir_must_be_directly_inside_the_store(self):
-    self.assert_refused(self.worktree, self.store, os.path.join(self.store, "x"))
+    self.assert_code(2, self.base, self.store, os.path.join(self.store, "x"))
     nested = os.path.join(self.run_dir, "nested")
     self.write(os.path.join(nested, "brief.md"), "brief\n")
-    self.assert_refused(self.worktree, nested, os.path.join(nested, "brief.md"))
-    self.assert_refused(self.worktree, os.path.join(self.store, "missing"), self.brief)
+    self.assert_code(2, self.base, nested, os.path.join(nested, "brief.md"))
+    self.assert_code(2, self.base, os.path.join(self.store, "missing"), self.brief)
+    elsewhere = os.path.join(self.tmp, "elsewhere")
+    self.write(os.path.join(elsewhere, "brief.md"), "brief\n")
+    self.assert_code(2, self.base, elsewhere, os.path.join(elsewhere, "brief.md"))
 
   def test_brief_must_be_a_file_in_the_run_dir(self):
     outside = os.path.join(self.store, "brief.md")
     self.write(outside, "brief\n")
-    self.assert_refused(self.worktree, self.run_dir, outside)
-    self.assert_refused(self.worktree, self.run_dir, os.path.join(self.run_dir, "missing.md"))
+    self.assert_code(2, self.base, self.run_dir, outside)
+    self.assert_code(2, self.base, self.run_dir, os.path.join(self.run_dir, "missing.md"))
 
-  def test_existing_output_paths_are_refused(self):
-    os.symlink(self.home, os.path.join(self.run_dir, "last-message-20261009T000000Z.md"))
-    self.assert_refused(self.worktree, self.run_dir, self.brief)
-
-  def test_unsafe_spellings_are_refused(self):
-    for bad in (self.worktree + "/.", self.worktree + "/../x", "relative/path",
-                self.worktree + " -s", "-C" + self.worktree, self.worktree.replace("/", "//", 1)):
-      self.assert_refused(bad, self.run_dir, self.brief)
-
-  def test_symlinked_paths_are_refused(self):
+  def test_unsafe_spellings_and_symlinked_paths_are_refused(self):
+    for bad in (self.run_dir + "/.", self.run_dir + "/../x", "relative/path",
+                self.run_dir + " -s", self.run_dir.replace("/", "//", 1)):
+      with self.subTest(bad=bad):
+        self.assert_code(2, self.base, bad, self.brief)
     link = os.path.join(self.store, "link")
     os.symlink(self.run_dir, link)
-    self.assert_refused(self.worktree, link, os.path.join(link, "brief.md"))
+    self.assert_code(2, self.base, link, os.path.join(link, "brief.md"))
 
-  def test_wrong_argument_count(self):
-    for args in ([self.worktree, self.run_dir],
-                 [self.worktree, self.run_dir, self.brief, "--sandbox=danger-full-access"]):
-      with self.assertRaises(SystemExit) as cm, contextlib.redirect_stderr(io.StringIO()):
-        self.mod.main(args)
-      self.assertEqual(cm.exception.code, 2)
+  def test_run_store_must_be_set_absolute_and_apart_from_scratch(self):
+    os.makedirs(os.path.join(self.parent, "runs"))
+    os.chmod(self.parent, 0o700)
+    os.symlink(self.tmp, os.path.join(self.tmp, "~"))
+    for value in (None, "~/store", "store", os.path.join(self.parent, "runs"),
+                  os.path.join(self.home, ".cache")):
+      with self.subTest(value=value):
+        line = "" if value is None else f'run_store = "{value}"\n'
+        self.config(line + f'codex = "{self.codex}"\n')
+        with contextlib.chdir(self.tmp):
+          self.assert_code(2, self.base, self.run_dir, self.brief)
 
-  def fake_codex(self, body):
-    bindir = os.path.join(self.tmp, "bin")
-    path = os.path.join(bindir, "codex")
-    self.write(path, "#!/bin/sh\n" + body)
-    os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
-    return mock.patch.dict(os.environ, {"PATH": bindir + os.pathsep + os.environ["PATH"]})
+  def test_run_store_ignores_the_environment(self):
+    hostile = {"DRIVER_LAB_RUNS": self.tmp, "XDG_CONFIG_HOME": self.tmp, "HOME": self.tmp}
+    elsewhere = os.path.join(self.tmp, "elsewhere")
+    self.write(os.path.join(elsewhere, "brief.md"), "brief\n")
+    with mock.patch.dict(os.environ, hostile):
+      self.assert_code(2, self.base, elsewhere, os.path.join(elsewhere, "brief.md"))
+      self.assert_code(0, self.base, self.run_dir, self.brief, "--dry-run")
 
-  def run_main(self):
-    for name in os.listdir(self.run_dir):
-      if name.startswith(("codex-", "last-message-")):
-        os.remove(os.path.join(self.run_dir, name))
-    out, err = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-      code = self.mod.main([self.worktree, self.run_dir, self.brief])
-    return code, err.getvalue()
+  def test_codex_must_be_configured_absolute_and_trustworthy(self):
+    missing = os.path.join(self.tmp, "bin", "nothing")
+    plain = os.path.join(self.tmp, "bin", "plain")
+    self.write(plain, "#!/bin/sh\n", 0o644)
+    open_to_group = os.path.join(self.tmp, "bin", "loose")
+    self.write(open_to_group, "#!/bin/sh\n", 0o775)
+    for value in (None, "codex", "bin/codex", missing, plain, open_to_group):
+      with self.subTest(value=value):
+        line = "" if value is None else f'codex = "{value}"\n'
+        self.config(f'run_store = "{self.store}"\n' + line)
+        with contextlib.chdir(self.tmp):
+          self.assert_code(3, self.base, self.run_dir, self.brief)
 
-  def test_a_clean_run_exits_zero(self):
-    with self.fake_codex("echo working\n"):
-      code, err = self.run_main()
-    self.assertEqual((code, err), (0, ""))
+  def test_existing_output_paths_are_refused(self):
+    for kind in ("log", "last", "patch", "refused"):
+      with self.subTest(kind=kind):
+        os.symlink(self.home, self.output(kind))
+        self.assert_code(2, self.base, self.run_dir, self.brief)
+        os.remove(self.output(kind))
+    self.assertFalse(os.path.exists(self.env_dump))
 
-  def test_a_changed_git_file_is_restored_and_reported(self):
-    dot_git = os.path.join(self.worktree, ".git")
-    original = open(dot_git, "rb").read()
-    with self.fake_codex(f"echo 'gitdir: /evil' > '{dot_git}'\n"):
-      code, err = self.run_main()
-    self.assertEqual(code, 4)
-    self.assertIn("TAMPER", err)
-    self.assertEqual(open(dot_git, "rb").read(), original)
+  def test_scratch_parent_must_be_private_and_not_a_symlink(self):
+    os.makedirs(os.path.dirname(self.parent))
+    os.symlink(self.tmp, self.parent)
+    self.assert_code(2, self.base, self.run_dir, self.brief)
+    os.remove(self.parent)
+    os.mkdir(self.parent, 0o755)
+    os.chmod(self.parent, 0o755)
+    self.assert_code(2, self.base, self.run_dir, self.brief)
+    self.assertFalse(os.path.exists(self.env_dump))
 
-  def test_new_agent_configuration_is_reported(self):
-    for made in (".claude/settings.json", "CLAUDE.md", "sub/CLAUDE.local.md",
-                 "sub/AGENTS.override.md"):
-      with self.subTest(made=made):
-        target = os.path.join(self.worktree, made)
-        with self.fake_codex(f"mkdir -p '{os.path.dirname(target)}' && touch '{target}'\n"):
-          code, err = self.run_main()
-        self.assertEqual(code, 4)
-        self.assertIn("TAMPER", err)
-        shutil.rmtree(os.path.join(self.worktree, made.split("/")[0]), ignore_errors=True)
-        if os.path.exists(target):
-          os.remove(target)
-
-  def test_changed_or_removed_agent_files_and_hidden_ones_are_reported(self):
-    self.write(os.path.join(self.worktree, "AGENTS.md"), "rules\n")
-    self.write(os.path.join(self.worktree, "docs", ".claude", "x"), "x\n")
-    agents = os.path.join(self.worktree, "AGENTS.md")
-    for body in (f"echo more >> '{agents}'\n", f"rm '{agents}'\n",
-                 f"echo y > '{self.worktree}/docs/.claude/x'\n",
-                 f"mkdir -p '{self.worktree}/.venv/lib' && touch '{self.worktree}/.venv/lib/CLAUDE.md'\n",
-                 f"touch '{self.worktree}/GEMINI.md'\n"):
-      with self.subTest(body=body):
-        self.write(agents, "rules\n")
-        self.write(os.path.join(self.worktree, "docs", ".claude", "x"), "x\n")
-        with self.fake_codex(body):
-          code, err = self.run_main()
-        self.assertEqual(code, 4)
-        self.assertIn("TAMPER", err)
-        for leftover in (".venv", "GEMINI.md"):
-          path = os.path.join(self.worktree, leftover)
-          if os.path.isdir(path):
-            shutil.rmtree(path)
-          elif os.path.lexists(path):
-            os.remove(path)
-
-  def test_a_new_symlink_out_of_the_worktree_is_reported(self):
-    link = os.path.join(self.worktree, "evidence.md")
-    with self.fake_codex(f"ln -s '{self.home}/.bashrc' '{link}'\n"):
-      code, err = self.run_main()
-    self.assertEqual(code, 4)
-    self.assertIn("links outside the worktree", err)
-    os.remove(link)
-    with self.fake_codex(f"ln -s README '{link}'\n"):
-      code, err = self.run_main()
-    self.assertEqual((code, err), (0, ""))
-
-  def test_codex_gets_a_private_tmpdir_that_is_removed_afterwards(self):
-    seen = os.path.join(self.tmp, "seen")
-    with self.fake_codex(f"echo \"$TMPDIR\" > '{seen}'\n"):
-      code, _ = self.run_main()
+  def test_dry_run_prints_command_and_env_and_runs_nothing(self):
+    code, out, _ = self.main(self.base, self.run_dir, self.brief, "--dry-run")
     self.assertEqual(code, 0)
-    tmpdir = open(seen, encoding="utf-8").read().strip()
-    self.assertIn("codex-implement-", tmpdir)
-    self.assertFalse(os.path.exists(tmpdir))
+    self.assertIn("'--ignore-user-config'", out)
+    self.assertIn("'CODEX_HOME'", out)
+    self.assertFalse(os.path.exists(self.env_dump))
+    self.assertFalse(os.path.exists(self.parent))
+    self.assertEqual(os.listdir(self.run_dir), ["brief.md"])
 
-  def test_agent_configuration_present_before_is_not_reported(self):
-    self.write(os.path.join(self.worktree, "CLAUDE.md"), "already here\n")
-    with self.fake_codex("true\n"):
-      code, err = self.run_main()
-    self.assertEqual((code, err), (0, ""))
+  def test_fixed_command(self):
+    cmd = self.mod.command(self.codex, self.base, "/w", self.brief, "/r/last.md")
+    self.assertEqual(cmd[0], self.codex)
+    exec_at = cmd.index("exec")
+    for flag in (["-a", "never"], ["-s", "workspace-write"], ["-c", "mcp_servers={}"],
+                 ["-c", "plugins={}"], ["--disable", "hooks"], ["--disable", "multi_agent"],
+                 ["--disable", "enable_mcp_apps"]):
+      at = next(i for i in range(exec_at) if cmd[i:i + 2] == flag)
+      self.assertLess(at, exec_at, flag)
+    for flag in ("--ignore-user-config", "--ignore-rules", "--skip-git-repo-check",
+                 "--ephemeral", "sandbox_workspace_write.writable_roots=[]",
+                 "sandbox_workspace_write.network_access=true",
+                 "sandbox_workspace_write.exclude_slash_tmp=true", "model_reasoning_effort=high"):
+      self.assertIn(flag, cmd[exec_at:])
+    self.assertEqual(cmd[cmd.index("--cd") + 1], "/w")
+    self.assertEqual(cmd[cmd.index("--output-last-message") + 1], "/r/last.md")
+    self.assertNotIn("--add-dir", cmd)
+    self.assertIn(self.base, cmd[-1])
+    self.assertIn(self.brief, cmd[-1])
+    self.assertIn("not a git checkout", cmd[-1])
+
+  # Environment.
+
+  def test_hostile_parent_environment_does_not_reach_codex_or_git(self):
+    hostile_bin = os.path.join(self.tmp, "hostile-bin")
+    marker = os.path.join(self.tmp, "hostile-ran")
+    self.write(os.path.join(hostile_bin, "codex"), f"#!/bin/sh\ntouch '{marker}'\n", 0o755)
+    self.write(os.path.join(hostile_bin, "git"), f"#!/bin/sh\ntouch '{marker}'\n", 0o755)
+    hostile_tmp = os.path.join(self.tmp, "hostile-tmp")
+    os.mkdir(hostile_tmp)
+    hostile = {
+        "PATH": hostile_bin + os.pathsep + os.environ["PATH"],
+        "CODEX_HOME": os.path.join(self.tmp, "hostile-codex"),
+        "TMPDIR": hostile_tmp, "TEMP": hostile_tmp, "TMP": hostile_tmp,
+        "HOME": os.path.join(self.tmp, "hostile-home"),
+        "GIT_DIR": os.path.join(self.tmp, "nowhere"), "GIT_WORK_TREE": self.tmp,
+        "GIT_CONFIG_PARAMETERS": "'core.hooksPath'='/nowhere'", "GIT_INDEX_FILE": "/nowhere",
+        "OPENAI_API_KEY": "leak", "SECRET": "leak",
+    }
+    self.fake_codex("echo hi > fine.txt")
+    with mock.patch.dict(os.environ, hostile):
+      code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    self.assertFalse(os.path.exists(marker))
+    self.assertEqual(os.listdir(hostile_tmp), [])
+    env = dict(line.split("=", 1) for line in self.read(self.env_dump).splitlines()
+               if "=" in line)
+    for name in ("PWD", "SHLVL", "_", "OLDPWD"):
+      env.pop(name, None)
+    tmp = env["TMPDIR"]
+    self.assertTrue(tmp.startswith(os.path.realpath(self.parent) + "/run-"), tmp)
+    self.assertEqual(env, {
+        "HOME": self.home, "CODEX_HOME": os.path.join(self.home, ".codex"),
+        "PATH": "/usr/local/bin:/usr/bin:/bin:" + os.path.dirname(self.codex),
+        "TMPDIR": tmp, "TEMP": tmp, "TMP": tmp, "LANG": "C.UTF-8",
+        "PYTHONDONTWRITEBYTECODE": "1", "UV_CACHE_DIR": os.path.join(tmp, "uv-cache"),
+    })
+    self.assertIn("fine.txt", self.read(self.output("patch")))
+
+  # The patch.
+
+  def test_patch_applies_to_a_fresh_checkout_of_base(self):
+    snap = os.path.join(self.tmp, "snap")
+    self.fake_codex("\n".join((
+        "printf 'hello\\nthere\\nworld\\n' > README.md",
+        "rm data.txt",
+        "chmod +x lib/mod.py",
+        "chmod -x tool.sh",
+        "mkdir -p lib/sub && printf 'no newline' > lib/sub/new.py",
+        "printf 'two\\nlines\\n' > notes.txt",
+        f"cp -a \"$PWD\" '{snap}'",
+    )))
+    code, out, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    patch = self.read(self.output("patch"))
+    self.assertIn(self.output("patch"), out)
+    self.assertIn("deleted file mode 100644", patch)
+    self.assertIn("new file mode 100644", patch)
+    self.assertIn("old mode 100644\nnew mode 100755", patch)
+    self.assertIn("old mode 100755\nnew mode 100644", patch)
+    self.assertIn("\\ No newline at end of file", patch)
+    self.assertNotIn("readme-link", patch)
+    self.assertEqual(self.read(self.output("refused")), "refused: 0\n")
+    fresh = os.path.join(self.tmp, "fresh")
+    self.git("clone", "-q", self.repo, fresh, cwd=self.tmp)
+    self.git("checkout", "-q", self.base, cwd=fresh)
+    self.git("apply", "--check", self.output("patch"), cwd=fresh)
+    self.git("apply", self.output("patch"), cwd=fresh)
+    for rel in ("README.md", "lib/mod.py", "lib/sub/new.py", "notes.txt", "tool.sh"):
+      with self.subTest(rel=rel):
+        self.assertEqual(self.read(os.path.join(fresh, rel)), self.read(os.path.join(snap, rel)))
+        self.assertEqual(os.stat(os.path.join(fresh, rel)).st_mode & 0o100,
+                         os.stat(os.path.join(snap, rel)).st_mode & 0o100)
+    self.assertFalse(os.path.exists(os.path.join(fresh, "data.txt")))
+    self.assertEqual(self.git("status", "--porcelain", "--", "README.md", cwd=fresh),
+                     "M README.md")
+
+  def test_no_changes_gives_an_empty_patch(self):
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    self.assertEqual(self.read(self.output("patch")), "")
+    self.assertEqual(self.read(self.output("last")), "final message\n")
+
+  def test_codex_failure_exits_one_and_still_writes_the_patch(self):
+    self.fake_codex("echo hi > fine.txt", code=7)
+    code, _, _ = self.run_codex()
+    self.assertEqual(code, 1)
+    self.assertIn("fine.txt", self.read(self.output("patch")))
+
+  def test_each_refusal_kind(self):
+    self.fake_codex("\n".join((
+        "ln -s /etc/passwd evil.md",
+        "rm readme-link && ln -s /etc/passwd readme-link",
+        "printf x > .newrc",
+        "mkdir .claude && printf '{}' > .claude/settings.json",
+        "printf '{}' > .mcp.json",
+        "printf 'edit\\n' > .github/ci.yml",
+        "printf 'more rules\\n' >> AGENTS.md",
+        "mkdir -p sub && printf 'x\\n' > sub/claude.md",
+        "head -c 2097153 /dev/zero | tr '\\000' a > big.txt",
+        "mkfifo pipe",
+        "printf 'a\\000b' > bin.dat",
+        "ln README.md hard.md",
+        "mkdir __pycache__ && touch __pycache__/x.pyc",
+        "printf x > -dash.txt",
+        "printf 'ok\\n' > fine.txt",
+    )))
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    refused = dict(line.split("\t", 1) for line in
+                   self.read(self.output("refused")).split("\n\n")[0].splitlines()[1:])
+    expected = {
+        "evil.md": "symlink", "readme-link": "symlink", ".newrc": "dot or unsafe",
+        ".claude/": "dot or unsafe", ".mcp.json": "dot or unsafe",
+        ".github/ci.yml": "dot or unsafe", "AGENTS.md": "agent instruction",
+        "sub/claude.md": "agent instruction", "big.txt": "larger than", "pipe": "FIFO",
+        "bin.dat": "binary", "hard.md": "hard link", "__pycache__/": "dot or unsafe",
+        "-dash.txt": "dot or unsafe",
+    }
+    self.assertEqual(set(refused), set(expected))
+    for rel, reason in expected.items():
+      self.assertIn(reason, refused[rel], rel)
+    report = self.read(self.output("refused"))
+    self.assertIn("=== AGENTS.md ===", report)
+    self.assertIn("+more rules", report)
+    patch = self.read(self.output("patch"))
+    self.assertEqual([l for l in patch.splitlines() if l.startswith("diff --git")],
+                     ["diff --git a/fine.txt b/fine.txt"])
+
+  # Failures.
+
+  @unittest.skipIf(os.geteuid() == 0, "root reads unreadable directories")
+  def test_walk_error_is_fatal_and_cleanup_still_runs(self):
+    self.fake_codex("mkdir locked && echo x > locked/f && chmod 000 locked")
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 4)
+    self.assertIn("cannot list", err)
+    self.assertFalse(os.path.exists(self.output("patch")))
+    self.assertFalse(os.path.exists(self.output("refused")))
+    self.assertEqual(os.listdir(self.parent), [])
+
+  def test_scratch_root_is_private_and_removed(self):
+    seen = os.path.join(self.tmp, "seen")
+    self.fake_codex(f"stat -c %a .. > '{seen}'; ls -a .. >> '{seen}'; ls -a . >> '{seen}'")
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    lines = self.read(seen).split()
+    self.assertEqual(lines[0], "700")
+    self.assertIn("tmp", lines)
+    self.assertNotIn(".git", lines)
+    self.assertEqual(os.listdir(self.parent), [])
+    self.assertEqual(stat.S_IMODE(os.stat(self.parent).st_mode), 0o700)
+
+  def test_cleanup_failure_exits_four(self):
+    self.fake_codex("echo hi > fine.txt")
+    with mock.patch.object(self.mod.shutil, "rmtree", side_effect=OSError("boom")):
+      code, _, err = self.run_codex()
+    self.assertEqual(code, 4)
+    self.assertIn("cannot remove scratch root", err)
 
 
 if __name__ == "__main__":

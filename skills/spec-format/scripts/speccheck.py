@@ -455,6 +455,8 @@ class Checker:
             if "doc" in entry:
                 self.check_citation(f, what, entry, path)
         for anchor, path in anchors(rec.data, rec.path):
+            if "stale" in anchor:
+                self.add(f, path + ("stale",), f"{what}: stale anchor; re-verify and remove stale")
             name = anchor["repo"]
             cited.add(name)
             if "lines" in anchor and anchor["lines"][0] > anchor["lines"][1]:

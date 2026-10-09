@@ -695,6 +695,9 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
+    import drift
+    import resolve
+
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
         epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 100 internal",
@@ -719,6 +722,8 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--stubs-from", action="append", default=[], type=Path,
                    help="a skills directory; every */SKILL.md calling itself a stub is checked")
     c.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    resolve.register(sub)
+    drift.register(sub)
     return parser
 
 
@@ -773,7 +778,8 @@ def main(argv: list[str] | None = None) -> int:
                     "install: pip install --require-hashes -r skills/spec-format/requirements.txt")
     sys.path.insert(0, str(HERE))
     try:
-        code, result = (cmd_check if args.command == "check" else cmd_validate)(args)
+        handler = getattr(args, "handler", cmd_check if args.command == "check" else cmd_validate)
+        code, result = handler(args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
@@ -787,7 +793,7 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command == "check":
+    elif args.command == "check" or hasattr(args, "handler"):
         for line in text:
             print(line)
     else:

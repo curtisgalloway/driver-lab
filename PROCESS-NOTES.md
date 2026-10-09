@@ -576,3 +576,32 @@ clean `git archive` export now runs the suite.
 Cost: one follow-up commit.
 Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
 Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.
+
+## 2026-10-08T19:00:17-07:00 — SF2-6: fixture construction
+
+The first resolver test run used shallow copies that PyYAML emitted as aliases,
+plus two incomplete support records. Four failures cost one repair pass.
+Fix belongs in test authoring: copy nested fixture data deeply and inspect
+the schema before constructing a new support class. One earlier fixture read
+used `worked` instead of `worked-example`; the corrected path was then read.
+
+## 2026-10-08T19:06:37-07:00 — SF2-6: tool and mutation setup
+
+`uv tool run` first tried its default tool directory, which is read-only in
+this session. Retried with both cache and tool directories under temporary
+storage; formatting then passed. The first mutation inventory included error
+dispatch and guards whose removal only crashes downstream. Retained the logs;
+refined the inventory to validation rejections and added independent assertion
+cases. Two new test setup errors (subTest arguments and an overly small limit
+during repository construction) were fixed before the next clean baseline.
+Fix belongs in the run setup and test authoring, not the format contract.
+
+## 2026-10-08T19:14:49-07:00 — SF2-6: protected Git metadata and temporary marker
+
+Ordinary staging failed on the worktree index lock despite writable common
+Git storage. The sandbox also exposes `/tmp/.git`, which causes two unrelated
+review-wrapper tests to reject temporary directories. Used a private index
+for named staging and the authorized common object/ref store for the local
+commit; the orchestrator must refresh the normal index later. Privacy and
+open-side checks were repeated with that index so new files were included.
+Fix belongs in the harness permission profile; no repository utility changed.

@@ -1185,6 +1185,30 @@ class ReviewRound1(Roots):
             f["message"] for f in errors(result)))
         self.assertEqual(warnings(result, "upstream-stale"), [])
 
+    def test_the_way_back_is_followed_through_every_fact_and_file(self):
+        """The closure beyond the frontier is followed transitively (a1 -> b1 -> b2 -> a2) and
+        by root, not by file (a1 -> b1 -> a spec in another file of a1's root)."""
+        cases = {
+            "through a second fact of the other root": (
+                {"a.spec.yaml": chip("achip", facts=ref_fact("a1", "bchip@bb#b1") + fact("a2"))},
+                ref_fact("b1", "#b2") + ref_fact("b2", "achip@aa#a2"), "a.spec.yaml", "C a2."),
+            "into another file of the own root": (
+                {"a.spec.yaml": chip("achip", facts=ref_fact("a1", "bchip@bb#b1")),
+                 "d.spec.yaml": chip("dchip", facts=fact("d1"))},
+                ref_fact("b1", "dchip@aa#d1"), "d.spec.yaml", "C d1."),
+        }
+        for name, (afiles, bfacts, edited, claim) in cases.items():
+            with self.subTest(name):
+                n = len(list(self.tmp.iterdir()))
+                a = self.root(f"a{n}", {"board-specs.yaml": marker("aa"), **afiles})
+                b = self.root(f"b{n}", {"board-specs.yaml": marker("bb"),
+                                        "b.spec.yaml": chip("bchip", facts=bfacts)})
+                self.verify_all(a, "achip", "a.spec.yaml", a, b)
+                text = (a / edited).read_text()
+                (a / edited).write_text(text.replace(claim, claim[:-1] + ", edited."))
+                st = rows(status(a, b)[1])["achip@aa#a1"]
+                self.assertEqual((st["status"], st["changed"]), ("stale", []))
+
     def test_a_forged_basis_on_a_cycle_across_roots_reads_stale(self):
         """a <-> b across roots, a edited: a verdict whose basis is a's recomputation with b
         fixed at its recorded basis still reads stale, never upstream-stale, because b's
@@ -1291,11 +1315,24 @@ class ReviewRound1(Roots):
         self.assertIn("failed the check", row["reason"])
         r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=(
             fact("b") + ref_fact("dup", "#b", "widgetchip@r#b")
-            + fact("self", extra='    relates: [{fact: "#self", relation: same-as}]\n')))})
+            + fact("self", extra='    relates: [{fact: "#self", relation: same-as}]\n')
+            + ref_fact("p", "#q") + ref_fact("q", "#p")))})
         st = rows(status(r)[1])
-        for key in ("dup", "self"):
+        for key in ("dup", "self", "p", "q"):
             self.assertEqual(st[f"widgetchip@r#{key}"]["status"], "unknown", key)
         self.assertEqual(st["widgetchip@r#b"]["status"], "unverified")
+        # the license gate: a documents-only root resting on a fact cited from GPL source
+        gpl = self.root("gpl", {"board-specs.yaml": marker("gpl", accepts="[GPL-2.0-only]",
+                                                           lic="GPL-2.0-only"),
+                                "g.spec.yaml": chip("gchip", repos=LINUX, facts=fact("g", support=(
+                                    "    support:\n      - class: src\n        anchors: [{repo: "
+                                    "linux, path: drivers/w.c, lines: [1, 2], symbol: s}]\n")))})
+        docs = self.root("docs", {"board-specs.yaml": marker("docs"),
+                                  "d.spec.yaml": chip("dchip", facts=ref_fact("d", "gchip@gpl#g"))})
+        code, result = check(docs, "--context-root", gpl)
+        need(errors(result, "license gate"))
+        row = rows(status(docs, "--context-root", gpl)[1])["dchip@docs#d"]
+        self.assertEqual(row["status"], "unknown")
 
     def test_a_reader_with_the_verdicts_own_verifier_is_not_a_second_reader(self):
         r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(

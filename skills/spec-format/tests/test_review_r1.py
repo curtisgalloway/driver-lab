@@ -106,12 +106,21 @@ class ReviewFixes(GitFixture):
         except resolve.ResolutionError as exc:
             self.fail(f"a label definition must resolve despite overrides: {exc}")
         self.assertEqual(uart, [3, 4])
-        self.assertEqual(resolve.node_range(lines, "l1"), [5, 5])
-        self.assertEqual(resolve.node_range(lines, "l2"), [5, 5])
+        for label in ("l1", "l2"):
+            try:
+                actual = resolve.node_range(lines, label)
+            except resolve.ResolutionError as exc:
+                self.fail(f"each label in a multiple-label definition must resolve: {exc}")
+            self.assertEqual(actual, [5, 5])
         self.assertEqual(resolve.node_range(lines, "/soc/serial@0"), [3, 4])
+        try:
+            child = resolve.node_range(lines[:8], "child")
+        except resolve.ResolutionError as exc:
+            self.fail(f"a child defined in an override must resolve: {exc}")
+        self.assertEqual(child, [8, 8])
         with self.assertRaises(resolve.ResolutionError):
-            resolve.node_range(lines[:8], "child")
-        for name in ("/uart", "/uart/child", "child"):
+            resolve.node_range(lines, "child")
+        for name in ("/uart", "/uart/child"):
             with self.subTest(name=name), self.assertRaises(resolve.ResolutionError):
                 resolve.node_range(lines, name)
 
@@ -236,16 +245,18 @@ class ReviewFixes(GitFixture):
                 self.anchor["lines"] = [len(source.splitlines()), len(source.splitlines())]
                 self.assertEqual(self.run_cli()[0], 0)
 
-    def test_spdx_outside_header_is_ignored(self):
-        for source in ('const char *s = "SPDX-License-Identifier: MIT";\nint VALUE;\n',
-                       "// header\n" * 5 + "// SPDX-License-Identifier: MIT\nint VALUE;\n"):
+    def test_spdx_invalid_suffix_and_line_six(self):
+        for source, message in (
+            ('const char *s = "SPDX-License-Identifier: MIT";\nint VALUE;\n', "invalid SPDX"),
+            ("// header\n" * 5 + "// SPDX-License-Identifier: MIT\nint VALUE;\n", "no SPDX"),
+        ):
             with self.subTest(source=source):
                 (self.repo / "code.c").write_text(source)
                 self.entry["commit"] = self.commit_all()
                 self.anchor["lines"] = [len(source.splitlines()), len(source.splitlines())]
                 code, result = self.run_cli()
                 self.assertEqual(code, 1, result)
-                self.assertIn("no SPDX", str(result))
+                self.assertIn(message, str(result))
 
     def test_show_escapes_controls_and_cr(self):
         controls = "".join(chr(i) for i in [*range(0x20), 0x7f] if i not in (9, 10, 13))

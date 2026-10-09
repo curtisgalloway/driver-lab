@@ -11,8 +11,11 @@ schema intentionally gives search anchors no stale field.
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 import re
+import secrets
+import stat
 import tempfile
 
 import resolve
@@ -128,7 +131,11 @@ def rewrite(source, commit_at, commit, changes, was):
                     for token in yaml.scan("{" + tail + "}")
                 )
                 separator = " " if comma else ", "
-                edits.append((pos, pos, f"{separator}stale: {{was: '{was}'}}"))
+                start = pos
+                if comma:
+                    while start > node.value[-1][1].end_mark.index and source[start - 1] in " \t":
+                        start -= 1
+                edits.append((start, pos, f"{separator}stale: {{was: '{was}'}}"))
             else:
                 first_key = node.value[0][0]
                 pos = source.rfind("\n", 0, node.end_mark.index) + 1
@@ -150,6 +157,24 @@ def rewrite(source, commit_at, commit, changes, was):
     for start, end, value in sorted(edits, reverse=True):
         source = source[:start] + value + source[end:]
     return source
+
+
+def replace_snapshot(path, original, replacement):
+    """Stage with O_EXCL beside the original, then compare and atomically replace."""
+    mode = stat.S_IMODE(path.stat().st_mode)
+    staged = path.parent / ("spec-rewrite-" + secrets.token_hex(16))
+    fd = os.open(staged, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            os.fchmod(stream.fileno(), mode)
+            stream.write(replacement)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if path.read_bytes() != original:
+            raise resolve.ResolutionError("spec changed during drift; original retained")
+        os.replace(staged, path)
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 def run(args):
@@ -187,7 +212,8 @@ def run(args):
     index, entry = entries[0]
     changes = []
     try:
-        source = path.read_bytes().decode("utf-8")
+        original = loaded.raw
+        source = original.decode("utf-8")
         resolve.check_url(entry["url"])
         resolve.check_commit(entry.get("commit"))
         with tempfile.TemporaryDirectory(prefix="spec-drift-") as scratch:
@@ -232,27 +258,21 @@ def run(args):
                     changes,
                     entry["commit"],
                 )
-                with tempfile.TemporaryDirectory(prefix="spec-rewrite-") as checkdir:
-                    candidate = Path(checkdir) / path.name
-                    candidate.write_bytes(replacement.encode("utf-8"))
-                    raw = []
-                    extension = (
-                        spec.read_root(args.root, spec.load_schemas(), raw)
-                        if args.root
-                        else None
-                    )
-                    valid, _, _ = spec.validate_file(
-                        candidate, spec.load_schemas(), extension, raw
-                    )
-                    if not valid or raw:
-                        raise resolve.ResolutionError(
-                            "rewritten spec failed validation; original retained"
-                        )
-                if path.read_bytes() != source.encode("utf-8"):
+                encoded = replacement.encode("utf-8")
+                raw = []
+                extension = (
+                    spec.read_root(args.root, spec.load_schemas(), raw)
+                    if args.root
+                    else None
+                )
+                valid, _, _ = spec.validate_file(
+                    path, spec.load_schemas(), extension, raw, raw=encoded
+                )
+                if not valid or raw:
                     raise resolve.ResolutionError(
-                        "spec changed during drift; original retained"
+                        "rewritten spec failed validation; original retained"
                     )
-                path.write_bytes(replacement.encode("utf-8"))
+                replace_snapshot(path, original, encoded)
     except (resolve.ResolutionError, OSError) as exc:
         findings.append(
             dict(path=str(path), line=1, column=1, level="error", message=str(exc))
@@ -271,7 +291,7 @@ def run(args):
     code, result = resolve.result_object(args.files, findings, [], [])
     result["changes"] = output
     result["_text"] = [
-        f"{c['path']}: {c['status']} {c['lines'] or ''}" for c in output
+        resolve.display_line(f"{c['path']}: {c['status']} {c['lines'] or ''}") for c in output
     ] + result["_text"]
     return code, result
 

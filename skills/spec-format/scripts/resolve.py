@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import unicodedata
 
 import speccheck
 
@@ -137,7 +138,7 @@ class Repository:
             raise ResolutionError("invalid repository path")
         tree = self.commit
         found = None
-        for part in parts:
+        for index, part in enumerate(parts):
             entries = self.run("ls-tree", "-z", "--", tree).split(b"\x00")
             found = None
             for entry in filter(None, entries):
@@ -148,6 +149,8 @@ class Repository:
             if found is None:
                 raise ContentError(f"{path}: path does not exist at {self.commit}")
             mode, _, tree = found
+            if index < len(parts) - 1 and found[1] != "tree":
+                raise ContentError(f"{path}: parent component is not a directory")
             if mode not in ("040000", "100644", "100755"):
                 raise ContentError(
                     f"{path}: symlinks and submodules are not source files"
@@ -176,8 +179,9 @@ class Repository:
         try:
             text = raw.decode("utf-8")
         except UnicodeDecodeError as exc:
+            invalid = raw[exc.start:exc.end].decode("utf-8", errors="surrogateescape")
             raise ContentError(
-                f"{path}: source is not UTF-8; supply decompiled DT text"
+                f"{path}: source is not UTF-8 ({invalid}); supply decompiled DT text"
             ) from exc
         lines = text.split("\n")
         if lines[-1] == "":
@@ -242,18 +246,21 @@ def node_range(lines, node):
         if word == "{":
             name = prefix[-1] if prefix else ""
             labels = [prefix[i - 1] for i in range(1, len(prefix)) if prefix[i] == ":"]
-            override = name.startswith("&") or bool(stack and stack[-1][4])
+            override = name.startswith("&")
+            unknown_path = override or bool(stack and stack[-1][4])
             full = "/" + "/".join(
                 [s[0] for s in stack if s[0] != "/"] + ([name] if name != "/" else [])
             )
             start = source.count("\n", 0, token.start()) + 1
-            stack.append((name, labels, full, start, override))
+            stack.append((name, labels, full, start, unknown_path))
             prefix = []
         elif word == "}":
             if not stack:
                 raise ContentError("unbalanced DT node braces")
-            name, labels, full, start, override = stack.pop()
-            if not override and (node == full or (not node.startswith("/") and node in [name, *labels])):
+            name, labels, full, start, unknown_path = stack.pop()
+            if (not unknown_path and node == full) or (
+                not name.startswith("&") and not node.startswith("/") and node in [name, *labels]
+            ):
                 matches.append([start, source.count("\n", 0, token.end()) + 1])
             prefix = []
         elif word == ";":
@@ -309,47 +316,62 @@ def license_key(tree):
     return tree.op, frozenset(children)
 
 
-def check_license(repo, entry, anchor):
-    """SPDX expressions must agree, including exceptions and AND/OR obligations."""
+def listed_file(entry, anchor):
+    """Closed-file membership needs no source bytes."""
     path = anchor["path"]
     listed = [item for item in entry.get("files", []) if item["path"] == path]
     if len(listed) != 1:
         raise ContentError(
             f"{path}: must occur exactly once in the closed files list"
         )
+    return listed[0]
+
+
+def check_anchor(entry, anchor):
+    """Reject source-independent errors before any fetch or blob read."""
+    if "stale" in anchor:
+        raise ContentError("stale anchor; re-verify before resolving")
+    check_url(entry["url"])
+    check_commit(entry.get("commit"))
+    listed_file(entry, anchor)
+    entry_license(entry, anchor["path"])
+    span = anchor.get("lines")
+    if span is not None and not (1 <= span[0] <= span[1]):
+        raise ContentError("line range must be positive and ordered")
+
+
+def entry_license(entry, path):
+    """The parser prerequisite and the entry's expression need no source bytes."""
+    import spec
+
+    try:
+        spdx = speccheck.load_spdx()
+    except speccheck.PreconditionError as exc:
+        raise spec.Precondition(str(exc)) from exc
+    try:
+        return spdx, license_key(spdx.parse(entry["license"]))
+    except spdx.SpdxError as exc:
+        raise ContentError(f"{path}: invalid SPDX expression: {exc}") from exc
+
+
+def check_license(repo, entry, anchor):
+    """Use the kernel's first-tag-in-five-lines rule, independent of comment syntax."""
+    path = anchor["path"]
+    listed = listed_file(entry, anchor)
     if path.endswith("/"):
         return
-    spdx = speccheck.load_spdx()
+    spdx, expected = entry_license(entry, path)
     declarations = []
-    closing = None
-    for line in repo.lines(path)[:5]:
-        text = line.strip()
-        if not text or text.startswith("#!"):
-            continue
-        if closing is not None:
-            comment = text
-        elif text.startswith(("//", "#", ";")):
-            comment = text
-        elif text.startswith("/*"):
-            closing, comment = "*/", text
-        elif text.startswith("<!--"):
-            closing, comment = "-->", text
-        else:
-            break
-        if "SPDX-License-Identifier:" in comment:
-            expression = comment.split("SPDX-License-Identifier:", 1)[1].strip()
-            expression = re.sub(r"\s*(?:\*/|-->)\s*$", "", expression).strip()
+    for index, line in enumerate(repo.lines(path)[:5]):
+        text = line.removeprefix("\ufeff") if index == 0 else line
+        if "SPDX-License-Identifier:" in text:
+            expression = text.split("SPDX-License-Identifier:", 1)[1].rstrip()
+            expression = re.sub(r"(?:\*/|-->|['\"])$", "", expression).strip()
             declarations.append(expression)
             break
-        if closing and closing in comment:
-            tail = comment.split(closing, 1)[1].strip()
-            closing = None
-            if tail:
-                break
-    if not declarations and listed[0]["license_from"] == "spdx-line":
+    if not declarations and listed["license_from"] == "spdx-line":
         raise ContentError(f"{path}: declared spdx-line but no SPDX line exists")
     try:
-        expected = license_key(spdx.parse(entry["license"]))
         for expression in declarations:
             if license_key(spdx.parse(expression)) != expected:
                 raise ContentError(
@@ -421,17 +443,41 @@ def prepare(args):
     }
     if local.keys() - names and not findings:
         raise spec.Usage("--repo names an entry absent from the input files")
+    for path, loaded in files:
+        by_name = {}
+        for entry in loaded.data.get("resources", {}).get("repos", []):
+            by_name.setdefault(entry["name"], []).append(entry)
+        for record, base in records(loaded.data):
+            for anchor, at in speccheck.anchors(record, base):
+                try:
+                    choices = by_name.get(anchor["repo"], [])
+                    if len(choices) != 1:
+                        if args.command == "drift":
+                            raise spec.Usage("--pin must select exactly one repos entry")
+                        raise ContentError("anchor repo must name exactly one repos entry")
+                    check_anchor(choices[0], anchor)
+                except ResolutionError as exc:
+                    mark = loaded.mark(at)
+                    findings.append(spec.Finding(path, mark.line, mark.column, str(exc)))
     if not findings:
         check_bindings(local)
     return files, findings, local
 
 
 def display_line(line):
-    """Render terminal controls as printable escapes, preserving tabs."""
-    return "".join(
-        f"\\x{ord(char):02x}" if (ord(char) < 0x20 and char != "\t") or ord(char) == 0x7f else char
-        for char in line.removesuffix("\r")
-    )
+    """Escape nonprinting Unicode and undecodable bytes; preserve only tabs."""
+    if isinstance(line, bytes):
+        line = line.decode("utf-8", errors="surrogateescape")
+    output = []
+    for char in line:
+        code = ord(char)
+        if 0xdc80 <= code <= 0xdcff:
+            output.append(f"\\x{code - 0xdc00:02x}")
+        elif char != "\t" and unicodedata.category(char) in {"Cc", "Cf", "Zl", "Zp", "Co", "Cs", "Cn"}:
+            output.append(f"\\x{code:02x}" if code <= 0xff else f"\\u{code:04x}")
+        else:
+            output.append(char)
+    return "".join(output)
 
 
 def result_object(files, findings, anchors, facts):
@@ -467,7 +513,7 @@ def result_object(files, findings, anchors, facts):
         for f in findings
     )
     text.append(f"{result['resolved']} anchor(s) resolved, {result['skipped']} skipped")
-    result["_text"] = text
+    result["_text"] = [display_line(line) for line in text]
     return (1 if errors else 0), result
 
 

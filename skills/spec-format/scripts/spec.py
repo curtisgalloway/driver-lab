@@ -617,7 +617,7 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     return None if problems else fragment
 
 
-def validate_file(path: Path, schemas, extension, findings: list[Finding]):
+def validate_file(path: Path, schemas, extension, findings: list[Finding], *, raw=None):
     """Load and schema-check one file: (valid, schema kind, Loaded or None)."""
     import jsonschema
 
@@ -626,7 +626,7 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]):
     kind = schema_kind(path)
     before = len(findings)
     try:
-        loaded = specload.load_strict_marked(path)
+        loaded = specload.load_strict_marked(path) if raw is None else specload.load_strict_marked(path, raw)
     except specload.LoadError as exc:
         findings.append(Finding(path, exc.line, exc.column, exc.problem))
         return False, kind, None
@@ -895,6 +895,10 @@ def main(argv: list[str] | None = None) -> int:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
+                if command in ("resolve", "show", "drift"):
+                    import resolve
+
+                    m = resolve.display_line(m)
                 print(f"{label}: {m}", file=sys.stderr)
             if hint:
                 print(hint, file=sys.stderr)

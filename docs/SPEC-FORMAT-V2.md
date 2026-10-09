@@ -349,6 +349,16 @@ anchors:
   at the new commit; it fails every check until a person re-verifies and removes it. It replaces
   the `[stale: was …]` text marker.
 
+DT node lookup locates definitions in the cited text; it does not evaluate a device tree.
+Labels and short node names defined inside an override such as
+`&i2c1 { pmic: pmic@32 { regulators { vdd: buck1 {}; }; }; };` locate their own
+definition lines, including nested children. An absolute path never matches a node inside
+an override: its ancestry is unknown without resolving the override's label. A label added
+to the override itself (`extra: &uart0`) is not a node definition. `/delete-node/` does not
+remove an earlier definition from this textual lookup. Reopened nodes remain separate
+definitions; multiple matches are ambiguous and fail. Cite a unique label or include the
+separately cited files when evaluating the resulting tree matters.
+
 ### Inference
 
 ```yaml
@@ -469,10 +479,14 @@ What changes from today:
   an option).
 - **Per-file licenses** (RG1 V3): an entry's `files` is the closed list of paths cited through
   it, each saying how its license was confirmed (`spdx-line`, `notice`, `license-file`). With a
-  checkout, `spec.py resolve` reads the first `SPDX-License-Identifier:` in a comment
-  in the file's leading comment header, within the first five lines (D12; the kernel places
-  it on line one, or line two for scripts). Markers in strings, later comments or subsequent
-  license tags are ignored. A header tag that differs from the entry's `license` fails.
+  checkout, `spec.py resolve` reads the first `SPDX-License-Identifier:` anywhere in the first
+  five lines, after stripping a leading UTF-8 byte-order mark (D12, following the kernel's
+  `scripts/spdxcheck.py`). The expression runs from after the tag to the end of that line,
+  with trailing whitespace and a trailing `*/`, `-->`, or closing quote removed. No comment
+  syntax is inferred: a tag after code or inside a string follows the same rule, and any
+  remaining source suffix is part of the expression. Tags on line six or later and tags
+  after the first one are ignored. A tag that differs from the entry's `license` fails under
+  every `license_from` mode; `spdx-line` also fails when no tag is found.
   A file under another license needs its own entry, as the GPL overlay already does with
   `linux` and `linux-pcie`.
 - **Roles replace pin kinds.** `Source pin:`/`Target pin:`/`Impl pin:`/`Ref pin:` lines become
@@ -1884,7 +1898,7 @@ left open, also decided by the user on 2026-10-08.
 | D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces scalar spans found by node marks | one library, already used here; comments and the SPDX header survive |
 | D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
 | D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no mixed v1 and v2 composition, and no second parser left behind |
-| D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag in the leading comment header within five lines | catches a file whose license differs from its entry without a per-file gate |
+| D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
 | D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without driver-lab defining its content |

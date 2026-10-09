@@ -628,3 +628,26 @@ failures; campaign-review then passed in a scratch checkout. The reviewer c06
 harness indexed an anchors key absent from usage-error JSON and was adapted
 in scratch to use a missing-key-safe read. These are environment and harness
 assumptions, so the implementation was not changed to accommodate them.
+
+## 2026-10-09T15:06:33-07:00 — SF2-6: round-2 scratch setup and fixtures
+
+The system Python lacks ensurepip, so the requested venv command failed once.
+Used uv to create a scratch environment and installed the same hash-pinned
+requirements. The first regression run also exposed a no-change fixture commit
+and an attempt to send loader-refused characters through a valid spec. Used
+allow-empty fixture commits and tested those fields at the text-output boundary,
+with real CLI source and finding tests alongside. Cost: one setup retry and one
+fixture correction. Prevention belongs in the test brief: allow an equivalent
+hash-verified scratch environment, and distinguish loader refusal from output
+escaping. Status: fixed for this run; no instruction changes proposed here.
+
+## 2026-10-09T15:15:45-07:00 — SF2-6: mutation scoring and replacement fixture
+
+The initial round-2 mutation pass exposed assertions inside mocked command
+operations that became internal errors, and a fixture that staged a deletion
+without the new parent file. Cost: one test correction and a rerun. Capture
+observations in mocks and assert afterward; explicitly stage both sides of a
+path-kind change. The preliminary fail-before summary was corrected after
+counting distinct failed methods. Prevention belongs in mutation-test guidance:
+an internal error does not count, and every regression method needs its own
+fail-before evidence. Status: fixed in the round-2 tests and scratch runner.

@@ -91,8 +91,10 @@ What fails (exit 1):
     whose ``spec_file`` is not that spec's path relative to the root, or which
     is current and whose ``summary.fail`` is not zero (a stale record reports
     stale, whatever its counts); two spec files in one root that would share a
-    record; with ``--require-verified``, also a spec with no record or a record
-    whose ``spec_sha256`` no longer matches
+    record; with ``--require-verified``, also a spec with no record, a record
+    whose ``spec_sha256`` no longer matches, or a current record whose
+    ``summary.adjudicate`` is not zero (the verifiers disagreed and nobody
+    resolved the claim)
   * a ``--context-root`` that is, contains, or sits inside a checked root, or
     that holds or is reached through a symbolic link (usage error, exit 2); in
     a checked root, any symbolic link (file or directory), or the root being or
@@ -1232,7 +1234,9 @@ def check_src_anchors(spec: Spec, findings: list[Finding]) -> None:
 RECORD_KEYS = ("spec", "spec_file", "spec_sha256", "verified", "verifier", "sources", "summary")
 SUMMARY_KEYS = ("pass", "fail", "unverifiable", "gap")
 # Optional because a record written before adjudication existed is still valid, and most
-# records have nothing to adjudicate. Validated when present; never a failure on its own.
+# records have nothing to adjudicate. Validated when present. A nonzero count is not a
+# failure on its own, so the default run stays clean; under --require-verified it is an
+# error, because verifiers that disagree and a claim nobody resolved is not "verified".
 OPTIONAL_SUMMARY_KEYS = ("adjudicate",)
 
 
@@ -1288,7 +1292,8 @@ def check_verification(
 ) -> str:
     """Check the spec's verification record; return its status for the summary.
 
-    Statuses: "verified", "unverified", "stale", "failing", "malformed".
+    Statuses: "verified", "unverified", "stale", "failing", "unresolved",
+    "malformed".
     Only the record's frontmatter is read; the body is the verifier's and the
     reader's business, not this script's.
     """
@@ -1390,6 +1395,17 @@ def check_verification(
             Finding("error", p, f"verification record reports {summary['fail']} FAIL verdict(s); see {rec.relative_to(spec.root)}")
         )
         return "failing"
+    if require and summary.get("adjudicate", 0) > 0:
+        findings.append(
+            Finding(
+                "error",
+                p,
+                f"verification record has {summary['adjudicate']} unresolved ADJUDICATE "
+                f"item(s) (--require-verified); resolve them and re-verify; see "
+                f"{rec.relative_to(spec.root)}",
+            )
+        )
+        return "unresolved"
     return "verified"
 
 
@@ -1456,7 +1472,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--require-verified",
         action="store_true",
-        help="a spec with no verification record, or a stale one, is an error instead of a warning",
+        help="a spec with no verification record, or a stale one, is an error instead of a "
+        "warning; a current record with unresolved ADJUDICATE items is also an error",
     )
     parser.add_argument(
         "--require-license",

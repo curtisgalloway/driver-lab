@@ -1006,13 +1006,36 @@ class Verification(unittest.TestCase):
         (root / "resources" / "vok.verify.md").write_text(record)
         return root
 
-    def test_adjudicate_is_optional_and_never_an_error_on_its_own(self):
-        """A disagreement is an adjudication item, not a failure: it must not fail the check."""
+    def test_adjudicate_is_optional_and_not_an_error_without_the_flag(self):
+        """Without --require-verified an adjudication count does not fail the check."""
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
             root = self._verified_root(
                 tmp, "summary: {pass: 1, fail: 0, unverifiable: 0, gap: 0, adjudicate: 2}"
+            )
+            code, data, err = run(root, flags=["--no-pyyaml"])
+            self.assertEqual(code, 0, err + json.dumps(data))
+            self.assertEqual(data["verification"], {"verified": 1})
+
+    def test_require_verified_refuses_unresolved_adjudicate(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._verified_root(
+                tmp, "summary: {pass: 1, fail: 0, unverifiable: 0, gap: 0, adjudicate: 3}"
+            )
+            code, data, _ = run(root, "--require-verified", flags=["--no-pyyaml"])
+            self.assertEqual(code, 1)
+            self.assertIn("3 unresolved ADJUDICATE item(s)", "\n".join(messages(data)))
+            self.assertEqual(data["verification"], {"unresolved": 1})
+
+    def test_require_verified_accepts_zero_adjudicate(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._verified_root(
+                tmp, "summary: {pass: 1, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}"
             )
             code, data, err = run(root, "--require-verified", flags=["--no-pyyaml"])
             self.assertEqual(code, 0, err + json.dumps(data))

@@ -396,6 +396,20 @@ class Cycles(Roots):
         self.assertEqual(sorted(k[-1] for k in before if before[k] != after[k]), ["a", "b", "c"])
         self.assertNotEqual(before["widgetchip@r#a"], before["widgetchip@r#b"])
 
+    def test_a_cycle_takes_in_what_its_members_rest_on_outside_it(self):
+        def spec(claim="C d."):
+            return chip(facts=(
+                fact("a", extra='    relates: [{fact: "#b", relation: same-as}, '
+                                '{fact: "#d", relation: refines}]\n')
+                + fact("b", extra='    relates: [{fact: "#a", relation: same-as}]\n')
+                + fact("d", claim=claim) + fact("e")))
+
+        before = self.bases(self.root("r1", {"board-specs.yaml": marker("r"),
+                                             "w.spec.yaml": spec()}))
+        after = self.bases(self.root("r2", {"board-specs.yaml": marker("r"),
+                                            "w.spec.yaml": spec("C d, edited.")}))
+        self.assertEqual(sorted(k[-1] for k in before if before[k] != after[k]), ["a", "b", "d"])
+
     def test_the_cycle_digest_follows_the_design(self):
         r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=(
             fact("a", extra='    relates: [{fact: "#b", relation: same-as}]\n')
@@ -831,6 +845,7 @@ class Upstream(Roots):
             "wrong value": {"upchip@up#mode": "f" * 64},
             "extra key": {"upchip@up#mode": good, "upchip@up#other": good},
             "not a full reference": {"#mode": good},
+            "empty": {},
         }
         for name, value in cases.items():
             with self.subTest(name):
@@ -845,7 +860,11 @@ class Upstream(Roots):
                 self.assertEqual(code, 1)
                 f = only(errors(result))
                 self.assertTrue(f["path"].endswith("resources/x.verify.yaml"))
-                if name != "not a full reference":
+                if name == "not a full reference":
+                    self.assertIn("an upstream key is a fact's full reference", f["message"])
+                elif name == "empty":
+                    self.assertIn("should be non-empty", f["message"])
+                else:
                     self.assertIn("verdict key 'direct': upstream does not match", f["message"])
         edited = json.loads(json.dumps(rec))
         edited["local"]["upstream"] = {"upchip@up#mode": good}
@@ -863,6 +882,13 @@ class Upstream(Roots):
                              "--require-verified", "main")
         self.assertIn("fact 'direct': verdict stale", "\n".join(
             f["message"] for f in errors(result)))
+
+    def test_an_empty_upstream_on_a_fact_without_one_is_refused(self):
+        rec = records_of_root(self.gpl, "x")
+        rec["local"]["upstream"] = {}
+        self.write(self.gpl, "resources/x.verify.yaml", record("xchip", "x.spec.yaml", rec))
+        code, result = check(self.gpl, "--context-root", self.docs)
+        self.assertIn("should be non-empty", only(errors(result))["message"])
 
     def test_a_dangling_upstream_is_unknown_and_an_error_in_both_modes(self):
         docs = self.root("docs-gone", {"board-specs.yaml": marker("up"),
@@ -904,6 +930,37 @@ def records_of_root(root, stem):
     import specload
 
     return specload.load_strict(root / "resources" / f"{stem}.verify.yaml")["verdicts"]
+
+
+class CrossRootCycle(Roots):
+    """A relates cycle across two roots hashes as one component. A verdict whose basis matches
+    only the upstream recomputation (where the other root's fact is a leaf), with nothing
+    upstream changed, is stale: the classification never relaxes what it cannot explain."""
+
+    def test_nothing_changed_upstream_reads_stale_not_upstream_stale(self):
+        a_text = chip("achip", facts=fact("a", extra='    relates: [{fact: "bchip@rb#b", '
+                                                     'relation: same-as}]\n'))
+        b_text = chip("bchip", facts=fact("b", extra='    relates: [{fact: "achip@ra#a", '
+                                                     'relation: same-as}]\n'))
+        ra = self.root("ra", {"board-specs.yaml": marker("ra"), "a.spec.yaml": a_text})
+        rb = self.root("rb", {"board-specs.yaml": marker("rb"), "b.spec.yaml": b_text})
+        st = rows(status(ra, rb)[1])
+        b_now = st["bchip@rb#b"]["basis"]
+        self.assertEqual(st["achip@ra#a"]["upstream"], {"bchip@rb#b": b_now})
+
+        def c(x):
+            return json.dumps(x, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+        local = (c({"id": "a", "title": "T a", "claim": "C a.",
+                    "support": [{"class": "databook", "doc": "trm", "at": [{"section": "1"}]}],
+                    "relates": [{"fact": "bchip@rb#b", "relation": "same-as"}]})
+                 + "\n" + c({"documents": {"trm": {"url": "https://example.invalid/trm.pdf",
+                                                   "pages": 80}}, "repos": {}}) + "\n{}")
+        leaf = hashlib.sha256(f"fact-v1\n{local}\nbchip@rb#b {b_now}".encode()).hexdigest()
+        self.assertNotEqual(leaf, st["achip@ra#a"]["basis"])
+        self.write(ra, "resources/a.verify.yaml", record("achip", "a.spec.yaml", {
+            "a": verdict(leaf, upstream={"bchip@rb#b": b_now})}))
+        self.assertEqual(rows(status(ra, rb)[1])["achip@ra#a"]["status"], "stale")
 
 
 class SecondReaders(Roots):

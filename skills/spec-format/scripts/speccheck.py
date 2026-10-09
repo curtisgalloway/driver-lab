@@ -28,7 +28,12 @@ already-parsed data and never over prose:
   accepts; with --require-license, also every repos entry no anchor or notice names;
 - under a `public` layer: no `access: internal`, no tool `via:` a skill not named with
   --public-skill; anywhere: no unsubstituted template placeholder (`<...>` outside code);
-- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves.
+- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
+- verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
+  spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
+  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts and a critical
+  fact without a second reader are warnings, errors under --require-verified (`pr`: all; `main`:
+  all but upstream-stale, D19).
 
 A finding in a --context-root's own files is a warning (that root fails in its own checks); a
 finding is always attributed to the file it was found in, so a context root cannot downgrade a
@@ -118,6 +123,8 @@ class Root:
     extension: dict | None = None
     marker: object = None  # the marker's Loaded, for positions
     files: list = dataclasses.field(default_factory=list)
+    spec_paths: list = dataclasses.field(default_factory=list)  # every *.spec.yaml found
+    record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
     # Every error-severity finding its own check produced, before context downgrading. A root
     # with any is untrusted: no reference may rest on it (user decision, 2026-10-08).
     untrusted: list = dataclasses.field(default_factory=list)
@@ -138,6 +145,14 @@ class SpecFile:
     assumptions: dict = dataclasses.field(default_factory=dict)  # id -> path
     documents: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
     repos: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
+    # Names this file declares twice, so a citation of them is ambiguous (freshness: unknown):
+    # ("documents", name), ("repos", name), ("assumptions", id), ("files", repos name, path).
+    ambiguous: set = dataclasses.field(default_factory=set)
+    # Its verification record (records.py): none | ok | invalid | shared; valid verdicts by id.
+    record_state: str = "none"
+    record_path: Path | None = None
+    record_loaded: object = None
+    verdicts: dict = dataclasses.field(default_factory=dict)  # fact id -> (verdict, key path)
 
     @property
     def kind(self) -> str:
@@ -217,8 +232,12 @@ def through_link(path: Path) -> bool:
 
 
 class Checker:
-    def __init__(self, api, spdx, *, require_license=False, public_skills=()):
+    def __init__(self, api, spdx, *, require_license=False, public_skills=(),
+                 require_verified=None):
         self.api = api
+        self.require_verified = require_verified  # None, "pr" or "main" (D19)
+        self.schemas = None
+        self.status: list = []  # per spec file: freshness rows (records.second_pass)
         self.spdx = spdx
         self.require_license = require_license
         self.public_skills = set(public_skills)
@@ -228,7 +247,13 @@ class Checker:
         self.stubs = 0
         self.unreadable_markers: list = []  # markers whose root name is therefore unknown
         self._resolved: dict = {}
-        self._failed_refs: set = set()  # (file, path) of references already reported failing
+        # (file, path) of every reference the check rejected: the one record of "this reference
+        # failed", read by the trust pass and by freshness (a fact resting on one is unknown)
+        self._failed_refs: set = set()
+        # (file, path) of every citation (a document citation, an anchor, an assumption name)
+        # the check rejected, under the citing record's path: freshness reads the record as
+        # unknown (review round 2)
+        self._failed_cites: set = set()
         self._reach: dict = {}
 
     # --- findings ----------------------------------------------------------------------------
@@ -252,6 +277,12 @@ class Checker:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
 
+    def reject(self, f, path: tuple, message: str, *, citation=False):
+        """An error at a reference, or at a citation (citation=True): reported, and recorded as
+        failed, in one step."""
+        (self._failed_cites if citation else self._failed_refs).add((f, path))
+        self.add(f, path, message)
+
     def _schema_findings(self, raw, root):
         for f in raw:
             level, message = "error", f.message
@@ -264,6 +295,7 @@ class Checker:
     # --- loading -----------------------------------------------------------------------------
 
     def load_roots(self, checked: list[Path], context: list[Path], schemas):
+        self.schemas = schemas
         given = [(p, False) for p in checked] + [(p, True) for p in context]
         for p, _ in given:
             if not p.is_dir():
@@ -293,7 +325,9 @@ class Checker:
             self.read_marker(root, schemas)
             files = self.walk(root)
             if root.accepts is None:
+                root.record_paths = []
                 continue  # an invalid marker: its specs are not read (references to it dangle)
+            root.spec_paths = files
             for path in files:
                 self.load_spec(root, path, schemas)
 
@@ -356,6 +390,13 @@ class Checker:
                                                      f"{root.label}: one root, one marker")
                 elif name.endswith(".spec.yaml"):
                     found.append(path)
+                elif name.endswith(".verify.yaml"):
+                    if Path(top) == root.given / "resources":
+                        root.record_paths.append(path)
+                    else:
+                        self.add((path, root, None), (), "a verification record lives in the "
+                                                         "root's own resources/ directory: move "
+                                                         "it there")
                 elif lower.endswith(".spec.md"):
                     self.add((path, root, None), (), "a format 1 spec in a format 2 root: "
                                                      "convert it to <name>.spec.yaml")
@@ -366,6 +407,14 @@ class Checker:
                             if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml), "
                             "or move it out of the root")
                     self.add((path, root, None), (), f"not read as a spec: {want}")
+                elif ".verify." in lower or (Path(top) == root.given / "resources"
+                                             and "verify" in lower):
+                    # .verify.yml, a case variant, a backup, a format 1 .verify.md, and in
+                    # resources/ any name with "verify" in it (w.verify, wverify.yaml): a record
+                    # discovery passes over would leave its verdicts unread without a word
+                    self.add((path, root, None), (), "not read as a verification record: name "
+                                                     "it <name>.verify.yaml (lowercase, .yaml) "
+                                                     "in resources/, or move it out of the root")
             dirs[:] = [d for d in dirs if not (Path(top) / d).is_symlink()]
         for exc in failures:
             where = Path(getattr(exc, "filename", None) or root.given)
@@ -402,6 +451,7 @@ class Checker:
                 f.records[rid] = Record(f, (key, i), item)
         for i, item in enumerate(f.data.get("assumptions", [])):
             if item["id"] in f.assumptions:
+                f.ambiguous.add(("assumptions", item["id"]))
                 self.add(f, ("assumptions", i, "id"), f"assumption id {item['id']!r} is used "
                                                       f"twice in this file")
             else:
@@ -410,6 +460,7 @@ class Checker:
         for group, table in (("documents", f.documents), ("repos", f.repos)):
             for i, entry in enumerate(resources.get(group, [])):
                 if entry["name"] in table:
+                    f.ambiguous.add((group, entry["name"]))
                     self.add(f, ("resources", group, i, "name"),
                              f"{group} entry {entry['name']!r} is listed twice in this file")
                 else:
@@ -418,6 +469,7 @@ class Checker:
             seen = set()
             for i, item in enumerate(entry.get("files", [])):
                 if item["path"] in seen:
+                    f.ambiguous.add(("files", name, item["path"]))
                     self.add(f, path + ("files", i, "path"),
                              f"repos entry {name!r} lists {item['path']!r} twice in files")
                 seen.add(item["path"])
@@ -460,21 +512,22 @@ class Checker:
             name = anchor["repo"]
             cited.add(name)
             if "lines" in anchor and anchor["lines"][0] > anchor["lines"][1]:
-                self.add(f, path + ("lines",), f"{what}: lines [{anchor['lines'][0]}, "
+                self.reject(f, path + ("lines",), f"{what}: lines [{anchor['lines'][0]}, "
                                                f"{anchor['lines'][1]}] run backwards; write "
-                                               f"[first, last]")
-            if not self.gate_name(f, path + ("repo",), name, f"{what}: an anchor"):
+                                               f"[first, last]", citation=True)
+            if not self.gate_name(f, path + ("repo",), name, f"{what}: an anchor",
+                                  citation=True):
                 continue
             entry, epath = f.repos[name]
             if "commit" not in entry:
-                self.add(f, path + ("repo",), f"{what}: anchor names repos entry {name!r}, "
-                                              f"which pins a ref, not a commit; a cited entry "
-                                              f"carries the full commit")
+                self.reject(f, path + ("repo",), f"{what}: anchor names repos entry {name!r}, "
+                                                 f"which pins a ref, not a commit; a cited entry "
+                                                 f"carries the full commit", citation=True)
             listed = {item["path"] for item in entry.get("files", [])}
             if anchor["path"] not in listed:
-                self.add(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the files "
-                                              f"of repos entry {name!r} (the closed list of "
-                                              f"cited paths, D12)")
+                self.reject(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the "
+                                                 f"files of repos entry {name!r} (the closed "
+                                                 f"list of cited paths, D12)", citation=True)
         names = [(a, rec.path + ("assumes", i)) for i, a in enumerate(rec.data.get("assumes", []))]
         for i, entry in enumerate(rec.data.get("support", [])):
             for j, premise in enumerate(entry.get("premises", [])):
@@ -483,8 +536,8 @@ class Checker:
                                   rec.path + ("support", i, "premises", j, "assumption")))
         for name, path in names:
             if name not in f.assumptions:
-                self.add(f, path, f"{what}: assumption {name!r} is not in this file's "
-                                  f"assumptions")
+                self.reject(f, path, f"{what}: assumption {name!r} is not in this file's "
+                                     f"assumptions", citation=True)
         irq = rec.data.get("irq")
         if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
             want = irq["number"] + IRQ_OFFSET[irq["kind"]]
@@ -494,25 +547,30 @@ class Checker:
                          f"{irq['number']} (INTID {want})")
 
     def check_citation(self, f: SpecFile, what: str, entry: dict, path: tuple):
+        """A document citation's checks; every error here is a rejected citation."""
         name, cls = entry["doc"], entry["class"]
+
+        def add(where, message):
+            self.reject(f, where, message, citation=True)
+
         if name not in f.documents:
-            self.add(f, path + ("doc",), f"{what}: document {name!r} is not in this file's "
-                                         f"resources.documents")
+            add(path + ("doc",), f"{what}: document {name!r} is not in this file's "
+                                 f"resources.documents")
             return
         doc, _ = f.documents[name]
         if doc.get("cite") is False:
-            self.add(f, path + ("doc",), f"{what}: document {name!r} is marked cite: false "
-                                         f"(a map only); it cannot be cited")
+            add(path + ("doc",), f"{what}: document {name!r} is marked cite: false "
+                                 f"(a map only); it cannot be cited")
         if cls in DOC_CLASS and doc["class"] != DOC_CLASS[cls]:
-            self.add(f, path + ("doc",), f"{what}: a {cls} citation names document {name!r} "
-                                         f"of class {doc['class']}")
+            add(path + ("doc",), f"{what}: a {cls} citation names document {name!r} "
+                                 f"of class {doc['class']}")
         count = doc.get("pages")
         for i, loc in enumerate(entry.get("at", [])):
             lpath = path + ("at", i)
             if cls == "standard" and count is not None and not any(k in loc for k in PRECISE):
-                self.add(f, lpath, f"{what}: document {name!r} is paged, so a standard "
-                                   f"locator needs a section, page, pages, table, figure or "
-                                   f"clause, not a heading alone")
+                add(lpath, f"{what}: document {name!r} is paged, so a standard "
+                           f"locator needs a section, page, pages, table, figure or "
+                           f"clause, not a heading alone")
             numbers = []
             if "page" in loc:
                 numbers.append((loc["page"], lpath + ("page",)))
@@ -522,17 +580,18 @@ class Checker:
                 if not DIGITS.fullmatch(value):
                     continue
                 if len(value) > 1 and value[0] == "0":
-                    self.add(f, vpath, f"{what}: page {_short(value)}: write "
-                                       f"{_short(value.lstrip('0') or '0')} (no leading zeros)")
+                    add(vpath, f"{what}: page {_short(value)}: write "
+                               f"{_short(value.lstrip('0') or '0')} (no leading zeros)")
                 if count is not None and not (_number(value) >= _number("1")
                                               and _number(value) <= _number(str(count))):
-                    self.add(f, vpath, f"{what}: page {_short(value)} is outside the {count} "
-                                       f"pages of document {name!r}")
+                    add(vpath, f"{what}: page {_short(value)} is outside the {count} "
+                               f"pages of document {name!r}")
             if "pages" in loc and all(DIGITS.fullmatch(p) for p in loc["pages"]):
                 first, last = (_number(p) for p in loc["pages"])
                 if first > last:
-                    self.add(f, lpath + ("pages",), f"{what}: pages [{_short(loc['pages'][0])}, {_short(loc['pages'][1])}] run "
-                                                    f"backwards; write [first, last]")
+                    add(lpath + ("pages",), f"{what}: pages [{_short(loc['pages'][0])}, "
+                                            f"{_short(loc['pages'][1])}] run backwards; "
+                                            f"write [first, last]")
 
     def check_public(self, f: SpecFile):
         for group, entries in f.data.get("resources", {}).items():
@@ -581,16 +640,19 @@ class Checker:
         shown = ", ".join(sorted(accepts)) or "none: documents only"
         return f"{tree} is not accepted by root {root.label} (accepts: {shown})"
 
-    def gate_name(self, f: SpecFile, path: tuple, name: str, what: str) -> bool:
+    def gate_name(self, f: SpecFile, path: tuple, name: str, what: str, *,
+                  citation=False) -> bool:
         """Direct gate for one anchor or notice: the repos entry it names, in its own file,
-        against its file's root. False when the name resolves to nothing."""
+        against its file's root. False when the name resolves to nothing. An anchor's
+        failure is a rejected citation (citation=True)."""
         if name not in f.repos:
-            self.add(f, path, f"{what} names repos entry {name!r}, which is not in this file's "
-                              f"resources.repos")
+            self.reject(f, path, f"{what} names repos entry {name!r}, which is not in this "
+                                 f"file's resources.repos", citation=citation)
             return False
         reason = self.gate(f.root, f.repos[name][0]["license"])
         if reason:
-            self.add(f, path, f"{what} names repos entry {name!r}: {reason}")
+            self.reject(f, path, f"{what} names repos entry {name!r}: {reason}",
+                        citation=citation)
         return True
 
     def reach(self, rec: Record):
@@ -678,8 +740,7 @@ class Checker:
                 for kind, ref, path in references(rec.data, rec.path):
                     target, why = self.resolve(f, ref)
                     if target is None:
-                        self.add(f, path, f"{what}: reference {ref!r} {why}")
-                        self._failed_refs.add((f, path))
+                        self.reject(f, path, f"{what}: reference {ref!r} {why}")
                         continue
                     if kind != "observation":
                         relation = None
@@ -687,17 +748,17 @@ class Checker:
                             relation = rec.data["relates"][path[-2]]["relation"]
                         dup = (kind, target, relation)
                         if dup in seen:
-                            self.add(f, path, f"{what}: {ref!r} names {target.full}, as "
-                                              f"{seen[dup]!r} already does in this {kind} list")
+                            self.reject(f, path, f"{what}: {ref!r} names {target.full}, as "
+                                                 f"{seen[dup]!r} already does in this {kind} list")
                         seen.setdefault(dup, ref)
                     if target is rec and kind != "premise":
-                        self.add(f, path, f"{what}: {ref!r} names the fact itself")
+                        self.reject(f, path, f"{what}: {ref!r} names the fact itself")
                     if kind == "premise":
                         edges.append((target, path))
                     if target.file.root.rank > f.root.rank:
-                        self.add(f, path, f"{what}: {ref!r} names a fact in layer "
-                                          f"{target.file.root.layer}, which merges after this "
-                                          f"file's layer {f.root.layer}")
+                        self.reject(f, path, f"{what}: {ref!r} names a fact in layer "
+                                             f"{target.file.root.layer}, which merges after this "
+                                             f"file's layer {f.root.layer}")
                     self.gate_reference(f, what, ref, path, target)
         self.check_cycles(premise_edges)
 
@@ -716,15 +777,13 @@ class Checker:
             reason = self.gate(f.root, g.repos[name][0]["license"])
             if reason:
                 problems.append(f"repos entry {name!r} of {_rel(g)}{through}: {reason}")
-        if problems or unknown:
-            self._failed_refs.add((f, path))
         for problem in problems:
-            self.add(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
-                              f"D13)")
+            self.reject(f, path, f"{what}: reference {ref!r} reaches {problem} (license gate, "
+                                 f"D13)")
         for via, hop, why in unknown:
-            self.add(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
-                              f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
-                              f"fails closed")
+            self.reject(f, path, f"{what}: reference {ref!r} reaches {via.full}, whose reference "
+                                 f"{hop!r} {why}; what lies beyond is unknown, so the license gate "
+                                 f"fails closed")
 
     def reach_roots(self, rec: Record) -> dict:
         """Every root a record rests on: its own and those of every fact it references,
@@ -760,11 +819,10 @@ class Checker:
                             if (f, path, root) in emitted:
                                 continue
                             emitted.add((f, path, root))
-                            self._failed_refs.add((f, path))
                             through = "" if via is target else f" through {via.full}"
                             trusted = not f.root.untrusted
-                            self.add(f, path, f"{what}: reference {ref!r} rests on "
-                                              f"{_untrusted(root)}{through}")
+                            self.reject(f, path, f"{what}: reference {ref!r} rests on "
+                                                 f"{_untrusted(root)}{through}")
                             changed = changed or trusted
             if not changed:
                 return
@@ -820,8 +878,8 @@ class Checker:
             for rec in scc:
                 for target, path in edges.get(rec, []):
                     if target in members:
-                        self.add(rec.file, path, f"{_label(rec)} {rec.id!r}: its inference "
-                                                 f"premises form a cycle among {names}")
+                        self.reject(rec.file, path, f"{_label(rec)} {rec.id!r}: its inference "
+                                                    f"premises form a cycle among {names}")
 
     # --- across files ------------------------------------------------------------------------
 
@@ -1008,14 +1066,19 @@ class Checker:
     # --- driver ------------------------------------------------------------------------------
 
     def run(self):
+        import records
+
         self.check_roots()
         for f in self.files:
             self.index_file(f)
         for f in self.files:
             self.check_file(f)
+        records.check_structure(self, self.schemas)
         self.check_composition()
         self.check_references()
+        records.first_pass(self)  # current FAILs: defects of a root's data, before trust
         self.check_trust()
+        records.second_pass(self, self.require_verified)
 
 
 def _untrusted(root: Root) -> str:
@@ -1057,10 +1120,11 @@ def _rel(f: SpecFile) -> str:
 
 
 def check(api, schemas, roots, *, context_roots=(), require_license=False, public_skills=(),
-          stubs=(), stubs_from=()):
-    """Run the checker; returns the Checker (its roots, files and findings)."""
+          stubs=(), stubs_from=(), require_verified=None):
+    """Run the checker; returns the Checker (its roots, files, findings and status)."""
     spdx = load_spdx()
-    checker = Checker(api, spdx, require_license=require_license, public_skills=public_skills)
+    checker = Checker(api, spdx, require_license=require_license, public_skills=public_skills,
+                      require_verified=require_verified)
     checker.load_roots(list(roots), list(context_roots), schemas)
     checker.run()
     checker.check_stubs(list(stubs), list(stubs_from))

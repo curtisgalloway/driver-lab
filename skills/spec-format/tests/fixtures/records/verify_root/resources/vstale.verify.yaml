@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+spec: vstale
+spec_file: vstale.spec.yaml
+spec_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+canonical: fact-v1
+sources:
+  - {name: trm, url: "https://example.invalid/trm.pdf", sha256: "1111111111111111111111111111111111111111111111111111111111111111", fetch: ok}
+summary: {pass: 1, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
+verdicts:
+  reset:
+    date: 2026-10-08
+    verifier: "a model, a harness"
+    contrary_evidence: none-found
+    citation_precision: exact
+    basis: 0d5c4a6cdea8ddf1e078589761dc1493617d1c8a27d33529b273b92d42b1f8cd
+    verdict: PASS

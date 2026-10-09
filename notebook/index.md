@@ -27,6 +27,13 @@ Outcome: open; review round 1 fixes implemented, awaiting orchestrator review.
 SPDX uses the leading comment header within five lines; operational drift reads
 retain the original. Accepted N4/N7 and schema-redundant R11 are recorded.
 
+### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
+Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00
+Outcome: complete ([evidence](../evidence/SF2-3.md)); three review rounds, round 3 clean. Round 2
+met the stop rule on identity allow-lists; the user chose "hash all but bookkeeping". Anything
+freshness cannot establish reads unknown, never current. Score a mutant that does not compile as
+invalid, and a failure during an internal error as a crash, not a kill.
+
 ### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
 Entries: 2026-10-08T14:58-07:00 through 2026-10-08T17:38-07:00
 Outcome: complete ([evidence](../evidence/SF2-2.md)); three review rounds, merged with tracked

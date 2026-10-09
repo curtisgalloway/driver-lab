@@ -55,7 +55,8 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stale] [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
-        [--spec <id>] [--merged] [--with-status] --format md [--json]
+        [--spec <id>] [--merged] [--with-status] [--source-commit <40-hex>]
+        [--tool-commit <40-hex>] --format md [--json]
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -112,12 +113,15 @@ Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a f
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 
-`check` also rejects raw HTML, disallowed links (including images), headings and unclosed
-fences in CommonMark author fields. Format 1 tag spellings in claims and prose are warnings.
+`check` also rejects raw HTML, disallowed links (including images), link reference definitions,
+headings and unclosed fences in CommonMark author fields, including verification-record notes.
+Format 1 tag spellings in claims and prose are warnings.
 `render` runs that check and repeats containment before emitting a view. Generated text is
 escaped, author Markdown is preserved; it can imitate a provenance block. The Markdown view
 does not guarantee visual separation of prose and provenance (the HTML viewer does). Without
-git metadata the banner states that commits are unavailable and includes each YAML's SHA256.
+explicit `--source-commit` and `--tool-commit` values the banner states that commits are
+unavailable and includes each checked YAML's SHA256. Both arguments require 40 lowercase hex
+characters; no Git subprocess runs. The source commit applies to all selected source files.
 `--merged` includes context files for the selected ids, ordered by layer; without it each
 checked file gets its own view. Errors print diagnostics instead of a partial view; `--json`
 returns `{"ok", "markdown", "findings"}` (`markdown` is null on error).
@@ -811,6 +815,12 @@ class _Parser(argparse.ArgumentParser):
         raise Usage(message)
 
 
+def commit_arg(value):
+    if not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise argparse.ArgumentTypeError("commit must be 40 lowercase hex characters")
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
@@ -859,6 +869,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--spec", help="render only this spec id")
     rd.add_argument("--merged", action="store_true", help="include context bases and overlays")
     rd.add_argument("--with-status", action="store_true", help="include verdict and freshness")
+    rd.add_argument("--source-commit", type=commit_arg, help="source commit (40 lowercase hex)")
+    rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
     rd.add_argument("--format", required=True, choices=("md",))
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
     return parser

@@ -11,26 +11,26 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from collections import Counter
 import re
 import string
-import subprocess
 
 import records
 import speccheck
+import specload
 import specmd
 import textcheck
 
 
 def escape(value) -> str:
     """Literal generated text, including table delimiters and HTML/entity punctuation."""
-    text = str(value).replace("\n", " ").replace("\r", " ")
+    text = specload.visible_name(str(value).replace("\n", " ").replace("\r", " ")).lstrip()
     return re.sub(r"([" + re.escape(string.punctuation) + r"])", r"\\\1", text)
 
 
 def code(value) -> str:
     """A literal CommonMark code span, even for backticks or leading/trailing spaces."""
-    text = str(value).replace("\n", " ").replace("\r", " ")
+    text = specload.visible_name(str(value).replace("\n", " ").replace("\r", " "))
     fence = "`" * (max((len(m[0]) for m in re.finditer(r"`+", text)), default=0) + 1)
     pad = " " if text.startswith("`") or text.endswith("`") or (
         text.startswith(" ") and text.endswith(" ") and text.strip()) else ""
@@ -44,16 +44,38 @@ def _value(value) -> str:
     return str(value)
 
 
-def revision(directory: Path) -> str:
-    """Read a checkout's commit when available; exports say unavailable, never invent a pin."""
-    try:
-        result = subprocess.run(["git", "-C", str(directory), "rev-parse", "HEAD"],
-                                capture_output=True, text=True, check=False)
-    except OSError:
-        return "unavailable (export)"
-    commit = result.stdout.strip()
-    return commit if result.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", commit) else (
-        "unavailable (export)")
+class View(list):
+    """Track intended layout constructs while assembling the view, before parsing it."""
+
+    def __init__(self):
+        super().__init__()
+        self.expected = Counter()
+        self.line = 0
+
+    def append(self, value):
+        if re.match(r"^#{1,6} ", value):
+            self.expected[(self.line, "heading_open", "")] += 1
+        super().append(value)
+        self.line += value.count("\n") + 1
+
+    def extend(self, values):
+        for value in values:
+            self.append(value)
+
+    def author(self, value):
+        for (line, kind, destination), count in specmd.constructs(value).items():
+            if kind in ("link_open", "image"):
+                self.expected[(self.line + line, kind, destination)] += count
+        super().append(value)
+        self.line += value.count("\n") + 1
+        self.append("")
+
+
+def _author(out, value):
+    if isinstance(out, View):
+        out.author(value)
+    else:
+        out.extend([value, ""])
 
 
 def _table(out, title, entries):
@@ -69,7 +91,8 @@ def _table(out, title, entries):
     for entry in entries:
         if "note" in entry:
             out.extend(["Note for " + code(entry.get("name", entry.get("path", title))) + ":",
-                        "", entry["note"], ""])
+                        ""])
+            _author(out, entry["note"])
         if "files" in entry:
             _table(out, "Files: " + entry["name"], entry["files"])
 
@@ -121,7 +144,7 @@ def _citation(file, entry) -> str:
     return escape(cls) + (": " + "; ".join(bits) if bits else "")
 
 
-def _support(out, checker, file, entries, prefix="- "):
+def _support(out, checker, file, entries, prefix="- ", notes=None):
     indent = prefix[:-2]
     for entry in entries:
         if entry["class"] != "inference":
@@ -139,7 +162,7 @@ def _support(out, checker, file, entries, prefix="- "):
                     out.append(indent + "  - " + text)
                 elif "states" in premise:
                     out.append(indent + "  - " + escape(premise["states"]))
-                    _support(out, checker, file, premise["support"], indent + "    - ")
+                    _support(out, checker, file, premise["support"], indent + "    - ", notes)
                 else:
                     assumption = file.data["assumptions"][file.assumptions[premise["assumption"]][1]]
                     out.append(indent + "  - assumption " + code(assumption["id"]) + ": " +
@@ -147,15 +170,15 @@ def _support(out, checker, file, entries, prefix="- "):
             out.append(prefix + "derivation: " + escape(entry["derivation"]))
             if "confidence" in entry:
                 out.append(prefix + "confidence: " + escape(entry["confidence"]))
-        if "note" in entry:
-            out.extend(["", "Note (not evidence):", "", entry["note"], ""])
+        if "note" in entry and notes is not None:
+            notes.append(entry["note"])
 
 
 def _fact(out, checker, rec, status, with_status):
     data, file = rec.data, rec.file
     out.extend(["#### " + escape(data.get("title", data.get("name", rec.id))), ""])
     if "claim" in data:
-        out.extend([data["claim"], ""])
+        _author(out, data["claim"])
     else:
         # Instance and variant rows remain visible, using their structured fields.
         for key, value in data.items():
@@ -165,7 +188,8 @@ def _fact(out, checker, rec, status, with_status):
     out.extend(["**Provenance** (generated):", ""])
     if not data.get("support"):
         out.append("- Gap")
-    _support(out, checker, file, data.get("support", []))
+    notes = []
+    _support(out, checker, file, data.get("support", []), notes=notes)
     for aid in data.get("assumes", []):
         assumption = file.data["assumptions"][file.assumptions[aid][1]]
         out.append("- assumes " + code(aid) + ": " + escape(assumption["text"]))
@@ -185,7 +209,7 @@ def _fact(out, checker, rec, status, with_status):
     for conflict in data.get("conflicts", []):
         out.append("- conflict" + (" (contested)" if "resolution" not in conflict else "") +
                    ": " + escape(conflict["reading"]))
-        _support(out, checker, file, conflict["support"], "  - ")
+        _support(out, checker, file, conflict["support"], "  - ", notes)
         for key in ("resolution", "assumption", "decided"):
             if key in conflict:
                 out.append("  - " + key + ": " + escape(_value(conflict[key])))
@@ -198,19 +222,23 @@ def _fact(out, checker, rec, status, with_status):
         if row["verdict"]:
             text += " · " + escape(row["verdict"] + " " + verdict["date"])
         text += " · " + escape(row["status"])
-        notes = []
+        status_notes = []
         if row["carried"]:
-            notes.append("carried from format " + str(verdict["carried_from"]["format"]))
+            status_notes.append("carried from format " + str(verdict["carried_from"]["format"]))
         if row["second_reader"] == "missing":
-            notes.append("second reader missing")
-        if notes:
-            text += " (" + escape("; ".join(notes)) + ")"
+            status_notes.append("second reader missing")
+        if status_notes:
+            text += " (" + escape("; ".join(status_notes)) + ")"
     out.extend([text, ""])
     if "note" in data:
-        out.extend(["Note (not evidence):", "", data["note"], ""])
+        notes.append(data["note"])
+    for note in notes:
+        out.extend(["Note (not evidence):", ""])
+        _author(out, note)
 
 
-def render(checker, *, spec_id=None, merged=False, with_status=False) -> str:
+def render(checker, *, spec_id=None, merged=False, with_status=False,
+           source_commit=None, tool_commit=None) -> str:
     """Build selected checked-root views; repeat author-field containment before any output.
 
     In merged mode context bases/overlays are included only for ids in the checked roots.
@@ -233,17 +261,19 @@ def render(checker, *, spec_id=None, merged=False, with_status=False) -> str:
                 if bad:
                     raise ValueError(f"{file.spec_id}: {speccheck._where(path)}: {bad[0].message}")
     status = {entry["file"]: {r["key"]: r for r in entry["rows"]} for entry in checker.status}
-    out = []
+    out = View()
     for group in groups:
         base = group[0]
+        if out:
+            out.extend(["Generated view:", ""])
         out.extend(["> Generated by " + code("spec.py render") + ". Do not edit.",
                     "> Canonical form " + code(records.CANONICAL) + "; driver-lab " +
-                    escape(revision(Path(__file__).resolve().parents[3])) + "."])
+                    escape(tool_commit or "unavailable") + "."])
         for file in group:
             relative = file.path.relative_to(file.root.given).as_posix()
-            digest = hashlib.sha256(file.path.read_bytes()).hexdigest()
+            digest = hashlib.sha256(file.loaded.source_bytes).hexdigest()
             out.append("> Source " + code(file.root.label + ":" + relative) + "; commit " +
-                       escape(revision(file.root.real)) + "; SHA256 " + code(digest) + ".")
+                       escape(source_commit or "unavailable") + "; SHA256 " + code(digest) + ".")
         out.extend(["", "# " + escape(base.data.get("name", base.spec_id)), "",
                     code(base.spec_id) + " · " + escape(base.kind) + " · triggers: " +
                     ", ".join(escape(t) for t in base.data.get("triggers", [])), ""])
@@ -259,7 +289,9 @@ def render(checker, *, spec_id=None, merged=False, with_status=False) -> str:
                     if file.is_overlay:
                         out.extend(["### Overlay: " + escape(file.root.layer) + " (" +
                                     escape(file.root.label) + ")", ""])
-                    out.extend([file.data["orientation"], ""])
+                    if file != group[0] and not file.is_overlay:
+                        out.extend(["Context (not facts):", ""])
+                    _author(out, file.data["orientation"])
         sections = speccheck.SECTIONS.get(base.kind, ("facts",))
         if base.is_overlay:
             original = next(f for f in checker.files if f.spec_id == base.spec_id and not f.is_overlay)
@@ -290,7 +322,9 @@ def render(checker, *, spec_id=None, merged=False, with_status=False) -> str:
                     fence = "`" * max(3, max((len(m[0]) + 1 for m in re.finditer(
                         r"`+", notice["text"])), default=3))
                     out.extend([fence + "text", notice["text"], fence, ""])
-    return "\n".join(out).rstrip() + "\n"
+    view = "\n".join(out).rstrip() + "\n"
+    specmd.check_view(view, out.expected)
+    return view
 
 
 def command(api, args):
@@ -308,7 +342,9 @@ def command(api, args):
         return api.EXIT_INVALID, {"ok": False, "findings": [f.as_dict() for f in findings],
                                   "markdown": None, "_text": [str(f) for f in findings]}
     try:
-        view = render(checker, spec_id=args.spec, merged=args.merged, with_status=args.with_status)
+        view = render(checker, spec_id=args.spec, merged=args.merged, with_status=args.with_status,
+                      source_commit=getattr(args, "source_commit", None),
+                      tool_commit=getattr(args, "tool_commit", None))
     except speccheck.UsageError as exc:
         raise api.Usage(str(exc)) from None
     except ValueError as exc:

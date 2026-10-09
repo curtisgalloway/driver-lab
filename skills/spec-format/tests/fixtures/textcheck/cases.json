@@ -176,10 +176,6 @@
       [
         1,
         "html"
-      ],
-      [
-        1,
-        "html"
       ]
     ]
   },
@@ -308,6 +304,10 @@
     "text": "[x][bad]\n\n[bad]: javascript:x",
     "findings": [
       [
+        3,
+        "reference"
+      ],
+      [
         1,
         "link"
       ]
@@ -317,6 +317,10 @@
     "name": "image-ref",
     "text": "![x][bad]\n\n[bad]: data:image/png;base64,xx",
     "findings": [
+      [
+        3,
+        "reference"
+      ],
       [
         1,
         "link"
@@ -487,5 +491,25 @@
     "name": "uppercase-allowed-scheme",
     "text": "[x](HTTPS://example.invalid/x)",
     "findings": []
+  },
+  {
+    "name": "scheme-must-start-url",
+    "text": "[x](javascript:https://example.invalid)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "anchor-must-start-url",
+    "text": "[x](relative#section)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
   }
 ]

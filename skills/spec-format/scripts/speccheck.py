@@ -609,6 +609,9 @@ class Checker:
 
     def check_placeholders(self, f: SpecFile):
         import specmd
+        import textcheck
+
+        author_paths = {path for path, _, _ in textcheck.fields(f.data)}
 
         def walk(node, path):
             if isinstance(node, dict):
@@ -620,7 +623,7 @@ class Checker:
                 for i, v in enumerate(node):
                     walk(v, path + (i,))
             elif isinstance(node, str) and "<" in node:
-                found = specmd.placeholders(node)
+                found = specmd.placeholders(node, skip_html=path in author_paths)
                 if found:
                     self.add(f, path, f"{_where(path)}: unsubstituted template placeholder "
                                       f"{found[0][2]!r}")

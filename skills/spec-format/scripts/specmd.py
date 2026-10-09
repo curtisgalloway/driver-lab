@@ -12,6 +12,7 @@ also live here, so there stays one parse in one module.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from dataclasses import dataclass
 
 _PARSER = None
@@ -98,10 +99,17 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
         out.append(TextFinding(line, kind, message, level))
 
     def inline(children, first):
+        tags = []
         for child in children or []:
             line = first + child.meta.get("field_line", 0)
             if child.type == "html_inline":
-                add(line, "html", "raw HTML")
+                tag = re.fullmatch(r"<(\/?)([A-Za-z][\w-]*)\s*[^>]*>", child.content)
+                if tag and tag[1] and tag[2].lower() in tags:
+                    tags.remove(tag[2].lower())
+                else:
+                    add(line, "html", "raw HTML")
+                    if tag and not tag[1] and not child.content.endswith("/>"):
+                        tags.append(tag[2].lower())
             elif child.type in ("link_open", "image"):
                 url = child.attrGet("href" if child.type == "link_open" else "src") or ""
                 if not allowed_link(url):
@@ -109,7 +117,11 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
             if child.children:
                 inline(child.children, line)
 
-    for token in _parser().parse(text):
+    env = {}
+    tokens = _parser().parse(text, env)
+    for ref in list(env.get("references", {}).values()) + env.get("duplicate_refs", []):
+        add(ref["map"][0] + 1, "reference", "link reference definition inside a field")
+    for token in tokens:
         line = token.map[0] + 1 if token.map else 1
         if token.type == "html_block":
             add(line, "html", "raw HTML")
@@ -132,7 +144,7 @@ V1_TAG = re.compile(
     r"(?:\]|:)", re.IGNORECASE)
 
 
-def _inline_text(children) -> str:
+def _inline_text(children, *, skip_html=False) -> str:
     """The text a reader sees in one inline run, continuous across emphasis and links; image
     alternative text included; code spans and autolinks replaced by BREAK; soft and hard line
     breaks kept as newlines."""
@@ -145,28 +157,30 @@ def _inline_text(children) -> str:
             in_autolink = False
         elif in_autolink:
             continue
-        elif child.type in ("text", "html_inline"):
+        elif child.type == "html_inline" and skip_html:
+            out.append(BREAK)
+        elif child.type in ("text", "text_special", "html_inline"):
             out.append(child.content)
         elif child.type in ("softbreak", "hardbreak"):
             out.append("\n")
         elif child.type == "code_inline":
             out.append(BREAK)
         elif child.type == "image":
-            out.append(BREAK + _inline_text(child.children) + BREAK)
+            out.append(BREAK + _inline_text(child.children, skip_html=skip_html) + BREAK)
     return "".join(out)
 
 
-def text_blocks(text: str) -> list[tuple[int, str]]:
+def text_blocks(text: str, *, skip_html=False) -> list[tuple[int, str]]:
     """(first source line, 0-based; the text outside code) for each block that holds text:
     paragraphs, headings, table cells and raw HTML blocks. Fenced and indented code is left
     out."""
     blocks = []
     for token in _parser().parse(text):
         line = token.map[0] if token.map else 0
-        if token.type == "html_block":
+        if token.type == "html_block" and not skip_html:
             blocks.append((line, token.content))
         elif token.type == "inline":
-            blocks.append((line, _inline_text(token.children)))
+            blocks.append((line, _inline_text(token.children, skip_html=skip_html)))
     return blocks
 
 
@@ -175,7 +189,7 @@ def outside_code(text: str) -> str:
     return "\n".join(t for _, t in text_blocks(text))
 
 
-def placeholders(text: str) -> list[tuple[int, int, str]]:
+def placeholders(text: str, *, skip_html=False) -> list[tuple[int, int, str]]:
     """Template placeholders outside code: (1-based line, 1-based column, placeholder).
 
     The line is the source line (blocks keep their line breaks); the column is where the
@@ -183,12 +197,44 @@ def placeholders(text: str) -> list[tuple[int, int, str]]:
     it (`<board *name*>`) means it is not spelled there literally."""
     source = text.split("\n")
     found = []
-    for first, block in text_blocks(text):
+    for first, block in text_blocks(text, skip_html=skip_html):
         for m in PLACEHOLDER.finditer(block):
             line = first + block.count("\n", 0, m.start())
             found.append((line + 1, _column(source[line] if line < len(source) else "",
                                             m.group(0)), m.group(0)))
     return found
+
+
+def constructs(text: str) -> Counter:
+    """Layout-only signatures: source line, token kind and link destination, never evidence."""
+    result = Counter()
+
+    def inline(children, first):
+        for child in children or []:
+            line = first + child.meta.get("field_line", 0)
+            if child.type in ("link_open", "image", "html_inline"):
+                value = child.attrGet("href" if child.type == "link_open" else "src") or ""
+                result[(line, child.type, value)] += 1
+            if child.children:
+                inline(child.children, line)
+
+    env = {}
+    for token in _parser().parse(text, env):
+        line = token.map[0] if token.map else 0
+        if token.type in ("heading_open", "html_block"):
+            result[(line, token.type, "")] += 1
+        elif token.type == "inline":
+            inline(token.children, line)
+    for ref in list(env.get("references", {}).values()) + env.get("duplicate_refs", []):
+        result[(ref["map"][0], "reference", "")] += 1
+    return result
+
+
+def check_view(text: str, expected: Counter):
+    """Reject a link, image, HTML, heading or definition not placed by the view builder."""
+    actual = constructs(text)
+    if actual != expected:
+        raise ValueError("assembled Markdown containment failed")
 
 
 def _column(line: str, needle: str) -> int:

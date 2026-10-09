@@ -603,3 +603,23 @@ paths as git trees, while git could not read a valid repository. Cost: two check
 verified here. Prevention: identify checkout-dependent suites in export briefs and rerun them
 in the orchestrator's actual worktree. Fix belongs in the implementer brief; no unrelated
 utility or campaign code was changed.
+
+### 2026-10-09T15:16:34-07:00 — round-1 export environment and diagnostic expectations
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The default Python again lacked
+ensurepip; a seeded Python 3.12 temporary environment installed the hash-pinned dependencies.
+Initial batched reads were truncated and a patch failed because its last context did not
+exist. Cost: targeted reads and one corrected patch. New safety rules changed existing
+reference-definition and HTML/placeholder expectations, requiring fixture updates. Prevention:
+use the chapter’s documented interpreter setup, budget combined output, and remove stale patch
+context. Fix belongs in implementer tooling and test authoring guidance.
+
+### 2026-10-09T15:22:19-07:00 — mutation scoring and fixture assumptions
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A missing rendered substring raised
+ValueError in a mutation test; assertions must establish its presence before indexing. A
+fixture assumed every support class allowed notes; switching to its document citation made
+the containment test valid. Self-review caught a status-variable collision in the fix. Cost:
+focused reruns and a repeated mutation pass. Prevention: inspect schema branches before
+editing fixtures, test optional modes, and distinguish assertion kills from crashes. Fix
+belongs in implementation and test authoring guidance.

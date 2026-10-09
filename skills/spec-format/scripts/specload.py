@@ -71,11 +71,20 @@ class Mark:
     column: int
 
 
+NAME_CATEGORIES = frozenset(("Cc", "Cf", "Zl", "Zp", "Co", "Cs", "Cn"))
+
+
+def visible_name(value) -> str:
+    """Make terminal controls and invisible filename characters printable."""
+    return "".join((f"\\u{ord(c):04x}" if ord(c) <= 0xffff else f"\\U{ord(c):08x}")
+                   if unicodedata.category(c) in NAME_CATEGORIES else c for c in str(value))
+
+
 class LoadError(Exception):
     """A file that `load_strict` refuses, with where and why."""
 
     def __init__(self, path: Path | str, line: int, column: int, problem: str):
-        self.path = str(path)
+        self.path = visible_name(path)
         self.line = line
         self.column = column
         self.problem = problem
@@ -94,6 +103,7 @@ class Loaded:
     data: Any
     values: dict[tuple, Mark]
     keys: dict[tuple, Mark]
+    source_bytes: bytes = b""
 
     def mark(self, path: tuple, *, key: bool = False) -> Mark:
         """The position of `path`, or of its nearest ancestor that has one."""
@@ -276,7 +286,10 @@ def load_strict_marked(path: Path | str) -> Loaded:
     Raises `LoadError` for every refused input, and `OSError` when the file cannot be read.
     """
     path = Path(path)
-    source = _decode(path, path.read_bytes())
+    if any(unicodedata.category(c) in NAME_CATEGORIES for c in str(path)):
+        raise LoadError(path, 1, 1, "file name contains a forbidden Unicode character")
+    raw = path.read_bytes()
+    source = _decode(path, raw)
     check_text(path, source)
     loader = None
     try:
@@ -306,7 +319,7 @@ def load_strict_marked(path: Path | str) -> Loaded:
     finally:
         if loader is not None:
             loader.dispose()
-    return Loaded(data, builder.values, builder.keys)
+    return Loaded(data, builder.values, builder.keys, raw)
 
 
 def load_strict(path: Path | str) -> Any:

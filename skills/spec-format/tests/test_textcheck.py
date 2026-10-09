@@ -42,10 +42,11 @@ class Safety(unittest.TestCase):
 
     def test_line_after_inline_break(self):
         self.assertEqual([(f.line, f.kind) for f in specmd.findings("first\n<b>x</b>")],
-                         [(2, "html"), (2, "html")])
+                         [(2, "html")])
         cases = [
-            ("`code\nspan` <b>x</b>", [(2, "html"), (2, "html")]),
-            ("&#10; <b>x</b>", [(1, "html"), (1, "html")]),
+            ("`code\nspan` <b>x</b>", [(2, "html")]),
+            ("&#10; <b>x</b>", [(1, "html")]),
+            ("first\n<ftp://example.invalid/x>", [(2, "link")]),
             ("first\n[x](javascript:x)", [(2, "link")]),
             ("first\n![text\n<b>](https://example.invalid/x)", [(3, "html")]),
             ("[text\n<b>](https://example.invalid/x)", [(2, "html")]),
@@ -61,9 +62,10 @@ class Safety(unittest.TestCase):
                               "repos": [{"files": [{"note": "# bad"}]}]},
                 "instances": [{"note": "# bad", "irq": {"note": "# bad"}}],
                 "notices": [{"text": "<script>", "title": "# exempt"}],
-                "todo": {"text": "# generated"}, "milestones": "# bad", "notes": "# bad"}
+                "todo": {"text": "# generated"}, "milestones": "# bad", "notes": "# bad",
+                "custom": {"notices": [{"note": "# bad"}]}}
         selected = list(textcheck.fields(data))
-        self.assertEqual(len(selected), 13)
+        self.assertEqual(len(selected), 14)
         self.assertTrue(all(value == "# bad" for _, value, _ in selected))
         self.assertFalse(any(path[0] in ("notices", "todo") for path, _, _ in selected))
 

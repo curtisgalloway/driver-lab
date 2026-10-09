@@ -30,12 +30,16 @@ def fields(data, path=()):
 
 
 def check_file(checker, file):
+    check_data(checker, file, file.data, file.records)
+
+
+def check_data(checker, where, data, records=None):
     from speccheck import _where
 
-    for path, value, lint in fields(file.data):
-        owner = next((r for r in file.records.values() if path[:2] == r.path), None)
+    for path, value, lint in fields(data):
+        owner = next((r for r in (records or {}).values() if path[:2] == r.path), None)
         label = f"fact {owner.id!r}, " if owner else ""
         for finding in specmd.findings(value, lint=lint):
-            checker.add(file, path,
+            checker.add(where, path,
                         f"{label}{_where(path)} (field line {finding.line}): {finding.message}",
                         level=finding.level)

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/verify.schema.json",
-  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness and second readers are the checker's (SF2-3).",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness, upstream maps and second readers are the checker's (records.py, SF2-3).",
   "title": "Spec format 2: verification record",
   "type": "object",
   "required": ["format", "spec", "spec_file", "spec_sha256", "canonical", "sources", "summary", "verdicts"],
@@ -59,6 +59,16 @@
       "required": ["basis", "verdict", "date", "verifier"],
       "properties": {
         "basis": {"$ref": "spec.schema.json#/$defs/sha256"},
+        "upstream": {
+          "$comment": "The facts in other roots the fact rests on (reached through references that stay in its own root until they cross), each with its basis when the verdict was reached; absent when there are none. It lets a change upstream read as upstream-stale (D19).",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$comment": "message: an upstream key is a fact's full reference, <spec id>@<root name>#<fact id>",
+            "pattern": "^[a-z0-9][a-z0-9-]*@[a-z0-9][a-z0-9._-]*#[a-z0-9][a-z0-9-]*(?![\\s\\S])"
+          },
+          "additionalProperties": {"$ref": "spec.schema.json#/$defs/sha256"}
+        },
         "verdict": {"$ref": "#/$defs/verdictValue"},
         "date": {"$ref": "spec.schema.json#/$defs/date"},
         "verifier": {"$ref": "spec.schema.json#/$defs/line"},
@@ -123,10 +133,15 @@
       },
       "allOf": [
         {
-          "if": {"not": {"required": ["carried_from"]}},
+          "if": {"required": ["carried_from"],
+                 "properties": {"carried_from": {"properties": {"format": {"const": 1}}}}},
           "then": {
+            "not": {"anyOf": [{"required": ["contrary_evidence"]}, {"required": ["citation_precision"]}]},
+            "$comment": "message: a verdict carried from a format 1 record leaves out contrary_evidence and citation_precision, which that record did not state"
+          },
+          "else": {
             "required": ["contrary_evidence", "citation_precision"],
-            "$comment": "message: a verdict reached under format 2 states contrary_evidence and citation_precision"
+            "$comment": "message: a verdict reached under format 2, or carried from a format 2 record, states contrary_evidence and citation_precision"
           }
         },
         {

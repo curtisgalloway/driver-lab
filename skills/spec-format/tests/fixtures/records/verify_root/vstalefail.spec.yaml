@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: vstalefail
+name: Chip vstalefail
+triggers: [vstalefail]
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: "https://example.invalid/trm.pdf", pages: 80, verified: 2026-10-01}
+facts:
+  - id: reset
+    section: quick-facts
+    title: Reset
+    claim: >-
+      The block resets in 10 cycles.
+    support: [{class: databook, doc: trm, at: [{section: "1"}]}]

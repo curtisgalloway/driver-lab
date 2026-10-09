@@ -28,7 +28,12 @@ already-parsed data and never over prose:
   accepts; with --require-license, also every repos entry no anchor or notice names;
 - under a `public` layer: no `access: internal`, no tool `via:` a skill not named with
   --public-skill; anywhere: no unsubstituted template placeholder (`<...>` outside code);
-- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves.
+- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
+- verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
+  spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
+  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts and a critical
+  fact without a second reader are warnings, errors under --require-verified (`pr`: all; `main`:
+  all but upstream-stale, D19).
 
 A finding in a --context-root's own files is a warning (that root fails in its own checks); a
 finding is always attributed to the file it was found in, so a context root cannot downgrade a
@@ -118,6 +123,8 @@ class Root:
     extension: dict | None = None
     marker: object = None  # the marker's Loaded, for positions
     files: list = dataclasses.field(default_factory=list)
+    spec_paths: list = dataclasses.field(default_factory=list)  # every *.spec.yaml found
+    record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
     # Every error-severity finding its own check produced, before context downgrading. A root
     # with any is untrusted: no reference may rest on it (user decision, 2026-10-08).
     untrusted: list = dataclasses.field(default_factory=list)
@@ -138,6 +145,11 @@ class SpecFile:
     assumptions: dict = dataclasses.field(default_factory=dict)  # id -> path
     documents: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
     repos: dict = dataclasses.field(default_factory=dict)  # name -> (entry, path)
+    # Its verification record (records.py): none | ok | invalid | shared; valid verdicts by id.
+    record_state: str = "none"
+    record_path: Path | None = None
+    record_loaded: object = None
+    verdicts: dict = dataclasses.field(default_factory=dict)  # fact id -> (verdict, key path)
 
     @property
     def kind(self) -> str:
@@ -217,8 +229,12 @@ def through_link(path: Path) -> bool:
 
 
 class Checker:
-    def __init__(self, api, spdx, *, require_license=False, public_skills=()):
+    def __init__(self, api, spdx, *, require_license=False, public_skills=(),
+                 require_verified=None):
         self.api = api
+        self.require_verified = require_verified  # None, "pr" or "main" (D19)
+        self.schemas = None
+        self.status: list = []  # per spec file: freshness rows (records.second_pass)
         self.spdx = spdx
         self.require_license = require_license
         self.public_skills = set(public_skills)
@@ -264,6 +280,7 @@ class Checker:
     # --- loading -----------------------------------------------------------------------------
 
     def load_roots(self, checked: list[Path], context: list[Path], schemas):
+        self.schemas = schemas
         given = [(p, False) for p in checked] + [(p, True) for p in context]
         for p, _ in given:
             if not p.is_dir():
@@ -293,7 +310,9 @@ class Checker:
             self.read_marker(root, schemas)
             files = self.walk(root)
             if root.accepts is None:
+                root.record_paths = []
                 continue  # an invalid marker: its specs are not read (references to it dangle)
+            root.spec_paths = files
             for path in files:
                 self.load_spec(root, path, schemas)
 
@@ -356,6 +375,13 @@ class Checker:
                                                      f"{root.label}: one root, one marker")
                 elif name.endswith(".spec.yaml"):
                     found.append(path)
+                elif name.endswith(".verify.yaml"):
+                    if Path(top) == root.given / "resources":
+                        root.record_paths.append(path)
+                    else:
+                        self.add((path, root, None), (), "a verification record lives in the "
+                                                         "root's own resources/ directory: move "
+                                                         "it there")
                 elif lower.endswith(".spec.md"):
                     self.add((path, root, None), (), "a format 1 spec in a format 2 root: "
                                                      "convert it to <name>.spec.yaml")
@@ -366,6 +392,12 @@ class Checker:
                             if ".facts." in lower else "name it *.spec.yaml (lowercase, .yaml), "
                             "or move it out of the root")
                     self.add((path, root, None), (), f"not read as a spec: {want}")
+                elif ".verify." in lower:
+                    # .verify.yml, a case variant, a backup, a format 1 .verify.md: a record
+                    # discovery passes over would leave its verdicts unread without a word
+                    self.add((path, root, None), (), "not read as a verification record: name "
+                                                     "it <name>.verify.yaml (lowercase, .yaml) "
+                                                     "in resources/, or move it out of the root")
             dirs[:] = [d for d in dirs if not (Path(top) / d).is_symlink()]
         for exc in failures:
             where = Path(getattr(exc, "filename", None) or root.given)
@@ -1006,14 +1038,19 @@ class Checker:
     # --- driver ------------------------------------------------------------------------------
 
     def run(self):
+        import records
+
         self.check_roots()
         for f in self.files:
             self.index_file(f)
         for f in self.files:
             self.check_file(f)
+        records.check_structure(self, self.schemas)
         self.check_composition()
         self.check_references()
+        records.first_pass(self)  # current FAILs: defects of a root's data, before trust
         self.check_trust()
+        records.second_pass(self, self.require_verified)
 
 
 def _untrusted(root: Root) -> str:
@@ -1055,10 +1092,11 @@ def _rel(f: SpecFile) -> str:
 
 
 def check(api, schemas, roots, *, context_roots=(), require_license=False, public_skills=(),
-          stubs=(), stubs_from=()):
-    """Run the checker; returns the Checker (its roots, files and findings)."""
+          stubs=(), stubs_from=(), require_verified=None):
+    """Run the checker; returns the Checker (its roots, files, findings and status)."""
     spdx = load_spdx()
-    checker = Checker(api, spdx, require_license=require_license, public_skills=public_skills)
+    checker = Checker(api, spdx, require_license=require_license, public_skills=public_skills,
+                      require_verified=require_verified)
     checker.load_roots(list(roots), list(context_roots), schemas)
     checker.run()
     checker.check_stubs(list(stubs), list(stubs_from))

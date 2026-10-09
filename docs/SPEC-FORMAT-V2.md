@@ -546,6 +546,7 @@ summary: {pass: 2, fail: 0, unverifiable: 0, gap: 0, adjudicate: 0}
 verdicts:
   gic-node:                         # the bare fact id: records are per file
     basis: <64 hex>                 # the fact's basis hash when this verdict was reached
+    upstream: {...}                 # facts in other roots it rests on, with their bases (see Freshness)
     verdict: PASS                   # PASS | FAIL | UNVERIFIABLE | GAP | ADJUDICATE
     date: 2026-10-08
     verifier: "<agent, model, harness>"
@@ -610,10 +611,38 @@ fact with no verdict is **unverified**. `spec.py status --stale` lists the stale
 facts, which is exactly the delta a re-verification has to cover. RG1's stop rule ("re-verify
 only the changed bullets") becomes mechanical.
 
+Three points the formula leaves open, settled in SF2-3 (proposed by the implementer, **pending
+the orchestrator's and the user's decision**; `skills/spec-format/scripts/records.py` implements
+them):
+
+- **Telling upstream-stale apart needs a second stored value.** One hash cannot say which of its
+  inputs changed. A verdict therefore also records **`upstream`**: the facts in other roots its
+  fact rests on, reached through references that stay in the fact's own root until they cross,
+  each with its basis when the verdict was reached (absent when there are none). A stale verdict
+  is upstream-stale when recomputing the basis with those recorded upstream bases gives back the
+  verdict's `basis` (nothing in the fact's own root changed), and the status names the upstream
+  facts whose basis moved. A current verdict's `upstream` must match exactly, which the checker
+  enforces; without it, an upstream change reads as plain stale, the stricter outcome.
+  `spec.py status --json` prints each fact's basis and `upstream` map for the verifier to copy.
+- **Reference cycles.** `relates` can form a cycle (`same-as` both ways); premises cannot. A
+  cycle (a strongly connected set of facts) is hashed as one: its digest is
+  `sha256("fact-v1-cycle\n" + sorted "<full reference> sha256(local part)" lines of its members +
+  "\n" + sorted "<full reference> <basis>" lines of the facts outside it they reference)`, and a
+  member's line for another member carries the digest in place of a basis. Outside cycles this
+  is the formula above unchanged; on a cycle, any change to any member stales every member. (The
+  *local part* is the formula's first three canonical terms.)
+- **A basis that cannot be established is unknown, never current**: a reference that does not
+  resolve or that the check failed, a cited `doc`, `repo` or assumption the file does not list,
+  a cited path not in the repos entry's `files`, or a fact resting on such a fact. Unknown is a
+  warning, and an error under either `--require-verified` mode.
+
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and
 errors under `--require-verified`. A stale verdict caused only by a fact in another root
 changing (through a root-qualified reference) is reported as **upstream-stale**, naming the
-upstream fact.
+upstream fact. A record's own defects (a key naming no fact, a summary that does not match) and
+a current `FAIL` make the root untrusted, like any error in its files; the freshness findings
+(stale, unverified, a missing second reader) are a policy on the checked root, reported for
+checked roots only, and do not (SF2-3, pending decision with the points above).
 
 How the spec repositories' CI uses this (D19):
 

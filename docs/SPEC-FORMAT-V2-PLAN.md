@@ -104,7 +104,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 |----|---------|--------------|--------|
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
-| SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
+| SF2-3 | Verification records and per-fact freshness | SF2-2 | in progress (implemented, awaiting review) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
 | SF2-6 | Resolve, show and drift | SF2-2 | pending |
@@ -312,7 +312,9 @@ Needs the design's Verification records section and SF2-2's composition API. Sma
 exacting tests. Split point: `status` can move to SF2-4 if needed.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-3.md`. Notebook: `notebook/SF2-3.md`.
+Status: in_progress; implemented, awaiting review. Evidence: `evidence/SF2-3.md` (written after
+review). Notebook: [SF2-3](../notebook/SF2-3.md). Pending decision: the three points the design's
+Freshness section marks "pending" (the `upstream` map, reference cycles, unknown bases).
 
 ---
 

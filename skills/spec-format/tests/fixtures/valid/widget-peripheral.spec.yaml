@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: peripheral
+id: widget-peripheral
+name: Widget peripheral
+resources:
+  documents:
+    - {name: trm, class: databook, title: Widget TRM, url: https://example.invalid/widget-trm.pdf}
+facts: []

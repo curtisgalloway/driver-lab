@@ -6,7 +6,7 @@
 Run:  python3 -m unittest discover -s skills/hardware-investigator/tests -v
 
 Builds the two fixture source trees as git repositories in a temporary directory, fills the
-expected facts files with the real commits, and checks the gate and ``anchor_check.py --root``
+expected facts files with the real commits, and checks the format 2 gate and resolver
 exit codes the example promises.
 """
 
@@ -20,7 +20,7 @@ import unittest
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL = HERE.parent
 GATE = SKILL / "scripts" / "license_gate.py"
-ANCHOR = SKILL.parent / "peripheral-spec" / "scripts" / "anchor_check.py"
+SPEC = SKILL.parent / "spec-format" / "scripts" / "spec.py"
 EX = SKILL / "examples"
 
 
@@ -55,21 +55,25 @@ class WorkedExample(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def facts(self, answer, name):
-        text = (EX / "expected" / answer).read_text().replace("@REV", "@" + self.rev[name])
+        text = (EX / "expected" / answer).read_text().replace("1" * 40, self.rev[name])
         path = self.tmp / answer
         path.write_text(text)
         return path
 
     def anchor(self, answer, pin, tree, root):
-        return py(ANCHOR, self.facts(answer, tree), "--repo", f"{pin}={self.tmp / tree}",
-                  "--root", EX / "roots" / root, "--require-license")
+        file = self.facts(answer, tree)
+        rc, out = py(GATE, "--facts", file, "--root", EX / "roots" / root)
+        if rc:
+            return rc, out
+        return py(SPEC, "resolve", file, "--repo", f"{pin}={self.tmp / tree}",
+                  "--root", EX / "roots" / root)
 
     def test_run_a_accepting_root_passes(self):
         rc, out = py(GATE, "--root", EX / "roots" / "gpl", "GPL-2.0-only")
         self.assertEqual(rc, 0, out)
-        rc, out = self.anchor("answer-linux.md", "linux", "widget-linux", "gpl")
+        rc, out = self.anchor("answer-linux.facts.yaml", "linux", "widget-linux", "gpl")
         self.assertEqual(rc, 0, out)
-        self.assertIn("result: PASS", out)
+        self.assertIn("anchor(s) resolved, 0 skipped", out)
 
     def test_run_b_refusing_root_stops_at_the_gate(self):
         rc, out = py(GATE, "--root", EX / "roots" / "permissive", "GPL-2.0-only")
@@ -77,16 +81,16 @@ class WorkedExample(unittest.TestCase):
         self.assertIn("refused: GPL-2.0-only", out)
 
     def test_run_b_backstop_fails_if_the_gpl_facts_are_cited_anyway(self):
-        rc, out = self.anchor("answer-linux.md", "linux", "widget-linux", "permissive")
+        rc, out = self.anchor("answer-linux.facts.yaml", "linux", "widget-linux", "permissive")
         self.assertEqual(rc, 1, out)
-        self.assertIn("license gate:", out)
+        self.assertIn("GPL-2.0-only is not accepted", out)
 
     def test_run_c_other_source_passes_the_refusing_root(self):
         rc, out = py(GATE, "--root", EX / "roots" / "permissive", "MIT")
         self.assertEqual(rc, 0, out)
-        rc, out = self.anchor("answer-fw.md", "fw", "widget-fw", "permissive")
+        rc, out = self.anchor("answer-fw.facts.yaml", "fw", "widget-fw", "permissive")
         self.assertEqual(rc, 0, out)
-        self.assertIn("result: PASS", out)
+        self.assertIn("anchor(s) resolved, 0 skipped", out)
 
     def test_source_licenses_match_the_example_text(self):
         linux = (EX / "sources/widget-linux/drivers/tty/serial/widget.c").read_text()

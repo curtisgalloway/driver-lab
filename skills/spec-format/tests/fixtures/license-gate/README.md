@@ -12,8 +12,8 @@ entries' licenses and the root marker, so no repository is fetched.
 - `roots/gpl`, `roots/docs`, `roots/permissive`: format 2 markers shaped like the three spec
   repositories (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`).
 - `specs/<row>.spec.yaml`: one spec per row of the format 1 matrix (`<row>-spec.md` there). Format
-  2 has no peripheral kind until SF2-7, so each row is an `ip` spec carrying the same repos
-  entries and anchors. Two rows changed shape with the format: `dual-gpl-mit` cites its `.dtsi`
+  2 uses `kind: peripheral` (SF2-7a), carrying the same repos entries and anchors.
+  Two rows changed shape with the format: `dual-gpl-mit` cites its `.dtsi`
   as `DT` (format 1 gated only `[src]`; format 2 gates `DT` and `rtl` too), and `docs-only` and
   `docs-named` both cite named documents, since format 2 has no free-text citation.
 - `expected.json`: the exit code of `spec.py check <root> --require-license` for every pair, the

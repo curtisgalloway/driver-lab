@@ -233,7 +233,7 @@ class ValidFixtures(Validator):
         kinds = set()
         for path in files:
             kinds.add(yaml.safe_load(path.read_text(encoding="utf-8"))["kind"])
-        self.assertEqual(kinds, {"board", "soc", "chip", "ip", "overlay", "facts"})
+        self.assertEqual(kinds, {"board", "soc", "chip", "ip", "overlay", "facts", "peripheral"})
         record = VALID / "resources" / "widget-soc.verify.yaml"
         code, result = run(["validate", "--json", "--root", str(VALID),
                             str(VALID / "board-specs.yaml"), str(record)]
@@ -283,7 +283,6 @@ class Kinds(Validator):
         cases = [
             ("format 1", soc(format=1), "format"),
             ("format as a string", soc(format="2"), "format"),
-            ("peripheral not yet", soc(kind="peripheral"), "kind"),
             ("unknown top-level key", soc(extra="x"), "unknown key 'extra'"),
             ("soc without instances", soc(instances=DROP), "'instances' is a required"),
             ("soc with parts", soc(parts=["x"]), "unknown key 'parts'"),
@@ -370,9 +369,9 @@ class Facts(Validator):
             ("todo unknown check", fact(todo={"check": "board", "text": "x"}), "is not one of"),
             ("todo unknown key", fact(todo=dict(TODO, how="x")), "unknown key 'how'"),
             ("blank note", fact(note=" "), "does not match"),
-            ("data payload not yet", fact(data={"register": {}}), "unknown key 'data'"),
-            ("requirement not yet", fact(requirement="hw-required"),
-             "unknown key 'requirement'"),
+            ("board kinds have no payload", fact(data={"register": {}}), "should not be valid"),
+            ("board kinds have no requirement", fact(requirement="hw-required"),
+             "should not be valid"),
         ]
         for label, f, expected in cases:
             with self.subTest(label):

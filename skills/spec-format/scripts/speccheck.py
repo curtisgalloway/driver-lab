@@ -57,6 +57,9 @@ SECTIONS = {
     "soc": ("quick-facts", "gotchas"),
     "chip": ("quick-facts", "gotchas"),
     "ip": ("standards", "programming-model", "variants-quirks", "gotchas"),
+    "peripheral": ("identity", "registers", "sequences", "data-formats", "interrupts",
+                   "dma", "sub-protocols", "target", "gotchas", "open-questions"),
+    "facts": ("facts",),
 }
 ANCHORED = ("src", "DT", "rtl")
 DOC_CLASS = {"databook": "databook", "standard": "standard", "doc": "doc"}  # citation -> document
@@ -167,7 +170,8 @@ class SpecFile:
 
     @property
     def spec_id(self) -> str:
-        return self.data["overlays"] if self.is_overlay else self.data["id"]
+        return self.data["overlays"] if self.is_overlay else self.data.get(
+            "id", self.path.name.removesuffix(".facts.yaml"))
 
 
 @dataclasses.dataclass(eq=False)
@@ -177,6 +181,7 @@ class Record:
     file: SpecFile
     path: tuple
     data: dict
+    parent: object = None
 
     @property
     def id(self) -> str:
@@ -190,24 +195,24 @@ class Record:
 def supports(data: dict, base: tuple):
     """Every support entry a record carries, with its path: its own, its premises', and its
     conflicts' (a premise's or a conflict's support is never an inference: the schema)."""
-    for i, entry in enumerate(data.get("support", [])):
-        yield entry, base + ("support", i)
-        if entry.get("class") == "inference":
-            for j, premise in enumerate(entry.get("premises", [])):
-                for k, sub in enumerate(premise.get("support", [])):
-                    yield sub, base + ("support", i, "premises", j, "support", k)
-    for c, conflict in enumerate(data.get("conflicts", [])):
-        for k, sub in enumerate(conflict.get("support", [])):
-            yield sub, base + ("conflicts", c, "support", k)
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "support":
+                for i, entry in enumerate(value):
+                    yield entry, base + (key, i)
+            yield from supports(value, base + (key,))
+    elif isinstance(data, list):
+        for i, value in enumerate(data):
+            yield from supports(value, base + (i,))
 
 
 def references(data: dict, base: tuple):
     """Every fact reference a record makes: (kind, reference, path of the value)."""
-    for i, entry in enumerate(data.get("support", [])):
+    for entry, at in supports(data, base):
         if entry.get("class") == "inference":
             for j, premise in enumerate(entry.get("premises", [])):
                 if "fact" in premise:
-                    yield "premise", premise["fact"], base + ("support", i, "premises", j, "fact")
+                    yield "premise", premise["fact"], at + ("premises", j, "fact")
     for r, relation in enumerate(data.get("relates", [])):
         yield "relates", relation["fact"], base + ("relates", r, "fact")
     for entry, path in supports(data, base):
@@ -455,6 +460,19 @@ class Checker:
                                                 f"record's keys")
                     continue
                 f.records[rid] = Record(f, (key, i), item)
+        import peripheral
+
+        for parent in list(f.records.values()):
+            for child, path in peripheral.subrecords(parent.data, parent.path):
+                rid = parent.id + "." + child["id"]
+                if rid in f.records:
+                    f.duplicated.add(rid)
+                    self.add(f, path + ("id",), f"sub-key {rid!r} is used twice")
+                else:
+                    data = dict(child, id=rid)
+                    if parent.data.get("critical"):
+                        data["critical"] = True
+                    f.records[rid] = Record(f, path, data, parent)
         for i, item in enumerate(f.data.get("assumptions", [])):
             if item["id"] in f.assumptions:
                 f.ambiguous.add(("assumptions", item["id"]))
@@ -486,7 +504,11 @@ class Checker:
         textcheck.check_file(self, f)
         cited = set()  # repos names an anchor or a notice of this file names
         for rec in f.records.values():
-            self.check_record(f, rec, cited)
+            if rec.parent is None:
+                self.check_record(f, rec, cited)
+        import peripheral
+
+        peripheral.check_file(self, f)
         for i, notice in enumerate(f.data.get("notices", [])):
             cited.add(notice["repo"])
             self.gate_name(f, ("notices", i, "repo"), notice["repo"], "a notice")
@@ -538,11 +560,11 @@ class Checker:
                                                  f"files of repos entry {name!r} (the closed "
                                                  f"list of cited paths, D12)", citation=True)
         names = [(a, rec.path + ("assumes", i)) for i, a in enumerate(rec.data.get("assumes", []))]
-        for i, entry in enumerate(rec.data.get("support", [])):
+        for entry, at in supports(rec.data, rec.path):
             for j, premise in enumerate(entry.get("premises", [])):
                 if "assumption" in premise:
                     names.append((premise["assumption"],
-                                  rec.path + ("support", i, "premises", j, "assumption")))
+                                  at + ("premises", j, "assumption")))
         for name, path in names:
             if name not in f.assumptions:
                 self.reject(f, path, f"{what}: assumption {name!r} is not in this file's "
@@ -758,7 +780,8 @@ class Checker:
                         relation = None
                         if kind == "relates":
                             relation = rec.data["relates"][path[-2]]["relation"]
-                        dup = (kind, target, relation)
+                        scope = path[:-3] if kind == "premise" else ()
+                        dup = (kind, target, relation, scope)
                         if dup in seen:
                             self.reject(f, path, f"{what}: {ref!r} names {target.full}, as "
                                                  f"{seen[dup]!r} already does in this {kind} list")
@@ -1140,4 +1163,31 @@ def check(api, schemas, roots, *, context_roots=(), require_license=False, publi
     checker.load_roots(list(roots), list(context_roots), schemas)
     checker.run()
     checker.check_stubs(list(stubs), list(stubs_from))
+    return checker
+
+
+def check_facts(api, schemas, paths, target, *, require_license=False, public_skills=(),
+                context_roots=(), stubs=(), stubs_from=(), require_verified=None):
+    """Check investigator output against a target marker without installing it in a root."""
+    if context_roots or stubs or stubs_from or require_verified:
+        raise UsageError("standalone facts checks do not take context, stub or verification options")
+    if not target.is_dir() or through_link(target):
+        raise UsageError("--root must name a directory reached without symbolic links")
+    if not (target / MARKER).is_file():
+        raise PreconditionError("--root has no board-specs.yaml")
+    checker = Checker(api, load_spdx(), require_license=require_license, public_skills=public_skills)
+    checker.schemas = schemas
+    root = Root(target, target.resolve(), False, 0)
+    checker.roots.append(root)
+    checker.read_marker(root, schemas)
+    for path in paths:
+        if not path.name.endswith(".facts.yaml") or not path.is_file() or through_link(path):
+            raise UsageError("check <file> --root requires regular *.facts.yaml files")
+        if root.accepts is not None:
+            checker.load_spec(root, path, schemas)
+    for file in checker.files:
+        checker.index_file(file)
+        checker.check_file(file)
+    checker.check_references()
+    checker.check_trust()
     return checker

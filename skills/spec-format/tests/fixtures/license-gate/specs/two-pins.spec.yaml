@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Two repos entries: BSD firmware and a GPL-2.0-only kernel (synthetic license-gate fixture; format 2 of the v1 two-pins-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-two-pins
 name: Widget block, two-pins
 triggers: [gate two pins]
@@ -22,14 +22,14 @@ resources:
       files: [{path: drivers/widget.c, license_from: spdx-line}]
 facts:
   - id: stub-magic
-    section: programming-model
+    section: identity
     title: Stub magic
     claim: The stub magic is at 0xF0.
     support:
       - class: src
         anchors: [{repo: tools, path: armstubs/armstub8.S, lines: [2, 2], symbol: stub_magic}]
   - id: ctrl-offset
-    section: programming-model
+    section: identity
     title: CTRL offset
     claim: CTRL is at offset 0x10.
     support:

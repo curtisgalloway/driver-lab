@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # A repos entry that states no license (a schema error) (synthetic license-gate fixture; format 2 of the v1 unlicensed-pin-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-unlicensed-pin
 name: Widget block, unlicensed-pin
 triggers: [gate unlicensed pin]
@@ -16,7 +16,7 @@ resources:
       files: [{path: armstubs/armstub8.S, license_from: spdx-line}]
 facts:
   - id: stub-magic
-    section: programming-model
+    section: identity
     title: Stub magic
     claim: The stub magic is at 0xF0.
     support:

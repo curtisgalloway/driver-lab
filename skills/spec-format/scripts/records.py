@@ -152,7 +152,7 @@ def local_part(rec):
         entry["files"] = [_entry("files", listed[p]) for p in sorted(cited)]
         repos[name] = entry
     names = list(rec.data.get("assumes", []))
-    for entry in rec.data.get("support", []):
+    for entry, _ in speccheck.supports(rec.data, ()):
         names += [p["assumption"] for p in entry.get("premises", []) if "assumption" in p]
     assumptions = {}
     for name in names:
@@ -281,6 +281,8 @@ class Freshness:
     def edges(self, rec):
         if rec not in self._edges:
             out = []
+            if rec.parent is not None:
+                out.append((rec.parent.full, rec.parent, None))
             for _, ref, path in self._refs(rec.data, rec.path):
                 target, why = self.checker.resolve(rec.file, ref)
                 if target is not None and self.failed is not None and (rec.file, path) in self.failed:
@@ -453,13 +455,12 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
             checker.add(where, kpath, f"verdict key {key!r} names no fact, instance or variant "
                                       f"of {rel}", key=True)
             continue
-        if dot:
+        if dot and (key not in f.records or key in f.duplicated):
             checker.add(where, kpath, f"verdict key {key!r}: {fid!r} has no field or step "
                                       f"{sub!r} with its own support (a sub-key names a "
-                                      f"register field or sequence step, D16; {f.kind} specs "
-                                      f"have none)", key=True)
+                                      f"register field or sequence step, D16)", key=True)
             continue
-        rec = f.records[fid]
+        rec = f.records[key]
         if rec.path[0] == "facts":
             gap = "support" not in rec.data
             if gap and v["verdict"] != "GAP":
@@ -480,7 +481,7 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
                                 f"verdict key {key!r}: a reader's verdict {reader['verdict']} "
                                 f"disagrees with {v['verdict']}; record the disagreement as "
                                 f"ADJUDICATE with readings")
-        f.verdicts[fid] = (v, kpath)
+        f.verdicts[key] = (v, kpath)
     for name, value in SUMMARY.items():
         if data["summary"][name] != counts[value]:
             checker.add(where, ("summary", name), f"summary {name}: {data['summary'][name]}, but "

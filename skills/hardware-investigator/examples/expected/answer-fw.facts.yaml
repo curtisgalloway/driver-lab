@@ -1,0 +1,118 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: facts
+resources:
+  repos:
+  - name: fw
+    url: https://example.invalid/widget-fw
+    commit: '1111111111111111111111111111111111111111'
+    license: MIT
+    role: source
+    files:
+    - path: uart/widget_uart_init.c
+      license_from: spdx-line
+facts:
+- id: reg-ctrl
+  section: facts
+  title: CTRL
+  data:
+    register:
+      name: UART_CTRL
+      offset: '0x0'
+      width: 32
+      access: rw
+      reset: '0x0'
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 4
+      - 4
+      symbol: UART_CTRL
+- id: reg-baud
+  section: facts
+  data:
+    register:
+      name: UART_BAUD
+      offset: '0x4'
+      width: 32
+      access: rw
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 5
+      - 5
+      symbol: UART_BAUD
+- id: reg-lcr
+  section: facts
+  data:
+    register:
+      name: UART_LCR
+      offset: '0x8'
+      width: 32
+      access: rw
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 6
+      - 6
+      symbol: UART_LCR
+- id: seq-init
+  section: facts
+  title: Initialization
+  claim: Clear CTRL, write BAUD, write LCR, then enable CTRL.
+  requirement: comment-explained
+  data:
+    sequence:
+      steps:
+      - id: s1
+        action: write 0 to CTRL
+        support:
+        - class: src
+          anchors:
+          - repo: fw
+            path: uart/widget_uart_init.c
+            lines:
+            - 10
+            - 10
+            symbol: uart_early_init
+            comment: true
+      - id: s2
+        action: write the divisor to BAUD
+      - id: s3
+        action: write 8N1 format to LCR
+      - id: s4
+        action: set bit 0 in CTRL
+      order:
+      - before: s2
+        after: s3
+        requirement: comment-explained
+        support:
+        - class: src
+          anchors:
+          - repo: fw
+            path: uart/widget_uart_init.c
+            lines:
+            - 6
+            - 6
+            symbol: UART_LCR
+            comment: true
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 10
+      - 13
+      symbol: uart_early_init
+      comment: true

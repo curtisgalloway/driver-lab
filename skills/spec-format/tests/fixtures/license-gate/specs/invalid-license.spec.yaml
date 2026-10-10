@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # A repos entry whose license is not SPDX (synthetic license-gate fixture; format 2 of the v1 invalid-license-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-invalid-license
 name: Widget block, invalid-license
 triggers: [gate invalid license]
@@ -17,7 +17,7 @@ resources:
       files: [{path: drivers/widget.c, license_from: spdx-line}]
 facts:
   - id: ctrl-offset
-    section: programming-model
+    section: identity
     title: CTRL offset
     claim: CTRL is at offset 0x10.
     support:

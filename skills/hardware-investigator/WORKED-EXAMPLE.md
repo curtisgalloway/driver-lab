@@ -5,8 +5,12 @@ SPDX-License-Identifier: Apache-2.0
 
 # Worked example: the Widget UART against three target roots
 
+**Terms:** a facts file is structured evidence without a spec identity; a pin is the full
+commit identifying source bytes; a target root is a directory whose marker states accepted
+licenses. See the [glossary](../../GLOSSARY.md).
+
 Everything here is synthetic. `<skill>` is the `hardware-investigator` directory; `<scratch>` is
-an empty directory you create; `<bx>` is `<skill>/../board-expert`. Run the commands as written
+an empty directory you create; `<sf>` is `<skill>/../spec-format`; `<bx>` is `<skill>/../board-expert`. Run the commands as written
 and compare. The expected facts files are under `examples/expected/`; write your own from the
 sources first and compare after, so the example tests the method and not copying.
 
@@ -38,6 +42,13 @@ git -C <scratch>/widget-fw add .
 git -C <scratch>/widget-fw -c user.name=example -c user.email=example@example.com commit -q -m fixture
 ```
 
+Use the hash-pinned spec-format environment for the format 2 commands:
+
+```
+uv venv <scratch>/venv
+uv pip install --python <scratch>/venv/bin/python --require-hashes -r <sf>/requirements.txt
+```
+
 ## Run A: target root `examples/roots/gpl` (accepting)
 
 Caller sources: `linux=<scratch>/widget-linux`.
@@ -52,13 +63,15 @@ Caller sources: `linux=<scratch>/widget-linux`.
 4. Gate it: `python3 <skill>/scripts/license_gate.py --root <skill>/examples/roots/gpl GPL-2.0-only`
    prints `accepted: GPL-2.0-only` and exits 0.
 5. Pin: `git -C <scratch>/widget-linux rev-parse HEAD`. Read `widget.c`, write the facts file
-   (compare `examples/expected/answer-linux.md`, whose `@REV` stands for the commit).
+   (compare `examples/expected/answer-linux.facts.yaml`, whose 40-character all-ones `commit` stands for the real commit).
 6. Check:
    ```
-   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
-       --repo linux=<scratch>/widget-linux --root <skill>/examples/roots/gpl --require-license
+   <scratch>/venv/bin/python <sf>/scripts/spec.py check <scratch>/answer-linux.facts.yaml \
+       --root <skill>/examples/roots/gpl --require-license
+   <scratch>/venv/bin/python <sf>/scripts/spec.py resolve <scratch>/answer-linux.facts.yaml \
+       --repo linux=<scratch>/widget-linux --root <skill>/examples/roots/gpl
    ```
-   Expected: `result: PASS (0 errors, 0 warnings)`, exit 0.
+   Expected: the check has zero errors and warnings, the resolver has zero skipped anchors, and both exit 0.
 
 ## Run B: target root `examples/roots/permissive`, caller sources `linux=…` only (refusing)
 
@@ -81,18 +94,20 @@ Caller sources: `linux=<scratch>/widget-linux`.
    <skill>/examples/roots/permissive MIT` prints `accepted: MIT`, exit 0. This happens before you
    open the file for evidence.
 3. Pin `fw`, read `uart/widget_uart_init.c`, write the facts file (compare
-   `examples/expected/answer-fw.md`), then check:
+   `examples/expected/answer-fw.facts.yaml`), then check:
    ```
-   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
-       --repo fw=<scratch>/widget-fw --root <skill>/examples/roots/permissive --require-license
+   <scratch>/venv/bin/python <sf>/scripts/spec.py check <scratch>/answer-fw.facts.yaml \
+       --root <skill>/examples/roots/permissive --require-license
+   <scratch>/venv/bin/python <sf>/scripts/spec.py resolve <scratch>/answer-fw.facts.yaml \
+       --repo fw=<scratch>/widget-fw --root <skill>/examples/roots/permissive
    ```
-   Expected: `result: PASS (0 errors, 0 warnings)`.
+   Expected: both commands exit 0, with no check errors or skipped anchors.
 4. The report's *Sources* section lists `linux` as refused (GPL-2.0-only) and `fw` as accepted
    (MIT); the facts cite `fw` only.
 
 ## What a failing run looks like
 
-If, in Run C, the facts file had cited `[src:linux: …]` with a `GPL-2.0-only` pin, step 3's
-check would exit 1 with `license gate: … cites source pin 'linux' (GPL-2.0-only), which root …
-does not accept`. That is the final backstop, not the method: the method refuses at the gate in
-step 1, before the source is read.
+If a facts file cites a `linux` entry licensed `GPL-2.0-only` against the permissive root,
+`spec.py check <file> --root <target> --require-license` exits 1 and names the refused license.
+`license_gate.py --facts <file> --root <target>` runs the same check. That is the final
+backstop: the method refuses at the earlier expression gate before reading source evidence.

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Documents only, a project document cited by heading (synthetic license-gate fixture; format 2 of the v1 docs-only-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-docs-only
 name: Widget block, docs-only
 triggers: [gate docs only]
@@ -11,7 +11,7 @@ resources:
     - {name: widget-guide, class: doc, title: Widget programming guide, url: "https://example.invalid/widget-guide"}
 facts:
   - id: reset-time
-    section: programming-model
+    section: identity
     title: Reset time
     claim: The block resets in 10 us.
     support: [{class: doc, doc: widget-guide, at: [{heading: Reset}]}]

@@ -23,8 +23,14 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
   - the privacy and open-side checks run from this script's own directory, over WORKTREE's
     tracked files plus the new untracked ones the patch added (git apply leaves them
     untracked, and `git ls-files` alone would never see them);
-  - a patch that touches a gate input (the check scripts, this script, the pinned
-    requirements, CI workflows) fails the gate, so the orchestrator reads that change first.
+  - which paths changed comes from WORKTREE itself (`git diff HEAD` and the untracked files),
+    never from parsing PATCH, so renames, quoted names, binary and mode-only changes count;
+  - a change to a gate input (the check scripts, this script, the pinned requirements, CI
+    workflows) fails the gate, so the orchestrator reads that change first, and so does a
+    binary change, which no scan here can read;
+  - every scan runs before any patched code. The suites run last, and the gate fails if
+    WORKTREE's changes differ afterwards, so patched code cannot hide or alter what was
+    scanned.
 The test suites necessarily run the patched code; whether its tests still mean anything is a
 review question, not one this gate can answer.
 
@@ -33,6 +39,7 @@ or a new untracked file holds a home directory path; 2 usage error.
 """
 
 import argparse
+import hashlib
 import importlib.util
 import os
 import re
@@ -51,7 +58,6 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 GATE_INPUTS = re.compile(
     r"^(utilities/(check-[^/]*|patch-gate)\.py|skills/spec-format/requirements\.txt|"
     r"\.github/.*)$")
-PATCH_PATH = re.compile(r"^(?:\+\+\+|---) (?:[ab]/)?(\S+)")
 MAX_ERROR_LINES = 3
 MAX_UNTRACKED_BYTES = 1 << 20
 
@@ -74,10 +80,55 @@ def risky_hits(patch_text):
   return hits
 
 
-def touched_gate_inputs(patch_text):
-  """Gate-input paths the patch adds, deletes or changes."""
-  paths = {m.group(1) for line in patch_text.splitlines() if (m := PATCH_PATH.match(line))}
-  return sorted(p for p in paths if p != "/dev/null" and GATE_INPUTS.match(p))
+GIT = ["git", "-c", "core.fsmonitor=false", "--no-pager"]
+
+
+def git(worktree, *args):
+  """Run git in WORKTREE without external diff drivers or text conversion."""
+  proc = subprocess.run([*GIT, "-C", worktree, *args], capture_output=True, check=False)
+  if proc.returncode != 0:
+    raise RuntimeError(f"git {args[0]} failed: "
+                       f"{summary(proc.stderr.decode('utf-8', 'replace'))}")
+  return proc.stdout
+
+
+def worktree_changes(worktree):
+  """(changed tracked paths, binary paths, untracked paths) as WORKTREE holds them."""
+  changed = [p for p in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--name-only", "-z", "HEAD")
+             .decode("utf-8", "surrogateescape").split("\0") if p]
+  binary = []
+  for row in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--numstat", "-z", "HEAD")\
+      .decode("utf-8", "surrogateescape").split("\0"):
+    added, _, rest = row.partition("\t")
+    if added == "-":
+      binary.append(rest.partition("\t")[2])
+  untracked = [p for p in git(worktree, "ls-files", "--others", "--exclude-standard", "-z")
+               .decode("utf-8", "surrogateescape").split("\0") if p]
+  return changed, binary, untracked
+
+
+def worktree_digest(worktree):
+  """A digest of WORKTREE's tracked changes and untracked files, bytes included."""
+  digest = hashlib.sha256(git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--binary",
+                              "HEAD"))
+  for name in sorted(worktree_changes(worktree)[2]):
+    path = os.path.join(worktree, name)
+    digest.update(name.encode("utf-8", "surrogateescape") + b"\0")
+    try:
+      if os.path.islink(path):
+        digest.update(b"link:" + os.readlink(path).encode("utf-8", "surrogateescape"))
+      else:
+        with open(path, "rb") as f:
+          digest.update(f.read())
+    except OSError as exc:
+      digest.update(f"unreadable:{exc.errno}".encode())
+    digest.update(b"\0")
+  return digest.hexdigest()
+
+
+def touched_gate_inputs(paths):
+  """The gate inputs among PATHS."""
+  return sorted(p for p in set(paths) if GATE_INPUTS.match(p))
 
 
 def load_check(name):
@@ -138,13 +189,6 @@ def build_venv(worktree):
   return code, output
 
 
-def untracked_files(worktree):
-  code, output = run(["git", "ls-files", "--others", "--exclude-standard", "-z"], worktree)
-  if code != 0:
-    raise RuntimeError(f"git ls-files failed: {summary(output)}")
-  return [name for name in output.split("\0") if name]
-
-
 def untracked_home_paths(worktree, names):
   """(names holding a home directory path, names this scan could not read)."""
   flagged, unscanned = [], []
@@ -198,52 +242,63 @@ def main(argv):
   failed |= refused > 0
   print(f"refused: {refused}")
   hits = risky_hits(patch_text)
-  print(f"pattern hits: {len(hits)}")
+  print(f"pattern hits (advisory): {len(hits)}")
   for number, line in hits:
     print(f"  patch:{number}: {line}")
-  inputs = touched_gate_inputs(patch_text)
-  failed |= bool(inputs)
-  print(f"gate inputs touched: {', '.join(inputs) or 'none'}")
 
+  # Every scan runs before any patched code does.
+  try:
+    changed, binary, names = worktree_changes(worktree)
+    before = worktree_digest(worktree)
+  except RuntimeError as exc:
+    print(f"FAIL worktree state: {exc}")
+    print("gate: FAIL")
+    return 1
+  inputs = touched_gate_inputs(changed + names)
+  failed |= bool(inputs or binary)
+  print(f"changed: {len(changed)} tracked, {len(names)} new; gate inputs touched: "
+        f"{', '.join(inputs) or 'none'}; binary: {', '.join(binary) or 'none'}")
+  flagged, unscanned = untracked_home_paths(worktree, names)
+  failed |= bool(flagged or unscanned)
+  print(f"new files with home paths: {', '.join(flagged) or 'none'}"
+        + (f"; NOT scanned: {', '.join(unscanned)}" if unscanned else ""))
+  try:
+    count, home, terms = trusted_checks(worktree, names)
+  except Exception as exc:  # pylint: disable=broad-except
+    failed = True
+    print(f"FAIL trusted checks: {type(exc).__name__}: {exc}")
+  else:
+    failed |= bool(home or terms)
+    print(f"{'ok  ' if not home else 'FAIL'} privacy (trusted copy): {count} files, "
+          f"{len(home)} home path(s)")
+    print(f"{'ok  ' if not terms else 'FAIL'} open-side (trusted copy): {count} files, "
+          f"{len(terms)} mention(s)")
+    for line in (home + terms)[:MAX_ERROR_LINES]:
+      print(f"  {line}")
+
+  # Patched code runs from here on.
   suites = [] if args.no_default_suites else default_suites()
   suites += args.suite
   if not args.reuse_venv and any(name == "spec-format" for name, _ in suites):
-    code, output = build_venv(args.worktree)
+    code, output = build_venv(worktree)
     if code:
       failed = True
       print(f"FAIL venv (exit {code}): {summary(output)}")
   for name, command in suites:
-    code, output = run(command, args.worktree)
+    code, output = run(command, worktree)
     print(f"{'ok  ' if code == 0 else 'FAIL'} {name} (exit {code}): {summary(output)}")
     if code:
       failed = True
       errors = [line for line in output.splitlines() if ERROR_LINE.search(line)]
       for line in errors[:MAX_ERROR_LINES]:
         print(f"  {line}")
-
   try:
-    names = untracked_files(args.worktree)
+    after = worktree_digest(worktree)
   except RuntimeError as exc:
+    after = f"unreadable: {exc}"
+  if after != before:
     failed = True
-    print(f"FAIL untracked: {exc}")
-  else:
-    flagged, unscanned = untracked_home_paths(args.worktree, names)
-    failed |= bool(flagged or unscanned)
-    print(f"untracked: {len(names)} new file(s), home paths in: {', '.join(flagged) or 'none'}"
-          + (f"; NOT scanned: {', '.join(unscanned)}" if unscanned else ""))
-    try:
-      count, home, terms = trusted_checks(worktree, names)
-    except Exception as exc:  # pylint: disable=broad-except
-      failed = True
-      print(f"FAIL trusted checks: {type(exc).__name__}: {exc}")
-    else:
-      failed |= bool(home or terms)
-      print(f"{'ok  ' if not home else 'FAIL'} privacy (trusted copy): {count} files, "
-            f"{len(home)} home path(s)")
-      print(f"{'ok  ' if not terms else 'FAIL'} open-side (trusted copy): {count} files, "
-            f"{len(terms)} mention(s)")
-      for line in (home + terms)[:MAX_ERROR_LINES]:
-        print(f"  {line}")
+    print("FAIL worktree changed while the suites ran; the scans above no longer describe it")
   print(f"gate: {'FAIL' if failed else 'pass'}")
   return 1 if failed else 0
 

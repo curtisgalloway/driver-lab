@@ -31,9 +31,22 @@ class PatchGateTest(unittest.TestCase):
     self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
     self.tree = os.path.join(self.tmp, "tree")
     os.mkdir(self.tree)
-    subprocess.run(["git", "init", "-q", self.tree], check=True)
+    self.git("init", "-q")
+    self.put("utilities/check-open-side.py", "x = 1\n")
+    self.put("README.md", "readme\n")
+    self.git("add", ".")
+    self.git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "i")
     self.patch = self.write("p.patch", "+++ b/x.py\n+print('hi')\n")
     self.refused = self.write("none.txt", "refused: 0\n")
+
+  def git(self, *args):
+    subprocess.run(["git", "-C", self.tree, *args], check=True, capture_output=True)
+
+  def put(self, name, data):
+    path = os.path.join(self.tree, name)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb" if isinstance(data, bytes) else "w") as f:
+      f.write(data)
 
   def write(self, name, text):
     path = os.path.join(self.tmp, name)
@@ -65,7 +78,7 @@ class PatchGateTest(unittest.TestCase):
   def test_clean_patch_passes(self):
     code, out = self.gate("--suite", f"ok={sys.executable} -c pass")
     self.assertEqual(code, 0, out)
-    self.assertIn("pattern hits: 0", out)
+    self.assertIn("pattern hits (advisory): 0", out)
     self.assertIn("ok   ok (exit 0)", out)
     self.assertTrue(out.endswith("gate: pass\n"), out)
 
@@ -95,17 +108,17 @@ class PatchGateTest(unittest.TestCase):
       f.write(home)
     code, out = self.gate()
     self.assertEqual(code, 1)
-    self.assertIn("untracked: 1 new file(s), home paths in: new.txt", out)
-    self.assertIn("FAIL privacy (trusted copy): 1 files, 1 home path(s)", out)
+    self.assertIn("new files with home paths: new.txt", out)
+    self.assertIn("FAIL privacy (trusted copy): 3 files, 1 home path(s)", out)
 
   def test_untracked_file_reaches_trusted_privacy_check(self):
     # The trusted check scans new untracked files that `git ls-files` alone would miss.
     count, home, terms = self.mod.trusted_checks(self.tree, [])
-    self.assertEqual((count, home, terms), (0, [], []))
+    self.assertEqual((count, home, terms), (2, [], []))
     with open(os.path.join(self.tree, "n.md"), "w", encoding="utf-8") as f:
       f.write("see /" + "Users/someone/notes\n")
     count, home, _ = self.mod.trusted_checks(self.tree, ["n.md"])
-    self.assertEqual(count, 1)
+    self.assertEqual(count, 3)
     self.assertEqual(len(home), 1)
 
   def test_unreadable_untracked_file_fails(self):
@@ -114,15 +127,35 @@ class PatchGateTest(unittest.TestCase):
     self.assertEqual(code, 1)
     self.assertIn("NOT scanned: link", out)
 
-  def test_patch_touching_gate_inputs_fails(self):
-    for path in ("utilities/check-open-side.py", "utilities/patch-gate.py",
-                 "skills/spec-format/requirements.txt", ".github/workflows/checks.yml"):
-      with self.subTest(path=path):
-        self.patch = self.write("p.patch", f"--- a/{path}\n+++ b/{path}\n+x\n")
-        code, out = self.gate()
-        self.assertEqual(code, 1)
-        self.assertIn(f"gate inputs touched: {path}", out)
-    self.assertEqual(self.mod.touched_gate_inputs("+++ b/utilities/run-store.py\n"), [])
+  def test_changed_gate_input_fails_whatever_the_patch_says(self):
+    # The patch text names nothing; the worktree is what counts.
+    self.put("utilities/check-open-side.py", "x = 2\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn("gate inputs touched: utilities/check-open-side.py", out)
+
+  def test_new_and_renamed_gate_inputs_fail(self):
+    os.makedirs(os.path.join(self.tree, "skills/spec-format"))
+    self.git("mv", "README.md", "skills/spec-format/requirements.txt")
+    self.put(".github/workflows/checks.yml", "on: push\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn(".github/workflows/checks.yml, skills/spec-format/requirements.txt", out)
+
+  def test_binary_change_fails(self):
+    self.put("README.md", b"\x00\x01binary")
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn("binary: README.md", out)
+
+  def test_suite_that_changes_worktree_fails(self):
+    script = self.write("edit.py", "open('README.md', 'a').write('later\\n')\n")
+    code, out = self.gate("--suite", f"edit={sys.executable} {script}")
+    self.assertEqual(code, 1)
+    self.assertIn("FAIL worktree changed while the suites ran", out)
+
+  def test_other_paths_are_not_gate_inputs(self):
+    self.assertEqual(self.mod.touched_gate_inputs(["utilities/run-store.py", "a.md"]), [])
 
   def test_refuses_to_run_from_inside_worktree(self):
     repo = os.path.dirname(self.mod.HERE)

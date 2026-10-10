@@ -88,10 +88,12 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
     - Then it runs the main checkout's `utilities/patch-gate.py PATCH WORKTREE --refused
       REFUSED` itself, adding `--suite NAME=COMMAND` for any other surface the patch touches.
       The script refuses to run from inside WORKTREE, because the patch may have changed the
-      checks there. It runs its own copies of the privacy and open-side checks over the
-      tracked files and the new untracked files. It fails on any refused file, failing
-      suite, home path, unreadable new file, or change to a gate input (the check scripts,
-      the gate, the pinned requirements, CI workflows); it rebuilds `.venv-sf2` with
+      checks there. It takes the changed paths from WORKTREE itself, not from the patch text,
+      and runs its own copies of the privacy and open-side checks over the tracked files and
+      the new untracked files, all before any patched code runs; the suites come last, and
+      the worktree must be unchanged after them. It fails on any refused file, failing suite,
+      home path, unreadable new file, binary change, or change to a gate input (the check
+      scripts, the gate, the pinned requirements, CI workflows); it rebuilds `.venv-sf2` with
       `--require-hashes` and prints every risky-pattern hit in the patch's added lines (shell
       or eval calls, network calls, subprocess use, home or absolute user paths, dotfiles,
       agent configuration) verbatim.

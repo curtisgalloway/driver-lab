@@ -4,9 +4,9 @@
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
 Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
-records and freshness from SF2-3, in records.py), `status` (SF2-3) and Markdown `render`
-(SF2-4, in render_md.py). Later milestones add HTML, `resolve`, `show`, `drift`, `inventory`
-and `migrate`.
+records and freshness from SF2-3, in records.py), `status` (SF2-3), Markdown `render`
+(SF2-4, in render_md.py), and `resolve`, `show` and `drift` (SF2-6, in resolve.py and
+drift.py). Later milestones add HTML, `inventory` and `migrate`.
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -25,11 +25,13 @@ import json
 import re
 import sys
 from pathlib import Path
-from textnames import visible_name
 
 EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 100
 
 HERE = Path(__file__).resolve().parent
+# `python3 -I` leaves the script's directory off sys.path.
+sys.path.insert(0, str(HERE))
+from textnames import visible_name  # pylint: disable=wrong-import-position
 SKILL_DIR = HERE.parent
 SCHEMA_DIR = SKILL_DIR / "schema"
 REQUIREMENTS = SKILL_DIR / "requirements.txt"
@@ -44,7 +46,7 @@ DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markd
 SKILL = """\
 ---
 name: spec-format-cli
-description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references, the license gate and verification records; report each verdict's freshness).
+description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references, the license gate and verification records; report each verdict's freshness; resolve anchors, show evidence and compare or rewrite pins with drift).
 ---
 
 # spec.py
@@ -58,6 +60,11 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
         [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
         [--tool-commit <40-hex>] --format md [--json]
+    python3 skills/spec-format/scripts/spec.py resolve <file>... [--repo NAME=CHECKOUT]...
+        [--docs-dir DIR] [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
+    python3 skills/spec-format/scripts/spec.py show <file>... [resolver options]
+    python3 skills/spec-format/scripts/spec.py drift <commit> <file> [--pin NAME]
+        [--rewrite] [resolver options]
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -110,7 +117,19 @@ for `check`): `basis` is the fact's basis hash now and
 `upstream` the map a verdict reached now records (null when the basis is unknown). Exit 0 when
 the check found no error, 1 when it did (the report is printed either way).
 
-Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a file invalid or a
+`resolve` checks source anchors and licenses at immutable pins, and document hashes when
+`--docs-dir` supplies bytes as DIR/NAME. `--repo` binds a named entry to the top level of a
+local checkout; unbound entries are fetched over HTTPS. Only size/time limits skip anchors;
+the summary counts skips explicitly, and a fully skipped run exits 0. `show` also displays
+facts beside cited source lines, escaping terminal control characters. Search anchors check
+scope existence only; their prose is never executed.
+
+`drift` compares one cited entry with a full lowercase commit id (40 or 64 hex digits).
+`--pin` is required when several entries are cited. `--rewrite` moves the pin, updates unique
+moved ranges and marks changed anchors stale while preserving comments and layout. Changed
+search scopes and operational read failures refuse rewriting and retain the original file.
+
+Exit status: 0 all valid (validate) or no error (check/resolve/show/drift; warnings allowed); 1 a file invalid or a
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 
@@ -620,7 +639,7 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     return None if problems else fragment
 
 
-def validate_file(path: Path, schemas, extension, findings: list[Finding]):
+def validate_file(path: Path, schemas, extension, findings: list[Finding], *, raw=None):
     """Load and schema-check one file: (valid, schema kind, Loaded or None)."""
     import jsonschema
 
@@ -629,7 +648,7 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]):
     kind = schema_kind(path)
     before = len(findings)
     try:
-        loaded = specload.load_strict_marked(path)
+        loaded = specload.load_strict_marked(path) if raw is None else specload.load_strict_marked(path, raw)
     except specload.LoadError as exc:
         findings.append(Finding(path, exc.line, exc.column, exc.problem))
         return False, kind, None
@@ -831,6 +850,10 @@ def source_commit_arg(value):
 
 
 def build_parser() -> argparse.ArgumentParser:
+    sys.path.insert(0, str(HERE))
+    import drift
+    import resolve
+
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
         epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 100 internal",
@@ -883,6 +906,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
     rd.add_argument("--format", required=True, choices=("md",))
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    resolve.register(sub)
+    drift.register(sub)
     return parser
 
 
@@ -919,6 +944,10 @@ def main(argv: list[str] | None = None) -> int:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
+                if command in ("validate", "resolve", "show", "drift"):
+                    import resolve
+
+                    m = resolve.display_line(m)
                 print(visible_name(f"{label}: {m}"), file=sys.stderr)
             if hint:
                 print(hint, file=sys.stderr)
@@ -932,7 +961,8 @@ def main(argv: list[str] | None = None) -> int:
         print(SKILL, end="")
         return EXIT_OK
     if args.command is None:
-        return fail("usage", EXIT_USAGE, ["name a subcommand: validate, check, status, render"])
+        return fail("usage", EXIT_USAGE,
+                    ["name a subcommand: validate, check, status, render, resolve, show, drift"])
 
     try:
         problems = check_dependencies()
@@ -948,9 +978,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         import render_md
 
-        code, result = {"check": cmd_check, "status": cmd_status,
-                        "validate": cmd_validate,
-                        "render": lambda a: render_md.command(sys.modules[__name__], a)}[args.command](args)
+        handler = getattr(args, "handler", None) or {
+            "check": cmd_check, "status": cmd_status, "validate": cmd_validate,
+            "render": lambda a: render_md.command(sys.modules[__name__], a)}[args.command]
+        code, result = handler(args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
@@ -964,9 +995,10 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command in ("check", "status", "render"):
+    elif args.command in ("check", "status", "render") or hasattr(args, "handler"):
         for line in text:
-            if args.command == "render" and code == EXIT_OK:
+            # resolve, show and drift escape their own lines (resolve.display_line).
+            if (args.command == "render" and code == EXIT_OK) or hasattr(args, "handler"):
                 print(line)
             else:
                 print(visible_name(line))
@@ -979,4 +1011,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    sys.modules["spec"] = sys.modules[__name__]
     sys.exit(main())

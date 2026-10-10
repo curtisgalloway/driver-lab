@@ -219,7 +219,7 @@ MUTATIONS.extend([
     ),
     (
         'source-hash-second-read', 'render_md',
-        'hashlib.sha256(file.loaded.source_bytes)',
+        'hashlib.sha256(file.loaded.raw)',
         'hashlib.sha256(file.path.read_bytes())',
     ),
     (

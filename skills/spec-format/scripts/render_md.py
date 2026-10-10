@@ -297,7 +297,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
                     escape(tool_commit or "unavailable") + ".", ""])
         for file in group:
             relative = file.path.relative_to(file.root.given).as_posix()
-            digest = hashlib.sha256(file.loaded.source_bytes).hexdigest()
+            digest = hashlib.sha256(file.loaded.raw).hexdigest()
             out.extend(["Source " + code(file.root.label + ":" + relative) + "; commit " +
                         escape(commits.get(file.root.given.absolute(), "unavailable")) +
                         "; SHA256 " + code(digest) + ".", ""])

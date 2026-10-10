@@ -89,13 +89,13 @@ class Loaded:
 
     Positions are keyed by the path of the value: a tuple of mapping keys and list indexes
     from the document root (`()` is the root). `keys` holds the position of the key itself
-    for a value inside a mapping.
+    for a value inside a mapping. `raw` is the exact byte snapshot that produced the data.
     """
 
     data: Any
     values: dict[tuple, Mark]
     keys: dict[tuple, Mark]
-    source_bytes: bytes = b""
+    raw: bytes = b""
 
     def mark(self, path: tuple, *, key: bool = False) -> Mark:
         """The position of `path`, or of its nearest ancestor that has one."""
@@ -272,15 +272,16 @@ def _decode(path: Path, raw: bytes) -> str:
         raise LoadError(path, m.line, m.column, f"bytes that are not UTF-8 ({exc.reason})") from None
 
 
-def load_strict_marked(path: Path | str) -> Loaded:
+def load_strict_marked(path: Path | str, raw: bytes | None = None) -> Loaded:
     """Load one YAML file under the format 2 rules, keeping every value's position.
 
     Raises `LoadError` for every refused input, and `OSError` when the file cannot be read.
+    When `raw` is supplied, parse those bytes without reading the path.
     """
     path = Path(path)
     if any(unicodedata.category(c) in NAME_CATEGORIES for c in str(path)):
         raise LoadError(path, 1, 1, "file name contains a forbidden Unicode character")
-    raw = path.read_bytes()
+    raw = path.read_bytes() if raw is None else raw
     source = _decode(path, raw)
     check_text(path, source)
     loader = None

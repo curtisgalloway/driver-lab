@@ -51,6 +51,9 @@ follows them. Where the body depends on one, it names it (D1–D22).
   Markdown view, is where a cited fact is guaranteed to look different from prose.
 - **Canonical form** — one fixed serialization of parsed YAML data (sorted keys, no whitespace),
   so that two files holding the same data hash the same whatever their layout.
+- **File links and modes** — a symbolic link points to another path; hard links are multiple
+  names for one file. Mode bits are Unix permission flags; setuid/setgid can give an executable
+  its owner's user/group identity. A data path names a value by keys and list positions.
 
 New terms are in the [glossary](../GLOSSARY.md).
 
@@ -353,6 +356,16 @@ anchors:
   at the new commit; it fails every check until a person re-verifies and removes it. It replaces
   the `[stale: was …]` text marker.
 
+DT node lookup locates definitions in the cited text; it does not evaluate a device tree.
+Labels and short node names defined inside an override such as
+`&i2c1 { pmic: pmic@32 { regulators { vdd: buck1 {}; }; }; };` locate their own
+definition lines, including nested children. An absolute path never matches a node inside
+an override: its ancestry is unknown without resolving the override's label. A label added
+to the override itself (`extra: &uart0`) is not a node definition. `/delete-node/` does not
+remove an earlier definition from this textual lookup. Reopened nodes remain separate
+definitions; multiple matches are ambiguous and fail. Cite a unique label or include the
+separately cited files when evaluating the resulting tree matters.
+
 ### Inference
 
 ```yaml
@@ -473,9 +486,16 @@ What changes from today:
   an option).
 - **Per-file licenses** (RG1 V3): an entry's `files` is the closed list of paths cited through
   it, each saying how its license was confirmed (`spdx-line`, `notice`, `license-file`). With a
-  checkout, `spec.py resolve` reads each cited file's `SPDX-License-Identifier:` line where there
-  is one and fails when it does not fit the entry's `license`. A file under another license needs
-  its own entry, as the GPL overlay already does with `linux` and `linux-pcie`.
+  checkout, `spec.py resolve` reads the first `SPDX-License-Identifier:` anywhere in the first
+  five lines, after stripping a leading UTF-8 byte-order mark (D12, following the kernel's
+  `scripts/spdxcheck.py`). The expression runs from after the tag to the end of that line,
+  with trailing whitespace and a trailing `*/`, `-->`, or closing quote removed. No comment
+  syntax is inferred: a tag after code or inside a string follows the same rule, and any
+  remaining source suffix is part of the expression. Tags on line six or later and tags
+  after the first one are ignored. A tag that differs from the entry's `license` fails under
+  every `license_from` mode; `spdx-line` also fails when no tag is found.
+  A file under another license needs its own entry, as the GPL overlay already does with
+  `linux` and `linux-pcie`.
 - **Roles replace pin kinds.** `Source pin:`/`Target pin:`/`Impl pin:`/`Ref pin:` lines become
   repos entries with `role`. The license gate reads every entry the same way.
 
@@ -1019,7 +1039,16 @@ names the file line, which keeps the format writable by agents and people alike.
 
 - **YAML**: PyYAML, already used in this repository (`campaign-review`, the frozen evaluations).
   `spec.py drift --rewrite` edits anchors in place by replacing the scalar spans PyYAML's node
-  marks locate, so comments and layout survive without a round-trip library (D9).
+  marks locate (D9). Before replacement, the same strict loader parses the rewritten bytes and
+  the schema validates them. The parsed data must match the original data with exactly the
+  selected repos entry's new commit, each moved anchor's new `lines`, and each changed anchor's
+  `stale: {was: <old commit>}` applied. Keys, values and types must match; no other data may
+  differ. A mismatch refuses the rewrite, names the first differing data path, exits 1 and
+  retains the original bytes. Comment bytes and the leading SPDX header must also match
+  byte for byte; comparing text with comments removed is insufficient.
+  Rewriting refuses a symbolic link (a pointer to another path), multiple hard links (names for
+  the same file), missing user write permission, or setuid/setgid flags (special Unix modes)
+  with exit 1 before source access. Other mode bits are preserved.
 - **JSON Schema validator** (D8), candidates: `jsonschema` (python-jsonschema; supports 2020-12;
   pulls in `attrs`, `referencing`, `jsonschema-specifications` and the compiled `rpds-py`);
   `jschon` (pure Python, supports 2020-12). `fastjsonschema` is excluded: it does not support
@@ -1960,10 +1989,10 @@ left open, also decided by the user on 2026-10-08.
 | D6 | Scalar types | The loader resolves only `true`, `false`, `null` and decimal integers; hex values are strings with patterns | no implicit-typing surprises; values keep their spelling |
 | D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
 | D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
-| D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces scalar spans found by node marks | one library, already used here; comments and the SPDX header survive |
+| D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces spans found by node marks, then strictly loads, validates and compares the result with exactly the intended data changes | user decision 2026-10-09: refuse unintended key, value or type changes with the first differing path; preserve comment/SPDX bytes and the original on refusal |
 | D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
 | D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no mixed v1 and v2 composition, and no second parser left behind |
-| D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed, checked by `resolve` | catches a file whose license differs from its entry without a per-file gate |
+| D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
 | D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without driver-lab defining its content |

@@ -25,6 +25,10 @@ evaluation; add other terms as the documents that use them are updated.
 | SDK | Software development kit: headers, libraries, and tools for building against a platform. |
 | Corpus | The pinned collection of source code and documents used as reference evidence. |
 | Pin | An exact revision, edition, or file digest identifying an input. |
+| Symbolic link / hard link | A path pointing to another path / another name for the same underlying file. Replacing a symbolic link replaces the pointer; replacing one hard link separates it from the other names. |
+| Mode bits | Unix file flags recording read, write and execute permissions and special modes. |
+| Setuid / setgid | Unix mode flags that can make an executable run with its owner's user identity / its group's identity. Spec files with either flag are refused for rewriting. |
+| Data path | The sequence of mapping keys and list positions naming a parsed value, such as `$['facts'][0]['title']`. Rewrite refusals name the first differing path. |
 | QEMU / device model | An open-source machine emulator / its software imitation of a hardware device, which a guest OS drives as if it were real. A device model is a separate implementation, not the silicon. |
 | Differential test | Running a reference driver and a candidate under identical scenarios and comparing their outcomes and register traces. |
 | Emulated evidence | A result observed on a device model (QEMU or another emulator; class `[emulated]`, adopted 2026-09-25); weaker than a hardware measurement because models are often lenient. It cites the model version and the runs, states what was observed from outside the model, and is never the sole authority for a fact. |

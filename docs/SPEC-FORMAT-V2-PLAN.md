@@ -66,6 +66,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
   changes as `codex-<stamp>.patch` plus a `codex-<stamp>.refused.txt` list in RUN_DIR. The
   orchestrator reads both before `git apply` in the milestone worktree. Reviewers stay as the review method says (an Opus reviewer plus a Codex
   review). The orchestrator holds pushes, merges, Codex runs and user questions.
+  Mechanical steps (the patch gate, git sequences, review archiving) go to Haiku runners,
+  and each milestone's close-out (evidence, plan row, notebook close, checks list) to a
+  Sonnet subagent, per AGENTS.md "Delegation in orchestrated runs" (user, 2026-10-09).
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh
     subagent that runs the checks, writes break cases including degenerate inputs: empty,
@@ -113,7 +116,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
-| SF2-6 | Resolve, show and drift | SF2-2 | pending |
+| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
@@ -468,7 +471,8 @@ Needs `fetch_src_pins.py`, the anchor-resolution parts of `anchor_check.py` and 
 anchor section. Split point: `drift` (step 2) becomes SF2-6b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-6.md`. Notebook: `notebook/SF2-6.md`.
+Status: complete. Evidence: [SF2-6](../evidence/SF2-6.md) (acceptance table, three review rounds
+and a confirmation round, decisions, limitations). Notebook: [SF2-6](../notebook/SF2-6.md).
 
 ---
 

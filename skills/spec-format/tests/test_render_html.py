@@ -349,7 +349,9 @@ class Views(Fixture):
         for kind in ('class-databook', 'origin', 'assumes', 'todo', 'critical', 'contested',
                      'requirement', 'assessment', 'verdict-pass', 'status-stale'):
             self.assertIn('badge ' + kind, classes)
-        self.assertIn('second reader missing', html)
+        # The badge itself: the record section also prints 'second reader missing' (SF2-G
+        # review: mutate_sf2_5's second-reader mutation survived on that text).
+        self.assertIn('badge critical">bring-up critical · second reader missing</span>', html)
         self.assertIn('PASS 2026-10-09 · carried', html)
         self.assertIn('badge origin">public · viewer</span>', html)
         self.assertNotIn('badge gap', html)
@@ -648,6 +650,37 @@ class Publishing(Fixture):
             code = publish.main(['verify', str(self.root), '--out', str(args.out),
                                  '--source-commit', args.source_commit[0], '--tool-commit', args.tool_commit])
         self.assertEqual(code, 1)
+
+    def test_publish_refuses_beside_a_context_root_with_its_own_error(self):
+        # SF2-G review B-F1: a context root's own error is only a warning in the findings, so
+        # the untrusted-roots guard is the one thing that stops this publish.
+        context = Path(self.temp.name) / 'context'
+        context.mkdir()
+        (context / 'board-specs.yaml').write_text(marker('ctx'))
+        (context / 'other.spec.yaml').write_text(chip('other', facts=fact('a') + fact('a')))
+        args = self.args()
+        args.context_root = [context]
+        checker = checked(self.root, context=[context])
+        self.assertFalse([f for f in checker.findings if f.level == 'error'])
+        with self.assertRaisesRegex(ValueError, 'publishing context does not check clean'):
+            publish.checked(args)
+
+    def test_renderer_usage_errors_are_a_clean_failure_not_a_traceback(self):
+        # SF2-G review A-F3: the renderers raise speccheck.UsageError and PreconditionError
+        # (for example a root's source commit given twice), which publish.main did not catch.
+        import speccheck
+
+        args = self.args()
+        argv = ['build', str(self.root), '--out', str(args.out), '--source-commit',
+                args.source_commit[0], '--tool-commit', args.tool_commit]
+        for error in (speccheck.UsageError, speccheck.PreconditionError):
+            with self.subTest(error=error.__name__):
+                err = io.StringIO()
+                with patch.object(render_html, 'render', side_effect=error('given twice')), \
+                        contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                    code = publish.main(argv)
+                self.assertEqual(code, 1)
+                self.assertEqual(err.getvalue(), 'given twice\n')
 
     def test_template_permissions_pins_triggers_and_verify_before_upload(self):
         text = (HERE.parent / 'ci/publish.yml').read_text()

@@ -741,7 +741,7 @@ the shared CommonMark module), plus a Codex `ro` review of the combined diff. St
 rounds.
 
 ### Evidence and findings
-Status: pending (draft evidence written; review not yet run). Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
+Status: pending (review round 1 fixes applied; round 2 to run). Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
 
 ## Stop point and what follows
 
@@ -882,13 +882,15 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
     N2): status rows for the two files' facts of the same id merge into one row. Impact:
     status output only; the check already reports the duplicate id as an error.
 - **SF2-G open findings** ([evidence](../evidence/SF2-G.md#findings-and-resolutions)):
-  - **G2:** a `codex-review` refusal test assumes the checkout lies outside the system temp
-    directory. Fix: build that case's brief outside the temp directory.
   - **G5:** the three spec repositories pin driver-lab `b86af093`, from before SF2-7a; their
     published viewers lack the verifier and second-reader lines. Fix: bump both workflows'
     pins in docs, permissive, then gpl (outside driver-lab).
-  - **G6:** the license-gate fixture markers accept `X11` and `Zlib`, which the published
-    markers do not; no fixture cites either. Fix: align them, or record the superset.
+  - **G6:** the license-gate and worked-example fixture markers accept `X11` and `Zlib`, which
+    the published markers do not; no fixture cites either. Fix: align them, or record the
+    superset (the license-gate README now states it).
+  - **Round 1 lows deferred:** `publish.py` builds duplicate pages when a base and its overlay
+    share a root (latent); `render_md`'s "Verify on hardware" list escapes author text instead
+    of fencing it; `resolve.node_range` rescans the file per node (performance).
 
 ## Next session
 

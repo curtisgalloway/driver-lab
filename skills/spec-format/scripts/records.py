@@ -551,7 +551,9 @@ def second_pass(checker, mode):
     checker.status = []
 
     def level(kind):
-        if mode is None or (mode == "main" and kind == "upstream-stale"):
+        # main relaxes upstream staleness (D19) and an unsettled ADJUDICATE (user decision,
+        # 2026-10-10, SF2-G review A-F8); pr makes both errors.
+        if mode is None or (mode == "main" and kind in ("upstream-stale", "adjudicate")):
             return "warning"
         return "error"
 
@@ -600,8 +602,10 @@ def second_pass(checker, mode):
                                    f"the verdict of {v['date']}", level=level(status))
             elif v["verdict"] == "ADJUDICATE":
                 checker.add(f, at, f"{what}: its verdict is ADJUDICATE, not yet settled",
-                            level="warning")
-            if status == "current" and reader == "missing":
+                            level=level("adjudicate"))
+            # Upstream-stale too: main mode only warns on the staleness, and a missing second
+            # reader must not ride through on that warning (SF2-G review, Codex B1).
+            if status in ("current", "upstream-stale") and reader == "missing":
                 same = ("; a reader with the verdict's own verifier is not a second reader"
                         if own else "")
                 checker.add(f, at, f"{what}: critical, so its verdict needs a second reader's "

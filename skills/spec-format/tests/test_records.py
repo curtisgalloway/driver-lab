@@ -833,6 +833,34 @@ class Upstream(Roots):
         self.assertEqual(st["xchip@g#direct"]["changed"], ["upchip@up#mode"])
         self.assertEqual(st["xchip@g#local"]["status"], "current")
 
+    def test_upstream_staleness_never_excuses_a_missing_second_reader(self):
+        # SF2-G review round 1, Codex B1: a critical fact with one reader, upstream-stale, was
+        # only a warning in main mode, so publish.checked accepted it and published it.
+        sys.path.insert(0, str(HERE.parent / "ci"))
+        from types import SimpleNamespace
+        import publish
+
+        gpl = self.root("gpl-critical", {
+            "board-specs.yaml": marker("gc"),
+            "x.spec.yaml": chip("xchip", facts=ref_fact(
+                "direct", "upchip@up#mode", extra="    critical: true\n")),
+        })
+        self.verify_all(gpl, "xchip", "x.spec.yaml", gpl, "--context-root", self.docs)
+        rec = records_of_root(gpl, "x")
+        rec["direct"].pop("readers")
+        self.write(gpl, "resources/x.verify.yaml", record("xchip", "x.spec.yaml", rec))
+        docs = self.make_docs("C mode, edited.")
+        for mode in ("pr", "main"):
+            with self.subTest(mode=mode):
+                code, result = check(gpl, "--context-root", docs, "--require-verified", mode)
+                self.assertEqual(code, 1)
+                f = only([f for f in result["findings"] if "second reader" in f["message"]])
+                self.assertEqual(f["level"], "error")
+                args = SimpleNamespace(root=gpl, context_root=[docs], public_skill=[],
+                                       require_verified=mode)
+                with self.assertRaisesRegex(ValueError, "second reader"):
+                    publish.checked(args)
+
     def test_an_unrelated_upstream_edit_stales_nothing(self):
         docs = self.root("docs-other", {
             "board-specs.yaml": marker("up"),
@@ -1089,16 +1117,20 @@ class SecondReaders(Roots):
 
 
 class Verdicts(Roots):
-    def test_adjudicate_is_a_warning_in_every_mode(self):
+    def test_adjudicate_is_an_error_on_pull_requests_and_a_warning_on_main(self):
+        # User decision, 2026-10-10 (SF2-G review A-F8): an unsettled ADJUDICATE cannot merge
+        # through a pull request; on main it warns, like upstream staleness (D19).
         r = self.root("r", {"board-specs.yaml": marker("r"), "w.spec.yaml": chip(facts=fact("a"))})
         b = self.bases(r)
         self.write(r, "resources/w.verify.yaml", record("widgetchip", "w.spec.yaml", {
             "a": verdict(b["widgetchip@r#a"], "ADJUDICATE")}))
-        for mode in (None, "pr", "main"):
-            code, result = check(r, *(["--require-verified", mode] if mode else []))
-            self.assertEqual(code, 0, mode)
-            self.assertIn("its verdict is ADJUDICATE, not yet settled",
-                          only(warnings(result))["message"])
+        for mode, level in ((None, "warning"), ("pr", "error"), ("main", "warning")):
+            with self.subTest(mode=mode):
+                code, result = check(r, *(["--require-verified", mode] if mode else []))
+                self.assertEqual(code, 1 if level == "error" else 0)
+                f = only(result["findings"])
+                self.assertEqual(f["level"], level)
+                self.assertIn("its verdict is ADJUDICATE, not yet settled", f["message"])
 
     def test_unverifiable_and_gap_are_verdicts(self):
         gap = "  - id: g\n    section: quick-facts\n    title: T g\n    claim: C g.\n" \

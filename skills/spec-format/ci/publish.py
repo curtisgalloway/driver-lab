@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 import render_html
 import render_md
 import spec
+import speccheck
 
 
 def catalog(checker):
@@ -141,7 +142,8 @@ def main(argv=None):
     try:
         checker = checked(args)
         (build if args.mode == 'build' else verify)(checker, args)
-    except (ValueError, OSError, spec.Usage, spec.Precondition) as exc:
+    except (ValueError, OSError, spec.Usage, spec.Precondition, speccheck.UsageError,
+            speccheck.PreconditionError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     print(args.mode + ': complete site (' + str(len(catalog(checker))) + ' spec views)')

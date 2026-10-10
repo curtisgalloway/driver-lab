@@ -12,6 +12,17 @@ SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+def outside_temp_file():
+  """An existing file outside the system temp directory, wherever the checkout lives: a
+  checkout under the temp directory made README.md an inside-temp brief (SF2-G finding G2)."""
+  tmp = os.path.realpath(tempfile.gettempdir())
+  for path in (os.path.join(REPO, "README.md"), os.__file__, sys.executable, "/etc/hosts"):
+    real = os.path.realpath(path)
+    if os.path.isfile(real) and os.path.commonpath([real, tmp]) != tmp:
+      return real
+  raise unittest.SkipTest("no file outside the temp directory to use as a brief")
+
+
 def run(*args):
   return subprocess.run([sys.executable, SCRIPT, *args, "--dry-run"], capture_output=True,
                         text=True, check=False)
@@ -62,7 +73,7 @@ class CodexReviewTest(unittest.TestCase):
         ("net", self.tmp, "--upload-pack=x", self.log),          # option-shaped path
         ("net", self.tmp, self.brief + " -c a=b", self.log),     # space in path
         ("ro", self.tmp, self.brief, self.log),                  # ro needs a checkout
-        ("ro", REPO, os.path.join(REPO, "README.md"), self.log), # ro brief outside temp
+        ("ro", REPO, outside_temp_file(), self.log),             # ro brief outside temp
         ("exec", self.tmp, self.brief, self.log),                # unknown mode
     ]
     for case in cases:

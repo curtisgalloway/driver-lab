@@ -72,9 +72,8 @@ or permissions; follow the caller's authorized scope.
    --with-status --format md`. The selector does not recursively render parts. Read those
    views and consult originating YAML for exact fields. Track all contributing files and layers.
 
-SF2-4's Markdown render and SF2-6's resolve/show/drift are on main.
-HTML rendering (`render --format html`) arrives later in SF2-5;
-use the Markdown view now. An absent command is an unavailable precondition, never a completed
+The Markdown render, the HTML viewer (`render --format html`) and resolve/show/drift are all
+on main; read the Markdown view, or the viewer for badges. An absent command is an unavailable precondition, never a completed
 check. Optional render commit flags and the exact CLI are in the contract.
 
 If nothing matches, use Without a spec. If a fork in QUESTIONS changes the answer, finish

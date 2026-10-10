@@ -57,3 +57,13 @@ row's "non-https URL" had no plain `http://` case; added it.
 
 Evidence drafted ([SF2-G](../evidence/SF2-G.md)). The plan's status stays pending until the
 review (`review-swarm` and a Codex `ro` review) has run.
+
+### 2026-10-10T11:18-07:00 — review round 1 fixes
+
+The blocker was a second interaction of `main` mode: the second-reader check ran only for a
+current verdict, so an upstream-stale critical fact carried its missing reader through as a
+warning, and publish accepted it. A mode that relaxes one finding must not relax another
+attached to the same fact. The user decided ADJUDICATE the same way (error on pull requests,
+warning on `main`). Rerunning `mutate_sf2_5.py` once its stale target was fixed showed one
+survivor: the test looked for the words "second reader missing", which the record section
+also prints, so removing the badge went unnoticed. Assert the element, not the words.

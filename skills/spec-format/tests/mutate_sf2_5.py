@@ -61,7 +61,7 @@ MUTATIONS = [
     ('contested-badge', 'scripts/render_html.py', "if 'resolution' not in conflict:", 'if False:'),
     ('requirement-assessment', 'scripts/render_html.py', "for key in ('requirement', 'assessment'):", 'for key in ():'),
     ('gap-badge', 'scripts/render_html.py', "out.append(badge('gap', 'Gap'))", 'pass'),
-    ('gap-only-without-support', 'scripts/render_html.py', "if not data.get('support'):", 'if True:'),
+    ('gap-only-without-support', 'scripts/render_html.py', "if not speccheck.has_support(data):", 'if True:'),
     ('verdict-badge', 'scripts/render_html.py', "out.append(badge(VERDICTS[row['verdict']], text))", 'pass'),
     ('freshness-badge', 'scripts/render_html.py', "out.append(badge(FRESHNESS[row['status']], row['status']))", 'pass'),
     ('carried-status', 'scripts/render_html.py', "(' · carried' if row['carried'] else '')", "''"),

@@ -95,8 +95,8 @@ those too. An internal overlay uses the same YAML shapes in a vendor/local root,
    --docs-dir <documents dir>` when bytes are available. Confirm anchors ran, not merely
    exit 0; skips and unrepeatable searches remain limits. Render every relevant id using
    `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
-   --with-status --format md` and inspect it. SF2-4/SF2-6 are on main; HTML rendering
-   (`render --format html`) arrives later in SF2-5, not part of this milestone's commands.
+   --with-status --format md` and inspect it, then the same with `--format html` (the viewer,
+   which repeats the containment checks); both are on main.
 7. **Verify** by following [spec-verifier's format 2 procedure](../spec-verifier/SKILL.md).
    If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.

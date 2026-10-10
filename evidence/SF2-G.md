@@ -23,12 +23,13 @@ Design: [SPEC-FORMAT-V2.md](../docs/SPEC-FORMAT-V2.md). Plan:
 Notebook: [SF2-G](../notebook/SF2-G.md). Run: `sf2-g-20261010-01` in the private run store
 (ledger, command outputs, the gate's scratch scripts).
 
-**Status: draft for review.** The gate ran on fresh clones of driver-lab and the three spec
-repositories. Five of the seven items passed as they stood. The full checks list failed in a
-deep checkout path (G1, G2). The coverage walk found two validation checks without a test that
-can fail (G3, G4). G1, G3 and G4 are fixed here with tests; G2 and two findings outside
-driver-lab are reported with proposed dispositions. The review (`review-swarm` plus a Codex `ro`
-review, two rounds at most) has not run yet.
+**Status: review round 1 fixes applied; awaiting round 2.** The gate ran on fresh clones of
+driver-lab and the three spec repositories. Five of the seven items passed as they stood. The
+full checks list failed in a deep checkout path (G1, G2). The coverage walk found two validation
+checks without a test that can fail (G3, G4). G1 to G4 are fixed here with tests. Review round 1
+(`review-swarm` and a Codex `ro` review) found one blocker, a critical fact with no second
+reader that publishes when it is upstream-stale; it is fixed, with the other round 1 fixes
+below.
 
 ## What the gate ran on
 
@@ -46,7 +47,7 @@ ancestor of `59df6e1`, 27 commits behind it.
 | 3. License-gate matrices, board and peripheral fixtures | met | 204 runs of `spec.py check` through the CLI, 0 mismatches. They cover the 15-row peripheral matrix under each of the three fixture markers and each of the three **published** markers, with and without `--require-license`, plus the four board fixtures against all six markers |
 | 4. Viewer guarantee on the adversarial fixtures | met | All 61 adversarial text cases, plus 7 forging cases written for the gate, were injected into a claim, a TODO and a verification note of the worked-example fixture: 204 runs through the CLI. Each run either failed `check` and `render` together, with no partial view (102), or rendered (102). Every rendered run kept the badge multiset of a benign render, had balanced HTML, no `img` or `script`, no attribute but `href` inside author containers, and no link outside `https:`, `http:`, `mailto:` and `#`. The published gpl merged viewer passes the same structural checks (0 violations) |
 | 5. Pages sites | met | Fetched every file of the three sites (docs 8, permissive 6, gpl 14). Each is byte-identical to a local `publish.py build` from the clones' `main` with the pinned tool |
-| 6. Full `AGENTS.md` checks list on the fresh clone | met after fixes | At `59df6e1`, in a scratch path under the system temp directory: 11 of 13. `spec-format` had 9 failures (G1) and `utilities` 1 (G2), both caused by the checkout's location. With G1's fix applied in the same clone, `spec-format` passed (625 tests, 1 skipped). In the worktree with all fixes: 13 of 13 |
+| 6. Full `AGENTS.md` checks list on the fresh clone | met after fixes | At `59df6e1`, in a scratch path under the system temp directory: 11 of 13. `spec-format` had 9 failures (G1) and `utilities` 1 (G2), both caused by where the checkout lies. After round 1, the whole list ran again on a fresh clone of `sf2/sf2-g` in the same kind of path (round 1 code; only these records changed afterwards): 13 of 13 (utilities 68 tests, `spec-format` 628 with 1 skipped, the archive checks included) |
 | 7. No format 1 rule stated as current in any skill | met | A grep over `skills/` (tests excluded) for format 1 file names, tags, retired tools and `format 1` found 10 lines. All 10 are D10 carry procedure, negative rules ("never … leave format 1 records in a format 2 root"), the carried-verdict schema comment, or the checker's code that rejects format 1 input |
 
 ## Design coverage, row by row
@@ -135,8 +136,9 @@ anchors).
 - **G2, a `codex-review` refusal test assumes the checkout is outside the system temp
   directory.** The case "ro brief outside temp" passes `README.md` of the checkout as the brief,
   so in a checkout under the temp directory the script accepts it (correctly) and the test fails.
-  Not fixed here. Proposed: build that case's brief outside the temp directory, or skip it when
-  the checkout lies inside it.
+  Resolution (round 1): the case takes the first existing file outside the temp directory
+  (the checkout's `README.md`, the standard library, the interpreter, `/etc/hosts`), and skips
+  only if there is none.
 - **G3, an instance whose `ip` names no spec had no test.** The checker's branch existed, but
   only the wrong-kind branch was tested. Resolution: the fixture `instance-dangling.spec.yaml` in
   `fixtures/check/bad_root` and its expected error. Removing the branch fails the test.
@@ -149,10 +151,12 @@ anchors).
   the current tool. The current tool's viewer adds verifier and second-reader lines that the
   published sites lack. Outside driver-lab. Proposed: bump the pin in all three repositories
   (both workflows each), docs, then permissive, then gpl, as one pull request per repository.
-- **G6, the license-gate fixture markers accept two licenses the published markers do not.** The
-  fixture permissive and gpl markers add `X11` and `Zlib`; no fixture spec cites either, so the
-  matrix gives the same 204 results under both marker sets. Proposed: align the fixture markers
-  with the published ones in a follow-up, or record that they are a superset on purpose.
+- **G6, fixture markers accept two licenses the published markers do not.** The permissive and
+  gpl markers of the license-gate fixtures and of the worked-example fixtures add `X11` and
+  `Zlib`; no fixture spec cites either, so the matrix gives the same 204 results under both
+  marker sets. LS-G F1 had documented this, and the caveat was lost in SF2-9; round 1 restored
+  it in the license-gate fixtures' README. Proposed: align both fixture sets with the published
+  markers in a follow-up, or record that they are a superset on purpose.
 
 ## Limitations
 
@@ -163,3 +167,35 @@ anchors).
 - The learnings rollup was not re-traced row by row.
 - The fresh-clone checks ran under the system temp directory, which is how G1 and G2 surfaced;
   CI's shorter path hides both.
+
+## Reviews
+
+| Round | Reviewer | Outcome |
+| --- | --- | --- |
+| 1 | Codex `ro`, combined diff | one blocker (B1), one should-fix (S1) |
+| 1 | `review-swarm`, two parts (code; tests and records), seven arms each, referee | 13 findings after the referee (part A 9, part B 4); the referee dropped 3 |
+
+Review artifacts: `review/codex1/` and `review/swarm/` in run `sf2-g-20261010-01`.
+
+Round 1 findings and decisions:
+
+| Finding | Decision | Reason |
+| --- | --- | --- |
+| Codex B1: an upstream-stale `critical` fact without a second reader passes `main` mode and publishes | fixed: the reader rule applies to current and upstream-stale verdicts; a check-and-publish test in both modes | `main` relaxes staleness only; it must not carry a missing reader through |
+| Codex S1: item 6 overstated the fresh-clone result | fixed: G2 fixed, the whole list rerun on a fresh clone of the branch, item 6 restated | the acceptance claim must name the run that supports it |
+| A-F8: a current ADJUDICATE is a warning in every mode | user decision (2026-10-10): an error under `--require-verified pr`, a warning under `main`; implemented with tests of both modes; `spec-verifier` and the design say so | the same shape as upstream staleness: nothing unsettled lands through a pull request, and `main` never turns red on its own |
+| A-F1: `patch-gate.py` did not treat the Codex wrappers as gate inputs | fixed: `codex-implement.py` and `codex-review.py` are gate inputs (docstring, `AGENTS.md`), with a test | a patch could widen Codex's own sandbox unflagged |
+| B-F1: no test reaches publish's clean-context guard | fixed: a test with a context root holding its own error | the guard was the only stop and nothing tested it |
+| A-F6, A-F5: `board-expert` and `board-spec-scaffold` said HTML rendering arrives in SF2-5 | fixed: both say it is on main | the text contradicted the code |
+| A-F3: `publish.py` let the renderers' `UsageError` and `PreconditionError` escape as tracebacks | fixed: caught and reported in one line, with a test | the documented failure is a message and exit 1 |
+| B-F2: a `mutate_sf2_5.py` target no longer existed | fixed: retargeted to `has_support`. The rerun then showed the second-reader badge mutation surviving, because another section prints the same words; the test now asserts the badge itself. Rerun: 65 of 65 killed by assertion | the script stopped at that entry, so later mutations never ran |
+| B-F3, B-F4: G6 understated; the LS-G caveat was lost | fixed: G6 names the worked-example markers; the fixture README carries the caveat again | records match the fixtures |
+| A-F4: pin lag can stop downstream publishing when an upstream repository lands a new form first | orchestrator: deferred to the G5 follow-up the user approved today (all three pins bumped back to back right after SF2-G merges, no spec content in between) | the bump order removes the window |
+| A-F2: duplicate pages when a base and its overlay share a root | orchestrator: backlog | latent; no repository has that layout |
+| A-F10: `escape()` instead of a fence in "Verify on hardware" | orchestrator: backlog | the text stays inert; fidelity only |
+| A-F11: `node_range` rescans per node | orchestrator: backlog | performance; under a second today |
+| Referee drops (A-F7, A-F9, B-F5) | orchestrator: stay dropped | the referee's reasons stand |
+
+None of the three published roots holds an ADJUDICATE verdict (all seven records count
+`adjudicate: 0`), so the new rule fails no published pull request; their checks with the
+round 1 tool pass in both modes.

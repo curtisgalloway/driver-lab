@@ -212,8 +212,8 @@ Retain dissenting history in `readings`; the checker requires `readers` entries 
 with a settled verdict, so obtain an updated second reading rather than rewrite its earlier
 conclusion as agreement.
 
-A current ADJUDICATE is a **warning in both gate modes**. The campaign's merge rule still
-requires zero unsettled ADJUDICATE; a zero-error check cannot waive the user's decision.
+A current ADJUDICATE is an **error under `--require-verified pr`** and a warning under `main`
+(user decision, 2026-10-10), so a pull request cannot land one; the user settles it first.
 Current UNVERIFIABLE and GAP may pass the mechanical gate too: report those limits.
 
 ## Write the YAML record

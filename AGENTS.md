@@ -83,21 +83,18 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
   commit messages, pull request bodies and conflict resolution. Mechanical steps go to cheaper
   subagents with a fixed brief and a report of ten lines or fewer. Use the `run-delegate` skill
   for read-only runs and `git-delegate` for git writes. Launch a fresh runner each time.
-  - **Patch gate, after each Codex run.**
+  - **Patch gate, after each Codex run** (a script, not a runner, user approved 2026-10-09).
     - The orchestrator applies the patch itself: one `git apply` in the milestone worktree.
-    - Then a read-only Haiku runner (`run-delegate`, report mode `failures`):
-      - reads the refused list;
-      - greps the patch's added lines for risky patterns: shell or eval calls, network calls,
-        subprocess use, home or absolute user paths, dotfiles, agent configuration;
-      - builds a fresh `.venv-sf2` with `--require-hashes`;
-      - runs the spec-format and utility suites, `check-no-private-paths.py` and
-        `check-open-side.py`;
-      - greps new untracked files for home paths;
-      - reports test counts, the number of refused files, failures with the tool's own error
-        lines, and every pattern hit, all verbatim.
-    - The orchestrator reads any hits.
-    - Before committing, the orchestrator reruns the suite itself, quietly, and judges only
-      the exit status. A runner's "all green" never gates a commit, push or merge.
+    - Then it runs `python3 utilities/patch-gate.py PATCH WORKTREE --refused REFUSED`
+      itself, adding `--suite NAME=COMMAND` for any other surface the patch touches. The
+      script fails on any refused file, failing suite, or home path in a new untracked file;
+      it rebuilds `.venv-sf2` with `--require-hashes` and prints every risky-pattern hit in
+      the patch's added lines (shell or eval calls, network calls, subprocess use, home or
+      absolute user paths, dotfiles, agent configuration) verbatim.
+    - The orchestrator reads any hits; they never pass or fail the gate on their own.
+    - The gate's exit status is the orchestrator's own check before committing. A Haiku runner
+      cost about 71k tokens per patch for these same commands, and the orchestrator had to
+      rerun them anyway.
   - **Git sequences (Haiku), through the `git-delegate` skill:** committing applied changes,
     merging `origin/main` into a branch, push, `gh pr create`, merge and the `git cherry`-gated
     cleanup. A push or merge is named on the brief's approved line. The brief tells the

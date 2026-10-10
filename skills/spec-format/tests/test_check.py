@@ -903,7 +903,9 @@ class Rules(TempRoots):
         for what, text in flagged.items():
             code, result = self.one({"x.spec.yaml": text})
             self.assertEqual(code, 1, what)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            expected = "raw HTML" if what in ("title", "html in claim") else "unsubstituted template placeholder"
+            self.assertTrue(any(expected in f["message"]
+                                for f in errors(result)))
         clean = chip(repos=repo(), facts=src_fact("a").replace("symbol: S", "symbol: Foo<T>")
                      + fact("b").replace("claim: C b.", "claim: \"`<type number flags>`, "
                                                         "<https://example.invalid/x>, a <0 0 0>\"")
@@ -916,16 +918,22 @@ class Rules(TempRoots):
         def claim(text):
             return chip(facts=fact("a").replace("claim: C a.", "claim: " + json.dumps(text)))
 
-        flagged = ["Use <board *name*>.", "Use ![<board name>](https://example.invalid/x).",
-                   "Over <soc-id> and more.", "A <SPDX identifier> here.",
-                   "Over [the <bus>](https://example.invalid/b)."]
+        flagged = ["Use <board *name*>.", "Use ![\\<board name>](https://example.invalid/x)."]
+        html = ["Use ![<board name>](https://example.invalid/x).", "Over <soc-id> and more.",
+                "A <SPDX identifier> here.", "Over [the <bus>](https://example.invalid/b)."]
         clean = ["Include <linux/of.h> first.", "Mail <a@b.example>.",
                  "See <https://example.invalid/x>.", "Code `<board name>`.",
                  "Split <board `x` name>.", "A tuple <0 0 0>.", "```\n<board name>\n```"]
         for text in flagged:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual(code, 1, text)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            self.assertTrue(any("unsubstituted template placeholder" in f["message"]
+                                for f in errors(result)))
+        for text in html:
+            code, result = self.one({"x.spec.yaml": claim(text)})
+            self.assertEqual(code, 1, text)
+            self.assertTrue(any("raw HTML" in f["message"] for f in errors(result)))
+            self.assertFalse(any("unsubstituted template placeholder" in f["message"] for f in errors(result)))
         for text in clean:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual((code, findings(result)), (0, []), text)

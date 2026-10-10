@@ -677,3 +677,108 @@ fail in the export; a scratch checkout adds a third because its README is now
 inside the configured temporary directory. Campaign-review passes in that
 checkout, but moving utility tests there cannot remove their parent-marker
 assumption. Leave these unchanged tools for the orchestrator’s environment.
+
+### 2026-10-09T14:27:42-07:00 — export environment setup and oversized reads
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The brief asked for a dot-directory
+venv, but the export instruction forbids creating one; system Python also lacked ensurepip.
+A seeded temporary venv plus pip hash verification worked. Initial document batches exceeded
+the output budget and required targeted reads. Cost: extra setup and read calls. Prevention:
+briefs should prefer temporary venvs in exports; tools should budget combined output before
+batching. Fix belongs in the implementer brief and tool usage.
+
+### 2026-10-09T14:34:50-07:00 — test fixture typing and new diagnostics
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A tag-shaped unquoted claim became a YAML
+list, reused Python objects generated YAML aliases, and generic YAML loading changed a zero
+hash to an integer. New safety findings also invalidated two first-error assumptions. Cost:
+three focused test reruns. Prevention: quote fixture strings, avoid shared objects in YAML
+dumps, use the strict loader for format 2 inputs, and match the relevant diagnostic rather
+than its position. Fix belongs in test authoring guidance.
+
+### 2026-10-09T14:42:46-07:00 — checkout-dependent checks in an export
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Utilities reported two failures and
+campaign-review reported ten errors: directory markers made filesystem checks classify temporary
+paths as git trees, while git could not read a valid repository. Cost: two checks cannot be
+verified here. Prevention: identify checkout-dependent suites in export briefs and rerun them
+in the orchestrator's actual worktree. Fix belongs in the implementer brief; no unrelated
+utility or campaign code was changed.
+
+### 2026-10-09T15:16:34-07:00 — round-1 export environment and diagnostic expectations
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The default Python again lacked
+ensurepip; a seeded Python 3.12 temporary environment installed the hash-pinned dependencies.
+Initial batched reads were truncated and a patch failed because its last context did not
+exist. Cost: targeted reads and one corrected patch. New safety rules changed existing
+reference-definition and HTML/placeholder expectations, requiring fixture updates. Prevention:
+use the chapter’s documented interpreter setup, budget combined output, and remove stale patch
+context. Fix belongs in implementer tooling and test authoring guidance.
+
+### 2026-10-09T15:22:19-07:00 — mutation scoring and fixture assumptions
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A missing rendered substring raised
+ValueError in a mutation test; assertions must establish its presence before indexing. A
+fixture assumed every support class allowed notes; switching to its document citation made
+the containment test valid. Self-review caught a status-variable collision in the fix. Cost:
+focused reruns and a repeated mutation pass. Prevention: inspect schema branches before
+editing fixtures, test optional modes, and distinguish assertion kills from crashes. Fix
+belongs in implementation and test authoring guidance.
+
+### 2026-10-09T15:53:34-07:00 — round-2 environment and fixture corrections
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. System Python again lacked ensurepip;
+used the recorded seeded Python 3.12 temporary environment. Initial reads exceeded their
+output budget. A missing local import broke diagnostic formatting; importing the loader
+in the dependency-failure handler also broke the no-site-packages exit contract. Moved
+visible-name encoding to a dependency-free shared module. A fixture placed a note on an
+inference support entry, whose schema forbids it; moved it to the nested document citation.
+An accidental indented scratch command failed before running. Cost: focused reruns and
+corrected reads. Prevention: follow the chapter environment recipe, budget output, verify
+schema branches and exercise dependency failures. Fix belongs in implementation guidance.
+
+### 2026-10-09T15:59:28-07:00 — mutation scoring and GFM audit imports
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Two containment mutations made
+direct-render tests raise ValueError instead of failing an assertion; a redundant diagnostic
+formatting layer had no independent boundary test. Added explicit assertion conversions
+and a text-output probe, then reran all mutations. The first standalone GFM audit imported
+render_md before adding the script path and failed immediately; corrected PYTHONPATH. Cost:
+one complete mutation rerun and one audit rerun. Prevention: score crashes separately,
+exercise output boundaries independently, and establish import paths before imports. Fix
+belongs in test and validation tooling.
+
+### 2026-10-09T16:13:18-07:00 — SF2-4 confirmation fixture corrections
+
+The first regression run used multiline and indented footnote payloads in single-line titles;
+schema rejection correctly preceded the expected text finding. Normalize those title fixtures
+to valid single-line strings. Importing the test helper class also collected its tests twice;
+import the module instead. A guessed record schema filename needed correction to
+`verify.schema.json`. Cost: one failed targeted run and one missing-file read. Prevention:
+check schema constraints and available filenames before constructing fixtures. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:16:00-07:00 — SF2-4 GFM proof assertion
+
+The first GFM proof recognized the escaped claim but required an exact autolink URL for the
+title. GFM includes the unrecognized closing backticks in that active autolink, percent-encoding
+them in its URL. Match the active link's URL prefix instead. Cost: one failed proof run;
+the corrected run confirms both escapes in safe and unsafe modes. Prevention: inspect the
+rendered HTML before asserting URL serialization. Fix belongs in the verification script.
+
+### 2026-10-09T16:16:31-07:00 — SF2-4 optional test selection
+
+The follow-up for the board suite's optional PyYAML test named a guessed test class in the
+same shell call that listed the available classes. The selected class did not exist.
+Cost: one failed test-selection command; rerunning the observed `SubsetParser` method passes.
+Prevention: consume discovery output before composing the dependent command. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:19:20-07:00 — SF2-4 mutation target scope
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: corrected. The initial integration mutation's
+unscoped replacement matched the new function's declaration before its call; compilation
+failed, so that attempt is not scored. Match the indented call with surrounding newlines.
+Cost: a partial mutation run and a complete rerun in four independent temporary copies.
+Prevention: compile every changed mutation target before starting the suite. Fix belongs
+in the mutation runner's preflight; all 112 current targets compile and fail by assertion.

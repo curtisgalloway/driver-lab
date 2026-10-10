@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T19:50-07:00
+Updated: 2026-10-09T15:53:47-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,14 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-6 — Resolve, show and drift](SF2-6.md)
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation
+round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
+"verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
+and keeps the original on any other difference. Do not patch a splicer a second time; verify its
+output. Recheck file policy beside the final comparison, not only before staging.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

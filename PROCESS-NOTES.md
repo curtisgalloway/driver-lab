@@ -576,3 +576,104 @@ clean `git archive` export now runs the suite.
 Cost: one follow-up commit.
 Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
 Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.
+
+## 2026-10-08T19:00:17-07:00 — SF2-6: fixture construction
+
+The first resolver test run used shallow copies that PyYAML emitted as aliases,
+plus two incomplete support records. Four failures cost one repair pass.
+Fix belongs in test authoring: copy nested fixture data deeply and inspect
+the schema before constructing a new support class. One earlier fixture read
+used `worked` instead of `worked-example`; the corrected path was then read.
+
+## 2026-10-08T19:06:37-07:00 — SF2-6: tool and mutation setup
+
+`uv tool run` first tried its default tool directory, which is read-only in
+this session. Retried with both cache and tool directories under temporary
+storage; formatting then passed. The first mutation inventory included error
+dispatch and guards whose removal only crashes downstream. Retained the logs;
+refined the inventory to validation rejections and added independent assertion
+cases. Two new test setup errors (subTest arguments and an overly small limit
+during repository construction) were fixed before the next clean baseline.
+Fix belongs in the run setup and test authoring, not the format contract.
+
+## 2026-10-08T19:14:49-07:00 — SF2-6: protected Git metadata and temporary marker
+
+Ordinary staging failed on the worktree index lock despite writable common
+Git storage. The sandbox also exposes `/tmp/.git`, which causes two unrelated
+review-wrapper tests to reject temporary directories. Used a private index
+for named staging and the authorized common object/ref store for the local
+commit; the orchestrator must refresh the normal index later. Privacy and
+open-side checks were repeated with that index so new files were included.
+Fix belongs in the harness permission profile; no repository utility changed.
+
+## 2026-10-09T14:28:09-07:00 — SF2-6: scratch environment setup
+
+System Python lacks ensurepip, so `python3 -m venv` failed. Used `uv venv`
+and `uv pip install --require-hashes` in scratch storage instead. The pinned
+requirements are unchanged. This cost one setup attempt; the check runner
+should probe venv support or use an available interpreter.
+
+## 2026-10-09T14:41:52-07:00 — SF2-6: mutation runner and export checks
+
+The first mutation run replaced a bare identifier beyond its AST span and
+created two invalid programs. It also exposed assertion gaps in older tests;
+none of those crash or survivor results counted as success. The runner now
+changes the exact span, and the final run has clean baselines and 84 assertion
+kills. A scratch-script quoting error cost one restart. Fix belongs in the
+mutation runner: use exact spans and preserve a clean baseline per case.
+
+Utility tests infer checkout membership from an ancestor Git marker, while
+campaign-review requires Git file enumeration. The export run recorded both
+failures; campaign-review then passed in a scratch checkout. The reviewer c06
+harness indexed an anchors key absent from usage-error JSON and was adapted
+in scratch to use a missing-key-safe read. These are environment and harness
+assumptions, so the implementation was not changed to accommodate them.
+
+## 2026-10-09T15:06:33-07:00 — SF2-6: round-2 scratch setup and fixtures
+
+The system Python lacks ensurepip, so the requested venv command failed once.
+Used uv to create a scratch environment and installed the same hash-pinned
+requirements. The first regression run also exposed a no-change fixture commit
+and an attempt to send loader-refused characters through a valid spec. Used
+allow-empty fixture commits and tested those fields at the text-output boundary,
+with real CLI source and finding tests alongside. Cost: one setup retry and one
+fixture correction. Prevention belongs in the test brief: allow an equivalent
+hash-verified scratch environment, and distinguish loader refusal from output
+escaping. Status: fixed for this run; no instruction changes proposed here.
+
+## 2026-10-09T15:15:45-07:00 — SF2-6: mutation scoring and replacement fixture
+
+The initial round-2 mutation pass exposed assertions inside mocked command
+operations that became internal errors, and a fixture that staged a deletion
+without the new parent file. Cost: one test correction and a rerun. Capture
+observations in mocks and assert afterward; explicitly stage both sides of a
+path-kind change. The preliminary fail-before summary was corrected after
+counting distinct failed methods. Prevention belongs in mutation-test guidance:
+an internal error does not count, and every regression method needs its own
+fail-before evidence. Status: fixed in the round-2 tests and scratch runner.
+
+## 2026-10-09T15:44:41-07:00 — SF2-6: round-3 test expectations
+
+The first layout run treated a valid unchanged-pin rewrite as a refusal, and
+a shallow fixture copy caused PyYAML to emit a forbidden alias. Ten assertion
+failures exposed these test defects; accept a verified no-op and deep-copy
+the duplicate anchor fixture. The implementation did not change for either
+case. Prevent this in fixture design, not in the loader.
+
+The blanket fail-before instruction cannot apply to coverage for guards that
+already work: line-5 SPDX and absolute DT override tokenization. Report those
+two pass-before tests separately with their assertion-killed mutations, as
+in round 1; do not manufacture a failing baseline.
+
+## 2026-10-09T15:51:36-07:00 — SF2-6: round-3 environment and mutation feedback
+
+A targeted read guessed a campaign test filename and failed once; list names
+before reading. The first mutation pass had two survivors, not kills: normal
+user access hid the mode check, and short DT names did not expose phantom
+roots. Strengthen the assertions before scoring the repeated pass.
+
+Utility tests encounter a Git marker in the scratch parent. Two assertions
+fail in the export; a scratch checkout adds a third because its README is now
+inside the configured temporary directory. Campaign-review passes in that
+checkout, but moving utility tests there cannot remove their parent-marker
+assumption. Leave these unchanged tools for the orchestrator’s environment.

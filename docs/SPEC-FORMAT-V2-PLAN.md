@@ -116,7 +116,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
-| SF2-6 | Resolve, show and drift | SF2-2 | pending |
+| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
@@ -467,7 +467,8 @@ Needs `fetch_src_pins.py`, the anchor-resolution parts of `anchor_check.py` and 
 anchor section. Split point: `drift` (step 2) becomes SF2-6b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-6.md`. Notebook: `notebook/SF2-6.md`.
+Status: complete. Evidence: [SF2-6](../evidence/SF2-6.md) (acceptance table, three review rounds
+and a confirmation round, decisions, limitations). Notebook: [SF2-6](../notebook/SF2-6.md).
 
 ---
 

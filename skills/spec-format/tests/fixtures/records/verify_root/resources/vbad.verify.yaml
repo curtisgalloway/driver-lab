@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+spec: vbad
+spec_file: vbad.spec.yaml
+spec_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+canonical: fact-v1
+sources: []
+verdicts:
+  reset:
+    basis: 1aa486d65b8ab1c147beedd2bdc7bcc25132ac13adab3ecc999c1dba577e2a7c
+    verdict: MAYBE
+    date: yesterday
+    verifier: "a model"
+    contrary_evidence: none-found
+    citation_precision: exact

@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+spec: vfail
+spec_file: vfail.spec.yaml
+spec_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+canonical: fact-v1
+sources:
+  - {name: trm, url: "https://example.invalid/trm.pdf", sha256: "1111111111111111111111111111111111111111111111111111111111111111", fetch: ok}
+summary: {pass: 0, fail: 1, unverifiable: 0, gap: 0, adjudicate: 0}
+verdicts:
+  reset:
+    date: 2026-10-08
+    verifier: "a model, a harness"
+    contrary_evidence: none-found
+    citation_precision: exact
+    basis: 1aa486d65b8ab1c147beedd2bdc7bcc25132ac13adab3ecc999c1dba577e2a7c
+    verdict: FAIL
+    correction: section 1 states 12 cycles

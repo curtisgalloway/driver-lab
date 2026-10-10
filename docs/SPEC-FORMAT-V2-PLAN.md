@@ -58,10 +58,17 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 - **Design gate:** satisfied (approved 2026-10-08). A milestone that needs a design change stops,
   amends the design, and asks the user before continuing.
 - **User overrides:** none.
-- **Implementers:** one fresh subagent per milestone. Model by unit (user decision 2026-10-08):
-  Opus 5.5 for SF2-1 to SF2-7 and SF2-G (loader, checker, records, CommonMark checks, viewer,
-  resolver, payload schemas, the gate); Sonnet 5.5 for SF2-8 to SF2-12 (skill text, templates,
-  migration, cutover, retirement). The orchestrator holds pushes, merges, Codex runs and user questions.
+- **Implementers:** one fresh implementer per milestone. By unit (user decision 2026-10-08,
+  revised the same evening after a larger Codex allowance): Opus 5.5 subagents for SF2-1 to
+  SF2-3 and SF2-G; **Codex** (through `utilities/codex-implement.py BASE RUN_DIR BRIEF`)
+  for SF2-4 to SF2-12. Codex returns a patch (user decision 2026-10-09): it works in a
+  private export of BASE that is deleted afterwards, and the wrapper writes the accepted
+  changes as `codex-<stamp>.patch` plus a `codex-<stamp>.refused.txt` list in RUN_DIR. The
+  orchestrator reads both before `git apply` in the milestone worktree. Reviewers stay as the review method says (an Opus reviewer plus a Codex
+  review). The orchestrator holds pushes, merges, Codex runs and user questions.
+  Mechanical steps (the patch gate, git sequences, review archiving) go to Haiku runners,
+  and each milestone's close-out (evidence, plan row, notebook close, checks list) to a
+  Sonnet subagent, per AGENTS.md "Delegation in orchestrated runs" (user, 2026-10-09).
 - **Review method** (naming it here authorizes it; executing sessions do not re-decide):
   - **Code units** (SF2-1–SF2-7, SF2-12): **both** an executing Claude reviewer (a fresh
     subagent that runs the checks, writes break cases including degenerate inputs: empty,
@@ -91,7 +98,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
     (the user adjudicates).
   - Reaching a limit: the orchestrator lists the open blockers with options (fix in a follow-up
     milestone, narrow the scope, accept and record as a limitation) and asks; no further round
-    starts without the user's decision.
+    starts without the user's decision. **Exception** (user, 2026-10-08): when every remaining
+    gap needs malformed input that the source repository's own CI already rejects, the
+    orchestrator merges and tracks the gaps in the backlog without asking.
 - **Review order:** review and fixes precede the checkpoint commit, which is the last step.
 - **Orchestrated mode:** allowed (`orchestrate-milestones`): one fresh subagent per milestone,
   the orchestrator landing each as one pull request per repository.
@@ -104,21 +113,25 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 |----|---------|--------------|--------|
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
-| SF2-3 | Verification records and per-fact freshness | SF2-2 | pending |
-| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
-| SF2-5 | The viewer and publishing | SF2-4 | pending |
-| SF2-6 | Resolve, show and drift | SF2-2 | pending |
-| SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
-| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-5, SF2-6 | pending |
-| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
-| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
-| SF2-11 | The three spec repositories cut over, published | SF2-10 (Pages approved) | pending |
+| SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
+| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
+| SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](../evidence/SF2-5.md)) |
+| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
+| SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)) |
+| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
+| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](../evidence/SF2-9.md)) |
+| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
+| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
 
-Order: the board-spec path end to end first (SF2-1 → SF2-6, SF2-8, SF2-10, SF2-11), because
-it carries the only published content; peripheral and review support (SF2-7, SF2-9) may run in
-parallel with SF2-8 and SF2-10 once its dependencies merge. SF2-12 waits for both paths.
+Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives format 2): the board-spec
+path first, **SF2-3 → SF2-4 → SF2-8**, with **SF2-6 running in parallel now** in its own
+worktree (it needs only SF2-2). SF2-5 (viewer and publishing) moves after SF2-8 and lands before
+SF2-11: SF2-8's skills read the Markdown view from SF2-4, not the HTML viewer, and its contract
+text marks `render --format html` as arriving with SF2-5. Then SF2-10 and SF2-11. Peripheral
+and review support (SF2-7, SF2-9) may run in parallel with SF2-8 and SF2-10 once its
+dependencies merge. SF2-12 waits for both paths.
 
 ### Outline mapping
 
@@ -293,13 +306,13 @@ modes (proposed flag: `--require-verified=pr|main`).
 3. `spec.py status` with `--json`.
 
 ### Acceptance criteria
-- [ ] Reflowing a folded scalar, reordering keys, moving a fact's section and editing comments
+- [x] Reflowing a folded scalar, reordering keys, moving a fact's section and editing comments
   leave every basis hash unchanged; editing a claim, a locator, a cited commit or a referenced
   fact changes exactly the expected hashes.
-- [ ] Upstream-stale is an error under the pull-request mode and a warning under `main` mode; a
+- [x] Upstream-stale is an error under the pull-request mode and a warning under `main` mode; a
   test proves `main` mode does not relax a fact staled by its own file.
-- [ ] A key naming no fact, a summary that does not match, and a missing second reader on a
-  `critical` fact are errors.
+- [x] A key naming no fact and a summary that does not match are errors; a missing second reader
+  on a `critical` fact is a warning, an error under `--require-verified`.
 
 ### Testing and review
 - Tests: `test_records.py` (proposed).
@@ -312,7 +325,11 @@ Needs the design's Verification records section and SF2-2's composition API. Sma
 exacting tests. Split point: `status` can move to SF2-4 if needed.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-3.md`. Notebook: `notebook/SF2-3.md`.
+Status: complete. Evidence: [SF2-3](../evidence/SF2-3.md) (acceptance table, three review rounds,
+decisions, the bookkeeping list, mutation results). Notebook: [SF2-3](../notebook/SF2-3.md).
+Three review rounds: round 2 met the stop rule and the user chose "hash all but bookkeeping";
+round 3 found no blocker. **Open limitations:** the three SF2-3 tracked items under
+[Discovered work / backlog](#discovered-work--backlog).
 
 ---
 
@@ -360,7 +377,11 @@ Needs the design's Rendering section and the CommonMark library's token API. Spl
 the renderer (steps 3–4) moves to SF2-5 if the text module and its fixtures take the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-4.md`. Notebook: `notebook/SF2-4.md`.
+Status: complete. Evidence: [SF2-4](../evidence/SF2-4.md) (acceptance table, four fix rounds
+and a confirmation review, mutation results). Notebook: [SF2-4](../notebook/SF2-4.md). Round 2
+met the stop rule (author text escaped its container under GFM a second time) and the user chose
+"author text inert in the .md view"; the confirmation round added a delimiter bound. **Open
+limitations:** the HTML viewer must use the same CommonMark preset (SF2-5); see the evidence.
 
 ---
 
@@ -404,7 +425,10 @@ Needs the design's viewer section and SF2-4's renderer. Split point: the workflo
 (step 3) moves to SF2-11 if the viewer takes the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-5.md`. Notebook: `notebook/SF2-5.md`.
+Status: complete. Evidence: [SF2-5](../evidence/SF2-5.md) (acceptance table, one review round
+with two reviewers and a clean confirmation, mutation results). Notebook: [SF2-5](../notebook/SF2-5.md).
+**Open limitations:** deploy concurrency serializes but does not order deployments when builds
+finish out of order; enabling Pages and installing the template in the spec repositories is SF2-11.
 
 ---
 
@@ -450,7 +474,8 @@ Needs `fetch_src_pins.py`, the anchor-resolution parts of `anchor_check.py` and 
 anchor section. Split point: `drift` (step 2) becomes SF2-6b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-6.md`. Notebook: `notebook/SF2-6.md`.
+Status: complete. Evidence: [SF2-6](../evidence/SF2-6.md) (acceptance table, three review rounds
+and a confirmation round, decisions, limitations). Notebook: [SF2-6](../notebook/SF2-6.md).
 
 ---
 
@@ -496,7 +521,8 @@ Several payloads but one pattern. Split point: reviews (`finding`, `pair`, `cove
 fixtures become SF2-7b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-7.md`. Notebook: `notebook/SF2-7.md`.
+Status: complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)). Evidence:
+`evidence/SF2-7a.md`, `evidence/SF2-7b.md`. Notebook: `notebook/SF2-7a.md`, `notebook/SF2-7b.md`.
 
 ---
 
@@ -511,7 +537,8 @@ writes YAML records with basis hashes, `readers`, `contrary_evidence`, `citation
 `carried_from`, and runs delta verification from `spec.py status --stale`.
 **Design coverage:** D7 (contract), D14 (procedure); § Effects (SPEC-FORMAT, board-expert,
 scaffold, spec-verifier).
-**Dependencies:** SF2-3, SF2-5, SF2-6 (the commands the text names must exist).
+**Dependencies:** SF2-3, SF2-4, SF2-6 (the commands the text names must exist; SF2-5's
+`render --format html` is named as arriving later, per the 2026-10-08 reorder).
 **In scope:** the four skills above and their tests where they have them; `GLOSSARY.md`;
 learnings rows marked SF2-8.
 **Out of scope:** peripheral-spec, reference-driver-review, hardware-investigator (SF2-9);
@@ -540,7 +567,7 @@ pre-RG2 procedure rows (user decision: they stay in the pre-RG2 pass).
 Text-heavy, four skills. Split point: `spec-verifier` (step 4) becomes SF2-8b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-8.md`. Notebook: `notebook/SF2-8.md`.
+Status: complete. Evidence: [evidence/SF2-8.md](../evidence/SF2-8.md). Notebook: [SF2-8a](../notebook/SF2-8a.md) and [SF2-8b](../notebook/SF2-8b.md).
 
 ---
 
@@ -572,7 +599,7 @@ check/resolve/show/drift/inventory`; the anchor-grammar section is replaced.
 Three skills, two with templates. Split point: `reference-driver-review` becomes SF2-9b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-9.md`. Notebook: `notebook/SF2-9.md`.
+Status: complete. Evidence: `evidence/SF2-9.md`. Notebook: `notebook/SF2-9.md`.
 
 ---
 
@@ -620,7 +647,7 @@ Conversion plus verification of three specs. Split point: after step 4 (conversi
 done, records carried), with delta verification as SF2-10b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-10.md`. Notebook: `notebook/SF2-10.md`.
+Status: complete. The draft branches `format-v2/sf2-10` are not merged; SF2-11 cuts over. Evidence: `evidence/SF2-10.md`. Notebook: `notebook/SF2-10.md`.
 
 ---
 
@@ -695,6 +722,9 @@ Mostly deletions and CI edits. Split point: none expected.
 ### Evidence and findings
 Status: pending. Evidence: `evidence/SF2-12.md`. Notebook: `notebook/SF2-12.md`.
 
+Carried from SF2-9: `README.md`, `DESIGN.md` and `GLOSSARY.md` still describe `peripheral-spec`,
+`reference-driver-review` and `hardware-investigator` in format 1 terms; retire that wording here.
+
 ---
 
 ## SF2-G — Whole-outcome gate
@@ -717,7 +747,25 @@ Status: pending. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
 
 This plan ends at SF2-G. The spec-regeneration series ([plan](SPEC-REGEN-PLAN.md)) is paused
 until then and resumes with RG2 (`rpi4`) written in format 2, after the pre-RG2 learnings pass.
-No RG unit starts while a format 2 milestone is open.
+No RG unit starts while a format 2 milestone is open, with one exception (user, 2026-10-08):
+the Rock 5T specs below.
+
+**Rock 5T specs first** (user decisions, 2026-10-08, made in the bringup-kit session and
+confirmed in this one):
+
+1. The Radxa Rock 5T bring-up drives format 2. The first new format 2 specs are an `rk3588`
+   SoC unit and a `rock5t` board unit, ahead of the remaining RG2–RG11 order. `rk3588` is the
+   full RK3588, not RG8's `rk3588s`; reuse and compose where the design allows.
+2. They go in the public hardware-specs repositories, layered: a docs-only base plus a GPL
+   overlay for Linux and devicetree facts. Both tiers are wanted; the docs-only base also
+   measures how far a spec gets without Linux.
+3. First pass: the board spec plus specs for the bring-up's first two milestones (console and
+   cores, then storage or network boot). The rest is written after bench evidence.
+4. Bring-up records for the Rock 5T stay in a separate private board repository. Specs are
+   public; records are private.
+5. Drafting starts by hand once SF2-3 merges (schemas, checker, license gate and records exist
+   then), as a separate unit run from this repository, with a light pass after SF2-8 (scaffold
+   and verifier procedure) and SF2-7 (peripheral payloads).
 
 ## Decisions (user, 2026-10-08)
 
@@ -731,7 +779,13 @@ No RG unit starts while a format 2 milestone is open.
 5. **GitHub Pages** (later the same day): approved for the three spec repositories; SF2-11 may
    enable it.
 6. **Models unchanged** (later the same day): Opus 5.5 for SF2-1 to SF2-7, SF2-G and every
-   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12.
+   reviewer and verifier; Sonnet 5.5 for SF2-8 to SF2-12. *Superseded by 7.*
+7. **Codex implements SF2-4 onward** (evening, after a larger Codex allowance), except SF2-G;
+   Opus 5.5 keeps SF2-3, SF2-G and every reviewer and verifier.
+8. **Stop-rule exception:** merge and track, without asking, when the remaining gaps need
+   malformed input the source's own CI already rejects (Conventions, stop rules).
+9. **Reorder for the Rock 5T** (both sessions): SF2-6 in parallel now; SF2-5 after SF2-8 and
+   before SF2-11; Rock 5T specs drafted after SF2-3 ([Stop point](#stop-point-and-what-follows)).
 
 Orchestrator decisions during SF2-1's review (2026-10-08), within the design's scope:
 
@@ -813,11 +867,28 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
     it; drop it or test it). Untrusted-root messages cut the underlying reason at 200
     characters, and the full path takes most of them.
 
+- **SF2-3 tracked items** (review nits, no code change at the close):
+  - **The own-verifier rule catches case only** (round 2, N2): readers' verifiers are compared
+    after NFC, white-space collapse and case folding, so a fullwidth letter or a trailing period
+    reads as a second reader. Impact: a `critical` fact can pass `--require-verified` with its
+    one verifier listed twice under two spellings; free-text verifiers cannot close this short
+    of an identity registry.
+  - **The first pass reads freshness without the rejected sets** (round 3, N1;
+    `records.first_pass`): a current FAIL whose citation the check now rejects is reported as a
+    current FAIL and also reads unknown. Impact: two errors where one would do; the run fails
+    either way.
+  - **One spec id declared by two files of a root collapses to one full reference** (round 3,
+    N2): status rows for the two files' facts of the same id merge into one row. Impact:
+    status output only; the check already reports the duplicate id as an error.
+
 ## Next session
 
-- Current milestone and status: SF2-2 complete ([evidence](../evidence/SF2-2.md)); SF2-3 next.
-- Resume action: begin SF2-3 (implementer: Opus 5.5) once SF2-2 is merged.
-- Read first: the design (including the license-gate section's trust rule), this plan's
-  conventions and SF2-3, the [SF2-2](../notebook/SF2-2.md) chapter's decisions. SF2-3 adds
-  `resources/*.verify.yaml`; the tracked gap on unrecognized file names names those records as
-  the one YAML a root may hold besides specs and the marker.
+- Current milestone and status: SF2-3 complete ([evidence](../evidence/SF2-3.md)), on branch
+  `sf2/sf2-3` awaiting the orchestrator's pull request. SF2-6 runs in parallel in its own
+  worktree.
+- Resume action: once SF2-3 merges, begin SF2-4 (implementer: Codex, per Conventions); Rock 5T
+  spec drafting may start by hand ([Stop point](#stop-point-and-what-follows), item 5).
+- Read first: the design's Verification records and Freshness sections (the `upstream` map,
+  cycles, `unknown`, bookkeeping fields), this plan's conventions and SF2-4, and the
+  [SF2-3](../notebook/SF2-3.md) chapter's decision entries. SF2-4 renders the statuses
+  `spec.py status` reports; the three SF2-3 tracked items are in the backlog.

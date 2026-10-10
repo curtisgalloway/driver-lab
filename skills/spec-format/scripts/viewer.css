@@ -1,0 +1,20 @@
+/* SPDX-FileCopyrightText: 2026 contributors
+ * SPDX-License-Identifier: Apache-2.0 */
+:root { color-scheme: light dark; font: 1rem/1.6 system-ui, sans-serif; }
+body { margin: 0; }
+main { max-width: 75rem; margin: auto; padding: 2rem; }
+a { text-decoration: underline; }
+.fact { border: 1px solid #888; border-radius: .5rem; margin: 1.5rem 0; padding: 1rem; }
+.claim, .author, .context { padding: .75rem; border-left: .25rem solid #888; }
+.provenance { border-top: 1px solid #888; margin-top: 1rem; padding-top: 1rem; }
+.badge { display: inline-block; font: bold .85rem/1.5 system-ui, sans-serif;
+  border: 2px solid currentColor; border-radius: .3rem; padding: .1rem .5rem; margin: .15rem; }
+.critical, .contested, .todo, .status-stale, .status-upstream-stale { border-style: dashed; }
+.verdict-fail, .verdict-adjudicate { border-width: 3px; }
+.origin { font-weight: normal; }
+table { border-collapse: collapse; display: block; overflow-x: auto; }
+th, td { text-align: left; border: 1px solid #888; padding: .5rem; }
+pre { overflow-x: auto; padding: .75rem; border: 1px solid #888; }
+code { font-family: ui-monospace, monospace; }
+p, li, dd, td, code { overflow-wrap: anywhere; }
+@media (max-width: 40rem) { main { padding: .75rem; } }

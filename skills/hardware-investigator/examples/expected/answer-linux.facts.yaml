@@ -1,0 +1,98 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: facts
+resources:
+  repos:
+  - name: linux
+    url: https://example.invalid/linux
+    commit: '1111111111111111111111111111111111111111'
+    license: GPL-2.0-only
+    role: source
+    files:
+    - path: drivers/tty/serial/widget.c
+      license_from: spdx-line
+facts:
+- id: reg-ctrl
+  section: facts
+  title: CTRL
+  data:
+    register:
+      name: WIDGET_CTRL
+      offset: '0x0'
+  support:
+  - class: src
+    anchors:
+    - repo: linux
+      path: drivers/tty/serial/widget.c
+      lines:
+      - 4
+      - 5
+      symbol: WIDGET_CTRL
+  claim: CTRL is at offset 0x00, and bit 0 enables the block.
+- id: reg-baud
+  section: facts
+  data:
+    register:
+      name: WIDGET_BAUD
+      offset: '0x4'
+  support:
+  - class: src
+    anchors:
+    - repo: linux
+      path: drivers/tty/serial/widget.c
+      lines:
+      - 6
+      - 6
+      symbol: WIDGET_BAUD
+  claim: BAUD, the baud divisor, is at offset 0x04.
+- id: reg-lcr
+  section: facts
+  data:
+    register:
+      name: WIDGET_LCR
+      offset: '0x8'
+  support:
+  - class: src
+    anchors:
+    - repo: linux
+      path: drivers/tty/serial/widget.c
+      lines:
+      - 7
+      - 7
+      symbol: WIDGET_LCR
+      comment: true
+  claim: LCR is at offset 0x08; the source comment says a write to it latches BAUD.
+- id: seq-init
+  section: facts
+  title: Initialization
+  claim: The driver initializes the block by clearing CTRL, writing BAUD, writing LCR, then setting the
+    enable bit.
+  requirement: as-implemented
+  data:
+    sequence:
+      steps:
+      - id: disable
+        action: Clear CTRL.
+      - id: baud
+        action: Write the divisor to BAUD.
+      - id: lcr
+        action: Write the line-control value to LCR.
+      - id: enable
+        action: Set the CTRL enable bit.
+      order:
+      - before: disable
+        after: baud
+      - before: baud
+        after: lcr
+      - before: lcr
+        after: enable
+  support:
+  - class: src
+    anchors:
+    - repo: linux
+      path: drivers/tty/serial/widget.c
+      lines:
+      - 12
+      - 15
+      symbol: widget_uart_init

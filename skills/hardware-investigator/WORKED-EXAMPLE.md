@@ -3,96 +3,133 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Worked example: the Widget UART against three target roots
+# Worked example: format 2 Widget UART facts
 
-Everything here is synthetic. `<skill>` is the `hardware-investigator` directory; `<scratch>` is
-an empty directory you create; `<bx>` is `<skill>/../board-expert`. Run the commands as written
-and compare. The expected facts files are under `examples/expected/`; write your own from the
-sources first and compare after, so the example tests the method and not copying.
+**Terms:** facts files contain identified records and structured support, without a spec identity;
+a pin identifies immutable source bytes; a root declares acceptable licenses. See the
+[glossary](../../GLOSSARY.md).
+
+Everything here is synthetic. This example uses the sources and facts converted in SF2-7,
+and the same target roots. It tests license placement and evidence resolution, not hardware.
+The source statements do not establish register width, access or reset; the records omit them.
+Write your own records after reading the accepted source, then compare with the expected files.
 
 **Question:** what is the Widget UART's control register, and in what order does software bring
-the block up?
+it up? The Linux-like source has GPL-2.0-only SPDX lines; offered firmware has MIT SPDX lines.
+The board map is a source lead, never confirmation of a file's license or hardware behavior.
 
-**Fixture:**
+## Setup and substitutions
 
-- `board-expert` specs: `<bx>/tests/fixtures/good_root` (`widgetuart`, among others).
-  `widgetuart` names one repository, `linux`, licensed `GPL-2.0-only`, file
-  `drivers/tty/serial/widget.c`.
-- Source trees (plain files; you make them git checkouts below): `examples/sources/widget-linux`
-  (a Linux-like tree, `GPL-2.0-only`) and `examples/sources/widget-fw` (a firmware tree the caller
-  offers, `MIT`; no board spec names it).
-- Target roots: `examples/roots/gpl` (accepts `GPL-2.0-only` among others) and
-  `examples/roots/permissive` (accepts `Apache-2.0`, `MIT`, `BSD-2-Clause`, `BSD-3-Clause`).
+Use a scratch directory under the system temporary directory. Copy each tree from
+`examples/sources/widget-linux` and `examples/sources/widget-fw` into it, initialize each as a
+git checkout and commit its files with a fictional fixture author. Read its full HEAD hash.
+Copy `examples/expected/answer-linux.facts.yaml` and `answer-fw.facts.yaml` to scratch, replacing
+only the all-ones resource commit in each with its corresponding checkout hash. Do not change
+claims or support to make them pass. The example tests make these same temporary checkouts.
 
-## Setup
+Use a virtual environment installed with spec-format's hash-pinned requirements.
+`<python>` is its interpreter; `<spec.py>` is `spec-format/scripts/spec.py`; `<gate.py>` is
+`hardware-investigator/scripts/license_gate.py`. `<root>` is `examples/roots/gpl`,
+`<permissive-root>` is `examples/roots/permissive`; `<facts>` and `<facts-fw>` are the two copied
+answers. `<source-checkout>` and `<fw-checkout>` are the temporary source trees. Their names
+and bindings match `resources.repos`, which have `role: source`, full commits, file licenses
+and `license_from: spdx-line` confirmations.
 
+## A: accepted Linux source
+
+Read the GPL target policy:
+
+```bash
+<python> <gate.py> --root <root>
 ```
-mkdir <scratch>/widget-linux <scratch>/widget-fw
-cp -r <skill>/examples/sources/widget-linux/. <scratch>/widget-linux/
-cp -r <skill>/examples/sources/widget-fw/. <scratch>/widget-fw/
-git -C <scratch>/widget-linux init -q
-git -C <scratch>/widget-linux add .
-git -C <scratch>/widget-linux -c user.name=example -c user.email=example@example.com commit -q -m fixture
-git -C <scratch>/widget-fw init -q
-git -C <scratch>/widget-fw add .
-git -C <scratch>/widget-fw -c user.name=example -c user.email=example@example.com commit -q -m fixture
+
+Read only the intended file's license line first. It states GPL-2.0-only. Gate before opening
+the file for evidence:
+
+```bash
+<python> <gate.py> --root <root> GPL-2.0-only
 ```
 
-## Run A: target root `examples/roots/gpl` (accepting)
+Expected: exit 0 and `accepted: GPL-2.0-only`. Now read the accepted source at its pin and
+write facts. Every record uses `section: facts`; the control, BAUD and LCR records carry
+`data.register` with canonical quoted offsets and source support. The init record states
+what the driver does with `data.sequence` steps and order constraints, labeled
+`requirement: as-implemented`. It is not a claim that silicon requires the driver's order.
+The LCR explanation is attributed to the source comment with a `comment: true` anchor,
+not measured hardware. The answer's SPDX header matches the GPL-2.0-only destination root.
 
-Caller sources: `linux=<scratch>/widget-linux`.
+```bash
+<python> <spec.py> check <facts> --root <root> --require-license
+<python> <spec.py> resolve <facts> --root <root> --repo linux=<source-checkout>
+<python> <spec.py> show <facts> --root <root> --repo linux=<source-checkout>
+```
 
-1. Accepts list: `python3 <skill>/scripts/license_gate.py --root <skill>/examples/roots/gpl`
-   prints the root, `license: GPL-2.0-only` and the accepts list, and exits 0.
-2. Map: `board-expert` on `spec: widgetuart` over `<bx>/tests/fixtures/good_root` says the
-   driver is `drivers/tty/serial/widget.c` in repository `linux`, stated license `GPL-2.0-only`,
-   and that the databook order is "disable, program, enable; latch by writing LCR".
-3. License of the file you will cite: `head -n 1 <scratch>/widget-linux/drivers/tty/serial/widget.c`
-   prints `// SPDX-License-Identifier: GPL-2.0-only`.
-4. Gate it: `python3 <skill>/scripts/license_gate.py --root <skill>/examples/roots/gpl GPL-2.0-only`
-   prints `accepted: GPL-2.0-only` and exits 0.
-5. Pin: `git -C <scratch>/widget-linux rev-parse HEAD`. Read `widget.c`, write the facts file
-   (compare `examples/expected/answer-linux.md`, whose `@REV` stands for the commit).
-6. Check:
-   ```
-   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
-       --repo linux=<scratch>/widget-linux --root <skill>/examples/roots/gpl --require-license
-   ```
-   Expected: `result: PASS (0 errors, 0 warnings)`, exit 0.
+Expected: exit 0 for each, zero check errors/warnings, four resolved anchors and zero skips.
+Show puts claims beside source bytes. That makes them reviewable; it is not independent
+verification. Return facts and resources unchanged to the drafter, which retains ids and
+support and assigns destination sections explicitly.
+Both expected answers assemble into peripheral specs: keep resources, ids, claims, payloads
+and support, set `kind: peripheral`, add `id` and `name`, and change the register records to
+`section: registers` and `seq-init` to `section: sequences`. No payload needs to be invented
+during assembly; the tests validate, check and resolve both assembled specs.
 
-## Run B: target root `examples/roots/permissive`, caller sources `linux=…` only (refusing)
+## B: only refused source available
 
-1. Accepts list as in A: `Apache-2.0, MIT, BSD-2-Clause, BSD-3-Clause`.
-2. Map and step 3 as in A: the file is `GPL-2.0-only`.
-3. Gate it: `python3 <skill>/scripts/license_gate.py --root <skill>/examples/roots/permissive
-   GPL-2.0-only` prints a `refused:` line naming the license, the root and its accepts list, and
-   exits 1.
-4. The only source that can answer the question is refused. **Stop.** Do not read `widget.c`
-   beyond its license line, do not pin it and do not write a facts file. Return the *Refused*
-   block from the skill, filled in. The correct answer here is that block and nothing about the
-   register.
+Read the permissive policy:
 
-## Run C: target root `examples/roots/permissive`, caller sources `linux=…` and `fw=…`
+```bash
+<python> <gate.py> --root <permissive-root>
+```
 
-1. As in B (including the license line of `widget.c`), `linux` is refused at its gate. Note the
-   refusal for the report.
-2. License of the offered tree: `head -n 1 <scratch>/widget-fw/uart/widget_uart_init.c` prints
-   `/* SPDX-License-Identifier: MIT */`. Gate: `license_gate.py --root
-   <skill>/examples/roots/permissive MIT` prints `accepted: MIT`, exit 0. This happens before you
-   open the file for evidence.
-3. Pin `fw`, read `uart/widget_uart_init.c`, write the facts file (compare
-   `examples/expected/answer-fw.md`), then check:
-   ```
-   uv run --with markdown-it-py==4.2.0 python3 <skill>/../peripheral-spec/scripts/anchor_check.py <scratch>/facts.md \
-       --repo fw=<scratch>/widget-fw --root <skill>/examples/roots/permissive --require-license
-   ```
-   Expected: `result: PASS (0 errors, 0 warnings)`.
-4. The report's *Sources* section lists `linux` as refused (GPL-2.0-only) and `fw` as accepted
-   (MIT); the facts cite `fw` only.
+After the GPL license line, gate it. **Expected exit: 1.**
 
-## What a failing run looks like
+```bash
+<python> <gate.py> --root <permissive-root> GPL-2.0-only
+```
 
-If, in Run C, the facts file had cited `[src:linux: …]` with a `GPL-2.0-only` pin, step 3's
-check would exit 1 with `license gate: … cites source pin 'linux' (GPL-2.0-only), which root …
-does not accept`. That is the final backstop, not the method: the method refuses at the gate in
-step 1, before the source is read.
+The gate reports refusal. Stop without reading that source for evidence, pinning it for an
+answer or returning hardware facts from it. Return the skill's Refused block, with confirmed
+license, accepts list, reason and options. This refusal is the expected successful method result.
+
+The following is a deliberately invalid backstop test, not a step in the refusing workflow.
+If GPL facts were supplied anyway, both paths reject them. **Expected exit: 1.**
+
+```bash
+<python> <spec.py> check <facts> --root <permissive-root> --require-license
+<python> <gate.py> --facts <facts> --root <permissive-root>
+```
+
+## C: independently accepted firmware offered
+
+Record the Linux refusal from B. Read the offered firmware file's license line: MIT. Gate it
+before reading further:
+
+```bash
+<python> <gate.py> --root <permissive-root> MIT
+```
+
+Expected: exit 0 and `accepted: MIT`. Now read firmware at its pin and produce the second
+answer; use `fw` support only. Its initialization claim is `comment-explained`, because the
+firmware comment explains disabling before programming. This is still a code comment, not
+an independently established hardware requirement. Its `data.sequence` carries steps and
+order constraints too, and its SPDX header matches the Apache-2.0 permissive destination.
+
+```bash
+<python> <spec.py> check <facts-fw> --root <permissive-root> --require-license
+<python> <spec.py> resolve <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+<python> <spec.py> show <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+```
+
+Expected: all exit 0, zero check errors/warnings, four resolved anchors and zero skips.
+Report Linux refused and firmware accepted, facts path, counts and hardware unknowns.
+Do not turn a mechanical success into a verification PASS. Later spec assembly and independent
+verification use the same records and per-fact bases; unknown width/access/reset stays unknown.
+
+## Repeatability
+
+The investigator worked-example suite checks the three license outcomes, source attribution,
+destination SPDX headers and assembly without changing returned payloads/support.
+`skills/spec-format/tests/test_sf2_9_docs.py` also extracts and
+executes every shell block above after these substitutions, as it does for the skills and
+prompts. Stand-in sources for the review fixture are explicitly synthetic; no command result
+here claims a differential driver or physical hardware test.

@@ -1,16 +1,7 @@
-# <license header per the repo's convention>
-#
-# Board-spec root marker: every *.spec.md below this directory is a spec.
-# See board-expert/SPEC-FORMAT.md.
-layer: <public | ip-vendor | soc-vendor | product | local>
-name: <short name shown in reports>
-# roots: [<further roots, relative to this file or absolute>]
-#
-# License fields: required in a published spec repository (spec_check.py and
-# anchor_check.py --require-license). Elsewhere spec_check.py only warns when they
-# are absent, but the license gate (anchor_check.py --root) always needs accepts:.
-# license: the root's own license, an SPDX expression.
-# accepts: the SPDX identifiers its specs' source pins may carry; [] for documents only.
-# Which repository a spec belongs in: peripheral-spec, "Where the spec goes".
-license: <SPDX expression: GPL-2.0-only | CC-BY-4.0 | Apache-2.0>
-accepts: [<SPDX identifier>, <SPDX identifier>]
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+layer: <layer>
+name: <root-name>
+license: <root-license>
+accepts: [<accepted-license>]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Check board specs against SPEC-FORMAT.md.
+"""Check board specs against FORMAT-1.md.
 
 A root is a directory holding ``board-specs.yaml``; every ``*.spec.md``
 below it is a spec (or an overlay, when its frontmatter has ``overlays:``).
@@ -934,7 +934,7 @@ def check_references(specs: list[Spec], findings: list[Finding]) -> None:
                     Finding("error", str(owner.path), f"duplicate id {sid!r} ({len(owners)} specs)")
                 )
     # One overlay per id per root: overlays of one id in different roots of one layer merge in
-    # the order the roots are given (SPEC-FORMAT, Roots and layers); two in one root have no
+    # the order the roots are given (FORMAT-1, Roots and layers); two in one root have no
     # order between them.
     overlays_seen: dict[tuple[str, str, str], list[Spec]] = {}
     for spec in specs:

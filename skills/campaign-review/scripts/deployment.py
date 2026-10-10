@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Deployment declarations and model roles; never execute declared commands."""
 
+import json
 from pathlib import Path
 import re
 
@@ -13,15 +14,20 @@ from pinned_file_adapter import module_at
 
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = ROOT / "evals/deployment.yaml"
-FORMAT = ROOT / "skills/board-expert/SPEC-FORMAT.md"
+SCHEMA = ROOT / "skills/spec-format/schema/spec.schema.json"
 ROLES = {"reader", "implementer", "reviewer"}
 
 
 def evidence_classes(target_spec=None):
-    """Read class definitions, never accept a mere tag mention in prose."""
-    text = FORMAT.read_text(encoding="utf-8")
-    tags = set(re.findall(r"^  - `\[([\w-]+)\]` —", text, re.MULTILINE))
-    check.require(bool(tags), "SPEC-FORMAT provenance definitions missing")
+    """Read the schema enum and explicit legacy extensions, never prose mentions."""
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    classes = schema["$defs"]["support"]["properties"]["class"]["enum"]
+    check.require(
+        isinstance(classes, list) and bool(classes)
+        and all(isinstance(value, str) and value for value in classes),
+        "spec schema provenance definitions missing",
+    )
+    tags = set(classes)
     if target_spec is not None:
         text = Path(target_spec).read_text(encoding="utf-8")
         tags.update(re.findall(r"^\| `\[([\w-]+)\]` \|", text, re.MULTILINE))

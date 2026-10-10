@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: overlay
+overlays: <soc-id>
+resources:
+  documents:
+    - name: supplemental-guide
+      class: doc
+      title: "<supplemental-guide-title>"
+      url: "<supplemental-guide-url>"
+      access: public
+facts:
+  - id: documented-map-caveat
+    section: gotchas
+    title: Documented addressing caveat
+    claim: >-
+      <documented-map-caveat-claim>
+    support:
+      - class: doc
+        doc: supplemental-guide
+        at: [{heading: "<documented-map-caveat-heading>"}]
+    relates:
+      - {fact: "<soc-id>@<base-root>#addressing-model", relation: qualifies}

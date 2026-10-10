@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: overlay
+overlays: widget-review
+resources:
+  repos:
+  - name: impl
+    role: impl
+    url: https://example.invalid/impl
+    commit: '2222222222222222222222222222222222222222'
+    license: MIT
+    files:
+    - path: drivers/widget/widget_uart.c
+      license_from: spdx-line
+  - name: ref
+    role: ref
+    url: https://example.invalid/linux
+    commit: '1111111111111111111111111111111111111111'
+    license: GPL-2.0-only
+    files:
+    - path: drivers/tty/serial/widget.c
+      license_from: spdx-line
+  documents:
+  - name: trm
+    class: databook
+    title: Widget TRM
+    url: https://example.invalid/widget-trm.pdf
+    sha256: '1111111111111111111111111111111111111111111111111111111111111111'
+    pages: 120
+facts:
+- id: overlay-delay
+  section: findings
+  claim: The initialization delay differs.
+  requirement: as-implemented
+  data:
+    finding:
+      category: differs
+      assessment: suspect
+      consequence: The block may become ready after the first write.
+      resolution:
+        status: open
+  todo:
+    check: hardware
+    text: Probe the first write after reset.
+  support:
+  - class: src
+    anchors:
+    - repo: impl
+      path: drivers/widget/widget_uart.c
+      lines:
+      - 30
+      - 31
+      symbol: widget_init
+    - repo: ref
+      path: drivers/tty/serial/widget.c
+      lines:
+      - 12
+      - 15
+      symbol: widget_uart_init
+  title: Delay observation

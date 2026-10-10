@@ -65,8 +65,18 @@ def only(found):
     return found[0]
 
 
+NO_RECORD = ": unverified: no record at resources/"
+
+
+def findings(result):
+    """The findings these tests judge: all but SF2-3's warning that a fact's spec file has no
+    verification record. These fixtures carry no records; test_records.py covers freshness."""
+    return [f for f in result["findings"]
+            if not (f["level"] == "warning" and NO_RECORD in f["message"])]
+
+
 def warnings(result):
-    return [f for f in result["findings"] if f["level"] == "warning"]
+    return [f for f in findings(result) if f["level"] == "warning"]
 
 
 def marker(name="r", layer="public", accepts="[]", lic="CC-BY-4.0", extra=""):
@@ -229,7 +239,7 @@ class References(TempRoots):
 
     def test_gpl_inference_on_a_docs_fact_passes(self):
         code, result = self.case("gpl-cites-docs", "docs", "gpl")
-        self.assertEqual((code, result["findings"]), (0, []))
+        self.assertEqual((code, findings(result)), (0, []))
 
     def test_docs_inference_on_a_gpl_fact_fails_the_transitive_gate(self):
         code, result = self.case("docs-cites-gpl", "docs", "gpl")
@@ -251,7 +261,7 @@ class References(TempRoots):
 
     def test_same_id_in_two_roots_passes(self):
         code, result = self.case("same-id", "docs", "gpl")
-        self.assertEqual((code, result["findings"]), (0, []))
+        self.assertEqual((code, findings(result)), (0, []))
 
     def test_premise_cycle_fails(self):
         code, result = self.case("cycle", "docs")
@@ -551,7 +561,7 @@ class Untrusted(unittest.TestCase):
         self.assertEqual((code, errors(result)), (0, []))
         self.assertEqual(len(warnings(result)), 2)  # the two overlays: a warning keeps trust
         code, result = check(FAIL / "perm", "--context-root", FAIL / "gpl-clean-twin")
-        self.assertEqual((code, result["findings"]), (0, []))
+        self.assertEqual((code, findings(result)), (0, []))
 
     def test_untrust_propagates_to_the_citing_root(self):
         # perm rests on an untrusted root, so perm is untrusted in turn: docs' reference to a
@@ -640,7 +650,8 @@ class Roots(TempRoots):
         d.mkdir()
         code, result = check(d)
         self.assertEqual((code, result.get("error")), (3, "precondition"))
-        self.assertEqual(set(result), {"ok", "error", "roots", "specs", "stubs", "findings"})
+        self.assertEqual(set(result), {"ok", "error", "roots", "specs", "stubs", "verification",
+                                       "findings"})
 
     def test_symbolic_links(self):
         a = self.root("a", {"board-specs.yaml": marker("a"), "x.spec.yaml": chip("x")})
@@ -778,7 +789,22 @@ class BoardFixtures(unittest.TestCase):
     def test_bad_root_each_file_has_its_defect_and_no_other(self):
         code, result = check(CHECK / "bad_root")
         self.assertEqual(code, 1)
-        self.assertEqual(warnings(result), [])
+        # SF2-3: a fact citing a name its file does not list (an assumption, a document, an
+        # unlisted path) or lists twice, a fact whose citation the check rejected (a document's
+        # class or cite: false, a locator, an anchor's lines or ref pin; review round 2), or a
+        # fact resting on a reference the check rejected (a duplicate premise, a fact relating
+        # to itself), has no basis hash, so its freshness is unknown: a consequence of that
+        # file's one defect, not a second defect
+        self.assertEqual(sorted((pathlib.Path(f["path"]).name, f["message"].split(": ")[1])
+                                for f in warnings(result)),
+                         [(name, "freshness unknown") for name in (
+                             "assumption-unresolved.spec.yaml", "doc-class.spec.yaml",
+                             "doc-unresolved.spec.yaml", "dup-doc-name.spec.yaml",
+                             "dup-premise.spec.yaml", "lines-backwards.spec.yaml",
+                             "page-bounds.spec.yaml", "page-zeros.spec.yaml",
+                             "paged-standard.spec.yaml", "pages-backwards.spec.yaml",
+                             "path-unlisted.spec.yaml", "repo-ref.spec.yaml",
+                             "self-relates.spec.yaml", "uncitable-doc.spec.yaml")])
         got: dict = {}
         for f in errors(result):
             got.setdefault(pathlib.Path(f["path"]).name, []).append(f["message"])
@@ -813,7 +839,7 @@ class BoardFixtures(unittest.TestCase):
     def test_good_root(self):
         good = CHECK / "good_root"
         code, result = check(good, "--public-skill", "widget-board-tools", "--require-license")
-        self.assertEqual((code, result["findings"], result["specs"]), (0, [], 3))
+        self.assertEqual((code, findings(result), result["specs"]), (0, [], 3))
         code, result = check(good)
         self.assertEqual(code, 1)
         f = only(errors(result))
@@ -877,32 +903,40 @@ class Rules(TempRoots):
         for what, text in flagged.items():
             code, result = self.one({"x.spec.yaml": text})
             self.assertEqual(code, 1, what)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            expected = "raw HTML" if what in ("title", "html in claim") else "unsubstituted template placeholder"
+            self.assertTrue(any(expected in f["message"]
+                                for f in errors(result)))
         clean = chip(repos=repo(), facts=src_fact("a").replace("symbol: S", "symbol: Foo<T>")
                      + fact("b").replace("claim: C b.", "claim: \"`<type number flags>`, "
                                                         "<https://example.invalid/x>, a <0 0 0>\"")
                      + "notices:\n  - {repo: linux, path: drivers/w.c, text: "
                        "\"Copyright <Some Author>\"}\n")
         code, result = self.one({"x.spec.yaml": clean})
-        self.assertEqual((code, result["findings"]), (0, []))
+        self.assertEqual((code, findings(result)), (0, []))
 
     def test_placeholder_shapes(self):
         def claim(text):
             return chip(facts=fact("a").replace("claim: C a.", "claim: " + json.dumps(text)))
 
-        flagged = ["Use <board *name*>.", "Use ![<board name>](https://example.invalid/x).",
-                   "Over <soc-id> and more.", "A <SPDX identifier> here.",
-                   "Over [the <bus>](https://example.invalid/b)."]
+        flagged = ["Use <board *name*>.", "Use ![\\<board name>](https://example.invalid/x)."]
+        html = ["Use ![<board name>](https://example.invalid/x).", "Over <soc-id> and more.",
+                "A <SPDX identifier> here.", "Over [the <bus>](https://example.invalid/b)."]
         clean = ["Include <linux/of.h> first.", "Mail <a@b.example>.",
                  "See <https://example.invalid/x>.", "Code `<board name>`.",
                  "Split <board `x` name>.", "A tuple <0 0 0>.", "```\n<board name>\n```"]
         for text in flagged:
             code, result = self.one({"x.spec.yaml": claim(text)})
             self.assertEqual(code, 1, text)
-            self.assertIn("unsubstituted template placeholder", need(errors(result))[0]["message"])
+            self.assertTrue(any("unsubstituted template placeholder" in f["message"]
+                                for f in errors(result)))
+        for text in html:
+            code, result = self.one({"x.spec.yaml": claim(text)})
+            self.assertEqual(code, 1, text)
+            self.assertTrue(any("raw HTML" in f["message"] for f in errors(result)))
+            self.assertFalse(any("unsubstituted template placeholder" in f["message"] for f in errors(result)))
         for text in clean:
             code, result = self.one({"x.spec.yaml": claim(text)})
-            self.assertEqual((code, result["findings"]), (0, []), text)
+            self.assertEqual((code, findings(result)), (0, []), text)
 
     def test_stub_placeholder_position(self):
         stub = self.tmp / "stub" / "SKILL.md"
@@ -1034,7 +1068,7 @@ class Rules(TempRoots):
                 "a standard citation names document 'trm' of class databook")]
         for docs, facts in ok:
             code, result = self.one({"x.spec.yaml": chip(docs=docs, facts=facts)})
-            self.assertEqual((code, result["findings"]), (0, []), facts)
+            self.assertEqual((code, findings(result)), (0, []), facts)
         for docs, facts, want in bad:
             code, result = self.one({"x.spec.yaml": chip(docs=docs, facts=facts)})
             self.assertTrue(any(want in f["message"] for f in errors(result)), (facts, result))
@@ -1044,7 +1078,7 @@ class Rules(TempRoots):
                "    support:\n      - {class: rtl, design: d, revision: r1, module: m, doc: trm, "
                "at: [{heading: FIFO}]}\n")
         code, result = self.one({"x.spec.yaml": chip(facts=rtl)})
-        self.assertEqual((code, result["findings"]), (0, []))
+        self.assertEqual((code, findings(result)), (0, []))
         uncitable = chip(docs='    - {name: trm, class: doc, title: T, '
                               'url: "https://example.invalid/t", cite: false}\n', facts=rtl)
         code, result = self.one({"x.spec.yaml": uncitable})
@@ -1129,15 +1163,18 @@ class WorkedExample(unittest.TestCase):
         code, result = check(WORKED / "docs", WORKED / "permissive", WORKED / "gpl",
                              "--require-license")
         self.assertEqual(code, 1)
-        got = sorted(f["message"] for f in result["findings"])
+        got = sorted(f["message"] for f in errors(result))
         # The permissive slice elides four documents ("also rpi-docs-legacy-boot, tfa-rpi4,
         # bcm2711-peripherals and gic400-trm, as in the base") and the fact patch-words.
         self.assertEqual(len(got), 5, got)
         for name in ("rpi-docs-legacy-boot", "tfa-rpi4", "bcm2711-peripherals", "gic400-trm"):
             self.assertTrue(any(f"document '{name}' is not in this file" in m for m in got), name)
         self.assertTrue(any("reference '#patch-words' resolves to nothing" in m for m in got))
-        for f in result["findings"]:
+        for f in errors(result):
             self.assertTrue(f["path"].endswith("permissive/bcm2711.spec.yaml"))
+        # the rest are SF2-3's freshness warnings (test_records.WorkedExample covers them)
+        for f in warnings(result):
+            self.assertRegex(f["message"], r": (unverified|verdict stale|freshness unknown): ")
 
     def test_the_gpl_overlay_cannot_sit_in_the_docs_root(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1156,7 +1193,8 @@ class WorkedExample(unittest.TestCase):
 class Output(TempRoots):
     def test_json_shape(self):
         code, result = check(CHECK / "good_root", "--public-skill", "widget-board-tools")
-        self.assertEqual(set(result), {"ok", "roots", "specs", "stubs", "findings"})
+        self.assertEqual(set(result), {"ok", "roots", "specs", "stubs", "verification",
+                                       "findings"})
         self.assertEqual(result["roots"], [{"path": str(CHECK / "good_root"), "name": "good",
                                             "layer": "public", "context": False}])
         code, result = check(CHECK / "bad_root")
@@ -1169,7 +1207,8 @@ class Output(TempRoots):
             code = spec_cli.main(["check", "--json"])
         self.assertEqual(code, 2)
         result = json.loads(out.getvalue())
-        self.assertEqual(set(result), {"ok", "error", "roots", "specs", "stubs", "findings"})
+        self.assertEqual(set(result), {"ok", "error", "roots", "specs", "stubs", "verification",
+                                       "findings"})
         self.assertEqual(result["findings"][0]["level"], "error")
 
     def test_text_output_and_exit_codes(self):
@@ -1179,9 +1218,11 @@ class Output(TempRoots):
                                   str(CHECK / "good_root")])
         self.assertEqual(code, 1)
         lines = out.getvalue().splitlines()
-        self.assertTrue(lines[-1].startswith("2 root(s), 6 spec file(s), 0 stub(s): 1 error(s), 3 "))
+        self.assertTrue(lines[-1].startswith("2 root(s), 6 spec file(s), 0 stub(s): 1 error(s), 5 "))
         self.assertTrue(any(": error: overlays 'nosuchboard'" in line for line in lines))
         self.assertTrue(any(": warning: context root: tools entry" in line for line in lines))
+        # SF2-3: the checked root's two facts have no record; the context root's get no finding
+        self.assertEqual(sum(": unverified: no record" in line for line in lines), 2)
 
 
 if __name__ == "__main__":

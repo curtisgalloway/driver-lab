@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # A GPL-2.0 OR MIT device-tree source, cited as DT (v1 gated only [src]) (synthetic license-gate fixture; format 2 of the v1 dual-gpl-mit-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-dual-gpl-mit
 name: Widget block, dual-gpl-mit
 triggers: [gate dual gpl mit]
@@ -17,7 +17,7 @@ resources:
       files: [{path: arch/arm64/boot/dts/widget.dtsi, license_from: spdx-line}]
 facts:
   - id: uart-base
-    section: programming-model
+    section: identity
     title: UART base
     claim: The UART is at 0xfe201000.
     support:

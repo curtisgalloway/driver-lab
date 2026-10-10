@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-08T17:38-07:00
+Updated: 2026-10-10T00:06:38-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,69 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-9 — Peripheral, review and investigator skills in format 2](SF2-9.md)
+Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:17:58-07:00
+Outcome: complete ([evidence](../evidence/SF2-9.md)); one review round with no blocker and a clean
+confirmation. Command tests use SF2-7 fixtures; format 1 procedures and prompts remain labeled in
+`FORMAT-1.md` files. Review inventory needs companion register records because findings prose does
+not count as register coverage.
+
+### [SF2-7b — Reviews and the HTML generated sections](SF2-7b.md)
+Entries: 2026-10-09T22:18:09-07:00 through 2026-10-09T23:17:02-07:00
+Outcome: complete ([evidence](../evidence/SF2-7b.md)). Reviews and the HTML generated sections
+shipped with no blocker in round 1; a confirmation regression (the pair exemption leaking into
+instance and variant rows) was fixed directly. Deciding that a pair's anchors are its support
+removed a forced Gap badge.
+
+### [SF2-7a — Peripheral specs and facts files in format 2](SF2-7a.md)
+Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T21:46:57-07:00
+Outcome: complete ([evidence](../evidence/SF2-7a.md)); reviews (SF2-7b) and the HTML generated
+sections are pending. The stop rule fired twice on inventory; refusing what is not fully understood,
+checked against a C compiler, ended the wrong-value blockers. When a fix loop keeps finding the
+same kind of blocker, change the contract instead of patching cases.
+
+### [SF2-10 — bcm2711 converted and verified on draft branches](SF2-10.md)
+Entries: 2026-10-09 through 2026-10-09T21:31:15-07:00
+Outcome: complete ([evidence](../evidence/SF2-10.md)); the three draft branches are not merged
+(SF2-11 cuts over). 50 of 65 v1 verdicts carried; the rest were read fresh in three correction
+rounds. When a fidelity check is unsure, keep the verdict fresh: all three uncertain carries
+cited headings that did not exist.
+
+### [SF2-5 — The viewer and publishing](SF2-5.md)
+Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
+Outcome: complete ([evidence](../evidence/SF2-5.md)); one review round and a clean confirmation
+round. The chapter records parser option isolation, nested image links and deployment completeness
+from source inventory. A composite action that looks pinned can still run a nested action by a
+movable tag; read what a pinned action calls.
+
+### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](SF2-8b.md))
+Outcome: complete ([evidence](../evidence/SF2-8.md)); one review round and a clean confirmation
+round. The Opus trace review found one blocker: format 1 contract sections were deleted while
+live format 1 skills still cited them; the old text now lives in a retained FORMAT-1.md. Before a
+contract file becomes a pointer, grep every skill and script docstring for its section names.
+### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
+chose "author text inert in the .md view": every author field is fenced and generated identifiers
+are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
+rely on a proof that text is safe.
+### [SF2-6 — Resolve, show and drift](SF2-6.md)
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation
+round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
+"verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
+and keeps the original on any other difference. Do not patch a splicer a second time; verify its
+output. Recheck file policy beside the final comparison, not only before staging.
+
+### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
+Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00
+Outcome: complete ([evidence](../evidence/SF2-3.md)); three review rounds, round 3 clean. Round 2
+met the stop rule on identity allow-lists; the user chose "hash all but bookkeeping". Anything
+freshness cannot establish reads unknown, never current. Score a mutant that does not compile as
+invalid, and a failure during an internal error as a crash, not a kill.
 
 ### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
 Entries: 2026-10-08T14:58-07:00 through 2026-10-08T17:38-07:00

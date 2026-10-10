@@ -4,6 +4,7 @@
 """Check source licenses against a spec root's accepts list, before citing a source.
 
     license_gate.py --root DIR [LICENSE ...]
+    license_gate.py --root DIR --facts FILE.facts.yaml
 
 Prints the root's name, license and accepts list, then one line per license given:
 ``accepted: <expression>`` or ``refused: <expression> (<reason>)``.  A license is an SPDX
@@ -14,6 +15,10 @@ side is, ``A AND B`` only when both are, ``X WITH <exception>`` when ``X`` is, a
 before anyone reads it for evidence.
 
 A root with no ``accepts:`` refuses everything; ``accepts: []`` accepts nothing.
+
+``--facts`` delegates to format 2's hash-pinned ``spec.py check FILE --root DIR
+--require-license``. It checks the structured citations and every declared repository entry.
+The expression-only preflight remains available before reading source evidence.
 
 Needs board-expert's scripts (``spdx.py``, ``spec_check.py``) beside this skill's directory.
 Stdlib only.
@@ -62,7 +67,16 @@ def main(argv=None) -> int:
                     help="the target spec root (a directory with board-specs.yaml)")
     ap.add_argument("licenses", nargs="*", metavar="LICENSE",
                     help="an SPDX expression to check (quote it)")
+    ap.add_argument("--facts", type=Path, help="check a format 2 facts file against this target root")
     args = ap.parse_args(argv)
+
+    if args.facts is not None:
+        if args.licenses:
+            ap.error("--facts checks file citations; do not also give license expressions")
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "spec-format" / "scripts"))
+        import spec
+
+        return spec.main(["check", str(args.facts), "--root", args.root, "--require-license"])
 
     tools = load_tools()
     if tools is None:

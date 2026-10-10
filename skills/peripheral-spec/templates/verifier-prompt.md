@@ -1,79 +1,58 @@
 <!--
 SPDX-FileCopyrightText: 2026 Curtis Galloway
 SPDX-License-Identifier: Apache-2.0
-Fill-in prompt for the independent verifier subagent; substitute every <angle-bracket> placeholder.
+Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-Independently verify the peripheral spec at <path-to-spec>. You did not write it; do not fix
-it. Load `peripheral-spec` for the anchor grammar, the labels, and the required
-structure. The source checkout is at <source checkout>; read it at the spec's `Source pin:`
-commit (<repo-name>@<commit>) — verifying against any other revision is verifying the wrong text.
-<If the spec has several Source pins: one checkout per pin, <pin>=<checkout> for each.>
-<If the spec is headed for a spec repository: its root is <spec repository>/specs.>
-<If a target tree was read: the target checkout is at <target checkout> at the `Target pin:`.>
+# Format 2 peripheral verification prompt
 
-This is an ACCURACY check. You may open any file and quote source and spec freely. Your quota is
-findings, not confirmations: a verdict with zero findings on a spec of this size is itself
-suspicious — say what you did to earn it.
+**Terms:** verdicts judge evidence records; sub-keys identify independently supported fields or
+steps; a basis hash tracks semantic dependencies. See [the glossary](../../../GLOSSARY.md).
 
-1. MECHANICAL: run
-     uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> \
-         [--target-repo <target checkout>] [--root <root> --require-license] \
-         [--docs-dir <pdf dir>] -o docs/spec-reports/<device>-check-<date>.txt
-     python3 <this-skill>/scripts/inventory_check.py <path-to-spec> --repo <source checkout> \
-         --headers <register header(s)> --dt <board .dtsi> --dt-node <node label> --all \
-         > docs/spec-reports/<device>-inventory-<date>.txt
-   With several pins, pass `--repo <pin>=<checkout>` once per pin; `inventory_check.py` compares
-   one header tree per run, so run it once per pin that holds register headers
-   (`--repo <pin>=<checkout>`). A `license gate:` error means the spec cites a source its
-   repository does not accept: a FAIL, fixed by moving the spec or dropping the anchor, never by
-   editing the pin's license. Any anchor error, inventory MISMATCH, or CONFLICT is a FAIL. Every warning must be justified in
-   the spec or is a finding. Every inventory omission is a finding unless the spec names it as
-   out of scope with a reason.
-2. CLAIM-BY-CLAIM: run
-     uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <path-to-spec> --repo <source checkout> --show
-   and read the review sheet. For EVERY anchored claim, decide whether the cited lines actually
-   support it: the offset is the #define's value, the bit is the mask's bit, the step is what the
-   statement does, the layout matches the struct, the ordering is the code's ordering. Cheaper
-   and more reliable than hundreds of lookups: dump the main source files in full once and check
-   the anchors against them. A range that contains the truth but is padded ("the whole function")
-   is a finding: anchors must be as tight as the claim. A symbol naming the wrong definition, or
-   an anchor at the guard/helper instead of the load-bearing statement or call site, is a finding.
-   A claim that is simply wrong about the code is a finding of the highest importance — list
-   those first.
-   BLIND RE-DERIVATION SAMPLE: pick ~10% of anchors at random (seed on the spec's sha256 and say
-   which). For each, read ONLY the cited lines and write down the fact they establish BEFORE
-   re-reading the claim; then compare. Any claim that says more than, or other than, what you
-   derived is a finding (paraphrase drift), even if the lines "support" it loosely.
-3. THE CLASSES THE SHEET CANNOT SETTLE — do these deliberately, they are where errors hide:
-   - COUNTS and cardinalities ("eight entry points", "a 9-word hole", "three registers"):
-     recompute every one from the code or the DT cell values; never accept.
-   - NEGATIVE and global claims ("never written", "no handler anywhere", "not referenced"):
-     re-establish each by search over the whole file or tree, and say you did.
-   - CROSS-REFERENCES: every §n and gotcha/milestone number in the text points at the item it
-     describes (off-by-one after renumbering is common).
-   - LABELS: every `[hw-required]` has a `[doc:]` that actually says so; every `[as-implemented]`
-     appears on the verify-on-hardware list; steps with no label are findings.
-   - DEFINITION DUPLICATES: when a header defines the same register twice (a DP_ and a non-DP_
-     typedef), the anchor points at the one the driver uses.
-4. COVERAGE: every constant, step, layout, interrupt, and gotcha carries `[src:]`/`[tgt:]` and/or
-   `[doc:]`; nothing carries neither (prose claims escape `--strict` — read for them). All twelve
-   required sections are present (the spec may number them differently — map them), including
-   the verify-on-hardware list and open questions; the register map follows the databook's
-   organization, not driver-touch order, and covers untouched registers from documents where a
-   document exists.
-5. DOCUMENTS: `[doc:]` citations name obtainable documents with section numbers (named
-   `[doc:<name> p.N]` anchors resolve against the front-matter `docs:` registry, which the
-   checker validates; with the files at hand, `--docs-dir` confirms their hashes); spot-check that
-   a cited section covers what the claim says when the document is available to you; say which
-   you could not open.
-6. NOTICE + RECORD: the spec opens with the provenance notice (derived from the pin; every fact
-   anchored; source is authoritative — fix the spec on disagreement; run `--drift` before trusting
-   at a newer commit; verification record at the end) and ends with an empty verification record
-   for the orchestrator to fill.
+Independently verify <spec> in <root>. You did not author it. Load `peripheral-spec`,
+`spec-format` and `spec-verifier`; use their format 2 procedure. Read source bytes at each
+`resources.repos[].commit`, not checkout HEAD. The `linux` binding is <source-checkout>;
+additional source/target bindings: <additional bindings>. Resolve license lines, and read
+notices/license files for every `license_from` confirmation the resolver cannot prove.
 
-Return exactly: "PASS + <report path>", or "FAIL + <report path>" + a list of
-{section, spec line, anchor, one-line reason} entries — wrong claims first, then wrong counts and
-unestablished negatives, then padded/misaimed anchors, then label and coverage gaps — and whether
-the notice is missing or deficient. Write the full findings list to
-docs/spec-reports/<device>-verify-<date>.txt as well. Do not edit the spec.
+Run with the hash-pinned interpreter `<python>` and sibling `<spec.py>`:
+
+```bash
+<python> <spec.py> check <root> --require-license
+<python> <spec.py> resolve <spec> --root <root> --repo linux=<source-checkout>
+<python> <spec.py> inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+<python> <spec.py> show <spec> --root <root> --repo linux=<source-checkout>
+<python> <spec.py> status <root> --json
+```
+
+Repeat bindings for all cited entries; add document bytes via `--docs-dir DIR` (`DIR/NAME`).
+Inspect resolution/skipped counts, not just exit status. Strict omissions, mismatches or unknown
+header expressions are findings unless explicitly resolved or recorded as a limitation; a
+limited inventory is never called a pass. A gate error is fixed by placement or evidence,
+never by relabeling licenses.
+
+Read the main source files in full once, then judge every fact and supported child. Check
+register offset/width/access/reset and fields against definitions and accessors, steps against
+performing statements/call sites, ordering against documents or attributed comments, layouts
+against structs. Recompute counts and repeat every scoped absence/global search. Reject padded
+ranges, wrong symbols and plausible lines that do not support the claim. Re-derive roughly 10%
+of anchors blind before reading the claims, seeded by the spec hash, and record the sample.
+
+Check all required subject areas and omissions: databook register organization including
+untouched registers, identity/revision, prerequisites, init/error/power/teardown, layouts,
+interrupts/DMA, sub-protocols, target integration, gotchas and questions. Test `requirement`:
+hw-required needs an applicable document, comment-explained needs attributed comment support,
+as-implemented is code observation. Every code-only hardware assumption has an observable TODO;
+generated hardware and open-question lists must represent the records. Spot-check locators
+against obtainable documents; name every unavailable source. Search for contrary evidence,
+including limitations and revision mismatches. A zero-finding result must say how coverage was earned.
+
+Return a full report plus proposed `<root>/resources/<device>.verify.yaml` following
+spec-verifier. Key verdicts by fact id and `fact-id.sub-id` for fields/steps with independent
+support; otherwise the parent covers them. Take basis/upstream from status JSON. State
+contrary_evidence, citation_precision, all five summary counts and required verdict fields.
+Do not manufacture a PASS from a mechanically valid anchor; retain GAP, UNVERIFIABLE and
+ADJUDICATE as appropriate. The orchestrator coordinates a fresh second reader for critical facts
+and installs the record, then runs the verification gate. Do not edit the spec. Report blockers
+by fact/sub-key, cited path/lines and reason, with corrections for FAILs. Format 1 work uses
+only the unchanged verifier template in [FORMAT-1.md](../FORMAT-1.md).

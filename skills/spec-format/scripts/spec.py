@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
-Subcommands built so far: `validate` (SF2-1) and `check` (SF2-2, in speccheck.py). Later
-milestones add `status`, `render`, `resolve`, `show`, `drift`, `inventory` and `migrate`.
+Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
+records and freshness from SF2-3, in records.py), `status` (SF2-3), Markdown `render`
+(SF2-4, in render_md.py), HTML `render` (SF2-5, in render_html.py), `resolve`, `show`
+and `drift` (SF2-6, in resolve.py and drift.py), typed peripheral `inventory` (SF2-7a,
+in inventory.py) and mechanical `migrate` (SF2-10a, in migrate.py).
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -27,6 +30,9 @@ from pathlib import Path
 EXIT_OK, EXIT_INVALID, EXIT_USAGE, EXIT_PRECONDITION, EXIT_INTERNAL = 0, 1, 2, 3, 100
 
 HERE = Path(__file__).resolve().parent
+# `python3 -I` leaves the script's directory off sys.path.
+sys.path.insert(0, str(HERE))
+from textnames import visible_name  # pylint: disable=wrong-import-position
 SKILL_DIR = HERE.parent
 SCHEMA_DIR = SKILL_DIR / "schema"
 REQUIREMENTS = SKILL_DIR / "requirements.txt"
@@ -41,7 +47,7 @@ DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markd
 SKILL = """\
 ---
 name: spec-format-cli
-description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references and the license gate).
+description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references, the license gate and verification records; report each verdict's freshness; resolve anchors, show evidence and compare or rewrite pins with drift).
 ---
 
 # spec.py
@@ -49,7 +55,37 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py validate <file>... [--root <dir>] [--json]
     python3 skills/spec-format/scripts/spec.py check <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stub <SKILL.md>]...
-        [--stubs-from <skills dir>]... [--json]
+        [--stubs-from <skills dir>]... [--require-verified pr|main] [--json]
+    python3 skills/spec-format/scripts/spec.py check <file.facts.yaml>... --root <dir>
+        [--require-license] [--public-skill <name>]... [--json]
+    python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
+        [--require-license] [--public-skill <name>]... [--stale] [--json]
+    python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
+        [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
+        [--tool-commit <40-hex>] --format md|html [--json]
+    python3 skills/spec-format/scripts/spec.py resolve <file>... [--repo NAME=CHECKOUT]...
+        [--docs-dir DIR] [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
+    python3 skills/spec-format/scripts/spec.py show <file>... [resolver options]
+    python3 skills/spec-format/scripts/spec.py drift <commit> <file> [--pin NAME]
+        [--rewrite] [resolver options]
+    python3 skills/spec-format/scripts/spec.py inventory <file> --headers <path>...
+        [--pin NAME] [--strict] [resolver options]
+    python3 skills/spec-format/scripts/spec.py migrate <v1.spec.md> [--output <new.spec.yaml>]
+        [--report <new.md>] [--marker <v1 board-specs.yaml>] [--verdicts <v1.verify.md>]
+        [--license-from REPO:PATH=spdx-line|notice|license-file]... [--json]
+
+`migrate` creates one fact per format 1 bullet, with an id from its bold lead-in, and a report
+mapping every old verdict key. Explicit src anchors and unambiguous DT file/line parentheticals
+become support. Document and inference prose stays in the report and is marked citation-pass
+in the fact's TODO. Mixed bullets are marked split-mixed and kept whole. Inference-nested anchors
+are report candidates only. Document registry classes are provisional doc until the citation
+pass. Each v1 repository file needs an explicit --license-from declaration; the tool does not
+read sources. Document hashes, commits, page counts and retrieval URLs are extracted when
+explicit in resource metadata. A sibling marker, when present, is copied with format: 2 to the
+output directory. A sibling resources verification record, when present (or supplied with
+--verdicts), supplies the exact old keys; otherwise keys are derived from section/ordinal/title.
+Outputs must be new files; no overwrites. No verdicts carry, and critical
+fact selection, citation judgments, splits and fidelity checking belong to later readers.
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -76,12 +112,80 @@ through references. `--context-root` reads a further root so references and over
 findings in its own files are warnings. `--require-license` also gates repos entries no anchor
 cites. `--public-skill` names a skill a public root's tools may name in `via:`. Output: one
 `path:line:column: error|warning: message` per finding, then a summary; `--json` prints
-`{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "findings": [{"path",
-"line", "column", "level", "message"}]}`, with `"error"` as for `validate` when no check ran.
+`{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "verification",
+"findings": [{"path", "line", "column", "level", "message"}]}`, with `"error"` as for `validate`
+when no check ran; `verification` counts the checked roots' facts by freshness.
 
-Exit status: 0 all valid (validate) or no error (check; warnings allowed); 1 a file invalid or a
+Verification records: `<root>/resources/<name>.verify.yaml` belongs to `<name>.spec.yaml` (any
+directory of the root); its `spec` and `spec_file` name that file, every verdict key names one of
+its facts (instances, variants), `summary` counts the verdicts, a GAP verdict belongs to a gap
+fact, readers agree with the verdict, a current verdict's `upstream` lists the facts in other
+roots it rests on with their bases. Each verdict is `current` (its `basis` is the fact's basis
+hash now), `stale`, `upstream-stale` (only facts in other roots changed), `unverified` (no
+verdict) or `unknown` (the basis cannot be established: never current). A current FAIL is an
+error; the others, and a `critical` fact whose current verdict has no `readers`, are warnings,
+and errors under `--require-verified pr` (pull requests: every one) or `--require-verified main`
+(every one but upstream-stale, which stays a warning; D19). Freshness findings are for checked
+roots only.
+
+`status` runs the same check and prints, per spec file of the checked roots, its record and
+summary and each fact's freshness; `--stale` lists only what a re-verification has to cover
+(every fact not current, and current critical facts without a second reader). `--json` prints
+`{"ok", "roots", "errors", "warnings", "specs": [{"path", "root", "spec", "record", "state",
+"facts": [{"key", "ref", "kind", "status", "verdict", "carried", "basis", "recorded",
+"upstream", "changed", "reason", "second_reader"}]}], "findings"}` (the check's findings, as
+for `check`): `basis` is the fact's basis hash now and
+`upstream` the map a verdict reached now records (null when the basis is unknown). Exit 0 when
+the check found no error, 1 when it did (the report is printed either way).
+
+`resolve` checks source anchors and licenses at immutable pins, and document hashes when
+`--docs-dir` supplies bytes as DIR/NAME. `--repo` binds a named entry to the top level of a
+local checkout; unbound entries are fetched over HTTPS. Only size/time limits skip anchors;
+the summary counts skips explicitly, and a fully skipped run exits 0. `show` also displays
+facts beside cited source lines, escaping terminal control characters. Search anchors check
+scope existence only; their prose is never executed.
+
+`drift` compares one cited entry with a full lowercase commit id (40 or 64 hex digits).
+`--pin` is required when several entries are cited. `--rewrite` moves the pin, updates unique
+moved ranges and marks changed anchors stale while preserving comments and layout. Changed
+search scopes and operational read failures refuse rewriting and retain the original file.
+
+`inventory` reads the selected repos entry's closed files at its immutable commit and compares
+register offsets and field masks with C constants. Reports are exact structured values;
+unsupported or ambiguous expressions are reported as unknown with reasons and fail.
+Mismatches, conflicting spec values and names
+absent from headers fail; omitted header names also fail under `--strict`. Several repos entries
+require `--pin`. No author prose counts as coverage. Only a bounded subset of integer constant
+expressions is supported (literals, textual object macros, arithmetic, shifts, BIT and GENMASK
+when the headers do not define them). Function-like macros are unknown; enum members are
+reported, with implicit values known only when all preceding members are known.
+
+`check <file.facts.yaml> --root <target>` checks investigator output with the same citation and
+license rules, without placing it in a spec root or requiring verification records. It reads
+the target marker only. Context, stub and verification options are not available in this mode.
+
+Exit status: 0 all valid (validate) or no error (check/resolve/show/drift; warnings allowed); 1 a file invalid or a
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
 board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
+
+`check` also rejects raw HTML, disallowed links (including images), link reference definitions,
+footnotes, nesting deeper than 16, headings and unclosed fences in CommonMark author fields,
+including verification-record notes.
+Format 1 tag spellings in claims and prose are warnings.
+`render` runs that check and repeats containment before emitting a view. Generated text is
+literal. In the Markdown view author Markdown is verbatim in labeled top-level fences with no info string.
+Generated syntax and values that GFM might autolink use code spans. Without
+explicit `--source-commit` and `--tool-commit` values the banner states that commits are
+unavailable and includes each checked YAML's SHA256. Both arguments require 40 lowercase hex
+characters; no Git subprocess runs. Repeat `--source-commit ROOT=SHA` once per rendered root
+directory; a bare SHA is accepted only when one root is rendered. Each omitted root is
+unavailable. `--tool-commit` identifies the rendering tool separately.
+`--merged` includes context files for the selected ids, ordered by layer; without it each
+checked file gets its own view. Errors print diagnostics instead of a partial view; `--json`
+returns `{"ok", "markdown", "findings"}` for md or `{"ok", "html", "findings"}` for html
+(the view is null on error). HTML renders author CommonMark separately in each field with raw
+HTML disabled, images as links and checked hrefs only. Only structured fields produce badges.
+The reusable publishing workflow and local build/verify helper live under `spec-format/ci/`.
 """
 
 
@@ -194,7 +298,7 @@ class Finding:
                 "message": self.message}
 
     def __str__(self):
-        return f"{self.path}:{self.line}:{self.column}: {self.message}"
+        return visible_name(f"{self.path}:{self.line}:{self.column}: {self.message}")
 
 
 # --- schemas -------------------------------------------------------------------------------
@@ -573,7 +677,7 @@ def load_extension(marker: Path, data, findings: list[Finding]) -> dict | None:
     return None if problems else fragment
 
 
-def validate_file(path: Path, schemas, extension, findings: list[Finding]):
+def validate_file(path: Path, schemas, extension, findings: list[Finding], *, raw=None):
     """Load and schema-check one file: (valid, schema kind, Loaded or None)."""
     import jsonschema
 
@@ -582,7 +686,7 @@ def validate_file(path: Path, schemas, extension, findings: list[Finding]):
     kind = schema_kind(path)
     before = len(findings)
     try:
-        loaded = specload.load_strict_marked(path)
+        loaded = specload.load_strict_marked(path) if raw is None else specload.load_strict_marked(path, raw)
     except specload.LoadError as exc:
         findings.append(Finding(path, exc.line, exc.column, exc.problem))
         return False, kind, None
@@ -631,22 +735,9 @@ def read_root(root: Path, schemas, findings: list[Finding]) -> dict | None:
 
 
 def cmd_check(args) -> tuple[int, dict]:
-    import types
-
-    import speccheck
-
-    api = types.SimpleNamespace(validate_file=validate_file, load_extension=load_extension)
-    try:
-        checker = speccheck.check(
-            api, load_schemas(), args.roots, context_roots=args.context_root,
-            require_license=args.require_license, public_skills=args.public_skill,
-            stubs=args.stub, stubs_from=args.stubs_from)
-    except speccheck.UsageError as exc:
-        raise Usage(str(exc)) from None
-    except speccheck.PreconditionError as exc:
-        raise Precondition(str(exc)) from None
-    uniq = {(f.path, f.line, f.column, f.level, f.message): f for f in checker.findings}
-    ordered = sorted(uniq.values(), key=lambda f: (f.path, f.line, f.column, f.message))
+    checker = _run_check(args, stubs=args.stub, stubs_from=args.stubs_from,
+                         require_verified=args.require_verified)
+    ordered = _ordered(checker.findings)
     errors = sum(1 for f in ordered if f.level == "error")
     warnings = len(ordered) - errors
     summary = (f"{len(checker.roots)} root(s), {len(checker.files)} spec file(s), "
@@ -657,8 +748,104 @@ def cmd_check(args) -> tuple[int, dict]:
                   for r in checker.roots],
         "specs": len(checker.files),
         "stubs": checker.stubs,
+        "verification": _counts(checker),
         "findings": [f.as_dict() for f in ordered],
         "_text": [str(f) for f in ordered] + [summary],
+    }
+
+
+def _ordered(findings) -> list:
+    uniq = {(f.path, f.line, f.column, f.level, f.message): f for f in findings}
+    return sorted(uniq.values(), key=lambda f: (f.path, f.line, f.column, f.message))
+
+
+def _counts(checker) -> dict:
+    import records
+
+    counts = dict.fromkeys(records.STATUSES, 0)
+    for entry in checker.status:
+        if not entry["file"].root.context:
+            for row in entry["rows"]:
+                counts[row["status"]] += 1
+    return counts
+
+
+def _run_check(args, **extra):
+    import types
+
+    import speccheck
+
+    api = types.SimpleNamespace(validate_file=validate_file, load_extension=load_extension)
+    try:
+        if getattr(args, "root", None) is not None:
+            return speccheck.check_facts(api, load_schemas(), args.roots, args.root,
+                                         require_license=args.require_license,
+                                         public_skills=args.public_skill,
+                                         context_roots=args.context_root, **extra)
+        return speccheck.check(
+            api, load_schemas(), args.roots, context_roots=args.context_root,
+            require_license=args.require_license, public_skills=args.public_skill, **extra)
+    except speccheck.UsageError as exc:
+        raise Usage(str(exc)) from None
+    except speccheck.PreconditionError as exc:
+        raise Precondition(str(exc)) from None
+
+
+def cmd_status(args) -> tuple[int, dict]:
+    import records
+
+    checker = _run_check(args)
+    ordered = _ordered(checker.findings)
+    errors = sum(1 for f in ordered if f.level == "error")
+    warnings = len(ordered) - errors
+    specs, text = [], []
+    for entry in checker.status:
+        f = entry["file"]
+        if f.root.context:
+            continue
+        rows = entry["rows"]
+        if args.stale:
+            rows = [r for r in rows if r["status"] != "current" or r["second_reader"] == "missing"]
+            if not rows:
+                continue
+        rel = records._rel(f.root, f.path)
+        specs.append({"path": str(f.path), "root": f.root.label, "spec": f.spec_id,
+                      "record": entry["record"], "state": entry["state"], "facts": rows})
+        summary = "no record"
+        if entry["state"] == "ok":
+            s = f.record_loaded.data["summary"]
+            summary = entry["record"] + ": " + ", ".join(f"{k} {s[k]}" for k in records.SUMMARY)
+        elif entry["state"] != "none":
+            summary = f"{entry['record']}: {entry['state']}"
+        text.append(f"{f.root.label}:{rel} ({f.spec_id}): {summary}")
+        for r in rows:
+            notes = [r["verdict"]] if r["verdict"] else []
+            if r["carried"]:
+                notes.append("carried")
+            if r["second_reader"] == "missing":
+                notes.append("needs a second reader")
+            if r["changed"]:
+                notes.append("upstream changed: " + ", ".join(r["changed"]))
+            if r["reason"]:
+                notes.append(r["reason"])
+            text.append(f"  {r['status']:<15} {r['key']}" + (f"  ({'; '.join(notes)})"
+                                                               if notes else ""))
+    tally = dict.fromkeys(records.STATUSES, 0)
+    for spec in specs:
+        for r in spec["facts"]:
+            tally[r["status"]] += 1
+    text += [str(f) for f in ordered if f.level == "error"]  # what the exit status rests on
+    text.append(", ".join(f"{n} {k}" for k, n in tally.items())
+                + f"; the check found {errors} error(s), {warnings} warning(s)")
+    return (EXIT_INVALID if errors else EXIT_OK), {
+        "ok": not errors,
+        "roots": [{"path": str(r.given), "name": r.name, "layer": r.layer, "context": r.context}
+                  for r in checker.roots],
+        "errors": errors,
+        "warnings": warnings,
+        "specs": specs,
+        "findings": [f.as_dict() for f in ordered],
+        "_text": text,
     }
 
 
@@ -694,7 +881,24 @@ class _Parser(argparse.ArgumentParser):
         raise Usage(message)
 
 
+def commit_arg(value):
+    if not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise argparse.ArgumentTypeError("commit must be 40 lowercase hex characters")
+    return value
+
+
+def source_commit_arg(value):
+    commit_arg(value.rsplit("=", 1)[-1])
+    return value
+
+
 def build_parser() -> argparse.ArgumentParser:
+    sys.path.insert(0, str(HERE))
+    import drift
+    import resolve
+    import inventory
+    import migrate
+
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
         epilog="exit status: 0 valid; 1 invalid; 2 usage; 3 a pinned dependency missing; 100 internal",
@@ -708,6 +912,7 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("check", help="check spec roots: names, composition, references, the "
                                      "license gate", allow_abbrev=False)
     c.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    c.add_argument("--root", type=Path, help="target root for checking standalone facts files")
     c.add_argument("--context-root", action="append", default=[], type=Path,
                    help="a further root read so references and overlays resolve; findings in "
                         "its own files are warnings")
@@ -718,14 +923,57 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--stub", action="append", default=[], type=Path, help="a stub SKILL.md")
     c.add_argument("--stubs-from", action="append", default=[], type=Path,
                    help="a skills directory; every */SKILL.md calling itself a stub is checked")
+    c.add_argument("--require-verified", choices=("pr", "main"), default=None,
+                   help="stale, unverified and unknown verdicts are errors; upstream-stale too "
+                        "under pr, a warning under main (D19)")
     c.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    st = sub.add_parser("status", help="each verdict's freshness, per spec file",
+                        allow_abbrev=False)
+    st.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    st.add_argument("--context-root", action="append", default=[], type=Path,
+                    help="a further root read so references and overlays resolve")
+    st.add_argument("--require-license", action="store_true",
+                    help="as for check (it decides which roots are trusted)")
+    st.add_argument("--public-skill", action="append", default=[],
+                    help="as for check")
+    st.add_argument("--stale", action="store_true",
+                    help="only facts a re-verification has to cover")
+    st.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    rd = sub.add_parser("render", help="generate a Markdown view or HTML viewer", allow_abbrev=False)
+    rd.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    rd.add_argument("--context-root", action="append", default=[], type=Path)
+    rd.add_argument("--require-license", action="store_true")
+    rd.add_argument("--public-skill", action="append", default=[])
+    rd.add_argument("--spec", help="render only this spec id")
+    rd.add_argument("--merged", action="store_true", help="include context bases and overlays")
+    rd.add_argument("--with-status", action="store_true", help="include verdict and freshness")
+    rd.add_argument("--source-commit", type=source_commit_arg, action="append",
+                    help="ROOT=SHA, once per rendered root; bare SHA only with one root")
+    rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
+    rd.add_argument("--format", required=True, choices=("md", "html"))
+    rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    resolve.register(sub)
+    drift.register(sub)
+    inventory.register(sub)
+    migrate.register(sub)
     return parser
 
 
-def _failure(kind: str, messages: list[str], command: str | None = None) -> str:
+def _failure(kind: str, messages: list[str], command: str | None = None,
+             render_format: str = "md") -> str:
     """The --json object for a run that judged nothing (usage, precondition, internal)."""
+    if command == "render":
+        return json.dumps({"ok": False, "error": kind,
+                           "html" if render_format == "html" else "markdown": None,
+                           "findings": [{"message": m} for m in messages]}, sort_keys=True)
+    if command == "status":
+        return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
+                           "warnings": 0, "specs": [],
+                           "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
+                                         "message": m} for m in messages]}, sort_keys=True)
     if command == "check":
         return json.dumps({"ok": False, "error": kind, "roots": [], "specs": 0, "stubs": 0,
+                           "verification": {},
                            "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
                                          "message": m} for m in messages]}, sort_keys=True)
     return json.dumps({"ok": False, "error": kind, "files": [],
@@ -737,16 +985,22 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     want_json = any(a == "--json" or a.startswith("--json=") for a in argv)
     command = next((a for a in argv if not a.startswith("-")), None)
+    render_format = "html" if ("--format=html" in argv or any(
+        a == "--format" and argv[i + 1:i + 2] == ["html"] for i, a in enumerate(argv))) else "md"
     parser = build_parser()
 
     def fail(kind: str, code: int, messages: list[str], hint: str = "") -> int:
         if want_json:
-            print(_failure(kind, messages, command))
+            print(_failure(kind, messages, command, render_format))
         else:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
-                print(f"{label}: {m}", file=sys.stderr)
+                if command in ("validate", "resolve", "show", "drift", "inventory"):
+                    import resolve
+
+                    m = resolve.display_line(m)
+                print(visible_name(f"{label}: {m}"), file=sys.stderr)
             if hint:
                 print(hint, file=sys.stderr)
         return code
@@ -759,7 +1013,8 @@ def main(argv: list[str] | None = None) -> int:
         print(SKILL, end="")
         return EXIT_OK
     if args.command is None:
-        return fail("usage", EXIT_USAGE, ["name a subcommand: validate, check"])
+        return fail("usage", EXIT_USAGE,
+                    ["name a subcommand: validate, check, status, render, resolve, show, drift, migrate"])
 
     try:
         problems = check_dependencies()
@@ -773,7 +1028,14 @@ def main(argv: list[str] | None = None) -> int:
                     "install: pip install --require-hashes -r skills/spec-format/requirements.txt")
     sys.path.insert(0, str(HERE))
     try:
-        code, result = (cmd_check if args.command == "check" else cmd_validate)(args)
+        import render_md
+        import render_html
+
+        handler = getattr(args, "handler", None) or {
+            "check": cmd_check, "status": cmd_status, "validate": cmd_validate,
+            "render": lambda a: (render_html if a.format == "html" else render_md).command(
+                sys.modules[__name__], a)}[args.command]
+        code, result = handler(args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])
     except Precondition as exc:
@@ -787,9 +1049,13 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command == "check":
+    elif args.command in ("check", "status", "render") or hasattr(args, "handler"):
         for line in text:
-            print(line)
+            # resolve, show and drift escape their own lines (resolve.display_line).
+            if (args.command == "render" and code == EXIT_OK) or hasattr(args, "handler"):
+                print(line)
+            else:
+                print(visible_name(line))
     else:
         for line in text:
             print(line)
@@ -799,4 +1065,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    sys.modules["spec"] = sys.modules[__name__]
     sys.exit(main())

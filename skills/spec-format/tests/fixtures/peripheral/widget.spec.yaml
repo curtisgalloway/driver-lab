@@ -1,0 +1,100 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: GPL-2.0-only
+format: 2
+kind: peripheral
+id: widget
+name: Widget UART
+resources:
+  repos:
+    - name: linux
+      url: https://example.invalid/linux
+      commit: "1111111111111111111111111111111111111111"
+      license: GPL-2.0-only
+      role: source
+      files: [{path: drivers/tty/serial/widget.c, license_from: spdx-line}]
+  documents:
+    - name: trm
+      class: databook
+      title: Widget TRM
+      url: https://example.invalid/widget-trm.pdf
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+      pages: 120
+areas:
+  - {area: registers, level: document-and-code, note: Definitions read in both sources.}
+  - {area: initialization, level: code-only, note: Hardware test remains open.}
+facts:
+  - id: reg-ctrl
+    section: registers
+    title: CTRL
+    data:
+      register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: rw, reset: "0x0"}
+      fields:
+        - id: en
+          name: WIDGET_CTRL_EN
+          bits: [0, 0]
+          meaning: block enable
+          support:
+            - class: src
+              anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [5, 5], symbol: WIDGET_CTRL_EN}]
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [4, 4], symbol: WIDGET_CTRL}]
+  - id: reg-baud
+    section: registers
+    data:
+      register: {name: WIDGET_BAUD, offset: "0x4", width: 32, access: rw}
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [6, 6], symbol: WIDGET_BAUD}]
+  - id: reg-lcr
+    section: registers
+    data:
+      register: {name: WIDGET_LCR, offset: "0x8", width: 32, access: rw}
+      fields:
+        - {id: format, name: WIDGET_LCR_8N1, bits: [0, 1], meaning: 8N1 format}
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [7, 8], symbol: WIDGET_LCR}]
+  - id: seq-init
+    section: sequences
+    title: Initialization
+    claim: Clear CTRL, write BAUD, write LCR, then enable CTRL.
+    requirement: as-implemented
+    data:
+      sequence:
+        steps:
+          - id: s1
+            action: write 0 to CTRL
+            support:
+              - class: src
+                anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [12, 12], symbol: widget_uart_init}]
+          - {id: s2, action: write the divisor to BAUD}
+          - {id: s3, action: write WIDGET_LCR_8N1 to LCR}
+          - {id: s4, action: set WIDGET_CTRL_EN in CTRL}
+        order:
+          - before: s2
+            after: s3
+            requirement: comment-explained
+            support:
+              - class: src
+                anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [7, 7], symbol: WIDGET_LCR, comment: true}]
+    support:
+      - class: src
+        anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [12, 15], symbol: widget_uart_init}]
+  - id: frame
+    section: data-formats
+    claim: The synthetic frame has four bytes.
+    data:
+      layout:
+        name: widget_frame
+        size: 4
+        fields:
+          - {id: type, name: frame_type, offset: "0x0", size: 1, meaning: type byte}
+          - {id: payload, name: frame_payload, offset: "0x1", size: 3, meaning: payload bytes}
+    support:
+      - {class: databook, doc: trm, at: [{page: "4"}]}
+    requirement: hw-required
+  - id: baud-latch-test
+    section: open-questions
+    claim: Does writing LCR latch BAUD on hardware?
+    todo: {check: hardware, text: Change BAUD without writing LCR and observe the output rate.}

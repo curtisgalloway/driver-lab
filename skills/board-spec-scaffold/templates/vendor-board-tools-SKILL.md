@@ -2,13 +2,19 @@
 name: <vendor>-board-tools
 description: >-
   <Vendor>-internal resources for board bring-up: how to reach the internal document portal, code
-  search and repositories, lab rigs, and the errata tracker that <vendor>'s board-spec overlays name
-  with `via:`; declares the <vendor> overlay roots. Use whenever board-expert resolves a spec with a
+  search and repositories, lab rigs, and the errata tracker used by <vendor>'s board-spec overlays.
+  Tools name this skill with `via:`; it declares the <vendor> overlay roots. Use when a spec has a
   <vendor> overlay, or a hardware question concerns a <vendor> board, SoC, or IP block and internal
   resources apply. Internal only: never installed outside <vendor>.
 ---
 
-<!-- license header per the vendor repo's convention -->
+<!--
+SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+SPDX-License-Identifier: <file-license>
+-->
+
+Terms: a root is a marked spec directory; an overlay adds fact records. See the target repo's
+glossary and spec-format contract. Match the license header to the private target repository.
 
 # <Vendor> board tools
 
@@ -28,7 +34,7 @@ One line per root; `board-expert` reads these. The layer comes from each root's 
 - <What may leave this skill's context in a report: facts, addresses, and mechanism prose, cited to
   the internal document by title. What may not: document text, internal hostnames in public
   artifacts.>
-- Facts from these roots reach reports tagged with their layer. They are never copied into a
+- Facts from these roots reach reports with their full fact reference and originating layer. They are never copied into a
   public-layer spec.
 
 ## Document portal

@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+layer: public
+name: <base-root>
+license: <docs-license>
+accepts: []

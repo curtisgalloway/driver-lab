@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Documents only, a databook cited by section and page (synthetic license-gate fixture; format 2 of the v1 docs-named-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-docs-named
 name: Widget block, docs-named
 triggers: [gate docs named]
@@ -11,12 +11,12 @@ resources:
     - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
 facts:
   - id: reset-time
-    section: programming-model
+    section: identity
     title: Reset time
     claim: The block resets in 10 us.
     support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]
   - id: fifo-depth
-    section: programming-model
+    section: identity
     title: FIFO depth
     claim: The FIFO is 64 entries deep.
     support: [{class: databook, doc: widget-trm, at: [{section: "5.1", page: "52"}]}]

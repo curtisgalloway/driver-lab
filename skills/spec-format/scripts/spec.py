@@ -135,10 +135,13 @@ search scopes and operational read failures refuse rewriting and retain the orig
 
 `inventory` reads the selected repos entry's closed files at its immutable commit and compares
 register offsets and field masks with C constants. Reports are exact structured values;
-unsupported expressions are counted as unknown. Mismatches, conflicting spec values and names
+unsupported or ambiguous expressions are reported as unknown with reasons and fail.
+Mismatches, conflicting spec values and names
 absent from headers fail; omitted header names also fail under `--strict`. Several repos entries
 require `--pin`. No author prose counts as coverage. Only a bounded subset of integer constant
-expressions is supported (literals, named constants, arithmetic, shifts, BIT and GENMASK).
+expressions is supported (literals, textual object macros, arithmetic, shifts, BIT and GENMASK
+when the headers do not define them). Function-like macros are unknown; enum members are
+reported, with implicit values known only when all preceding members are known.
 
 `check <file.facts.yaml> --root <target>` checks investigator output with the same citation and
 license rules, without placing it in a spec root or requiring verification records. It reads

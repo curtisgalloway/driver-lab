@@ -71,6 +71,22 @@ class Fixture(unittest.TestCase):
 
 class Peripheral(Fixture):
 
+    def test_restored_license_fixture_claims_and_support(self):
+        base = HERE / "fixtures" / "license-gate" / "specs"
+        data = specload.load_strict(base / "bsd-target.spec.yaml")
+        fact = next((f for f in data["facts"] if f.get("claim") == "The driver binds by compatible string."), None)
+        self.assertIsNotNone(fact)
+        self.assertEqual(fact["section"], "target")
+        self.assertEqual(fact["support"], [{"class": "src", "anchors": [
+            {"repo": "os", "path": "drivers/widget/widget.cc", "search": "compatible"}]}])
+        self.assertIn("[tgt: drivers/widget/widget.cc:12]", fact["note"])
+        data = specload.load_strict(base / "docs-only.spec.yaml")
+        self.assertEqual([f["claim"] for f in data["facts"]],
+                         ["The block resets in 10 us.", "The FIFO is 64 entries deep."])
+        self.assertEqual([f["support"] for f in data["facts"]], [
+            [{"class": "databook", "doc": "widget-trm", "at": [{"section": section}]}]
+            for section in ("4.2", "5.1")])
+
     def test_widget_validates_and_renders_register_sequence_and_layout(self):
         self.assertEqual(run("validate", self.file)[0], 0)
         self.assertEqual(self.check()[0], 0)
@@ -101,14 +117,14 @@ class Peripheral(Fixture):
 
     def test_register_required_shape_and_canonical_scalars(self):
         base = copy.deepcopy(self.data)
-        for name in ("name", "offset", "width", "access"):
+        for name in ("name", "offset"):
             self.data = copy.deepcopy(base)
             del self.data["facts"][0]["data"]["register"][name]
             self.invalid("required property", schema=True)
         for name, values in (("name", ["", " ", "-CTRL", "CTRL\n"]),
                              ("offset", [0, "0x00", "0X1", "0xA", "0x0\n"]),
                              ("width", [0, -1, "32", True]), ("access", ["", "read-write"]),
-                             ("reset", [1, "0x00"])):
+                             ("reset", [None, 1, "0x00"])):
             for value in values:
                 self.data = copy.deepcopy(base)
                 self.data["facts"][0]["data"]["register"][name] = value
@@ -366,7 +382,7 @@ class Peripheral(Fixture):
         after = records.Freshness(checker).basis(file.records["reg-ctrl.en"])[0]
         self.assertNotEqual(before, after)
 
-    def test_subkey_basis_tracks_parent_cited_resources(self):
+    def test_subkey_basis_excludes_parent_cited_resources(self):
         self.data["facts"][0]["support"] = copy.deepcopy(self.data["facts"][4]["support"])
         checker = self.checker()
         file = checker.files[0]
@@ -374,7 +390,7 @@ class Peripheral(Fixture):
         before = records.Freshness(checker).basis(file.records["reg-ctrl.en"])[0]
         file.documents["trm"][0]["sha256"] = "2" * 64
         after = records.Freshness(checker).basis(file.records["reg-ctrl.en"])[0]
-        self.assertNotEqual(before, after)
+        self.assertEqual(before, after)
 
     def test_subkey_duplicate_ids_are_refused(self):
         fields = self.data["facts"][0]["data"]["fields"]
@@ -422,7 +438,8 @@ class Peripheral(Fixture):
                                               for f in self.data["facts"][:3]])
         self.assertEqual(got["verify"], [{"fact": "seq-init.s" + str(i), "text": text}
                                          for i, text in enumerate(("write 0 to CTRL", "write the divisor to BAUD",
-                                                                  "write WIDGET_LCR_8N1 to LCR", "set WIDGET_CTRL_EN in CTRL"), 1)])
+                                                                  "write WIDGET_LCR_8N1 to LCR", "set WIDGET_CTRL_EN in CTRL"), 1)] +
+                         [{"fact": "baud-latch-test", "text": self.data["facts"][-1]["claim"]}])
         self.assertEqual(got["questions"], [{"fact": "baud-latch-test", **self.data["facts"][-1]["todo"]}])
         self.assertEqual(got["references"], [{"type": "documents", **self.data["resources"]["documents"][0]},
                                              {"type": "repos", **self.data["resources"]["repos"][0]}])
@@ -451,7 +468,7 @@ class Peripheral(Fixture):
         self.data["facts"][1]["requirement"] = "as-implemented"
         got = peripheral.generated(self.checker().files[0])
         self.assertEqual([r["fact"] for r in got["verify"]],
-                         ["reg-baud", "seq-init.s1", "seq-init.s3", "seq-init.s4", "seq-init.s2->s3"])
+                         ["reg-baud", "seq-init.s1", "seq-init.s3", "seq-init.s4", "seq-init.s2->s3", "baud-latch-test"])
         self.assertEqual(got["questions"][0], {"fact": "seq-init.s1", "check": "hardware", "text": "Observe CTRL."})
 
     def test_facts_file_check_against_target_marker(self):
@@ -486,6 +503,108 @@ class Peripheral(Fixture):
         self.assertEqual(code, 2, result)
         code, result = run("check", self.file, "--root", self.root, "--require-verified", "pr")
         self.assertEqual(code, 2, result)
+
+
+    def test_unknown_register_width_and_access_are_absent(self):
+        reg = self.data["facts"][0]["data"]["register"]
+        reg.pop("reset")
+        reg.pop("width")
+        reg.pop("access")
+        self.assertEqual(self.check()[0], 0)
+        view = render_md.render(self.checker())
+        self.assertIn("Register `WIDGET_CTRL` at `0x0`.", view)
+        self.assertNotIn("None", view)
+
+    def test_field_requirement_override_fixes_inherited_hw_required(self):
+        self.data["facts"][0]["requirement"] = "hw-required"
+        self.data["facts"][0]["support"] = copy.deepcopy(self.data["facts"][4]["support"])
+        self.invalid("hw-required needs document-class support")
+        self.data["facts"][0]["data"]["fields"][0]["requirement"] = "as-implemented"
+        self.assertEqual(self.check()[0], 0)
+        got = peripheral.generated(self.checker().files[0])
+        self.assertIn({"fact": "reg-ctrl.en", "text": "block enable"}, got["verify"])
+
+    def test_payloadless_overlay_hardware_todo_is_generated(self):
+        overlay = Path(self.tmp.name) / "overlay"
+        overlay.mkdir()
+        (overlay / "board-specs.yaml").write_text("format: 2\nlayer: local\nname: local\nlicense: Apache-2.0\naccepts: [GPL-2.0-only]\n")
+        (overlay / "widget-overlay.spec.yaml").write_text(dump({"format": 2, "kind": "overlay",
+            "overlays": "widget", "facts": [{"id": "observe", "section": "identity",
+            "title": "Clock", "claim": "Observe the clock.", "todo": {"check": "hardware", "text": "Measure it."}}]}))
+        for flags in ((), ("--merged",)):
+            code, result = run("render", self.root, overlay, "--format", "md", *flags)
+            self.assertEqual(code, 0, result)
+            self.assertEqual(result["markdown"].count("- `observe`: " + render_md.escape("Observe the clock.")), 1)
+
+    def test_layout_support_does_not_make_a_verdict_subkey(self):
+        row = self.data["facts"][4]["data"]["layout"]["fields"][0]
+        row["support"] = copy.deepcopy(self.data["facts"][4]["support"])
+        checker = self.checker()
+        self.assertNotIn("frame.type", checker.files[0].records)
+
+    def test_duplicated_subkey_verdict_is_refused_as_a_key(self):
+        self.record(self.checker(), "reg-ctrl.en")
+        fields = self.data["facts"][0]["data"]["fields"]
+        fields.append(copy.deepcopy(fields[0]))
+        checker = self.checker()
+        self.assertTrue(any("verdict key 'reg-ctrl.en'" in f.message and "has no field or step" in f.message
+                            for f in checker.findings), checker.findings)
+        self.assertNotIn("reg-ctrl.en", checker.files[0].verdicts)
+
+    def test_nested_citation_is_checked_once(self):
+        self.data["facts"][0]["data"]["fields"][0]["support"][0]["anchors"][0]["path"] = "missing.c"
+        checker = self.checker()
+        hits = [f for f in checker.findings if f.level == "error" and "is not in the files" in f.message]
+        self.assertEqual(len(hits), 1, checker.findings)
+
+    def bases(self):
+        checker = self.checker()
+        fresh = records.Freshness(checker)
+        return {key: fresh.basis(rec)[0] for key, rec in checker.files[0].records.items()}
+
+    def test_d16_field_anchor_stales_only_its_subkey(self):
+        before = self.bases()
+        self.data["facts"][0]["data"]["fields"][0]["support"][0]["anchors"][0]["lines"] = [4, 5]
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]}, {"reg-ctrl.en"})
+        before = after
+        self.data["facts"][0]["data"]["register"]["offset"] = "0x10"
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]}, {"reg-ctrl", "reg-ctrl.en"})
+
+    def test_d16_step_edit_and_step_order(self):
+        steps = self.data["facts"][3]["data"]["sequence"]["steps"]
+        steps[3]["support"] = copy.deepcopy(steps[0]["support"])
+        before = self.bases()
+        steps[3]["action"] = "Set the enable bit twice."
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]}, {"seq-init.s4"})
+        before = after
+        steps[2], steps[3] = steps[3], steps[2]
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]},
+                         {"seq-init", "seq-init.s1", "seq-init.s4"})
+
+    def test_d16_parent_edit_does_not_stale_children(self):
+        before = self.bases()
+        self.data["facts"][0]["support"][0]["anchors"][0]["lines"] = [4, 5]
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]}, {"reg-ctrl"})
+        before = after
+        self.data["facts"][3]["data"]["sequence"]["steps"][1]["action"] = "Write a new divisor."
+        after = self.bases()
+        self.assertEqual({key for key in before if before[key] != after[key]}, {"seq-init"})
+
+    def test_facts_symlink_is_usage_error(self):
+        self.write()
+        dest = Path(self.tmp.name) / "answer.facts.yaml"
+        data = {"format": 2, "kind": "facts", "facts": [], "resources": self.data["resources"]}
+        target = Path(self.tmp.name) / "regular.facts.yaml"
+        target.write_text(dump(data))
+        dest.symlink_to(target)
+        code, result = run("check", dest, "--root", self.root)
+        self.assertEqual(code, 2, result)
+        self.assertIn("regular *.facts.yaml", result["findings"][0]["message"])
 
 
 class Inventory(Fixture):
@@ -623,6 +742,103 @@ class Inventory(Fixture):
         self.assertIsNone(inventory.integer("-1", {}))
         self.assertIsNone(inventory.integer("1 + " * 100 + "1", {}))
         self.assertIsNone(inventory.integer("1" * 4097, {}))
+
+
+    def commit_header(self, text, relative="drivers/tty/serial/widget.c"):
+        path = self.repo / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        subprocess.run(["git", "-C", str(self.repo), "add", relative], check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(self.repo), "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+                        "-c", "commit.gpgsign=false", "commit", "-q", "-m", "header fixture"], check=True, capture_output=True)
+        self.data["resources"]["repos"][0]["commit"] = subprocess.run(
+            ["git", "-C", str(self.repo), "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
+
+    def test_inventory_header_license_must_match(self):
+        source = self.repo / "drivers/tty/serial/widget.c"
+        self.commit_header(source.read_text().replace("GPL-2.0-only", "MIT"))
+        code, result = self.inventory()
+        self.assertEqual(code, 1, result)
+        self.assertIn("SPDX line 'MIT' differs from entry license", result["findings"][0]["message"])
+
+    def test_inventory_unknown_never_passes_even_when_covered(self):
+        source = self.repo / "drivers/tty/serial/widget.c"
+        self.commit_header(source.read_text() + "\n#define WIDGET_CTRL 0x10\n")
+        code, result = self.inventory()
+        self.assertEqual(code, 1, result)
+        self.assertEqual(result["unknown"], ["WIDGET_CTRL"])
+        self.assertIn("ambiguous", result["unknown_reasons"]["WIDGET_CTRL"])
+
+    def test_cross_header_conflict_is_unknown_with_reason(self):
+        self.commit_header("// SPDX-License-Identifier: GPL-2.0-only\n#define WIDGET_CTRL 0x10\n", "other.h")
+        self.data["resources"]["repos"][0]["files"].append({"path": "other.h", "license_from": "spdx-line"})
+        code, result = self.inventory("--headers", "drivers/tty/serial/widget.c", "other.h")
+        self.assertEqual(code, 1, result)
+        self.assertIn("unknown", result, result)
+        self.assertEqual(result["unknown"], ["WIDGET_CTRL"])
+        self.assertIn("ambiguous", result["unknown_reasons"]["WIDGET_CTRL"])
+        self.commit_header("// SPDX-License-Identifier: GPL-2.0-only\n#define WIDGET_CTRL 0\n", "other.h")
+        code, result = self.inventory("--headers", "drivers/tty/serial/widget.c", "other.h")
+        self.assertEqual(code, 0, result)
+        self.assertEqual(result["unknown"], [])
+
+    def test_comments_preserve_the_whole_expression(self):
+        values, _ = inventory.extract("#define CTRL 0x10 /* base */ + 4\n#define MASK 0x1 /* c */ | 0x2 // rest\n")
+        self.assertEqual(values, {"CTRL": 20, "MASK": 3})
+        self.assertEqual(inventory.integer("1 /* multiline\ncomment */ + 2", {}), 3)
+
+    def test_duplicate_and_conditional_definitions_require_agreement(self):
+        text = ("#define CTRL 1\n#define CTRL 2\n#define SAME 3\n#define SAME (1 + 2)\n"
+            "#ifdef CONFIG_A\n#define ALT 4\n#else\n#define ALT 8\n#endif\n"
+            "#if CONFIG_B\n#define EQUAL 4\n#else\n#define EQUAL (2 + 2)\n#endif\n"
+            "#if CONFIG_C\n#define MAYBE 7\n#endif\n")
+        values, _ = inventory.extract(text)
+        self.assertEqual(values, {"CTRL": None, "SAME": 3, "ALT": None, "EQUAL": 4, "MAYBE": None})
+        reasons = {}
+        inventory.extract(text, reasons)
+        self.assertEqual(set(reasons), {"CTRL", "ALT", "MAYBE"})
+        self.assertIn("ambiguous", reasons["ALT"])
+        self.assertIn("conditional", reasons["MAYBE"])
+
+    def test_object_macros_expand_textually_before_evaluation(self):
+        values, _ = inventory.extract("#define BASE 1 + 2\n#define CTRL BASE * 4\n#define GROUP (BASE) * 4\n"
+                                      "#define INDIRECT CTRL + 1\n#define RECURSE RECURSE\n")
+        self.assertEqual(values, {"BASE": 3, "CTRL": 9, "GROUP": 12, "INDIRECT": 10, "RECURSE": None})
+        values, _ = inventory.extract("#define BASE 1 + 2\n#define BASE 3\n#define CTRL BASE * 4\n")
+        self.assertEqual(values, {"BASE": 3, "CTRL": None})
+
+    def test_function_macros_and_all_enum_members_are_reported(self):
+        text = ("#define CTRL(n) (0x10 + (n))\n"
+            "enum regs { FIRST, NEXT, EXPLICIT = 8, LAST };\n"
+            "enum bad { BAD = OTHER(1), AFTER, RECOVER = 9, RECOVER_NEXT };\n")
+        values, kinds = inventory.extract(text)
+        self.assertEqual(values, {"CTRL": None, "FIRST": 0, "NEXT": 1, "EXPLICIT": 8, "LAST": 9,
+                                  "BAD": None, "AFTER": None, "RECOVER": 9, "RECOVER_NEXT": None})
+        self.assertEqual(kinds["CTRL"], "define")
+        self.assertEqual(kinds["NEXT"], "enum")
+        reasons = {}
+        inventory.extract(text, reasons)
+        self.assertEqual(set(reasons), {"CTRL", "BAD", "AFTER", "RECOVER_NEXT"})
+
+    def test_header_defined_builtins_never_use_assumed_meanings(self):
+        values, _ = inventory.extract("#define BIT(n) (1 << ((n) + 1))\n#define CTRL BIT(0)\n"
+                                      "#define GENMASK(h,l) 0xff\n#define MASK GENMASK(2, 1)\n")
+        self.assertEqual(values, {"BIT": None, "CTRL": None, "GENMASK": None, "MASK": None})
+        values, _ = inventory.extract("#define BIT 8\n#define CTRL BIT + 1\n#define MASK BIT(2)\n")
+        self.assertEqual(values, {"BIT": 8, "CTRL": 9, "MASK": None})
+
+    def test_guards_are_pairs_and_register_spelling_never_filters(self):
+        values, _ = inventory.extract("#ifndef DEVICE_HEADER\n#define DEVICE_HEADER\n"
+                                      "#define STATUS_H 0x10\n#define _CTRL 0x14\n#define __MASK 3\n#endif\n")
+        self.assertEqual(values, {"STATUS_H": 16, "_CTRL": 20, "__MASK": 3})
+        values, _ = inventory.extract("#define UNPAIRED_H\n#define VALID_H 4\n")
+        self.assertEqual(values, {"UNPAIRED_H": None, "VALID_H": 4})
+
+    def test_shift_bound_and_genmask_order_have_independent_controls(self):
+        self.assertEqual(inventory.integer("1 << 2", {}), 4)
+        self.assertIsNone(inventory.integer("0 >> 4097", {}))
+        self.assertIsNone(inventory.integer("GENMASK(2, 3)", {}))
+        self.assertEqual(inventory.integer("GENMASK(3, 2)", {}), 12)
 
 
 if __name__ == "__main__":

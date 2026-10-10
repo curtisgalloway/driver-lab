@@ -26,7 +26,7 @@ CODE = [
     ("inherited-requirement", "peripheral", 'value = row.get("requirement", inherited)', 'value = row.get("requirement")'),
     ("area-duplicate", "peripheral", 'if row["area"] in areas:', 'if False:'),
     ("reset-width", "peripheral", 'if int(register["reset"], 16).bit_length() > register["width"]:', 'if False:'),
-    ("bits-bound", "peripheral", 'if low > high or high >= register["width"]:', 'if False:'),
+    ("bits-bound", "peripheral", 'if low > high or ("width" in register and high >= register["width"]):', 'if False:'),
     ("layout-bound", "peripheral", 'if int(row["offset"], 16) + row["size"] > payload["layout"]["size"]:', 'if False:'),
     ("child-id-duplicate", "peripheral", 'if key in seen:', 'if False:'),
     ("order-step-existence", "peripheral", 'if before not in steps or after not in steps:', 'if False:'),
@@ -37,7 +37,9 @@ CODE = [
     ("subkey-support", "peripheral", 'if "support" in row and path[-2] in ("fields", "steps"):', 'if False:'),
     ("subkey-duplicate", "speccheck", 'self.add(f, path + ("id",), f"sub-key {rid!r} is used twice")', 'pass'),
     ("nested-citations", "speccheck", 'yield from supports(value, base + (key,))', 'yield from supports(value, base + (key,)) if key != "data" else ()'),
-    ("subkey-parent-basis", "records", 'out.append((rec.parent.full, rec.parent, None))', 'pass'),
+    ("subkey-parent-basis", "peripheral", 'data["parent_identity"] = {k: payload["register"][k] for k in ("name", "offset")}', 'pass'),
+    ("subkey-step-order", "peripheral", 'data["parent_identity"] = {"steps": [row["id"] for row in payload["sequence"]["steps"]]}', 'pass'),
+    ("parent-excludes-supported-children", "peripheral", 'owner[path[-1]] = {"id": owner[path[-1]]["id"]}', 'pass'),
     ("subkey-critical", "speccheck", 'if parent.data.get("critical"):', 'if False:'),
     ("subkey-records", "records", 'if dot and (key not in f.records or key in f.duplicated):', 'if dot:'),
     ("bad-subkey-diagnostic", "records", 'if dot and (key not in f.records or key in f.duplicated):\n            checker.add', 'if dot and (key not in f.records or key in f.duplicated):\n            continue\n            checker.add'),
@@ -50,6 +52,14 @@ CODE = [
     ("inventory-closed-files", "inventory", 'resolve.check_anchor(entry, {"path": header})', 'pass'),
     ("inventory-immutable", "inventory", 'entry["commit"], args.timeout,', 'resolve.git(local[entry["name"]], ["rev-parse", "HEAD"], 30, 1024).decode().strip(), args.timeout,'),
     ("inventory-prose-coverage", "inventory", 'for name in values if name not in covered]', 'for name in values if name not in covered and name not in str(data)]'),
+    ("inventory-license", "inventory", 'resolve.check_license(repo, entry, {"path": header})', 'pass'),
+    ("inventory-shift-bound", "inventory", 'and not 0 <= right <= 4096:', 'and right < 0:'),
+    ("inventory-genmask-order", "inventory", '0 <= values[1] <= values[0] <= 4096:', '0 <= values[1] <= 4096 and 0 <= values[0] <= 4096:'),
+    ("inventory-definition-agreement", "inventory", 'if len(results) != 1:', 'if False:'),
+    ("facts-file-symlink", "speccheck", 'or not path.is_file() or through_link(path):', 'or not path.is_file():'),
+    ("duplicated-subkey-verdict", "records", 'key not in f.records or key in f.duplicated', 'key not in f.records'),
+    ("layout-fields-no-subkey", "peripheral", 'if path[-2] == "steps" or "register" in data.get("data", {}):', 'if True:'),
+    ("top-level-citations-once", "speccheck", 'if len(rec.path) == 2:', 'if True:'),
     ("generated-registers", "peripheral", 'registers.append(dict(payload["register"], fact=fid, fields=payload.get("fields", [])))', 'pass'),
     ("generated-verify", "peripheral", 'if row.get("requirement", fact.get("requirement")) == "as-implemented":', 'if False:'),
     ("generated-questions", "peripheral", 'questions.append({"fact": fid, **fact["todo"]})', 'pass'),
@@ -66,7 +76,7 @@ CODE = [
 
 def schema_mutations():
     result = []
-    for name, keys in (("register", ("name", "offset", "width", "access")),
+    for name, keys in (("register", ("name", "offset")),
                        ("field", ("id", "name", "bits", "meaning")),
                        ("step", ("id", "action")), ("order", ("before", "after")),
                        ("layout", ("name", "size", "fields")),
@@ -94,6 +104,8 @@ def schema_mutations():
         ("sequences-payload", ("$defs", "fact", "allOf", 3), "set", {}),
         ("layouts-payload", ("$defs", "fact", "allOf", 4), "set", {}),
         ("open-question-gap", ("$defs", "fact", "allOf", 5), "set", {}),
+        ("register-reset-nonnull", ("$defs", "register", "properties", "reset", "type"), "set", ["string", "null"]),
+        ("register-access", ("$defs", "register", "properties", "access"), "set", {}),
     ])
     for index, kind in enumerate(("board", "soc", "chip", "ip")):
         result.append((kind + "-no-payload", ("allOf", index, "then", "properties", "facts", "items", "not"), "set", {"not": {}}))

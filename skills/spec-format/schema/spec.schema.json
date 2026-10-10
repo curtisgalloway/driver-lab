@@ -1043,9 +1043,7 @@
         "type": "object",
         "required": [
           "name",
-          "offset",
-          "width",
-          "access"
+          "offset"
         ],
         "properties": {
           "name": {
@@ -1070,10 +1068,7 @@
             ]
           },
           "reset": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": "string",
             "$ref": "#/$defs/hex"
           }
         },
@@ -1111,6 +1106,9 @@
           },
           "meaning": {
             "$ref": "#/$defs/text"
+          },
+          "requirement": {
+            "$ref": "#/$defs/requirement"
           },
           "support": {
             "$ref": "#/$defs/supportList"
@@ -1157,6 +1155,9 @@
           },
           "meaning": {
             "$ref": "#/$defs/text"
+          },
+          "requirement": {
+            "$ref": "#/$defs/requirement"
           },
           "support": {
             "$ref": "#/$defs/supportList"

@@ -20,25 +20,6 @@ facts:
     register:
       name: WIDGET_CTRL
       offset: '0x0'
-      width: 32
-      access: rw
-      reset: '0x0'
-    fields:
-    - id: en
-      name: WIDGET_CTRL_EN
-      bits:
-      - 0
-      - 0
-      meaning: block enable
-      support:
-      - class: src
-        anchors:
-        - repo: linux
-          path: drivers/tty/serial/widget.c
-          lines:
-          - 5
-          - 5
-          symbol: WIDGET_CTRL_EN
   support:
   - class: src
     anchors:
@@ -46,16 +27,15 @@ facts:
       path: drivers/tty/serial/widget.c
       lines:
       - 4
-      - 4
+      - 5
       symbol: WIDGET_CTRL
+  claim: CTRL is at offset 0x00, and bit 0 enables the block.
 - id: reg-baud
   section: facts
   data:
     register:
       name: WIDGET_BAUD
       offset: '0x4'
-      width: 32
-      access: rw
   support:
   - class: src
     anchors:
@@ -65,21 +45,13 @@ facts:
       - 6
       - 6
       symbol: WIDGET_BAUD
+  claim: BAUD, the baud divisor, is at offset 0x04.
 - id: reg-lcr
   section: facts
   data:
     register:
       name: WIDGET_LCR
       offset: '0x8'
-      width: 32
-      access: rw
-    fields:
-    - id: format
-      name: WIDGET_LCR_8N1
-      bits:
-      - 0
-      - 1
-      meaning: 8N1 format
   support:
   - class: src
     anchors:
@@ -87,47 +59,15 @@ facts:
       path: drivers/tty/serial/widget.c
       lines:
       - 7
-      - 8
+      - 7
       symbol: WIDGET_LCR
+  claim: LCR is at offset 0x08, and a write to it latches BAUD.
 - id: seq-init
   section: facts
   title: Initialization
-  claim: Clear CTRL, write BAUD, write LCR, then enable CTRL.
+  claim: The driver initializes the block by clearing CTRL, writing BAUD, writing LCR, then setting the
+    enable bit.
   requirement: as-implemented
-  data:
-    sequence:
-      steps:
-      - id: s1
-        action: write 0 to CTRL
-        support:
-        - class: src
-          anchors:
-          - repo: linux
-            path: drivers/tty/serial/widget.c
-            lines:
-            - 12
-            - 12
-            symbol: widget_uart_init
-      - id: s2
-        action: write the divisor to BAUD
-      - id: s3
-        action: write WIDGET_LCR_8N1 to LCR
-      - id: s4
-        action: set WIDGET_CTRL_EN in CTRL
-      order:
-      - before: s2
-        after: s3
-        requirement: comment-explained
-        support:
-        - class: src
-          anchors:
-          - repo: linux
-            path: drivers/tty/serial/widget.c
-            lines:
-            - 7
-            - 7
-            symbol: WIDGET_LCR
-            comment: true
   support:
   - class: src
     anchors:

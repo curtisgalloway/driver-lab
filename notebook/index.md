@@ -22,8 +22,8 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-7a — Peripheral specs and facts files in format 2](SF2-7a.md)
-Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T19:32:15-07:00; indexed through the last entry.
-Outcome: implementation and verification in an exported tree; orchestrator review and
+Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T20:41:25-07:00; indexed through the last entry.
+Outcome: implementation and review round 1 fixes in an exported tree; orchestrator review and
 checkpoint pending. Reviews and HTML generation are outside this unit.
 
 ### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)

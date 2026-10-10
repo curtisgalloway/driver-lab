@@ -6,6 +6,8 @@ Only structured fields decide requirements, citations and generated summaries.
 Layout offsets and sizes count bytes; register bits are [low, high], inclusive.
 """
 
+import copy
+
 
 def children(data, base=()):
     payload = data.get("data", {})
@@ -25,6 +27,29 @@ def subrecords(data, base=()):
             # Layout fields do not have D16 sub-keys: only registers and sequences do.
             if path[-2] == "steps" or "register" in data.get("data", {}):
                 yield row, path
+
+
+def basis_data(rec):
+    """D16 projection: independent children and only the parent's identifying data."""
+    data = copy.deepcopy(rec.data)
+    if getattr(rec, "parent", None) is not None:
+        payload = rec.parent.data["data"]
+        if "register" in payload:
+            data["parent_identity"] = {k: payload["register"][k] for k in ("name", "offset")}
+        elif "sequence" in payload:
+            data["parent_identity"] = {"steps": [row["id"] for row in payload["sequence"]["steps"]]}
+    else:
+        for _, path in subrecords(rec.data):
+            owner = data
+            for part in path[:-1]:
+                owner = owner[part]
+            owner[path[-1]] = {"id": owner[path[-1]]["id"]}
+    return data
+
+
+def owns_citation(rec, path):
+    """The parent's freshness does not include a separately supported child's citation."""
+    return not any(path[:len(at)] == at for _, at in subrecords(rec.data, rec.path))
 
 
 def requirement(checker, file, row, path, inherited=None, inherited_support=()):
@@ -50,7 +75,7 @@ def check_file(checker, file):
         requirement(checker, file, fact, path)
         payload = fact.get("data", {})
         register = payload.get("register")
-        if register and register.get("reset") is not None:
+        if register and "reset" in register and "width" in register:
             if int(register["reset"], 16).bit_length() > register["width"]:
                 checker.add(file, path + ("data", "register", "reset"), "reset exceeds register width")
         seen = set()
@@ -63,7 +88,7 @@ def check_file(checker, file):
                 seen.add(key)
             if "bits" in row:
                 low, high = row["bits"]
-                if low > high or high >= register["width"]:
+                if low > high or ("width" in register and high >= register["width"]):
                     checker.add(file, at + ("bits",), "bits must be ordered and inside register width")
             if "offset" in row and "layout" in payload:
                 if int(row["offset"], 16) + row["size"] > payload["layout"]["size"]:
@@ -109,6 +134,8 @@ def generated(file):
         sequence_steps = payload.get("sequence", {}).get("steps", [])
         if fact.get("requirement") == "as-implemented" and not sequence_steps:
             verify.append({"fact": fid, "text": fact.get("claim", payload.get("register", {}).get("name", fid))})
+        elif fact.get("todo", {}).get("check") == "hardware" and not sequence_steps:
+            verify.append({"fact": fid, "text": fact.get("claim", fid)})
         for row, at in children(fact):
             if row.get("requirement", fact.get("requirement")) == "as-implemented":
                 key = row.get("id", row.get("before", "") + "->" + row.get("after", ""))

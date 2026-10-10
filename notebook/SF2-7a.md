@@ -34,3 +34,40 @@ Run: `sf2-7a-20261009-01`. Reviews and HTML generation belong to separate units.
   payload or requirement. Every mutation qualifies through assertion failures.
 - The patch collector flags four empty directories reserved read-only by the harness;
   no authored file is refused. The orchestrator needs that collector detail in its ledger.
+
+
+## 2026-10-09T20:41:25-07:00 — Review round 1 fixes
+
+- Inventory comments now retain the complete expression. Object macros expand as tokens,
+  preserving C precedence; duplicate and conditional definitions require agreement and
+  complete branch coverage. Function macros, unsupported expressions and declarations,
+  recursive or excessive expansions, and unresolved enum values remain named unknowns with
+  reasons. Unknowns fail inventory even when a spec covers them. Header-defined macros
+  suppress the built-in meanings; include guards are recognized by their opening pair.
+- D16 now separates a supported child's data, citations and references from the parent's
+  basis. The child keeps the register name and offset, or the sequence's step order.
+  Field-anchor and step-action edits affect only their sub-keys; parent-only support and
+  unsupported-child edits affect only the parent. Identity and step-order edits still
+  affect the relevant children. Field requirements can override the inherited requirement.
+- Ordinary peripheral overlay facts with hardware TODOs now reach the generated hardware
+  list, in merged and separate views. Reset null is refused; absent width and access mean
+  unknown. The design's register offset example uses canonical hexadecimal spelling.
+- Fidelity restoration: both investigator answers again say "BAUD, the baud divisor" and
+  "a write to it latches BAUD"; the firmware CTRL claim again says "bit 0 enables the block".
+  Both initialization claims and their original citation ranges are restored verbatim.
+  Invented reset, width and access values, the 8N1 field, the order row, and the per-step
+  decomposition are removed; the original prose carries the initialization evidence.
+- Fidelity restoration: the BSD target fixture again says "The driver binds by compatible
+  string." Its original `[tgt: drivers/widget/widget.cc:12]` citation is retained in a note;
+  no symbol was recorded, so format 2 uses a file-scoped `compatible` search rather than an
+  invented symbol. Its citation now gates the target license without `--require-license`.
+- Fidelity restoration: the documents-only fixture again says "The FIFO is 64 entries
+  deep." Both it and the reset claim cite the original Widget TRM sections 5.1 and 4.2,
+  replacing the conversion's programming-guide citation.
+- Regression replay against the exported base gives 19 assertion failures and no unittest
+  errors; all six inventory blocker regressions fail by assertion before the fixes.
+- The nine reviewer guard gaps are addressed: eight have assertion-failing mutations; the
+  redundant Markdown parent predicate is removed because sub-records have no section.
+  The citation pass instead guards by top-level record path and has an exact diagnostic
+  count test. The first mutation rerun also exposed a renamed bits guard and a layout
+  mutation that crashed before its assertion; both now qualify by assertion in isolation.

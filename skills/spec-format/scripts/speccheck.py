@@ -504,7 +504,7 @@ class Checker:
         textcheck.check_file(self, f)
         cited = set()  # repos names an anchor or a notice of this file names
         for rec in f.records.values():
-            if rec.parent is None:
+            if len(rec.path) == 2:
                 self.check_record(f, rec, cited)
         import peripheral
 

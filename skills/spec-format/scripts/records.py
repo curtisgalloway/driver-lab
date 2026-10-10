@@ -113,11 +113,13 @@ def local_part(rec):
     bookkeeping fields; or (None, why) when a cited name is not in its file or is listed twice,
     or a cited repos entry pins a ref, so the part cannot be established."""
     import speccheck
+    import peripheral
 
     f = rec.file
-    fact = {k: v for k, v in rec.data.items() if k != "section"}
+    data = peripheral.basis_data(rec)
+    fact = {k: v for k, v in data.items() if k != "section"}
     documents, repos, paths = {}, {}, {}
-    for entry, _ in speccheck.supports(rec.data, ()):
+    for entry, _ in speccheck.supports(data, ()):
         if "doc" in entry:
             name = entry["doc"]
             if ("documents", name) in f.ambiguous:
@@ -151,8 +153,8 @@ def local_part(rec):
         entry = _entry("repos", entry)
         entry["files"] = [_entry("files", listed[p]) for p in sorted(cited)]
         repos[name] = entry
-    names = list(rec.data.get("assumes", []))
-    for entry, _ in speccheck.supports(rec.data, ()):
+    names = list(data.get("assumes", []))
+    for entry, _ in speccheck.supports(data, ()):
         names += [p["assumption"] for p in entry.get("premises", []) if "assumption" in p]
     assumptions = {}
     for name in names:
@@ -280,10 +282,10 @@ class Freshness:
 
     def edges(self, rec):
         if rec not in self._edges:
+            import peripheral
+
             out = []
-            if rec.parent is not None:
-                out.append((rec.parent.full, rec.parent, None))
-            for _, ref, path in self._refs(rec.data, rec.path):
+            for _, ref, path in self._refs(peripheral.basis_data(rec), rec.path):
                 target, why = self.checker.resolve(rec.file, ref)
                 if target is not None and self.failed is not None and (rec.file, path) in self.failed:
                     target, why = None, "failed the check (see the error at that reference)"
@@ -297,7 +299,10 @@ class Freshness:
         if text is None:
             return text, why
         n = len(rec.path)
-        bad = sorted((p for p in self.cites.get(rec.file, ()) if p[:n] == rec.path), key=repr)
+        import peripheral
+
+        bad = sorted((p for p in self.cites.get(rec.file, ())
+                      if p[:n] == rec.path and peripheral.owns_citation(rec, p)), key=repr)
         if bad:
             return None, (f"{rec.full}: the citation at {self._where(bad[0])} failed the check "
                           f"(see the error there)")

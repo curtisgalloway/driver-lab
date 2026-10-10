@@ -17,6 +17,8 @@ import sys
 import tempfile
 import unittest
 
+import yaml
+
 HERE = pathlib.Path(__file__).resolve().parent
 SKILL = HERE.parent
 GATE = SKILL / "scripts" / "license_gate.py"
@@ -97,6 +99,28 @@ class WorkedExample(unittest.TestCase):
         fw = (EX / "sources/widget-fw/uart/widget_uart_init.c").read_text()
         self.assertEqual(linux.splitlines()[0], "// SPDX-License-Identifier: GPL-2.0-only")
         self.assertEqual(fw.splitlines()[0], "/* SPDX-License-Identifier: MIT */")
+
+    def test_converted_answers_preserve_exact_format_one_claims(self):
+        for source in ("linux", "fw"):
+            data = yaml.safe_load((EX / "expected" / ("answer-" + source + ".facts.yaml")).read_text())
+            expected = [
+                "CTRL is at offset 0x00, and bit 0 enables the block.",
+                "BAUD, the baud divisor, is at offset 0x04.",
+                "LCR is at offset 0x08, and a write to it latches BAUD.",
+                ("The driver initializes the block by clearing CTRL, writing BAUD, writing LCR, then setting the enable bit."
+                 if source == "linux" else
+                 "The firmware disables the block before reprogramming it, writes BAUD, writes LCR, then enables the block."),
+            ]
+            self.assertEqual([f.get("claim") for f in data["facts"]], expected)
+            for fact in data["facts"][:3]:
+                self.assertEqual(set(fact["data"]), {"register"})
+                self.assertEqual(set(fact["data"]["register"]), {"name", "offset"})
+            self.assertNotIn("data", data["facts"][3])
+            self.assertEqual(data["facts"][3]["requirement"],
+                             "as-implemented" if source == "linux" else "comment-explained")
+            self.assertEqual([f["support"][0]["anchors"][0]["lines"] for f in data["facts"]],
+                             [[4, 5], [6, 6], [7, 7], [12, 15]] if source == "linux" else
+                             [[4, 4], [5, 5], [6, 6], [10, 13]])
 
 
 if __name__ == "__main__":

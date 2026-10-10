@@ -19,8 +19,10 @@ entries' licenses and the root marker, so no repository is fetched.
 - `expected.json`: the exit code of `spec.py check <root> --require-license` for every pair, the
   root holding one marker and one spec; 0 passes, 1 fails. The codes are the format 1 file's,
   row for row. `without_require_license` lists the only codes that differ without the flag: a
-  repos entry no anchor or notice names (`bsd-target`, `uncited-gpl-pin`) is gated only under
+  repos entry no anchor or notice names (`uncited-gpl-pin`) is gated only under
   `--require-license` (design, "Roots, layers, overlays and the license gate").
+  `bsd-target` restores the format 1 target binding citation, so its license is gated with or
+  without the flag. `docs-only` restores the FIFO depth and both original TRM citations.
 - `board/`: `widgetchip.spec.yaml` cites a document only and fits every root;
   `widgetchip-bsd-overlay` adds a BSD-3-Clause repos entry no anchor cites (fits the GPL and
   permissive roots under `--require-license`, not the docs root); `widgetchip-gpl3-overlay` adds a

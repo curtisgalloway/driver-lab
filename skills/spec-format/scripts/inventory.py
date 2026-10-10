@@ -16,18 +16,24 @@ import tempfile
 
 import resolve
 
-DEFINE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)\s+(.+)")
-ENUM = re.compile(r"^\s*([A-Z_][A-Z0-9_]*)\s*=\s*([^,}]+)")
+DEFINE = re.compile(r"^\s*#\s*define\s+([A-Za-z_]\w*)(.*)$")
+TOKEN = re.compile(r"\b[A-Za-z_]\w*\b")
+COMMENTS = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|/\*.*?\*/|//[^\n]*', re.S)
 BITFIELD = re.compile(r"^\s*(?:unsigned\s+)?(?:int|long|char|short|u(?:int)?\d+(?:_t)?)\s+(\w+)\s*:\s*\d+\s*;")
-SKIP = re.compile(r"^(_+|.*_H_?$|.*_H__$|.*_INCLUDED$)")
 OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
        ast.BitOr: operator.or_, ast.BitAnd: operator.and_, ast.BitXor: operator.xor,
        ast.LShift: operator.lshift, ast.RShift: operator.rshift}
 
 
-def integer(expression, names):
+def strip_comments(text):
+    """Replace comments with whitespace, retaining tokens on either side."""
+    return COMMENTS.sub(lambda m: " "
+                        if m[0].startswith(("/*", "//")) else m[0], text)
+
+
+def integer(expression, names, disabled=()):
     """Integer or None for a bounded subset of C constant expressions."""
-    expression = re.split(r"/\*|//", expression, maxsplit=1)[0].strip()
+    expression = " ".join(strip_comments(expression).split())
     expression = re.sub(r"\b(0[xX][0-9a-fA-F]+|[0-9]+)[uUlL]+\b", r"\1", expression)
     if len(expression) > 4096:
         return None
@@ -45,6 +51,8 @@ def integer(expression, names):
                 raise ValueError("shift bound")
             value = OPS[type(node.op)](left, right)
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and not node.keywords:
+            if node.func.id in disabled or node.func.id in names:
+                raise ValueError("locally defined call")
             values = [read(arg, depth + 1) for arg in node.args]
             if node.func.id in ("BIT", "BIT_ULL") and len(values) == 1 and 0 <= values[0] <= 4096:
                 value = 1 << values[0]
@@ -65,27 +73,170 @@ def integer(expression, names):
         return None
 
 
-def extract(text):
-    definitions, kinds = {}, {}
-    for line in text.splitlines():
-        match = DEFINE.match(line) or ENUM.match(line)
-        if match and not SKIP.match(match[1]):
-            definitions[match[1]] = match[2]
-            kinds[match[1]] = "define" if DEFINE.match(line) else "enum"
-        elif (match := BITFIELD.match(line)):
-            definitions[match[1]] = ""
-            kinds[match[1]] = "bitfield"
-    values = dict.fromkeys(definitions)
-    for _ in range(min(len(values), 64) + 1):
-        changed = False
-        for name, expression in definitions.items():
-            if values[name] is None:
-                value = integer(expression, values)
-                if value is not None:
-                    values[name], changed = value, True
-        if not changed:
-            break
-    return values, kinds
+def declarations(text):
+    """Collect every declaration, including unsupported forms, without overwriting names.
+
+    Conditions are not executed. Their branches must cover all possibilities before a
+    conditional name can be known. A conventional empty include-guard pair is ignored.
+    """
+    text = strip_comments(re.sub(r"\\\n", "", text))
+    lines = text.splitlines()
+    nonempty = [line.strip() for line in lines if line.strip()]
+    guard = None
+    if len(nonempty) >= 3:
+        first = re.fullmatch(r"#\s*ifndef\s+(\w+)", nonempty[0])
+        second = DEFINE.match(nonempty[1])
+        if first and second and first[1] == second[1] and not second[2].strip():
+            guard = first[1]
+    definitions, kinds, stack, groups, predecessors = {}, {}, [], {}, {}
+    enum_lines = []
+
+    def add(name, expression, kind):
+        definitions.setdefault(name, []).append((expression, tuple(stack)))
+        kinds[name] = kind
+
+    for line in lines:
+        directive = re.match(r"\s*#\s*(\w+)\b(.*)", line)
+        if directive:
+            op, tail = directive.groups()
+            if op in ("if", "ifdef", "ifndef"):
+                if op == "ifndef" and tail.strip() == guard and not stack:
+                    continue
+                group = len(groups)
+                groups[group] = [1, False]
+                stack.append((group, 0))
+            elif op in ("else", "elif") and stack:
+                group, branch = stack.pop()
+                groups[group][0] += 1
+                groups[group][1] |= op == "else"
+                stack.append((group, branch + 1))
+            elif op == "endif" and stack:
+                stack.pop()
+            elif op == "define" and (match := DEFINE.match(line)):
+                name, body = match.groups()
+                if name != guard:
+                    add(name, None if body.startswith("(") else body.strip(), "define")
+            elif op == "undef" and (match := re.match(r"\s*(\w+)", tail)):
+                add(match[1], None, "define")
+            continue
+        enum_lines.append((line, tuple(stack)))
+        if match := BITFIELD.match(line):
+            add(match[1], None, "bitfield")
+
+    enum_text = "\n".join(line for line, _ in enum_lines)
+    for enum in re.finditer(r"\benum\b[^;{]*\{([^}]*)\}", enum_text, re.S):
+        previous = None
+        preceding = []
+        start = enum_text[:enum.start(1)].count("\n")
+        position = 0
+        for member in re.split(r",(?![^()]*\))", enum[1]):
+            first = position + len(member) - len(member.lstrip())
+            context = enum_lines[min(start + enum[1][:first].count("\n"), len(enum_lines) - 1)][1]
+            position += len(member) + 1
+            match = re.match(r"\s*([A-Za-z_]\w*)\b(.*)", member, re.S)
+            if not match:
+                continue
+            name, tail = match.groups()
+            if tail.strip().startswith("="):
+                expression = tail.strip()[1:].strip()
+            elif not tail.strip():
+                expression = "0" if previous is None else f"({previous}) + 1"
+                predecessors.setdefault(name, []).extend(preceding)
+            else:
+                expression = None
+            definitions.setdefault(name, []).append((expression, context))
+            kinds[name] = "enum"
+            previous = name
+            preceding.append(name)
+    return definitions, kinds, groups, predecessors
+
+
+def extract(text, reasons=None):
+    return extract_headers([("", text)], reasons)[:2]
+
+
+def extract_headers(headers, reasons=None):
+    """Expand object macros as tokens, with bounded alternatives for duplicate definitions."""
+    definitions, kinds, origins, groups, predecessors = {}, {}, {}, {}, {}
+    for header, text in headers:
+        found, types, conditions, dependencies = declarations(text)
+        offset = len(groups)
+        groups.update({g + offset: branches for g, branches in conditions.items()})
+        for name, earlier in dependencies.items():
+            predecessors.setdefault(name, []).extend(earlier)
+        for name, rows in found.items():
+            definitions.setdefault(name, []).extend(
+                (expr, tuple((g + offset, b) for g, b in context)) for expr, context in rows)
+            kinds[name], origins[name] = types[name], header
+
+    def complete(contexts):
+        if any(len(context) > 32 for context in contexts):
+            return False
+        if () in contexts:
+            return True
+        if not contexts:
+            return False
+        group = contexts[0][0][0]
+        count, exhaustive = groups[group]
+        return exhaustive and all(complete([c[1:] for c in contexts if c[0] == (group, b)])
+                                  for b in range(count))
+
+    budget = [0]
+
+    def expand(expression, seen=()):
+        budget[0] += 1
+        if budget[0] > 4096:
+            raise ValueError("macro expansion work bound")
+        if expression is None or not expression or len(expression) > 4096 or len(seen) > 32:
+            raise ValueError("unsupported declaration or expansion bound")
+        parts, end = [""], 0
+        for token in TOKEN.finditer(expression):
+            name = token[0]
+            alternatives = {name}
+            if name in definitions:
+                if name in seen:
+                    raise ValueError("recursive macro")
+                rows = definitions[name]
+                for earlier in predecessors.get(name, []):
+                    if not complete([context for _, context in definitions[earlier]]):
+                        raise ValueError("implicit enum has a conditional preceding member")
+                    candidates = {integer(expr, {}, disabled=definitions)
+                                  for body, _ in definitions[earlier]
+                                  for expr in expand(body, seen + (name,))}
+                    if None in candidates or len(candidates) != 1:
+                        raise ValueError("implicit enum has an unknown preceding member")
+                if not complete([context for _, context in rows]):
+                    raise ValueError("conditional definition may be absent")
+                alternatives = set()
+                for expr, _ in rows:
+                    for value in expand(expr, seen + (name,)):
+                        alternatives.add(f"({value})" if kinds[name] == "enum" else value)
+            parts = [p + expression[end:token.start()] + value for p in parts for value in alternatives]
+            if len(parts) > 64 or any(len(p) > 4096 for p in parts):
+                raise ValueError("macro expansion bound")
+            end = token.end()
+        return {p + expression[end:] for p in parts}
+
+    values, unknown = {}, {}
+    for name, rows in definitions.items():
+        budget[0] = 0
+        try:
+            if any(values.get(earlier) is None for earlier in predecessors.get(name, [])):
+                raise ValueError("implicit enum has an unknown preceding member")
+            if not complete([context for _, context in rows]):
+                raise ValueError("conditional definition may be absent")
+            results = {integer(expr, {}, disabled=definitions)
+                       for body, _ in rows for expr in expand(body, (name,))}
+            if None in results:
+                raise ValueError("unsupported expression or declaration")
+            if len(results) != 1:
+                raise ValueError("ambiguous definitions disagree")
+            values[name] = results.pop()
+        except ValueError as exc:
+            values[name], unknown[name] = None, str(exc)
+    if reasons is not None:
+        reasons.update(unknown)
+    return values, kinds, origins
 
 
 def compare(data, values, origins, kinds):
@@ -99,7 +250,7 @@ def compare(data, values, origins, kinds):
         entries = [(register["name"], int(register["offset"], 16), fact["id"])]
         for field in payload.get("fields", []):
             low, high = field["bits"]
-            if not 0 <= low <= high < register["width"] or high > 4096:
+            if not 0 <= low <= high or ("width" in register and high >= register["width"]) or high > 4096:
                 import spec
 
                 raise spec.Usage("inventory field bits must be ordered, inside width and at most 4096")
@@ -142,7 +293,7 @@ def run(args):
         resolve.check_url(entry["url"])
     except resolve.ResolutionError as exc:
         raise spec.Usage(f"inventory needs an immutable source pin: {exc}") from exc
-    values, origins, kinds = {}, {}, {}
+    headers, reasons = [], {}
     with tempfile.TemporaryDirectory(prefix="spec-inventory-") as scratch:
         try:
             for header in args.headers:
@@ -152,17 +303,15 @@ def run(args):
                     resolve.fetch(entry, Path(scratch) / "source", args.timeout, args.limit_mb << 20))
             for header in args.headers:
                 resolve.check_license(repo, entry, {"path": header})
-                found, types = extract("\n".join(repo.lines(header)))
-                for name, value in found.items():
-                    if name in values and values[name] != value:
-                        raise resolve.ContentError(f"header constants disagree for {name}")
-                    values[name], kinds[name], origins[name] = value, types[name], header
+                headers.append((header, "\n".join(repo.lines(header))))
         except resolve.ResolutionError as exc:
             return 1, {"ok": False, "findings": [{"message": str(exc)}],
                        "_text": [resolve.display_line(str(exc))]}
+    values, kinds, origins = extract_headers(headers, reasons)
     result = compare(loaded.data, values, origins, kinds)
+    result["unknown_reasons"] = reasons
     bad = bool(result["mismatches"] or result["conflicts"] or result["absent"] or
-               (args.strict and result["omissions"]))
+               result["unknown"] or (args.strict and result["omissions"]))
     result.update(ok=not bad, pin=entry["name"], commit=entry["commit"], findings=[])
     lines = [f"inventory: {result['names']} names; {result['covered']} covered; "
              f"{len(result['unknown'])} unknown values"]
@@ -176,7 +325,7 @@ def run(args):
     for name in result["absent"]:
         lines.append(f"absent from headers: {name}")
     for name in result["unknown"]:
-        lines.append(f"unknown value: {name}")
+        lines.append(f"unknown value: {name}: {reasons[name]}")
     lines.append("result: " + ("FAIL" if bad else "PASS"))
     result["_text"] = [resolve.display_line(line) for line in lines]
     return int(bad), result

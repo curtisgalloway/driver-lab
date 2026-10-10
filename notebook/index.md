@@ -22,9 +22,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-5 — The viewer and publishing](SF2-5.md)
-Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T19:23:00-07:00
-Outcome: implemented and locally verified; orchestrator review pending. The chapter records parser
-option isolation, nested image links and deployment completeness from source inventory.
+Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
+Outcome: complete ([evidence](../evidence/SF2-5.md)); one review round and a clean confirmation
+round. The chapter records parser option isolation, nested image links and deployment completeness
+from source inventory. A composite action that looks pinned can still run a nested action by a
+movable tag; read what a pinned action calls.
 
 ### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)
 Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](SF2-8b.md))

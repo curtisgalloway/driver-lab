@@ -539,6 +539,22 @@ class Untrusted(unittest.TestCase):
                 self.assertIn("a reference may only rest on a root that checks clean",
                               f["message"])
 
+    def test_reason_survives_a_deep_checkout(self):
+        # SF2-G finding G1: the first error's reason was cut at 200 characters including its
+        # path, so a checkout deep enough left no reason at all and these cases failed there.
+        with tempfile.TemporaryDirectory() as tmp:
+            deep = pathlib.Path(tmp, *(["d" * 40] * 5))
+            shutil.copytree(FAIL, deep / "fail-closed")
+            shutil.copytree(UNTRUSTED / "misnamed-yml", deep / "misnamed-yml")
+            code, result = check(deep / "fail-closed" / "docs", "--context-root",
+                                 deep / "fail-closed" / "perm", "--context-root",
+                                 deep / "misnamed-yml", "--require-license")
+        self.assertEqual(code, 1)
+        f = only(errors(result))
+        self.assertGreater(len(str(deep)), 200)
+        self.assertIn("misnamed-yml/b.spec.yml:1:1: ", f["message"])
+        self.assertIn("not read as a spec", f["message"])
+
     def test_unreadable_markers(self):
         for case in self.UNREADABLE_MARKER:
             with self.subTest(case):
@@ -746,6 +762,7 @@ class BoardFixtures(unittest.TestCase):
         "dup-premise.spec.yaml": ["'dup-premise#reset-time' names dup-premise@bad#reset-time, "
                                   "as '#reset-time' already does"],
         "format1.spec.md": ["a format 1 spec in a format 2 root"],
+        "instance-dangling.spec.yaml": ["instance 'uart1': ip 'nosuchip' resolves to no spec"],
         "instance-not-ip.spec.yaml": ["instance 'uart1': 'fineboard' is not an ip spec"],
         "internal-doc.spec.yaml": ["documents entry 'secret-trm': access: internal under a "
                                    "public root"],

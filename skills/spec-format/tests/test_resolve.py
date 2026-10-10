@@ -401,6 +401,7 @@ class ResolveTests(GitFixture):
     def test_bad_urls_never_reach_git(self):
         for url in (
             "-x",
+            "http://example.invalid/a",  # the design's "non-https URL" (SF2-G finding G4)
             "file:///tmp/source",
             "ext::bad",
             "",

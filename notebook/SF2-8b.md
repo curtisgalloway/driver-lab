@@ -70,3 +70,18 @@ record test, new glossary terms and this chapter/index entry. No plan status or 
 changed. No commit is possible in this export. Independent docs reviews, the git-based
 checks and rerunning the export-dependent suites remain with the orchestrator; this entry
 does not declare SF2-8 complete. The run report is the ledger handoff.
+
+### 2026-10-09T17:50-07:00 — review round 1 fixes
+
+Restricted upstream-only renewal to previous PASS verdicts; every other verdict needs a
+full reading. Added reader checks of notice/license-file evidence, marked peripheral and
+review support as future SF2-7 work, and corrected the format 1 handoff. The example now
+derives a total from two separately cited phases, documents GAP fields and the illustrative
+critical marker, and uses fresh status bases. Removed glossary rows owned by SF2-8a.
+
+The spec-format suite ran 453 tests successfully (one optional real HTTPS fetch skipped);
+all three worked-example tests pass, including freshness propagation from either premise.
+The verbatim record passes both license/verification gates with four current verdicts and
+zero findings. The skill validator passes. Both repository check CLIs exit 2 because this
+export lacks Git metadata; their unchanged scan functions pass over all exported files
+(581 privacy paths, 580 open-side paths). No commit or run-store write was attempted.

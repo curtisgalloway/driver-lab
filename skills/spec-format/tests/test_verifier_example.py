@@ -39,7 +39,8 @@ class VerifierExample(unittest.TestCase):
         self.record.write_text(record, encoding="utf-8")
 
     def test_worked_record_passes_pr_gate_verbatim(self):
-        code, result = run("check", self.root, "--require-verified", "pr")
+        code, result = run("check", self.root, "--require-license",
+                           "--require-verified", "pr")
         self.assertEqual(code, 0, result)
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["findings"], [], result)
@@ -52,7 +53,8 @@ class VerifierExample(unittest.TestCase):
         code, status = run("status", self.root)
         self.assertEqual(code, 0, status)
         facts = {row["key"]: row for row in status["specs"][0]["facts"]}
-        self.assertEqual(set(facts), {"reset-cycles", "reset-budget", "power-on-state"})
+        self.assertEqual(set(facts), {"reset-cycles", "settle-cycles", "reset-budget",
+                                     "power-on-state"})
         self.assertEqual({row["status"] for row in facts.values()}, {"current"})
         self.assertEqual(facts["reset-cycles"]["second_reader"], "present")
         self.assertEqual(facts["power-on-state"]["verdict"], "GAP")
@@ -72,14 +74,19 @@ class VerifierExample(unittest.TestCase):
 
     def test_changed_fact_stales_its_dependent_but_not_the_gap(self):
         spec = self.root / "widget.spec.yaml"
-        spec.write_text(spec.read_text(encoding="utf-8").replace(
-            "Reset completes in 10", "Reset completes in 11"), encoding="utf-8")
-        code, status = run("status", self.root, "--stale")
-        self.assertEqual(code, 0, status)
-        self.assertEqual({row["key"]: row["status"]
-                          for row in status["specs"][0]["facts"]},
-                         {"reset-cycles": "stale", "reset-budget": "stale"})
-        code, checked = run("check", self.root, "--require-verified", "pr")
-        self.assertEqual(code, 1, checked)
-        self.assertTrue(any("verdict stale" in finding["message"]
-                            for finding in checked["findings"]), checked)
+        original = spec.read_text(encoding="utf-8")
+        for key, old, new in (
+            ("reset-cycles", "Reset completes in 10", "Reset completes in 11"),
+            ("settle-cycles", "settling takes 4 more", "settling takes 5 more"),
+        ):
+            with self.subTest(premise=key):
+                spec.write_text(original.replace(old, new), encoding="utf-8")
+                code, status = run("status", self.root, "--stale")
+                self.assertEqual(code, 0, status)
+                self.assertEqual({row["key"]: row["status"]
+                                  for row in status["specs"][0]["facts"]},
+                                 {key: "stale", "reset-budget": "stale"})
+                code, checked = run("check", self.root, "--require-verified", "pr")
+                self.assertEqual(code, 1, checked)
+                self.assertTrue(any("verdict stale" in finding["message"]
+                                    for finding in checked["findings"]), checked)

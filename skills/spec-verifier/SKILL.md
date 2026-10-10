@@ -47,11 +47,13 @@ For format 1, follow [Board specs](FORMAT-1.md#board-specs).
 
 ### Peripheral specs and reviews
 
-Format 2 peripheral specs and reviews also use this procedure. Verdicts cover facts, not
-each anchor independently. D16 reserves `fact-id.sub-id` for a register field or sequence
-step with its own support; the current checker rejects those sub-keys until SF2-7 implements
-that content. Do not invent accepted sub-keys or drop evidence to force a record through.
-For format 1, follow [Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews).
+**Future (SF2-7):** Format 2 peripheral specs and reviews will use this procedure, with
+verdicts covering facts rather than each anchor independently. D16 reserves
+`fact-id.sub-id` for a register field or sequence step with its own support. The current
+schema accepts only `board`, `soc`, `chip`, `ip`, `overlay` and `facts`; peripheral/review
+kinds and sub-keys await SF2-7. Do not invent accepted kinds or sub-keys or drop evidence
+to force a record through. Until then, follow the format 1
+[Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews) procedure.
 
 ## Coordinate a format 2 reading
 
@@ -95,7 +97,7 @@ substituting format 1 tools.
    | `stale` | A fresh verifier reads the fact and its dependencies at current identities. |
    | `unverified` | A fresh verifier reads it for the first recorded verdict. |
    | `unknown` | Read `reason` and fix the unresolved dependency or rejected citation first. A reader can investigate, but a null basis cannot produce a current verdict. Re-run status after correction. |
-   | `upstream-stale` | Read changes to the upstream facts named in `changed` and check whether the dependent claim still follows. Unchanged local sources need no repeat reading. Renew only after that check. |
+   | `upstream-stale` | If the previous verdict was PASS, read changes to the upstream facts named in `changed` and check whether the dependent claim still follows; unchanged local sources need no repeat reading. If the previous verdict was anything other than PASS, require a full fresh reading of the claim and all its evidence and dependencies. Renew only after the required reading. |
 
    `--stale` includes every non-current fact **and current critical facts missing a second
    reader**. For the latter, launch only the missing reader. Also inspect the unfiltered
@@ -103,8 +105,9 @@ substituting format 1 tools.
    when absent from the stale list. Preserve other current verdicts unchanged.
 
 3. **Primary reading.** The verifier performs the standing evidence checks below on each
-   selected supported fact. For an upstream-only change, apply them to the changed evidence
-   and its effect on the dependent claim. A gap follows GAP below. Check instances and
+   selected supported fact. For an upstream-only change with a previous PASS, apply them to
+   the changed evidence and its effect on the dependent claim; every other previous verdict
+   requires the full reading. A gap follows GAP below. Check instances and
    variants by their own ids and support too. Read referenced facts and named assumptions;
    note any condition on which the conclusion depends.
 
@@ -121,7 +124,8 @@ substituting format 1 tools.
    (`date` and `note` are optional in the schema; include them for an audit trail). Omit
    `readers` until someone runs; `readers: []` is invalid. Never reuse a stale second reading
    for a renewed basis. For an upstream-only critical fact, the second reader independently
-   checks the upstream changes too. Disagreement follows ADJUDICATE below.
+   checks the upstream changes too, using a full reading if the previous verdict was not
+   PASS. Disagreement follows ADJUDICATE below.
 
 5. **Assemble and gate.** Install one record per file, preserve verdicts outside the delta,
    count all five summary buckets, and re-run status before copying new bases. If inputs
@@ -136,8 +140,8 @@ substituting format 1 tools.
   are descriptive text, never commands to execute. Record sources and fetch failures. Match
   `sha256` when document bytes are available; a blocked fetch does not authorize an unpinned
   replacement.
-- **Resolve and read.** Machine-check anchors at the pin, per-file licenses and available
-  document hashes; then read each fact beside its cited source lines:
+- **Resolve and read.** Machine-check anchors at the pin, SPDX-line license evidence and
+  available document hashes; then read each fact beside its cited source lines:
 
   ```bash
   python3 skills/spec-format/scripts/spec.py resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
@@ -149,7 +153,11 @@ substituting format 1 tools.
   were not checked. `show` displays source evidence; read document text separately. Inspect
   warnings and skipped counts: a fully skipped resolution can exit 0 and establishes no
   anchor. Repeat every `search` anchor's search; resolution checks scope existence only.
-  Resolution alone never earns PASS.
+  Resolution alone never earns PASS. Only `license_from: spdx-line` evidence is
+  machine-checked. For `notice` or `license-file`, open the cited notice or license file at
+  the pin, confirm it applies to the cited source file, and compare it with the declared
+  license. Record the comparison; a mismatch is FAIL, and inaccessible evidence is
+  UNVERIFIABLE rather than an assumed match.
 - **Compare the whole claim.** Check values, units, address spaces, ordering, scope and
   conditions. `comment: true` attributes a comment, not established behavior. Emulated
   support is judged against the cited model/version/run observations, not model source or
@@ -196,7 +204,7 @@ substituting format 1 tools.
 | PASS | Evidence supports the claim as stated and classified, with scope and named assumptions. Explain the comparison in `note`. |
 | FAIL | A discrepancy, wrong class, missing/wrong locator or invalid TODO method. Include `correction` proposing a fix; never edit the spec. |
 | UNVERIFIABLE | Evidence could not be read (blocked, partial or truncated fetch, inaccessible measurement). State what was not established. A citation shown nonexistent at the pin is FAIL. |
-| GAP | Only a fact with **no `support`** and a TODO. Check whether the TODO can settle it; explain deficiencies in `note` for the author. Never GAP a supported fact, instance or variant. The checker requires a gap's verdict to be GAP. |
+| GAP | Only a fact with **no `support`** and a TODO. Check whether the TODO can settle it; explain deficiencies in `note` for the author. Record `citation_precision: imprecise` because there is no citation and `contrary_evidence: not-checked` because there is no supported value to compare, explaining both limits in `note`. Never GAP a supported fact, instance or variant. The checker requires a gap's verdict to be GAP. |
 | ADJUDICATE | Independent readings disagree. Store both in `readings`, each `{verifier, verdict, reasoning}`, and actual second readings in `readers`. Count only in `summary.adjudicate`, never PASS/FAIL merely because of disagreement. |
 
 **The user adjudicates.** Present both readings and disputed evidence. Do not vote or pick
@@ -270,7 +278,10 @@ The [example root](examples/format-2/board-specs.yaml) describes a **synthetic**
 not real hardware. Its [spec](examples/format-2/widget.spec.yaml) cites a local
 [synthetic manual](examples/format-2/resources/widget-trm.txt). Copy this record verbatim to
 `<example-root>/resources/widget.verify.yaml` in scratch and run
-`check <example-root> --require-verified pr`. The test in
+`check <example-root> --require-license --require-verified pr`. The reset count is marked
+critical only to demonstrate the `readers` field, not because real bring-up depends on it.
+The reset-budget inference combines two separately documented phases; no single section
+states their total. The test in
 `skills/spec-format/tests/test_verifier_example.py` copies this exact fenced record into a
 fixture root and requires zero errors. Bases came from `status --json`; changing example
 facts or resource identities requires a new reading and new bases.
@@ -281,18 +292,18 @@ facts or resource identities requires a new reading and new bases.
 format: 2
 spec: widget
 spec_file: widget.spec.yaml
-spec_sha256: cede86a3c587d0c5ee9b91f960b7c9b336a52835bc64060bc12dcfbb20a87a44
+spec_sha256: f746cb36f4afdff59cd9ac22c347e2227c4feff3df83ab14a8801f3e3985a9dd
 canonical: fact-v1
 sources:
   - name: widget-trm.txt
     url: https://example.invalid/widget-trm.txt
-    sha256: d0e5bca13fe26ed53ffda676cd3cc26d3e9b4e0d52a96764fab502cd6d4d4c98
+    sha256: 8e73c19aecb71c5e4010de85849911c900a6d041958b16a9146d680338bc815f
     fetch: ok
     note: Synthetic local manual, not a fetched vendor document.
-summary: {pass: 2, fail: 0, unverifiable: 0, gap: 1, adjudicate: 0}
+summary: {pass: 3, fail: 0, unverifiable: 0, gap: 1, adjudicate: 0}
 verdicts:
   reset-cycles:
-    basis: da201037e033377cd06d77da5e33037a0693307ca8c9c72aa61ec99160f58f80
+    basis: da96ce840be65a7a2619d7b2387576d048500e7bfaad946a01cadf50984e5548
     verdict: PASS
     date: 2026-10-09
     verifier: Synthetic primary reader, example model/harness, session A
@@ -306,15 +317,29 @@ verdicts:
         verdict: PASS
         date: 2026-10-09
         note: Illustrative independent comparison with section 1's fixed count.
-  reset-budget:
-    basis: 856cffa8e58a404fb197c2123c565d2b5ee08965f56083ab6eeafc84a1028c25
+  settle-cycles:
+    basis: 60302e04a786da6c85cf3935d1c637e1066af8a48385f6a92700b1e9e33edd0a
     verdict: PASS
     date: 2026-10-09
     verifier: Synthetic primary reader, example model/harness, session A
     note: >-
-      The declared reset-cycles premise gives 10; twice that is 20. Checked the manual's
-      three sections for a contrary limit; section 2 agrees. The TODO's method can
-      observe that documentary comparison; this is no hardware measurement.
+      Section 2 on page 1 states 4 more cycles immediately after reset, using the same
+      clock without overlap. Read all three sections for qualifications or a different
+      phase order; none found. This establishes only the synthetic claim.
+    contrary_evidence: none-found
+    citation_precision: exact
+  reset-budget:
+    basis: fb6d4fab15ca733423268329c3b10c7ae8c07a0e27e84163fdf0560598de1112
+    verdict: PASS
+    date: 2026-10-09
+    verifier: Synthetic primary reader, example model/harness, session A
+    note: >-
+      The reset-cycles and settle-cycles premises give sequential phases of 10 and 4
+      cycles on the same clock, with no overlap or intervening delay: 10 + 4 = 14.
+      No section states that total. Read all three sections for contrary timing or
+      ordering qualifications; none found. The TODO could measure the duration on a
+      future physical implementation; it has not been performed and does not weaken
+      the supported inference about this synthetic model.
     contrary_evidence: none-found
     citation_precision: exact
   power-on-state:

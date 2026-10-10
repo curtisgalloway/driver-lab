@@ -138,8 +138,8 @@ Rules that hold for every kind:
 
 ## Board specs
 
-The kind defined by `board-expert/SPEC-FORMAT.md`; this section is the one statement of its
-verification procedure, and `SPEC-FORMAT.md` § Verification points here.
+The kind defined by `board-expert/FORMAT-1.md`; this section is the one statement of its
+verification procedure, and `board-expert/FORMAT-1.md` § Verification points here.
 
 - **Claims** are the fact bullets of the fact sections (`Quick-facts`, `Gotchas`, and for an IP spec
   `Standards and databook`, `Programming model`, `Known variants and quirks`), each keyed as

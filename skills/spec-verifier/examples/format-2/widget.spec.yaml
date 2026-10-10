@@ -13,7 +13,7 @@ resources:
       title: Synthetic Widget manual
       revision: "1"
       url: https://example.invalid/widget-trm.txt
-      sha256: d0e5bca13fe26ed53ffda676cd3cc26d3e9b4e0d52a96764fab502cd6d4d4c98
+      sha256: 8e73c19aecb71c5e4010de85849911c900a6d041958b16a9146d680338bc815f
       pages: 1
       page_numbering: printed
       access: public
@@ -27,19 +27,28 @@ facts:
       - class: databook
         doc: widget-trm.txt
         at: [{section: "1", page: "1"}]
+  - id: settle-cycles
+    section: quick-facts
+    title: Post-reset settling
+    claim: Immediately after reset completes, settling takes 4 more clock cycles before the synthetic Widget is ready.
+    support:
+      - class: databook
+        doc: widget-trm.txt
+        at: [{section: "2", page: "1"}]
   - id: reset-budget
     section: quick-facts
     title: Reset budget
-    claim: A budget twice the synthetic reset count allows 20 clock cycles.
+    claim: The synthetic Widget is ready 14 clock cycles after reset begins.
     support:
       - class: inference
         premises:
           - fact: "#reset-cycles"
-        derivation: Twice 10 clock cycles is 20 clock cycles.
+          - fact: "#settle-cycles"
+        derivation: Reset takes 10 clock cycles, followed immediately by 4 settling cycles; the sequential phases total 14 clock cycles from reset start to ready.
     todo:
-      check: document
-      text: Confirm that the manual's budget section states the same count.
-      method: Read section 2 and compare its budget with the calculated 20 cycles.
+      check: hardware
+      text: Confirm the derived duration if a physical Widget implementing this model is built.
+      method: Count clock cycles from reset start to the ready indication on that implementation.
   - id: power-on-state
     section: gotchas
     title: Power-on state

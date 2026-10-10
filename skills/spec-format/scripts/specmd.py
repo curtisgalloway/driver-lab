@@ -134,6 +134,24 @@ def allowed_link(url: str) -> bool:
     return url.startswith("#") or bool(re.match(r"^(?:https?|mailto):", url, re.IGNORECASE))
 
 
+def viewer_tokens(text: str):
+    """Parse one viewer field with raw HTML disabled, using the shared checked grammar.
+
+    A copy keeps rendering options from changing the checker's HTML detection. Consumers
+    render a fixed token vocabulary, never token attributes or fence info strings.
+    """
+    import copy
+
+    parser = copy.copy(_parser())
+    parser.options = copy.deepcopy(parser.options)
+    parser.options["html"] = False
+    env = {}
+    tokens = parser.parse(text, env)
+    if "nesting_limit" in env:
+        raise ValueError("viewer parser nesting limit reached")
+    return tokens
+
+
 def findings(text: str, *, lint=False) -> list[TextFinding]:
     """Only safety/layout findings; the parse never supplies facts or provenance.
 

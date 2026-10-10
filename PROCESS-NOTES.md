@@ -577,6 +577,212 @@ Cost: one follow-up commit.
 Prevention: after adding fixtures, run the suite from `git archive HEAD`, not the working tree.
 Fix belongs in: driver-lab AGENTS.md (checks before a checkpoint), if it recurs.
 
+## 2026-10-08T19:00:17-07:00 — SF2-6: fixture construction
+
+The first resolver test run used shallow copies that PyYAML emitted as aliases,
+plus two incomplete support records. Four failures cost one repair pass.
+Fix belongs in test authoring: copy nested fixture data deeply and inspect
+the schema before constructing a new support class. One earlier fixture read
+used `worked` instead of `worked-example`; the corrected path was then read.
+
+## 2026-10-08T19:06:37-07:00 — SF2-6: tool and mutation setup
+
+`uv tool run` first tried its default tool directory, which is read-only in
+this session. Retried with both cache and tool directories under temporary
+storage; formatting then passed. The first mutation inventory included error
+dispatch and guards whose removal only crashes downstream. Retained the logs;
+refined the inventory to validation rejections and added independent assertion
+cases. Two new test setup errors (subTest arguments and an overly small limit
+during repository construction) were fixed before the next clean baseline.
+Fix belongs in the run setup and test authoring, not the format contract.
+
+## 2026-10-08T19:14:49-07:00 — SF2-6: protected Git metadata and temporary marker
+
+Ordinary staging failed on the worktree index lock despite writable common
+Git storage. The sandbox also exposes `/tmp/.git`, which causes two unrelated
+review-wrapper tests to reject temporary directories. Used a private index
+for named staging and the authorized common object/ref store for the local
+commit; the orchestrator must refresh the normal index later. Privacy and
+open-side checks were repeated with that index so new files were included.
+Fix belongs in the harness permission profile; no repository utility changed.
+
+## 2026-10-09T14:28:09-07:00 — SF2-6: scratch environment setup
+
+System Python lacks ensurepip, so `python3 -m venv` failed. Used `uv venv`
+and `uv pip install --require-hashes` in scratch storage instead. The pinned
+requirements are unchanged. This cost one setup attempt; the check runner
+should probe venv support or use an available interpreter.
+
+## 2026-10-09T14:41:52-07:00 — SF2-6: mutation runner and export checks
+
+The first mutation run replaced a bare identifier beyond its AST span and
+created two invalid programs. It also exposed assertion gaps in older tests;
+none of those crash or survivor results counted as success. The runner now
+changes the exact span, and the final run has clean baselines and 84 assertion
+kills. A scratch-script quoting error cost one restart. Fix belongs in the
+mutation runner: use exact spans and preserve a clean baseline per case.
+
+Utility tests infer checkout membership from an ancestor Git marker, while
+campaign-review requires Git file enumeration. The export run recorded both
+failures; campaign-review then passed in a scratch checkout. The reviewer c06
+harness indexed an anchors key absent from usage-error JSON and was adapted
+in scratch to use a missing-key-safe read. These are environment and harness
+assumptions, so the implementation was not changed to accommodate them.
+
+## 2026-10-09T15:06:33-07:00 — SF2-6: round-2 scratch setup and fixtures
+
+The system Python lacks ensurepip, so the requested venv command failed once.
+Used uv to create a scratch environment and installed the same hash-pinned
+requirements. The first regression run also exposed a no-change fixture commit
+and an attempt to send loader-refused characters through a valid spec. Used
+allow-empty fixture commits and tested those fields at the text-output boundary,
+with real CLI source and finding tests alongside. Cost: one setup retry and one
+fixture correction. Prevention belongs in the test brief: allow an equivalent
+hash-verified scratch environment, and distinguish loader refusal from output
+escaping. Status: fixed for this run; no instruction changes proposed here.
+
+## 2026-10-09T15:15:45-07:00 — SF2-6: mutation scoring and replacement fixture
+
+The initial round-2 mutation pass exposed assertions inside mocked command
+operations that became internal errors, and a fixture that staged a deletion
+without the new parent file. Cost: one test correction and a rerun. Capture
+observations in mocks and assert afterward; explicitly stage both sides of a
+path-kind change. The preliminary fail-before summary was corrected after
+counting distinct failed methods. Prevention belongs in mutation-test guidance:
+an internal error does not count, and every regression method needs its own
+fail-before evidence. Status: fixed in the round-2 tests and scratch runner.
+
+## 2026-10-09T15:44:41-07:00 — SF2-6: round-3 test expectations
+
+The first layout run treated a valid unchanged-pin rewrite as a refusal, and
+a shallow fixture copy caused PyYAML to emit a forbidden alias. Ten assertion
+failures exposed these test defects; accept a verified no-op and deep-copy
+the duplicate anchor fixture. The implementation did not change for either
+case. Prevent this in fixture design, not in the loader.
+
+The blanket fail-before instruction cannot apply to coverage for guards that
+already work: line-5 SPDX and absolute DT override tokenization. Report those
+two pass-before tests separately with their assertion-killed mutations, as
+in round 1; do not manufacture a failing baseline.
+
+## 2026-10-09T15:51:36-07:00 — SF2-6: round-3 environment and mutation feedback
+
+A targeted read guessed a campaign test filename and failed once; list names
+before reading. The first mutation pass had two survivors, not kills: normal
+user access hid the mode check, and short DT names did not expose phantom
+roots. Strengthen the assertions before scoring the repeated pass.
+
+Utility tests encounter a Git marker in the scratch parent. Two assertions
+fail in the export; a scratch checkout adds a third because its README is now
+inside the configured temporary directory. Campaign-review passes in that
+checkout, but moving utility tests there cannot remove their parent-marker
+assumption. Leave these unchanged tools for the orchestrator’s environment.
+
+### 2026-10-09T14:27:42-07:00 — export environment setup and oversized reads
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The brief asked for a dot-directory
+venv, but the export instruction forbids creating one; system Python also lacked ensurepip.
+A seeded temporary venv plus pip hash verification worked. Initial document batches exceeded
+the output budget and required targeted reads. Cost: extra setup and read calls. Prevention:
+briefs should prefer temporary venvs in exports; tools should budget combined output before
+batching. Fix belongs in the implementer brief and tool usage.
+
+### 2026-10-09T14:34:50-07:00 — test fixture typing and new diagnostics
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A tag-shaped unquoted claim became a YAML
+list, reused Python objects generated YAML aliases, and generic YAML loading changed a zero
+hash to an integer. New safety findings also invalidated two first-error assumptions. Cost:
+three focused test reruns. Prevention: quote fixture strings, avoid shared objects in YAML
+dumps, use the strict loader for format 2 inputs, and match the relevant diagnostic rather
+than its position. Fix belongs in test authoring guidance.
+
+### 2026-10-09T14:42:46-07:00 — checkout-dependent checks in an export
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Utilities reported two failures and
+campaign-review reported ten errors: directory markers made filesystem checks classify temporary
+paths as git trees, while git could not read a valid repository. Cost: two checks cannot be
+verified here. Prevention: identify checkout-dependent suites in export briefs and rerun them
+in the orchestrator's actual worktree. Fix belongs in the implementer brief; no unrelated
+utility or campaign code was changed.
+
+### 2026-10-09T15:16:34-07:00 — round-1 export environment and diagnostic expectations
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The default Python again lacked
+ensurepip; a seeded Python 3.12 temporary environment installed the hash-pinned dependencies.
+Initial batched reads were truncated and a patch failed because its last context did not
+exist. Cost: targeted reads and one corrected patch. New safety rules changed existing
+reference-definition and HTML/placeholder expectations, requiring fixture updates. Prevention:
+use the chapter’s documented interpreter setup, budget combined output, and remove stale patch
+context. Fix belongs in implementer tooling and test authoring guidance.
+
+### 2026-10-09T15:22:19-07:00 — mutation scoring and fixture assumptions
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A missing rendered substring raised
+ValueError in a mutation test; assertions must establish its presence before indexing. A
+fixture assumed every support class allowed notes; switching to its document citation made
+the containment test valid. Self-review caught a status-variable collision in the fix. Cost:
+focused reruns and a repeated mutation pass. Prevention: inspect schema branches before
+editing fixtures, test optional modes, and distinguish assertion kills from crashes. Fix
+belongs in implementation and test authoring guidance.
+
+### 2026-10-09T15:53:34-07:00 — round-2 environment and fixture corrections
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. System Python again lacked ensurepip;
+used the recorded seeded Python 3.12 temporary environment. Initial reads exceeded their
+output budget. A missing local import broke diagnostic formatting; importing the loader
+in the dependency-failure handler also broke the no-site-packages exit contract. Moved
+visible-name encoding to a dependency-free shared module. A fixture placed a note on an
+inference support entry, whose schema forbids it; moved it to the nested document citation.
+An accidental indented scratch command failed before running. Cost: focused reruns and
+corrected reads. Prevention: follow the chapter environment recipe, budget output, verify
+schema branches and exercise dependency failures. Fix belongs in implementation guidance.
+
+### 2026-10-09T15:59:28-07:00 — mutation scoring and GFM audit imports
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Two containment mutations made
+direct-render tests raise ValueError instead of failing an assertion; a redundant diagnostic
+formatting layer had no independent boundary test. Added explicit assertion conversions
+and a text-output probe, then reran all mutations. The first standalone GFM audit imported
+render_md before adding the script path and failed immediately; corrected PYTHONPATH. Cost:
+one complete mutation rerun and one audit rerun. Prevention: score crashes separately,
+exercise output boundaries independently, and establish import paths before imports. Fix
+belongs in test and validation tooling.
+
+### 2026-10-09T16:13:18-07:00 — SF2-4 confirmation fixture corrections
+
+The first regression run used multiline and indented footnote payloads in single-line titles;
+schema rejection correctly preceded the expected text finding. Normalize those title fixtures
+to valid single-line strings. Importing the test helper class also collected its tests twice;
+import the module instead. A guessed record schema filename needed correction to
+`verify.schema.json`. Cost: one failed targeted run and one missing-file read. Prevention:
+check schema constraints and available filenames before constructing fixtures. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:16:00-07:00 — SF2-4 GFM proof assertion
+
+The first GFM proof recognized the escaped claim but required an exact autolink URL for the
+title. GFM includes the unrecognized closing backticks in that active autolink, percent-encoding
+them in its URL. Match the active link's URL prefix instead. Cost: one failed proof run;
+the corrected run confirms both escapes in safe and unsafe modes. Prevention: inspect the
+rendered HTML before asserting URL serialization. Fix belongs in the verification script.
+
+### 2026-10-09T16:16:31-07:00 — SF2-4 optional test selection
+
+The follow-up for the board suite's optional PyYAML test named a guessed test class in the
+same shell call that listed the available classes. The selected class did not exist.
+Cost: one failed test-selection command; rerunning the observed `SubsetParser` method passes.
+Prevention: consume discovery output before composing the dependent command. Fix belongs
+in the implementation workflow; corrected in this session.
+
+### 2026-10-09T16:19:20-07:00 — SF2-4 mutation target scope
+
+Chapter: [SF2-4](notebook/SF2-4.md). Status: corrected. The initial integration mutation's
+unscoped replacement matched the new function's declaration before its call; compilation
+failed, so that attempt is not scored. Match the indented call with surrounding newlines.
+Cost: a partial mutation run and a complete rerun in four independent temporary copies.
+Prevention: compile every changed mutation target before starting the suite. Fix belongs
+in the mutation runner's preflight; all 112 current targets compile and fail by assertion.
+
 ### 2026-10-09T16:26-07:00 — exported implementation needs temporary hash-pinned setup
 Chapter: [SF2-8a](notebook/SF2-8a.md)
 What happened: the system Python venv lacked ensurepip. The brief also named an in-tree

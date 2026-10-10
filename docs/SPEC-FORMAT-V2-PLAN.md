@@ -119,7 +119,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)) |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
-| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
+| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](../evidence/SF2-9.md)) |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
@@ -599,7 +599,7 @@ check/resolve/show/drift/inventory`; the anchor-grammar section is replaced.
 Three skills, two with templates. Split point: `reference-driver-review` becomes SF2-9b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-9.md`. Notebook: `notebook/SF2-9.md`.
+Status: complete. Evidence: `evidence/SF2-9.md`. Notebook: `notebook/SF2-9.md`.
 
 ---
 
@@ -721,6 +721,9 @@ Mostly deletions and CI edits. Split point: none expected.
 
 ### Evidence and findings
 Status: pending. Evidence: `evidence/SF2-12.md`. Notebook: `notebook/SF2-12.md`.
+
+Carried from SF2-9: `README.md`, `DESIGN.md` and `GLOSSARY.md` still describe `peripheral-spec`,
+`reference-driver-review` and `hardware-investigator` in format 1 terms; retire that wording here.
 
 ---
 

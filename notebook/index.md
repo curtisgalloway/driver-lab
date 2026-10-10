@@ -22,10 +22,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-9 — Peripheral, review and investigator skills in format 2](SF2-9.md)
-Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:06:38-07:00; indexed through that entry
-Outcome: round 1 fixes prepared for orchestrator review. Command tests use SF2-7 fixtures;
-format 1 procedures and prompts remain labeled. Review inventory needs companion register
-records because findings prose does not count as register coverage.
+Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:17:58-07:00
+Outcome: complete ([evidence](../evidence/SF2-9.md)); one review round with no blocker and a clean
+confirmation. Command tests use SF2-7 fixtures; format 1 procedures and prompts remain labeled in
+`FORMAT-1.md` files. Review inventory needs companion register records because findings prose does
+not count as register coverage.
 
 ### [SF2-7b — Reviews and the HTML generated sections](SF2-7b.md)
 Entries: 2026-10-09T22:18:09-07:00 through 2026-10-09T23:17:02-07:00

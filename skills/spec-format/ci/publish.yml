@@ -9,7 +9,6 @@ on:
     - cron: '23 4 * * 1'
 permissions:
   contents: read
-  actions: read
 env:
   TOOL_COMMIT: '0000000000000000000000000000000000000000'
   PYTHONDONTWRITEBYTECODE: '1'
@@ -55,7 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: read
       pages: write
       id-token: write
     concurrency:
@@ -92,9 +90,18 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
           "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified main
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+      # Prepare the Pages tar locally: upload-pages-artifact nests a mutable
+      # upload-artifact@v4 even when the composite itself is pinned by SHA.
+      - name: Archive verified Pages site
+        run: |
+          tar --dereference --hard-dereference --directory site \
+            -cvf "$RUNNER_TEMP/artifact.tar" --exclude=.git --exclude=.github .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          path: site
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e

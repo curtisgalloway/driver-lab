@@ -24,7 +24,7 @@ import publish
 import render_html
 import specmd
 import spec
-from test_check import chip, fact, marker, inference
+from test_check import chip, fact, marker, inference, repo
 from test_render_md import checked
 from test_records import record, verdict
 
@@ -121,6 +121,17 @@ class Author(unittest.TestCase):
             tree = self.assert_safe(render_html.author('![alt](' + url + ')'))
             self.assertFalse(any(t == 'a' for t, _, _ in tree.nodes))
 
+    def test_autolink_inside_link_label_cannot_nest_anchors(self):
+        for inner in ('https://inner.invalid', 'javascript:x'):
+            for outer in ('https://outer.invalid', 'javascript:x'):
+                with self.subTest(inner=inner, outer=outer):
+                    tree = self.assert_safe(render_html.author('[<' + inner + '>](' + outer + ')'))
+                    expected = ([outer] if specmd.allowed_link(outer) else
+                                [inner] if specmd.allowed_link(inner) else [])
+                    self.assertEqual([a['href'] for t, a, _ in tree.nodes if t == 'a'],
+                                     expected)
+                    self.assertIn(inner, ''.join(tree.text))
+
     def test_attributes_from_title_fence_info_and_ordered_list_are_discarded(self):
         text = '9. item\n\n[x](https://example.invalid "badge id=fake")\n\n```badge id=fake\n<script>\n```'
         html = render_html.author(text)
@@ -137,6 +148,20 @@ class Author(unittest.TestCase):
         html = render_html.author('[x](https://example.invalid/?a=1&amp;b=2)')
         self.assertEqual([a['href'] for _, a, _ in Tree(html).nodes if 'href' in a],
                          ['https://example.invalid/?a=1&b=2'])
+
+    def test_author_href_quotes_escaped_even_without_parser_normalization(self):
+        url = 'https://example.invalid/" onmouseover="x&y'
+        token = Token('link_open', 'a', 1)
+        token.attrs = {'href': url}
+        label = Token('text', '', 0)
+        label.content = 'label'
+        with patch.object(specmd, 'viewer_tokens', return_value=[
+                token, label, Token('link_close', 'a', -1)]):
+            html = render_html.author('ignored')
+        tree = self.assert_safe(html)
+        self.assertEqual([a for t, a, _ in tree.nodes if t == 'a'], [{'href': url}])
+        self.assertIn('&quot;', html)
+        self.assertIn('&amp;', html)
 
     def test_fixed_tags_ignore_token_tag_and_attributes(self):
         token = Token('paragraph_open', 'script', 1)
@@ -272,6 +297,7 @@ class Views(Fixture):
         self.assertIn('second reader missing', html)
         self.assertIn('PASS 2026-10-09 · carried', html)
         self.assertIn('badge origin">public · viewer</span>', html)
+        self.assertNotIn('badge gap', html)
         rec.data.pop('support')
         self.assertIn('badge gap', render_html.render(checker))
         rec.data['conflicts'][0]['resolution'] = 'settled'
@@ -415,6 +441,29 @@ class Publishing(Fixture):
                                source_commit=[str(self.root) + '=' + 'a' * 40],
                                tool_commit='b' * 40, out=Path(self.temp.name) / 'site')
 
+    def test_publish_requires_license_even_for_uncited_repo(self):
+        args = self.args()
+        self.path.write_text(chip(repos=repo('uncited', 'GPL-3.0-only')))
+        checker = checked(self.root)
+        self.assertFalse([f for f in checker.findings if f.level == 'error'])
+        with self.assertRaisesRegex(ValueError, "repos entry 'uncited'.*cited or not"):
+            publish.checked(args)
+
+    def test_build_verifies_written_site_before_returning(self):
+        args = self.args()
+        checker = publish.checked(args)
+        real_verify = publish.verify
+
+        def corrupt_then_verify(actual_checker, actual_args):
+            page = next(actual_args.out.glob('spec-*.html'))
+            page.write_text('altered after rendering')
+            real_verify(actual_checker, actual_args)
+
+        with patch.object(publish, 'verify', side_effect=corrupt_then_verify) as verify:
+            with self.assertRaisesRegex(ValueError, 'differs'):
+                publish.build(checker, args)
+        verify.assert_called_once_with(checker, args)
+
     def test_build_and_verify_workflow_steps_locally(self):
         args = self.args()
         self.path.with_name('other.spec.yaml').write_text(chip('other'))
@@ -499,7 +548,10 @@ class Publishing(Fixture):
         page.unlink()
         page.mkdir()
         with self.assertRaisesRegex(ValueError, 'regular'):
-            publish.verify(checker, args)
+            try:
+                publish.verify(checker, args)
+            except OSError as exc:
+                self.fail('verify must refuse irregular entries before reading them: ' + str(exc))
         page.rmdir()
         original = Path(self.temp.name) / 'original'
         original.write_text(content)
@@ -544,28 +596,48 @@ class Publishing(Fixture):
     def test_template_permissions_pins_triggers_and_verify_before_upload(self):
         text = (HERE.parent / 'ci/publish.yml').read_text()
         workflow = yaml.load(text, Loader=yaml.BaseLoader)
-        self.assertEqual(workflow['permissions'], {'contents': 'read', 'actions': 'read'})
+        self.assertEqual(workflow['permissions'], {'contents': 'read'})
         self.assertEqual(set(workflow['on']), {'push', 'pull_request', 'schedule'})
         self.assertEqual(workflow['on']['push']['branches'], ['main'])
         build, deploy = workflow['jobs']['build'], workflow['jobs']['deploy']
         self.assertNotIn('permissions', build)
-        self.assertEqual(deploy['permissions'], {'contents': 'read', 'actions': 'read',
-                                               'pages': 'write', 'id-token': 'write'})
+        self.assertEqual(deploy['permissions'], {'contents': 'read', 'pages': 'write',
+                                               'id-token': 'write'})
+        self.assertEqual(deploy.get('concurrency'), {'group': 'spec-pages', 'cancel-in-progress': 'false'})
         self.assertIn("github.ref == 'refs/heads/main'", deploy['if'])
         self.assertIn("github.event_name == 'push'", deploy['if'])
         self.assertIn("github.event_name == 'schedule'", deploy['if'])
         self.assertEqual(deploy['needs'], 'build')
+        self.assertEqual(workflow['env']['TOOL_COMMIT'], '0' * 40)
+        self.assertEqual(build['steps'][0].get('run'),
+                         'test "$TOOL_COMMIT" != ' + '0' * 40)
+        self.assertNotIn('if', build['steps'][0])
         for job in (build, deploy):
             for step in job['steps']:
                 if 'uses' in step:
                     self.assertRegex(step['uses'], r'^[\w-]+/[\w-]+@[0-9a-f]{40}$')
                 if step.get('uses', '').startswith('actions/checkout@'):
-                    self.assertEqual(step['with']['persist-credentials'], 'false')
+                    self.assertEqual(step.get('with', {}).get('persist-credentials'), 'false')
+                if step.get('uses', '').startswith('actions/upload-artifact@'):
+                    self.assertEqual(step.get('with', {}).get('if-no-files-found'), 'error')
         deploy_steps = deploy['steps']
         self.assertTrue(any('publish.py verify' in s.get('run', '') for s in deploy_steps))
         verify = next(i for i, s in enumerate(deploy_steps) if 'publish.py verify' in s.get('run', ''))
-        upload = next(i for i, s in enumerate(deploy_steps) if s.get('uses', '').startswith('actions/upload-pages'))
+        uploads = [i for i, s in enumerate(deploy_steps)
+                   if s.get('uses', '').startswith('actions/upload-artifact@')]
+        self.assertEqual(len(uploads), 1)
+        upload = uploads[0]
         self.assertLess(verify, upload)
+        self.assertNotIn('if', deploy_steps[verify])
+        self.assertEqual(deploy_steps[upload]['with'], {
+            'name': 'github-pages', 'path': '${{ runner.temp }}/artifact.tar',
+            'retention-days': '1', 'if-no-files-found': 'error'})
+        archive = deploy_steps[upload - 1]
+        self.assertNotIn('if', archive)
+        self.assertLess(verify, upload - 1)
+        self.assertIn('tar --dereference --hard-dereference --directory site', archive['run'])
+        self.assertIn('-cvf "$RUNNER_TEMP/artifact.tar" --exclude=.git --exclude=.github .',
+                      archive['run'])
         self.assertIn('--require-verified main', deploy_steps[verify]['run'])
         self.assertIn('--require-hashes', text)
         self.assertIn('publish.py build', text)

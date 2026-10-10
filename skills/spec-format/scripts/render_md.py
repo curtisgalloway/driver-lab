@@ -257,6 +257,16 @@ def _payload(out, checker, rec, status, with_status):
     import peripheral
 
     payload = rec.data.get("data", {})
+    if "finding" in payload:
+        finding = payload["finding"]
+        _table(out, "Finding (generated)", [{k: v for k, v in finding.items() if k != "settled_by"}])
+        _support(out, checker, rec.file, finding.get("settled_by", []))
+        out.append("")
+    if "pair" in payload:
+        for side, anchors in payload["pair"].items():
+            out.extend(["Correspondence side: " + code(side), ""])
+            _support(out, checker, rec.file, [{"class": "src", "anchors": anchors}])
+            out.append("")
     if "layout" in payload:
         out.extend(["Layout " + code(payload["layout"]["name"]) + ": " +
                     str(payload["layout"]["size"]) + " bytes.", ""])
@@ -288,12 +298,11 @@ def _generated(out, file):
     out.heading(2, "Provenance notice (generated): " + escape(file.root.label))
     out.extend(["Support classes: " + ", ".join(code(c) for c in summary["classes"]) + ".", ""])
     _table(out, "Canonical references (generated)", summary["references"])
-    rows = []
-    for register in summary["registers"]:
-        rows.append({key: register.get(key, "") for key in ("fact", "offset", "name", "width", "access", "reset")})
-        rows[-1]["fields"] = [{k: field[k] for k in ("id", "name", "bits", "meaning")}
-                              for field in register["fields"]]
+    rows = peripheral.register_rows(summary)
     _table(out, "Register map (generated)", rows)
+    _table(out, "Findings (generated)", summary["findings"])
+    _table(out, "Correspondence (generated)", summary["pairs"])
+    _table(out, "Comparison coverage (generated)", summary["coverage"])
     if summary["verify"]:
         out.heading(2, "Verify on hardware (generated)")
         for row in summary["verify"]:
@@ -348,7 +357,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
     out = View()
     for group in groups:
         base = group[0]
-        peripheral_spec = any(f.spec_id == base.spec_id and f.kind == "peripheral"
+        peripheral_spec = any(f.spec_id == base.spec_id and f.kind in ("peripheral", "review")
                               for f in checker.files)
         if out:
             out.extend(["Generated view:", ""])

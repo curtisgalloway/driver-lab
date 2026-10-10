@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: review
+id: widget-review
+name: Widget UART review
+notes: The implementation side is illustrative; this fixture does not claim a hardware result.
+resources:
+  repos:
+    - name: impl
+      role: impl
+      url: https://example.invalid/impl
+      commit: "2222222222222222222222222222222222222222"
+      license: MIT
+      files: [{path: drivers/widget/widget_uart.c, license_from: spdx-line}]
+    - name: ref
+      role: ref
+      url: https://example.invalid/linux
+      commit: "1111111111111111111111111111111111111111"
+      license: GPL-2.0-only
+      files: [{path: drivers/tty/serial/widget.c, license_from: spdx-line}]
+  documents:
+    - name: trm
+      class: databook
+      title: Widget TRM
+      url: https://example.invalid/widget-trm.pdf
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+      pages: 120
+areas:
+  - {area: initialization, level: document-and-code, note: Initialization compared with the TRM.}
+facts:
+  - id: f-baud-latch
+    section: findings
+    title: BAUD written after LCR
+    claim: >-
+      The implementation writes LCR before BAUD; the reference writes BAUD first, and its comment
+      says a write to LCR latches BAUD, so the implementation latches the old divisor.
+    data:
+      finding:
+        category: differs
+        assessment: bug
+        consequence: the first frames go out at the previous baud rate
+        settled_by: [{class: databook, doc: trm, at: [{section: "4.2", page: "40"}]}]
+        resolution: {status: open}
+    support:
+      - class: src
+        anchors:
+          - {repo: impl, path: drivers/widget/widget_uart.c, lines: [30, 31], symbol: widget_init}
+          - {repo: ref, path: drivers/tty/serial/widget.c, lines: [13, 14], symbol: widget_uart_init}
+          - {repo: ref, path: drivers/tty/serial/widget.c, lines: [7, 7], symbol: WIDGET_LCR, comment: true}
+  - id: init-pair
+    section: correspondence
+    claim: The two initialization routines correspond.
+    data:
+      pair:
+        impl: [{repo: impl, path: drivers/widget/widget_uart.c, lines: [30, 31], symbol: widget_init}]
+        ref: [{repo: ref, path: drivers/tty/serial/widget.c, lines: [12, 15], symbol: widget_uart_init}]
+    support: [{class: databook, doc: trm, at: [{section: "4.2", page: "40"}]}]
+  - id: dma-coverage
+    section: coverage
+    claim: DMA has not been compared.
+    data:
+      coverage: {area: dma, compared: false, read: Initialization routines only., reason: No DMA implementation was supplied.}
+    support: [{class: databook, doc: trm, at: [{page: "40"}]}]
+  - id: f-delay
+    section: findings
+    claim: The initialization delay differs.
+    requirement: as-implemented
+    data:
+      finding:
+        category: differs
+        assessment: suspect
+        consequence: The block may become ready after the first write.
+        resolution: {status: open}
+    todo: {check: hardware, text: Probe the first write after reset.}
+    support:
+      - class: src
+        anchors:
+          - {repo: impl, path: drivers/widget/widget_uart.c, lines: [30, 31], symbol: widget_init}
+          - {repo: ref, path: drivers/tty/serial/widget.c, lines: [12, 15], symbol: widget_uart_init}
+  - id: question
+    section: open-questions
+    title: Delay requirement
+    claim: What delay does the device require?
+    todo: {check: document, text: Locate the reset timing specification.}

@@ -60,6 +60,7 @@ SECTIONS = {
     "peripheral": ("identity", "registers", "sequences", "data-formats", "interrupts",
                    "dma", "sub-protocols", "target", "gotchas", "open-questions"),
     "facts": ("facts",),
+    "review": ("identity", "correspondence", "coverage", "findings", "agreements", "open-questions"),
 }
 ANCHORED = ("src", "DT", "rtl")
 DOC_CLASS = {"databook": "databook", "standard": "standard", "doc": "doc"}  # citation -> document
@@ -192,18 +193,24 @@ class Record:
         return f"{self.file.spec_id}@{self.file.root.label}#{self.id}"
 
 
-def supports(data: dict, base: tuple):
-    """Every support entry a record carries, with its path: its own, its premises', and its
-    conflicts' (a premise's or a conflict's support is never an inference: the schema)."""
+def supports(data: dict, base: tuple, _payload=True):
+    """Own, premise, conflict and settlement support, plus the fact's pair sides.
+
+    Pair sides project to source support entries, while anchors() keeps their real YAML paths.
+    Recursive values cannot introduce another pair payload.
+    """
     if isinstance(data, dict):
         for key, value in data.items():
-            if key == "support":
+            if key in ("support", "settled_by"):
                 for i, entry in enumerate(value):
                     yield entry, base + (key, i)
-            yield from supports(value, base + (key,))
+            yield from supports(value, base + (key,), False)
+        if _payload:
+            for side, value in data.get("data", {}).get("pair", {}).items():
+                yield {"class": "src", "anchors": value}, base + ("data", "pair", side)
     elif isinstance(data, list):
         for i, value in enumerate(data):
-            yield from supports(value, base + (i,))
+            yield from supports(value, base + (i,), False)
 
 
 def references(data: dict, base: tuple):
@@ -225,7 +232,7 @@ def anchors(data: dict, base: tuple):
     for entry, path in supports(data, base):
         if entry.get("class") in ANCHORED:
             for a, anchor in enumerate(entry.get("anchors", [])):
-                yield anchor, path + ("anchors", a)
+                yield anchor, path + ((a,) if path[-1] in ("impl", "ref") else ("anchors", a))
 
 
 def through_link(path: Path) -> bool:
@@ -509,6 +516,9 @@ class Checker:
         import peripheral
 
         peripheral.check_file(self, f)
+        import review
+
+        review.check_file(self, f)
         for i, notice in enumerate(f.data.get("notices", [])):
             cited.add(notice["repo"])
             self.gate_name(f, ("notices", i, "repo"), notice["repo"], "a notice")

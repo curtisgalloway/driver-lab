@@ -33,12 +33,56 @@ def _parser():
     global _PARSER  # pylint: disable=global-statement
     if _PARSER is None:
         from markdown_it import MarkdownIt
-        from markdown_it.rules_block import fence
-        from markdown_it.rules_inline import autolink, html_inline, image, link
+        from markdown_it.parser_block import ParserBlock
+        from markdown_it.parser_inline import ParserInline
+        from markdown_it.rules_block import StateBlock, fence
+        from markdown_it.rules_inline import StateInline, autolink, html_inline, image, link
+
+        class CheckedDepth:
+            # Observe every level change, including skipToken's temporary increments.
+            # Record reaching the ceiling even if lookahead later backtracks or caches
+            # a text fallback. A shared env also preserves exhaustion in image labels,
+            # whose recursive inline parse starts a fresh state at level zero.
+            @property
+            def level(self):
+                return self._level
+
+            @level.setter
+            def level(self, value):
+                self._level = value
+                if value >= self.md.options["maxNesting"]:
+                    self.env.setdefault("nesting_limit", getattr(self, "line", 0) + 1)
+
+        class CheckedInlineState(CheckedDepth, StateInline):
+            pass
+
+        class CheckedBlockState(CheckedDepth, StateBlock):
+            pass
+
+        class CheckedInlineParser(ParserInline):
+            def parse(self, src, md, env, tokens):
+                # Same lifecycle as the pinned parser; only the state type changes.
+                state = CheckedInlineState(src, md, env, tokens)
+                self.tokenize(state)
+                for rule in self.ruler2.getRules(""):
+                    rule(state)
+                return state.tokens
+
+        class CheckedBlockParser(ParserBlock):
+            def parse(self, src, md, env, tokens):
+                if not src:
+                    return None
+                state = CheckedBlockState(src, md, env, tokens)
+                self.tokenize(state, state.line, state.lineMax)
+                return state.tokens
 
         # Stop parsing before Python's recursion ceiling, but well past the field limit.
-        # Any parser truncation leaves tokens deeper than MAX_DEPTH and is an error.
+        # Reaching this ceiling is recorded even when the parser drops deep tokens.
         _PARSER = MarkdownIt("commonmark", {"maxNesting": 64})
+        _PARSER.inline = CheckedInlineParser()
+        _PARSER.block = CheckedBlockParser()
+        # New components start with every rule enabled; reapply CommonMark's rule filter.
+        _PARSER.configure("commonmark", options_update={"maxNesting": 64})
         # Recognize even unsafe destinations, rather than silently treating their Markdown
         # as ordinary text. Nothing renders HTML with this parser; findings reject the URL.
         _PARSER.validateLink = lambda url: True
@@ -137,6 +181,9 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
 
     env = {}
     tokens = _parser().parse(text, env)
+    if "nesting_limit" in env:
+        add(env["nesting_limit"], "nesting",
+            f"nesting deeper than {MAX_DEPTH} (parser nesting limit reached)")
     for ref in list(env.get("references", {}).values()) + env.get("duplicate_refs", []):
         add(ref["map"][0] + 1, "reference", "link reference definition inside a field")
         if re.search(r"\[\^[^\]\n]+\]:", text.splitlines()[ref["map"][0]]):

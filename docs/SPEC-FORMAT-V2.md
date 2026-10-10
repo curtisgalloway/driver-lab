@@ -1104,16 +1104,19 @@ renders each field's CommonMark (D4); the Markdown view displays its source verb
 3. **Containment (D22).** `check` still rejects raw HTML, disallowed links, headings,
    unclosed fences, reference definitions and footnote references or definitions in author
    fields, for the HTML viewer. Block or inline nesting deeper than 16 is an error; the
-   parser's limit is 64, well above the field limit and below Python's recursion ceiling,
-   so it cannot silently skip the checked depth. The plain substring `[^` anywhere in
+   parser's limit is 64, well above the field limit and below Python's recursion ceiling.
+   Reaching that limit during block or inline parsing, including silent link-label
+   lookahead, is recorded as a nesting error even if the parser collapses the input to text
+   or drops its tail. The plain substring `[^` anywhere in
    author text is rejected too, including formatted or backtick-containing labels and code;
    token-level footnote checks remain. Notices are exempt from these CommonMark checks,
    but still subject to the backtick bound.
    Render repeats the field checks, then parses the assembled view. Every author fence must
    have its expected position and content, be closed and at the top level, with no info
    string. Outside fences, only generated headings, lists, paragraphs, tables and code spans
-   are allowed: no links, images, HTML or autolinks. No GFM plugins are pinned, so this check
-   uses the CommonMark preset; the fences are inert in either renderer. A failure emits
+   are allowed: no links, images, HTML or autolinks. The assembled check is CommonMark-only;
+   GFM safety rests on `escape()` for generated values and the bounded top-level fences for
+   author fields. A failure emits
    diagnostics and no partial view. Parsing supplies layout checks, never fact meaning.
 
 The banner accepts repeatable `--source-commit ROOT=SHA`, with a lowercase 40-hex commit

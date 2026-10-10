@@ -13,6 +13,9 @@ write specs for its boards and Fuchsia drivers from them. A driver written from 
 the Linux candidates in the e1000 and ENC28J60 campaigns, is used here as one quality signal for
 the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality).
 
+A one-page overview of how the system works and how it checks quality:
+[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+
 ## Why this exists and what it is not for
 
 Agents write drivers better from a spec than from a pile of source: a spec states the register

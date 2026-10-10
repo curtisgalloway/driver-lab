@@ -160,6 +160,16 @@ class PatchGateTest(unittest.TestCase):
       with self.subTest(path=path):
         self.assertEqual(self.mod.touched_gate_inputs([path]), [path])
 
+  def test_codex_wrappers_are_gate_inputs(self):
+    # SF2-G review A-F1: a patch could widen Codex's own sandbox in codex-implement.py.
+    for path in ("utilities/codex-implement.py", "utilities/codex-review.py"):
+      with self.subTest(path=path):
+        self.assertEqual(self.mod.touched_gate_inputs([path]), [path])
+    self.put("utilities/codex-implement.py", "x = 2\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn("gate inputs touched: utilities/codex-implement.py", out)
+
   def test_new_gitignore_hiding_a_file_fails(self):
     self.put(".gitignore", "hidden.txt\n")
     self.put("hidden.txt", "/" + "home/someone/x\n")

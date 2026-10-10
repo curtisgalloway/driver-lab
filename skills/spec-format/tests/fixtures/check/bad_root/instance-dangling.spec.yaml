@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Defect: an instance whose ip names no spec (SF2-G finding G3).
+format: 2
+kind: soc
+id: instance-dangling
+name: Instance-Dangling
+triggers: [instance-dangling]
+instances:
+  - id: uart1
+    name: uart1
+    ip: nosuchip
+    reg: null
+    irq: null
+    clocks: []
+    todo: {check: document, text: find the block.}
+resources:
+  documents:
+    - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
+facts:
+  - id: reset-time
+    section: quick-facts
+    title: Reset time
+    claim: The block resets in 10 us.
+    support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]

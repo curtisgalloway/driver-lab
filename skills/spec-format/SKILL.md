@@ -257,10 +257,11 @@ child stale; changing a parent's requirement does not affect a child with its ow
 Status is current, stale, upstream-stale, unverified or unknown. Unknown means no basis can be
 established, never current. Upstream-stale means only external dependencies changed, with
 none of their dependency closure returning to the own root; otherwise stale. A current FAIL
-or malformed record is an error and untrusts its root. Freshness and a missing independent
-second reader on a current critical verdict are warnings by default, errors under
-`check --require-verified pr`; `main` keeps upstream-stale a warning but fails other freshness
-cases. Policy applies to checked roots. Second readers differ from the main verifier and agree
+or malformed record is an error and untrusts its root. Freshness, a current ADJUDICATE, and a
+missing independent second reader on a current or upstream-stale critical verdict are warnings
+by default, errors under `check --require-verified pr`; `main` keeps upstream-stale and a
+current ADJUDICATE as warnings but fails other freshness cases and a missing second reader.
+Policy applies to checked roots. Second readers differ from the main verifier and agree
 with settled verdicts; disagreement needs adjudication. `status --stale` includes every
 noncurrent fact and current critical facts lacking a second reader; it is a re-verification
 list, not a list of all failed verdicts.

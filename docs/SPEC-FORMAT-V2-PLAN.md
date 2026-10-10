@@ -123,7 +123,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](../evidence/SF2-11.md)) |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | complete ([evidence](../evidence/SF2-12.md)) |
-| SF2-G | Whole-outcome gate | all | pending |
+| SF2-G | Whole-outcome gate | all | complete ([evidence](../evidence/SF2-G.md)) |
 
 Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives format 2): the board-spec
 path first, **SF2-3 → SF2-4 → SF2-8**, with **SF2-6 running in parallel now** in its own
@@ -741,7 +741,9 @@ the shared CommonMark module), plus a Codex `ro` review of the combined diff. St
 rounds.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
+Status: complete. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`. Open: G5
+(bump the three spec repositories' pins, approved for right after this merges) and G6; see the
+backlog.
 
 ## Stop point and what follows
 
@@ -865,7 +867,8 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
     unreadable marker is), or refuse the invocation.
   - **Nits:** `reach_roots`' transitive walk is redundant with the fixed point (no test needs
     it; drop it or test it). Untrusted-root messages cut the underlying reason at 200
-    characters, and the full path takes most of them.
+    characters, and the full path takes most of them. (Fixed in SF2-G, G1: only the message is
+    cut now; a deep checkout had failed nine tests.)
 
 - **SF2-3 tracked items** (review nits, no code change at the close):
   - **The own-verifier rule catches case only** (round 2, N2): readers' verifiers are compared
@@ -880,6 +883,16 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
   - **One spec id declared by two files of a root collapses to one full reference** (round 3,
     N2): status rows for the two files' facts of the same id merge into one row. Impact:
     status output only; the check already reports the duplicate id as an error.
+- **SF2-G open findings** ([evidence](../evidence/SF2-G.md#findings-and-resolutions)):
+  - **G5:** the three spec repositories pin driver-lab `b86af093`, from before SF2-7a; their
+    published viewers lack the verifier and second-reader lines. Fix: bump both workflows'
+    pins in docs, permissive, then gpl (outside driver-lab).
+  - **G6:** the license-gate and worked-example fixture markers accept `X11` and `Zlib`, which
+    the published markers do not; no fixture cites either. Fix: align them, or record the
+    superset (the license-gate README now states it).
+  - **Round 1 lows deferred:** `publish.py` builds duplicate pages when a base and its overlay
+    share a root (latent); `render_md`'s "Verify on hardware" list escapes author text instead
+    of fencing it; `resolve.node_range` rescans the file per node (performance).
 
 ## Next session
 

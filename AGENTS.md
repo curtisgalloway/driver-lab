@@ -92,7 +92,7 @@ python3 -m unittest discover -s evals/e1000/harness/tests
       the new untracked files, all before any patched code runs; the suites come last, and
       the worktree must be unchanged after them. It fails on any refused file, failing suite,
       home path, unreadable new file, binary change, or change to a gate input (the check
-      scripts, the gate, the pinned requirements, CI workflows); it rebuilds `.venv-sf2` with
+      scripts, the gate, the Codex wrappers, the pinned requirements, CI workflows); it rebuilds `.venv-sf2` with
       `--require-hashes` and prints every risky-pattern hit in the patch's added lines (shell
       or eval calls, network calls, subprocess use, home or absolute user paths, dotfiles,
       agent configuration) verbatim.

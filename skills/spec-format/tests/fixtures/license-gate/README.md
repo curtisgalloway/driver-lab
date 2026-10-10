@@ -9,7 +9,10 @@ The license-gate matrix for `spec.py check`, converted from the retired format 1
 entries' licenses and the root marker, so no repository is fetched.
 
 - `roots/gpl`, `roots/docs`, `roots/permissive`: format 2 markers shaped like the three spec
-  repositories (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`).
+  repositories (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`). The
+  GPL and permissive fixture roots also accept `X11` and `Zlib`, which the published markers do
+  not, so a spec citing either passes the fixture check and fails the published one (LS-G F1;
+  SF2-G G6). No fixture spec cites either.
 - `specs/<row>.spec.yaml`: one spec per row of the format 1 matrix (`<row>-spec.md` there). Format
   2 uses `kind: peripheral` (SF2-7a), carrying the same repos entries and anchors.
   Two rows changed shape with the format: `dual-gpl-mit` cites its `.dtsi`

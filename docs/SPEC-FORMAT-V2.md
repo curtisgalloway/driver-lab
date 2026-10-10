@@ -694,7 +694,9 @@ by the orchestrator on 2026-10-08; `skills/spec-format/scripts/records.py` imple
   warning, and an error under either `--require-verified` mode.
 
 What the checker does: a current `FAIL` is an error. Stale and unverified facts are warnings, and
-errors under `--require-verified`. A stale verdict caused only by a fact in another root
+errors under `--require-verified`. A current `ADJUDICATE` is a warning, an error under
+`--require-verified=pr` and still a warning under `=main` (user decision, 2026-10-10, SF2-G
+review), so an unsettled verdict cannot land through a pull request. A stale verdict caused only by a fact in another root
 changing (through a root-qualified reference) is reported as **upstream-stale**, naming the
 upstream fact. A record's own defects (a key naming no fact, a summary that does not match) and
 a current `FAIL` make the root untrusted, like any error in its files; the freshness findings

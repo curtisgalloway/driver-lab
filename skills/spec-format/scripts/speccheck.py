@@ -31,9 +31,10 @@ already-parsed data and never over prose:
 - stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
-  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts and a critical
-  fact without a second reader are warnings, errors under --require-verified (`pr`: all; `main`:
-  all but upstream-stale, D19).
+  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts, a current
+  ADJUDICATE, and a critical fact whose current or upstream-stale verdict has no second reader
+  are warnings, errors under --require-verified (`pr`: all; `main`: all but upstream-stale, D19,
+  and a current ADJUDICATE).
 
 A finding in a --context-root's own files is a warning (that root fails in its own checks); a
 finding is always attributed to the file it was found in, so a context root cannot downgrade a
@@ -132,8 +133,9 @@ class Root:
     files: list = dataclasses.field(default_factory=list)
     spec_paths: list = dataclasses.field(default_factory=list)  # every *.spec.yaml found
     record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
-    # Every error-severity finding its own check produced, before context downgrading. A root
-    # with any is untrusted: no reference may rest on it (user decision, 2026-10-08).
+    # Every error-severity finding its own check produced, before context downgrading, as a
+    # (location, message) pair. A root with any is untrusted: no reference may rest on it (user
+    # decision, 2026-10-08).
     untrusted: list = dataclasses.field(default_factory=list)
 
     @property
@@ -292,7 +294,7 @@ class Checker:
         mark = loaded.mark(path, key=key) if loaded is not None else None
         line, column = (mark.line, mark.column) if mark else (1, 1)
         if root is not None and level == "error":
-            root.untrusted.append(f"{file}:{line}:{column}: {message}")
+            root.untrusted.append((f"{file}:{line}:{column}", message))
         if root is not None and root.context and downgrade:
             level, message = "warning", f"context root: {message}"
         self.findings.append(Finding(str(file), line, column, message, level))
@@ -307,7 +309,7 @@ class Checker:
         for f in raw:
             level, message = "error", f.message
             if root is not None:
-                root.untrusted.append(f"{f.path}:{f.line}:{f.column}: {message}")
+                root.untrusted.append((f"{f.path}:{f.line}:{f.column}", message))
             if root is not None and root.context:
                 level, message = "warning", f"context root: {message}"
             self.findings.append(Finding(f.path, f.line, f.column, message, level))
@@ -1136,9 +1138,12 @@ class Checker:
 
 
 def _untrusted(root: Root) -> str:
-    first = root.untrusted[0]
-    if len(first) > 200:
-        first = first[:197] + "..."
+    # Each entry is (location, message). Only the message is shortened, so how deep the
+    # checkout lies never decides how much of the reason survives (SF2-G finding G1).
+    where, reason = root.untrusted[0]
+    if len(reason) > 200:
+        reason = reason[:197] + "..."
+    first = f"{where}: {reason}"
     return (f"root {root.label}, which is untrusted: its own check found "
             f"{len(root.untrusted)} error(s) (first: {first}); a reference may only rest on a "
             f"root that checks clean")

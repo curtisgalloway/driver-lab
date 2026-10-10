@@ -812,3 +812,15 @@ Cost: two utility failures and ten campaign-suite errors remain environment-limi
 an orchestrator rerun in a real checkout. Non-git tests still establish their own results.
 Prevention: state checkout-dependent test limits in export briefs or run them at the orchestrator.
 Fix belongs in: the export harness/brief and the orchestrator's final check gate.
+
+### 2026-10-10T11:32-07:00 — tests that pass for the wrong reason, twice in one gate
+Chapter: [SF2-G](notebook/SF2-G.md)
+What happened: the suite depended on where the checkout lies (a path cut and an "outside temp"
+case), so CI's short path hid two failures that a deep scratch clone showed. The first fix
+for the second one then picked a brief that an earlier syntax check refused, so the test still
+passed with the check under test removed; a badge test matched words another section also
+printed.
+Cost: one extra review round's should-fix and a surviving mutation found only on rerun.
+Prevention: run the checks list once from a deep path under the temp directory; make a refusal
+test assert the specific diagnostic, and remove the guard once to see the test fail.
+Fix belongs in: the gate's procedure (fresh clone in a scratch path) and test-writing practice.

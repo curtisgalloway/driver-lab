@@ -25,8 +25,8 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
     untracked, and `git ls-files` alone would never see them);
   - which paths changed comes from WORKTREE itself (`git diff HEAD` and the untracked files),
     never from parsing PATCH, so renames, quoted names, binary and mode-only changes count;
-  - a change to a gate input (the check scripts, this script, the pinned requirements, CI
-    workflows) fails the gate, so the orchestrator reads that change first, and so does a
+  - a change to a gate input (the check scripts, this script, the Codex wrappers
+    codex-implement.py and codex-review.py, the pinned requirements, CI workflows) fails the gate, so the orchestrator reads that change first, and so does a
     binary change, which no scan here can read;
   - every scan runs before any patched code. The suites run last, each in its own process
     group that is killed when it returns, and the gate fails if WORKTREE's changes differ
@@ -62,10 +62,12 @@ RISKY = re.compile(
 HOME_PATH = re.compile(r"/(?:Users|home)/[A-Za-z0-9_]")
 ERROR_LINE = re.compile(r"^(FAIL|ERROR):|Error\b|error:")
 HERE = os.path.dirname(os.path.realpath(__file__))
-# Paths whose change can weaken the gate itself: the checks, the pinned requirements, CI,
-# and the files that decide what git reports as changed or how it diffs it.
+# Paths whose change can weaken the gate itself: the checks, the Codex wrappers (Codex's own
+# containment; SF2-G review A-F1), the pinned requirements, CI, and the files that decide what
+# git reports as changed or how it diffs it.
 GATE_INPUTS = re.compile(
-    r"utilities/(check-[^/]*|patch-gate)\.py|skills/spec-format/requirements\.txt|"
+    r"utilities/(check-[^/]*|patch-gate|codex-implement|codex-review)\.py|"
+    r"skills/spec-format/requirements\.txt|"
     r"\.github/.*|(.*/)?\.git(ignore|attributes|modules)", re.DOTALL)
 # A changed path holding a control character is refused outright rather than matched.
 ODD_PATH = re.compile(r"[\x00-\x1f\x7f]")

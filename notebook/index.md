@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T16:19:20-07:00
+Updated: 2026-10-09T18:30:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,12 +22,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
-Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T16:19:20-07:00
-Outcome: open, confirmation delimiter-bound fix awaiting the orchestrator. Author fences
-and generated code spans retain their sizing with a 32-backtick input bound and assertions
-at 33. Plain `[^` is rejected even in code or formatted labels. Fail-before tests and GFM
-blocker reproductions verify the fix; a declaration-matching mutation needed scoping.
-Checkout-dependent checks still need the orchestrator's worktree.
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
+chose "author text inert in the .md view": every author field is fenced and generated identifiers
+are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
+rely on a proof that text is safe.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

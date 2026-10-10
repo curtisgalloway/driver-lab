@@ -57,3 +57,9 @@ the scaffold points to the verifier's format 2 procedure. The Git-based checks c
 this export; their scan functions checked the exported files instead. Commands, results and
 the remaining Git-index check belong in the orchestrator's private ledger. SF2-8b files were
 not edited.
+
+## 2026-10-09T19:00-07:00 — closed
+Round 1 reviews and the confirmation round (every finding fixed, no new blocker or should-fix)
+are done; 8b was merged into this branch and the milestone lands as one pull request. Outcome
+and findings: [evidence/SF2-8.md](../evidence/SF2-8.md). Kept for later: the reviewer's
+format 1 deletion blocker is the pattern to check first when a contract file becomes a pointer.

@@ -118,7 +118,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
 | SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
-| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | in progress (SF2-8a implemented, awaiting review) |
+| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
@@ -563,9 +563,7 @@ pre-RG2 procedure rows (user decision: they stay in the pre-RG2 pass).
 Text-heavy, four skills. Split point: `spec-verifier` (step 4) becomes SF2-8b.
 
 ### Evidence and findings
-Status: in progress (SF2-8a implemented, awaiting review). Evidence: `evidence/SF2-8.md`
-(remains with the orchestrator). Notebook: [SF2-8a](../notebook/SF2-8a.md); SF2-8b owns
-spec-verifier and its own chapter.
+Status: complete. Evidence: [evidence/SF2-8.md](../evidence/SF2-8.md). Notebook: [SF2-8a](../notebook/SF2-8a.md) and [SF2-8b](../notebook/SF2-8b.md).
 
 ---
 

@@ -21,16 +21,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
-### [SF2-8a — Contract, board-expert and scaffold](SF2-8a.md)
-Entries: 2026-10-09T16:11-07:00 through 2026-10-09T16:26-07:00
-Outcome: implementation checkpoint; awaiting independent review. The schema is the contract's
-authority; the reader/scaffold use format 2 with an explicit format 1 transition. Command names
-were checked against SF2-4/SF2-6. Git-dependent checks remain with the orchestrator.
-### [SF2-8b — Spec verifier in format 2](SF2-8b.md)
-Entries: 2026-10-09T16:11-07:00 through 2026-10-09T16:17-07:00
-Outcome: implementation ready for orchestrator review; format 2 delta records and readers,
-format 1 retained, runnable synthetic record checked verbatim. Export-dependent utility and
-campaign stand-in tests need a real-checkout rerun; full spec-format suite passes.
+### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](SF2-8b.md))
+Outcome: complete ([evidence](../evidence/SF2-8.md)); one review round and a clean confirmation
+round. The Opus trace review found one blocker: format 1 contract sections were deleted while
+live format 1 skills still cited them; the old text now lives in a retained FORMAT-1.md. Before a
+contract file becomes a pointer, grep every skill and script docstring for its section names.
 ### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
 Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
 Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.

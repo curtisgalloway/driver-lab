@@ -85,3 +85,8 @@ The verbatim record passes both license/verification gates with four current ver
 zero findings. The skill validator passes. Both repository check CLIs exit 2 because this
 export lacks Git metadata; their unchanged scan functions pass over all exported files
 (581 privacy paths, 580 open-side paths). No commit or run-store write was attempted.
+
+### 2026-10-09T19:00-07:00 — closed
+Round 1 and the confirmation round are done (every finding fixed, no new blocker or
+should-fix). Merged into the SF2-8a branch and landed with it as one pull request. Outcome and
+findings: [evidence/SF2-8.md](../evidence/SF2-8.md).

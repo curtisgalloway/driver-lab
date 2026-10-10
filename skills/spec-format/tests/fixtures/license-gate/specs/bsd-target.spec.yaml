@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# A BSD target-side repos entry no anchor cites (synthetic license-gate fixture; format 2 of the v1 bsd-target-spec.md)
+# A BSD target-side citation (synthetic license-gate fixture; format 2 of the v1 bsd-target-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-bsd-target
 name: Widget block, bsd-target
 triggers: [gate bsd target]
@@ -15,9 +15,17 @@ resources:
       commit: "4444444444444444444444444444444444444444"
       license: BSD-3-Clause
       role: target
+      files: [{path: drivers/widget/widget.cc, license_from: spdx-line}]
 facts:
   - id: reset-time
-    section: programming-model
+    section: identity
     title: Reset time
     claim: The block resets in 10 us.
     support: [{class: databook, doc: widget-trm, at: [{section: "4.2", page: "40"}]}]
+  - id: target-binding
+    section: target
+    claim: The driver binds by compatible string.
+    note: "Format 1 citation: [tgt: drivers/widget/widget.cc:12]. No symbol was recorded; the search is scoped to that file."
+    support:
+      - class: src
+        anchors: [{repo: os, path: drivers/widget/widget.cc, search: compatible}]

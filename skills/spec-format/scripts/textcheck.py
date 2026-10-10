@@ -61,7 +61,11 @@ def fields(data, path=()):
 
 
 def check_file(checker, file):
-    check_backticks(checker, file, {"source_path": file.path.relative_to(file.root.given).as_posix()})
+    try:
+        relative = file.path.relative_to(file.root.given).as_posix()
+    except ValueError:
+        relative = file.path.name
+    check_backticks(checker, file, {"source_path": relative})
     check_data(checker, file, file.data, file.records)
 
 

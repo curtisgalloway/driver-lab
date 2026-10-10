@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: facts
+resources:
+  repos:
+  - name: fw
+    url: https://example.invalid/widget-fw
+    commit: '1111111111111111111111111111111111111111'
+    license: MIT
+    role: source
+    files:
+    - path: uart/widget_uart_init.c
+      license_from: spdx-line
+facts:
+- id: reg-ctrl
+  section: facts
+  title: CTRL
+  data:
+    register:
+      name: UART_CTRL
+      offset: '0x0'
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 4
+      - 4
+      symbol: UART_CTRL
+  claim: CTRL is at offset 0x00, and bit 0 enables the block.
+- id: reg-baud
+  section: facts
+  data:
+    register:
+      name: UART_BAUD
+      offset: '0x4'
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 5
+      - 5
+      symbol: UART_BAUD
+      comment: true
+  claim: BAUD, the baud divisor, is at offset 0x04.
+- id: reg-lcr
+  section: facts
+  data:
+    register:
+      name: UART_LCR
+      offset: '0x8'
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 6
+      - 6
+      symbol: UART_LCR
+      comment: true
+  claim: LCR is at offset 0x08, and a write to it latches BAUD.
+- id: seq-init
+  section: facts
+  title: Initialization
+  claim: The firmware disables the block before reprogramming it, writes BAUD, writes LCR, then enables
+    the block.
+  requirement: comment-explained
+  support:
+  - class: src
+    anchors:
+    - repo: fw
+      path: uart/widget_uart_init.c
+      lines:
+      - 10
+      - 13
+      symbol: uart_early_init
+      comment: true

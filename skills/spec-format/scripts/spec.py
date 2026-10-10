@@ -5,9 +5,9 @@
 
 Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
 records and freshness from SF2-3, in records.py), `status` (SF2-3), Markdown `render`
-(SF2-4, in render_md.py), HTML `render` (SF2-5, in render_html.py), and `resolve`, `show`
-and `drift` (SF2-6, in resolve.py and drift.py); mechanical `migrate` (SF2-10a, in migrate.py).
-Inventory arrives later.
+(SF2-4, in render_md.py), HTML `render` (SF2-5, in render_html.py), `resolve`, `show`
+and `drift` (SF2-6, in resolve.py and drift.py), typed peripheral `inventory` (SF2-7a,
+in inventory.py) and mechanical `migrate` (SF2-10a, in migrate.py).
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -56,6 +56,8 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py check <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stub <SKILL.md>]...
         [--stubs-from <skills dir>]... [--require-verified pr|main] [--json]
+    python3 skills/spec-format/scripts/spec.py check <file.facts.yaml>... --root <dir>
+        [--require-license] [--public-skill <name>]... [--json]
     python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stale] [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
@@ -66,6 +68,8 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
     python3 skills/spec-format/scripts/spec.py show <file>... [resolver options]
     python3 skills/spec-format/scripts/spec.py drift <commit> <file> [--pin NAME]
         [--rewrite] [resolver options]
+    python3 skills/spec-format/scripts/spec.py inventory <file> --headers <path>...
+        [--pin NAME] [--strict] [resolver options]
     python3 skills/spec-format/scripts/spec.py migrate <v1.spec.md> [--output <new.spec.yaml>]
         [--report <new.md>] [--marker <v1 board-specs.yaml>] [--verdicts <v1.verify.md>]
         [--license-from REPO:PATH=spdx-line|notice|license-file]... [--json]
@@ -145,6 +149,20 @@ scope existence only; their prose is never executed.
 `--pin` is required when several entries are cited. `--rewrite` moves the pin, updates unique
 moved ranges and marks changed anchors stale while preserving comments and layout. Changed
 search scopes and operational read failures refuse rewriting and retain the original file.
+
+`inventory` reads the selected repos entry's closed files at its immutable commit and compares
+register offsets and field masks with C constants. Reports are exact structured values;
+unsupported or ambiguous expressions are reported as unknown with reasons and fail.
+Mismatches, conflicting spec values and names
+absent from headers fail; omitted header names also fail under `--strict`. Several repos entries
+require `--pin`. No author prose counts as coverage. Only a bounded subset of integer constant
+expressions is supported (literals, textual object macros, arithmetic, shifts, BIT and GENMASK
+when the headers do not define them). Function-like macros are unknown; enum members are
+reported, with implicit values known only when all preceding members are known.
+
+`check <file.facts.yaml> --root <target>` checks investigator output with the same citation and
+license rules, without placing it in a spec root or requiring verification records. It reads
+the target marker only. Context, stub and verification options are not available in this mode.
 
 Exit status: 0 all valid (validate) or no error (check/resolve/show/drift; warnings allowed); 1 a file invalid or a
 check error; 2 usage; 3 a pinned dependency missing or at another version, or a root without
@@ -759,6 +777,11 @@ def _run_check(args, **extra):
 
     api = types.SimpleNamespace(validate_file=validate_file, load_extension=load_extension)
     try:
+        if getattr(args, "root", None) is not None:
+            return speccheck.check_facts(api, load_schemas(), args.roots, args.root,
+                                         require_license=args.require_license,
+                                         public_skills=args.public_skill,
+                                         context_roots=args.context_root, **extra)
         return speccheck.check(
             api, load_schemas(), args.roots, context_roots=args.context_root,
             require_license=args.require_license, public_skills=args.public_skill, **extra)
@@ -873,6 +896,7 @@ def build_parser() -> argparse.ArgumentParser:
     sys.path.insert(0, str(HERE))
     import drift
     import resolve
+    import inventory
     import migrate
 
     parser = _Parser(
@@ -888,6 +912,7 @@ def build_parser() -> argparse.ArgumentParser:
     c = sub.add_parser("check", help="check spec roots: names, composition, references, the "
                                      "license gate", allow_abbrev=False)
     c.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    c.add_argument("--root", type=Path, help="target root for checking standalone facts files")
     c.add_argument("--context-root", action="append", default=[], type=Path,
                    help="a further root read so references and overlays resolve; findings in "
                         "its own files are warnings")
@@ -929,6 +954,7 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
     resolve.register(sub)
     drift.register(sub)
+    inventory.register(sub)
     migrate.register(sub)
     return parser
 
@@ -970,7 +996,7 @@ def main(argv: list[str] | None = None) -> int:
             label = {"usage": "usage error", "precondition": "missing precondition"}.get(
                 kind, "internal error")
             for m in messages:
-                if command in ("validate", "resolve", "show", "drift"):
+                if command in ("validate", "resolve", "show", "drift", "inventory"):
                     import resolve
 
                     m = resolve.display_line(m)

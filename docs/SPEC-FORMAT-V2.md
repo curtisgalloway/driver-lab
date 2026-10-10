@@ -763,7 +763,7 @@ named, hashed, and cited by name and page) is the only shape.
   section: registers
   title: CTRL
   data:
-    register: {name: WIDGET_CTRL, offset: "0x00", width: 32, access: rw}
+    register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: rw}
     fields:
       - id: en
         name: WIDGET_CTRL_EN
@@ -785,7 +785,14 @@ named, hashed, and cited by name and page) is the only shape.
 - `claim` is optional for a register fact: when absent, the renderer writes it from `data`. The
   basis hash covers `data`, so a changed offset stales the verdict.
 - A field with its own `support` gets its own verdict key (`reg-ctrl.en`); otherwise the
-  register's verdict covers its fields (D16).
+  register's verdict covers its fields (D16). A sub-key's basis covers its own data and
+  support plus the parent's identifying data: the register's name and offset, or the
+  sequence's step order. The parent's basis excludes the data and support of children
+  with their own support. Editing step `s4` stales only `seq.s4`; editing field `en`'s
+  own anchor stales only `reg.en`.
+- Register `width` and `access` are optional when the source does not state them; absence
+  means unknown. `reset` is absent or a canonical hexadecimal value, never null. A field's
+  `requirement` overrides the inherited register requirement.
 - `inventory` (today's `inventory_check.py`) compares `data.register.name` and `offset`, and each
   field's `name` and `bits`, with the header at the pin. It no longer guesses names and hex values
   out of prose, so its value-mismatch report becomes exact.

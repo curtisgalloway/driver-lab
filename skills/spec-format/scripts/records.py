@@ -113,11 +113,13 @@ def local_part(rec):
     bookkeeping fields; or (None, why) when a cited name is not in its file or is listed twice,
     or a cited repos entry pins a ref, so the part cannot be established."""
     import speccheck
+    import peripheral
 
     f = rec.file
-    fact = {k: v for k, v in rec.data.items() if k != "section"}
+    data = peripheral.basis_data(rec)
+    fact = {k: v for k, v in data.items() if k != "section"}
     documents, repos, paths = {}, {}, {}
-    for entry, _ in speccheck.supports(rec.data, ()):
+    for entry, _ in speccheck.supports(data, ()):
         if "doc" in entry:
             name = entry["doc"]
             if ("documents", name) in f.ambiguous:
@@ -151,8 +153,8 @@ def local_part(rec):
         entry = _entry("repos", entry)
         entry["files"] = [_entry("files", listed[p]) for p in sorted(cited)]
         repos[name] = entry
-    names = list(rec.data.get("assumes", []))
-    for entry in rec.data.get("support", []):
+    names = list(data.get("assumes", []))
+    for entry, _ in speccheck.supports(data, ()):
         names += [p["assumption"] for p in entry.get("premises", []) if "assumption" in p]
     assumptions = {}
     for name in names:
@@ -280,8 +282,10 @@ class Freshness:
 
     def edges(self, rec):
         if rec not in self._edges:
+            import peripheral
+
             out = []
-            for _, ref, path in self._refs(rec.data, rec.path):
+            for _, ref, path in self._refs(peripheral.basis_data(rec), rec.path):
                 target, why = self.checker.resolve(rec.file, ref)
                 if target is not None and self.failed is not None and (rec.file, path) in self.failed:
                     target, why = None, "failed the check (see the error at that reference)"
@@ -295,7 +299,10 @@ class Freshness:
         if text is None:
             return text, why
         n = len(rec.path)
-        bad = sorted((p for p in self.cites.get(rec.file, ()) if p[:n] == rec.path), key=repr)
+        import peripheral
+
+        bad = sorted((p for p in self.cites.get(rec.file, ())
+                      if p[:n] == rec.path and peripheral.owns_citation(rec, p)), key=repr)
         if bad:
             return None, (f"{rec.full}: the citation at {self._where(bad[0])} failed the check "
                           f"(see the error there)")
@@ -453,13 +460,12 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
             checker.add(where, kpath, f"verdict key {key!r} names no fact, instance or variant "
                                       f"of {rel}", key=True)
             continue
-        if dot:
+        if dot and (key not in f.records or key in f.duplicated):
             checker.add(where, kpath, f"verdict key {key!r}: {fid!r} has no field or step "
                                       f"{sub!r} with its own support (a sub-key names a "
-                                      f"register field or sequence step, D16; {f.kind} specs "
-                                      f"have none)", key=True)
+                                      f"register field or sequence step, D16)", key=True)
             continue
-        rec = f.records[fid]
+        rec = f.records[key]
         if rec.path[0] == "facts":
             gap = "support" not in rec.data
             if gap and v["verdict"] != "GAP":
@@ -480,7 +486,7 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
                                 f"verdict key {key!r}: a reader's verdict {reader['verdict']} "
                                 f"disagrees with {v['verdict']}; record the disagreement as "
                                 f"ADJUDICATE with readings")
-        f.verdicts[fid] = (v, kpath)
+        f.verdicts[key] = (v, kpath)
     for name, value in SUMMARY.items():
         if data["summary"][name] != counts[value]:
             checker.add(where, ("summary", name), f"summary {name}: {data['summary'][name]}, but "

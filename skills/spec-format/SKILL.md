@@ -248,6 +248,10 @@ except `records.BOOKKEEPING`: document `verified`, `fetch`, `note`; repos `verif
 files items. Layout, comments, key order and folding do not count; semantic edits do.
 `spec_sha256` is informational, never the freshness test.
 
+D16 child bases include the effective requirement: a field or step's explicit requirement,
+or the parent's requirement when inherited. Changing the inherited requirement makes the
+child stale; changing a parent's requirement does not affect a child with its own override.
+
 Status is current, stale, upstream-stale, unverified or unknown. Unknown means no basis can be
 established, never current. Upstream-stale means only external dependencies changed, with
 none of their dependency closure returning to the own root; otherwise stale. A current FAIL
@@ -258,6 +262,24 @@ cases. Policy applies to checked roots. Second readers differ from the main veri
 with settled verdicts; disagreement needs adjudication. `status --stale` includes every
 noncurrent fact and current critical facts lacking a second reader; it is a re-verification
 list, not a list of all failed verdicts.
+
+## Inventory
+
+`spec.py inventory <file> --headers <path>...` compares structured register offsets and
+field masks with constants in the cited headers at the immutable source pin. Unknown names
+carry reasons, fail the command even when covered, and still count for omission checks;
+`--strict` also fails on omissions. Prose does not count as coverage.
+
+Inventory evaluates only a supported subset. A name must have exactly one definition across
+all cited headers, with no enum/macro collision. Its definition and every macro or enum
+dependency must be outside preprocessor conditionals, except a recognized include guard
+wrapping the whole file with no outer alternative branch. Any preprocessor directive inside
+an enum body makes every member unknown, including members in alternative branches. An
+object macro expands textually, preserving precedence, and every resulting token must fit
+the bounded integer parser. Function macros and unsupported expressions remain unknown.
+Built-in `BIT`, `BIT_ULL`, `GENMASK` and `GENMASK_ULL` meanings apply only when no cited
+header defines that name in any form; even an empty include-guard definition suppresses
+them. Inventory never selects a conditional branch or guesses among duplicate definitions.
 
 ## Rendering and text safety
 
@@ -309,8 +331,8 @@ spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 ```
 
 Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; HTML render and the
-publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6. SF2-4 and SF2-6 are on
-main. Inventory and migration arrive later.
+publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a;
+migrate is SF2-10a. All are on main.
 
 `validate` checks shape only; `--root` loads extensions. `check` adds names, composition,
 references, license/trust and records. `--context-root` supplies dependencies without enforcing

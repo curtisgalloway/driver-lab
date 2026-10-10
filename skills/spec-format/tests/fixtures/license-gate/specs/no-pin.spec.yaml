@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # A source anchor naming no repos entry (synthetic license-gate fixture; format 2 of the v1 no-pin-spec.md)
 format: 2
-kind: ip
+kind: peripheral
 id: gate-no-pin
 name: Widget block, no-pin
 triggers: [gate no pin]
@@ -11,7 +11,7 @@ resources:
     - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
 facts:
   - id: ctrl-offset
-    section: programming-model
+    section: identity
     title: CTRL offset
     claim: CTRL is at offset 0x10.
     support:

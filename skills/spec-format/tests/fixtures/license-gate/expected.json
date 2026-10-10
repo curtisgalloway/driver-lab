@@ -16,7 +16,6 @@
   "no-pin.spec.yaml":             {"gpl": 1, "docs": 1, "permissive": 1},
   "invalid-license.spec.yaml":    {"gpl": 1, "docs": 1, "permissive": 1},
   "without_require_license": {
-    "bsd-target.spec.yaml":       {"docs": 0},
     "uncited-gpl-pin.spec.yaml":  {"docs": 0, "permissive": 0}
   }
 }

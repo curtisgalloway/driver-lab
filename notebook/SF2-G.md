@@ -67,3 +67,12 @@ attached to the same fact. The user decided ADJUDICATE the same way (error on pu
 warning on `main`). Rerunning `mutate_sf2_5.py` once its stale target was fixed showed one
 survivor: the test looked for the words "second reader missing", which the record section
 also prints, so removing the badge went unnoticed. Assert the element, not the words.
+
+### 2026-10-10T11:32-07:00 — round 2 and close
+
+Round 2 (the last allowed) found no blocker. Its should-fix was mine: the G2 test's chosen
+brief could be refused by the wrapper's path-syntax check before the temp boundary, so it
+passed with the boundary removed. The test now picks a safely spelled file and asserts the
+boundary's own message; removing the boundary fails it in both a home checkout and a temp
+clone. Four doc passages still described the pre-round-1 mode policy; they now match
+`records.py`. Merged `origin/main` (`e8b2735`) by a merge commit. Complete.

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-10T11:18:45-07:00
+Updated: 2026-10-10T11:32:28-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -56,10 +56,11 @@ publish three Pages sites. Downstream CI reads the upstream `main`, so it is red
 merges, and with no branch protection the re-run after each merge is the only gate.
 
 ### [SF2-G — Whole-outcome gate](SF2-G.md)
-Entries: 2026-10-10T10:05-07:00 through 2026-10-10T11:18-07:00
-Outcome: round 1 fixes applied ([evidence](../evidence/SF2-G.md)); the gate passed on fresh clones
-after three small fixes (a deep-path message cut, two untested checks). The spec repositories pin
-a tool from before SF2-7a. A gate script that always refuses checks nothing: count outcomes.
+Entries: 2026-10-10T10:05-07:00 through 2026-10-10T11:32-07:00
+Outcome: complete ([evidence](../evidence/SF2-G.md)); the gate passed on fresh clones after small
+fixes, and two review rounds closed a second-reader bypass in `main` mode and set ADJUDICATE's
+policy. The spec repositories pin a tool from before SF2-7a (G5). A refusal test must assert its
+own diagnostic, or an earlier check makes it pass.
 
 ### [SF2-12 — Format 1 retired](SF2-12.md)
 Entries: 2026-10-10

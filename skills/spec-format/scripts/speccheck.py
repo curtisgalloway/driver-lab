@@ -31,9 +31,10 @@ already-parsed data and never over prose:
 - stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
-  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts and a critical
-  fact without a second reader are warnings, errors under --require-verified (`pr`: all; `main`:
-  all but upstream-stale, D19).
+  current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts, a current
+  ADJUDICATE, and a critical fact whose current or upstream-stale verdict has no second reader
+  are warnings, errors under --require-verified (`pr`: all; `main`: all but upstream-stale, D19,
+  and a current ADJUDICATE).
 
 A finding in a --context-root's own files is a warning (that root fails in its own checks); a
 finding is always attributed to the file it was found in, so a context root cannot downgrade a

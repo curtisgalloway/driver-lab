@@ -262,9 +262,10 @@ python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependen
 python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license --require-verified main
 ```
 
-Use `pr` for a proposed change: stale, upstream-stale, unverified, unknown and a current
-critical fact without a second reader are errors. `main` differs only in allowing
-upstream-stale as a warning (D19); local stale still fails. Current FAIL always fails.
+Use `pr` for a proposed change: stale, upstream-stale, unverified, unknown, a current
+ADJUDICATE, and a critical fact whose current or upstream-stale verdict has no second reader
+are errors. `main` differs only in keeping upstream-stale (D19) and a current ADJUDICATE as
+warnings; local stale and a missing second reader still fail. Current FAIL always fails.
 Repeat status to check the delta and report the gate, five summary counts, precision and
 contrary-evidence limits, TODOs, each FAIL's correction and unsettled ADJUDICATE. Commit or
 stage records only when the project calls for it; do not push without authorization.

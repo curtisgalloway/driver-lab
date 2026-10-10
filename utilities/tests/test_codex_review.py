@@ -3,6 +3,7 @@
 """Tests for utilities/codex-review.py: it builds only the two fixed forms and refuses the rest."""
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -12,15 +13,26 @@ SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+SAFE = re.compile(r"/[A-Za-z0-9._/-]+")  # codex-review.py's path syntax, which runs first
+
+
+def safe(path):
+  """Whether codex-review.py's path-syntax checks would accept path, so that a refusal of it
+  comes from the check under test and not from its spelling (SF2-G review round 2, S1)."""
+  return (SAFE.fullmatch(path) is not None and "//" not in path
+          and not {".", ".."} & set(path.split("/")) and os.path.realpath(path) == path)
+
+
 def outside_temp_file():
-  """An existing file outside the system temp directory, wherever the checkout lives: a
-  checkout under the temp directory made README.md an inside-temp brief (SF2-G finding G2)."""
+  """An existing, safely spelled file outside the system temp directory, wherever the checkout
+  lives: a checkout under the temp directory made README.md an inside-temp brief (SF2-G G2)."""
   tmp = os.path.realpath(tempfile.gettempdir())
-  for path in (os.path.join(REPO, "README.md"), os.__file__, sys.executable, "/etc/hosts"):
+  for path in (os.path.join(REPO, "README.md"), os.__file__, sys.executable, "/etc/hosts",
+               "/etc/passwd"):
     real = os.path.realpath(path)
-    if os.path.isfile(real) and os.path.commonpath([real, tmp]) != tmp:
+    if os.path.isfile(real) and os.path.commonpath([real, tmp]) != tmp and safe(real):
       return real
-  raise unittest.SkipTest("no file outside the temp directory to use as a brief")
+  raise unittest.SkipTest("no safely spelled file outside the temp directory to use as a brief")
 
 
 def run(*args):
@@ -79,6 +91,15 @@ class CodexReviewTest(unittest.TestCase):
     for case in cases:
       with self.subTest(case=case):
         self.assertEqual(run(*case).returncode, 2)
+
+  def test_ro_brief_outside_temp_is_refused_by_the_temp_boundary(self):
+    # The refusal must come from the temp-boundary check itself, not an earlier syntax check.
+    if not safe(REPO):
+      self.skipTest("the checkout path is not safely spelled for codex-review.py")
+    brief = outside_temp_file()
+    r = run("ro", REPO, brief, self.log)
+    self.assertEqual(r.returncode, 2)
+    self.assertIn("BRIEF must be under " + os.path.realpath(tempfile.gettempdir()), r.stderr)
 
   def test_extra_arguments_refused(self):
     r = subprocess.run([sys.executable, SCRIPT, "net", self.tmp, self.brief, self.log,

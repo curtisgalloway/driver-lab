@@ -23,13 +23,14 @@ Design: [SPEC-FORMAT-V2.md](../docs/SPEC-FORMAT-V2.md). Plan:
 Notebook: [SF2-G](../notebook/SF2-G.md). Run: `sf2-g-20261010-01` in the private run store
 (ledger, command outputs, the gate's scratch scripts).
 
-**Status: review round 1 fixes applied; awaiting round 2.** The gate ran on fresh clones of
+**Status: complete.** The gate ran on fresh clones of
 driver-lab and the three spec repositories. Five of the seven items passed as they stood. The
 full checks list failed in a deep checkout path (G1, G2). The coverage walk found two validation
 checks without a test that can fail (G3, G4). G1 to G4 are fixed here with tests. Review round 1
 (`review-swarm` and a Codex `ro` review) found one blocker, a critical fact with no second
 reader that publishes when it is upstream-stale; it is fixed, with the other round 1 fixes
-below.
+below. Round 2, the last the stop rule allows, found no blocker; its should-fix and four stale
+passages of documentation are fixed.
 
 ## What the gate ran on
 
@@ -174,8 +175,11 @@ anchors).
 | --- | --- | --- |
 | 1 | Codex `ro`, combined diff | one blocker (B1), one should-fix (S1) |
 | 1 | `review-swarm`, two parts (code; tests and records), seven arms each, referee | 13 findings after the referee (part A 9, part B 4); the referee dropped 3 |
+| 2 | Codex `ro`, round 1 fixes | no blocker; one should-fix (S1), one note |
+| 2 | `review-swarm`, round 1 fixes, seven arms, referee | no blocker; 4 documentation findings (F2–F5); the referee dropped 1 (F1) |
 
-Review artifacts: `review/codex1/` and `review/swarm/` in run `sf2-g-20261010-01`.
+Review artifacts: `review/codex1/`, `review/swarm/`, `review/codex2/` and `review/swarm2/` in
+run `sf2-g-20261010-01`.
 
 Round 1 findings and decisions:
 
@@ -195,6 +199,15 @@ Round 1 findings and decisions:
 | A-F10: `escape()` instead of a fence in "Verify on hardware" | orchestrator: backlog | the text stays inert; fidelity only |
 | A-F11: `node_range` rescans per node | orchestrator: backlog | performance; under a second today |
 | Referee drops (A-F7, A-F9, B-F5) | orchestrator: stay dropped | the referee's reasons stand |
+
+Round 2 findings and decisions:
+
+| Finding | Decision | Reason |
+| --- | --- | --- |
+| Codex2 S1: the G2 test's brief could be refused by `codex-review.py`'s path-syntax check before the temp boundary, so it passed with the boundary removed | fixed: the brief must be safely spelled, and a new test asserts the boundary's own diagnostic; removing the boundary fails it, in a home checkout and in a temp-directory clone | a refusal test must fail when the guard it names is removed |
+| Codex2 note 2, swarm2 F2: `spec-verifier` said `main` differs from `pr` only in upstream-stale | fixed: ADJUDICATE joins the `pr` error list and the `main` warnings | the text must match `records.py` |
+| swarm2 F3, F4, F5: `spec-format/SKILL.md`, `spec.py check --help` and the `second_pass` docstring described the old reader and mode rules | fixed, with `speccheck.py`'s module docstring, which said the same | the same |
+| swarm2 referee drop F1 | orchestrator: stays dropped | such a fact already failed `main` on the reader rule before round 1 |
 
 None of the three published roots holds an ADJUDICATE verdict (all seven records count
 `adjudicate: 0`), so the new rule fails no published pull request; their checks with the

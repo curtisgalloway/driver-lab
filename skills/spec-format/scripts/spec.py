@@ -107,9 +107,10 @@ fact, readers agree with the verdict, a current verdict's `upstream` lists the f
 roots it rests on with their bases. Each verdict is `current` (its `basis` is the fact's basis
 hash now), `stale`, `upstream-stale` (only facts in other roots changed), `unverified` (no
 verdict) or `unknown` (the basis cannot be established: never current). A current FAIL is an
-error; the others, and a `critical` fact whose current verdict has no `readers`, are warnings,
-and errors under `--require-verified pr` (pull requests: every one) or `--require-verified main`
-(every one but upstream-stale, which stays a warning; D19). Freshness findings are for checked
+error; the others, a current ADJUDICATE, and a `critical` fact whose current or upstream-stale
+verdict has no second reader in `readers`, are warnings, and errors under
+`--require-verified pr` (pull requests: every one) or `--require-verified main` (every one but
+upstream-stale, D19, and a current ADJUDICATE, which stay warnings). Freshness findings are for checked
 roots only.
 
 `status` runs the same check and prints, per spec file of the checked roots, its record and

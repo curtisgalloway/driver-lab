@@ -540,7 +540,9 @@ def first_pass(checker):
 
 def second_pass(checker, mode):
     """After the trust pass: freshness of every verdict in the checked roots, as warnings, or
-    as errors under --require-verified (`pr`: all; `main`: all but upstream-stale, D19). A
+    as errors under --require-verified (`pr`: all; `main`: all but upstream-stale, D19, and a
+    current ADJUDICATE, user decision 2026-10-10). A missing second reader is checked on
+    current and upstream-stale verdicts of critical facts. A
     reference or citation the check failed counts as not resolving, so a fact resting on it is
     unknown.
     These findings are a policy on the checked root, not a defect that could change what a

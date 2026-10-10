@@ -123,7 +123,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](../evidence/SF2-11.md)) |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | complete ([evidence](../evidence/SF2-12.md)) |
-| SF2-G | Whole-outcome gate | all | pending |
+| SF2-G | Whole-outcome gate | all | complete ([evidence](../evidence/SF2-G.md)) |
 
 Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives format 2): the board-spec
 path first, **SF2-3 → SF2-4 → SF2-8**, with **SF2-6 running in parallel now** in its own
@@ -741,7 +741,9 @@ the shared CommonMark module), plus a Codex `ro` review of the combined diff. St
 rounds.
 
 ### Evidence and findings
-Status: pending (review round 1 fixes applied; round 2 to run). Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`.
+Status: complete. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`. Open: G5
+(bump the three spec repositories' pins, approved for right after this merges) and G6; see the
+backlog.
 
 ## Stop point and what follows
 

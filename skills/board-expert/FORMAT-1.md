@@ -677,8 +677,9 @@ runs again on demand). This section fixes only what the format and the checker r
   (FAILs included) were about another version of the file and the fix may already be in. Record
   that is current and whose `summary.fail` is not zero: error. A record with a malformed
   frontmatter: error.
-  `--require-verified` turns the two warnings into errors, for a root whose policy is that nothing
-  unverified lands. CI keeps the default so a new spec can merge before its first verification. A
+  `--require-verified` turns the two warnings into errors, and also makes a current record with a
+  nonzero `summary.adjudicate` an error (verifiers disagreed and the claim is unresolved; without
+  the flag the count is not a failure), for a root whose policy is that nothing unverified lands. CI keeps the default so a new spec can merge before its first verification. A
   current record reporting failures therefore never merges; a stale one merges with a warning
   unless the root runs the checker with `--require-verified`.
 
@@ -754,7 +755,8 @@ skill is not loaded, the reader reports the tool as unavailable and continues.
 - a verification record (`<root>/resources/<name>.verify.md`, an overlay's included) whose
   frontmatter is malformed, whose `spec_file` is not the spec it belongs to, or which is current
   and whose `summary.fail` is not zero; two spec files in one root that would share a record;
-  with `--require-verified`, also a spec or overlay with no record or with a stale one.
+  with `--require-verified`, also a spec or overlay with no record, with a stale one, or with a
+  current one whose `summary.adjudicate` is not zero.
 
 A root given with `--context-root` is read so that overlays and parts resolve, and its own
 findings are reported as warnings: it fails in its own repository's checks, not in another's. A

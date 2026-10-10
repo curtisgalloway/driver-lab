@@ -382,8 +382,14 @@ def check_license(repo, entry, anchor):
         raise ContentError(f"{path}: invalid SPDX expression: {exc}") from exc
 
 
+HEX_LITERAL = re.compile(
+    r"\b0[xX]([0-9a-fA-F](?:[0-9a-fA-F_']*[0-9a-fA-F])?)(?:[uU](?:ll|LL|l|L)?|(?:ll|LL|l|L)[uU]?)?\b"
+)
+
+
 def hex_values(text):
-    return {int(v, 16) for v in re.findall(r"\b0[xX]([0-9a-fA-F]+)\b", text)}
+    """Hex values in TEXT, read through C integer suffixes and `_` or `'` digit separators."""
+    return {int(re.sub(r"[_']", "", v), 16) for v in HEX_LITERAL.findall(text)}
 
 
 def records(data):

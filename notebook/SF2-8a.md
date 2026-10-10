@@ -47,3 +47,13 @@ are left to the orchestrator as the brief directs. No verifier files or format 1
 The plan remains in progress. Independent review and the checkpoint commit belong to the
 orchestrator; SF2-8b implements the verifier. HTML rendering remains SF2-5; other skill migrations
 remain SF2-9, and legacy readers/tools retire in SF2-12.
+
+## 2026-10-09T17:49-07:00 — review round 1 fixes
+Recovered the unchanged format 1 contract from the pre-SF2-8a revision into FORMAT-1.md;
+its legacy consumers now have their sections back. Replaced all template SPDX defaults with
+placeholders and added license checks against the declared root policy. Clarified marker paths,
+overlay references, SoC instances/INTIDs, pinned DT text and confidential-document exclusions;
+the scaffold points to the verifier's format 2 procedure. The Git-based checks cannot enumerate
+this export; their scan functions checked the exported files instead. Commands, results and
+the remaining Git-index check belong in the orchestrator's private ledger. SF2-8b files were
+not edited.

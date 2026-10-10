@@ -1,16 +1,19 @@
-# SPDX-FileCopyrightText: 2026 contributors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
 format: 2
 kind: soc
 id: <soc-id>
 name: "<soc-name>"
 triggers: ["<soc-trigger>"]
 cache: <soc-id>-resources
+# Each instance needs an ip spec that resolves in the supplied roots.
+# Use instances: [] as the valid minimal form when no supported placements are available.
 instances:
   - id: console-uart
     name: "<uart-instance>"
     ip: <ip-id>
     reg: "<uart-base>"
+    # SPI intid = number + 32; PPI intid = number + 16.
     irq: {kind: SPI, number: <uart-spi>, intid: <uart-intid>}
     clocks: ["<uart-clock>"]
     role: debug console

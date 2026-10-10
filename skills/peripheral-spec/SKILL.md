@@ -79,7 +79,7 @@ To choose:
    `hardware-specs-permissive`. A source under any other license (GPL-3.0, a vendor license, NDA
    material) fits none of the three: do not publish a spec anchored to it.
 3. **Let the tools confirm it.** Each repository's root marker declares its license and the
-   licenses its specs may cite (`license:` and `accepts:`, `board-expert/SPEC-FORMAT.md`), and
+   licenses its specs may cite (`license:` and `accepts:`, `board-expert/FORMAT-1.md`), and
    `anchor_check.py --root <root> --require-license` fails any anchor whose pin's license the root
    does not accept (*Check, verify, land*, step 1). The gate is what the repositories' CI runs; a
    spec that fails it belongs in another repository, or must drop the anchor.
@@ -162,7 +162,7 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   `uv run --with markdown-it-py==4.2.0`): an anchor in a fenced or indented code block, or inside
   a longer code span, is prose and is not checked; a code span holding exactly one anchor is that
   anchor. Anchor kinds are lowercase (`[SRC:` is an error). The spec follows board-expert's
-  spec Markdown profile (`SPEC-FORMAT.md`, "The spec Markdown profile"): no HTML, block quotes,
+  spec Markdown profile (`FORMAT-1.md`, "The spec Markdown profile"): no HTML, block quotes,
   images, character references or link reference definitions, and a fence must close. Its
   SPDX header is YAML comment lines in a front matter block (`---` / `# SPDX-...` / `---`). A
   wrapped list item is one claim; a nested item is its own.
@@ -184,7 +184,7 @@ with **neither** a `[src:]`/`[tgt:]` nor a `[doc:]` tag is an error.
   describe the files you cite through that pin, since it is what the license gate reads. A
   published spec states one on every pin: in a root that declares `accepts:`, a pin with no
   license fails the gate. A line that starts `Source pin:` but does not have this shape is a
-  warning, and an error under `--root`. A *board* spec (`board-expert/SPEC-FORMAT.md`, "Facts
+  warning, and an error under `--root`. A *board* spec (`board-expert/FORMAT-1.md`, "Facts
   read from source") states its pins in front matter instead: the checker reads each
   `resources.repos` entry with a `name` and a `ref` as a Source pin, with the entry's
   `license:`, and a `Source pin:` line of the same name must agree with it.

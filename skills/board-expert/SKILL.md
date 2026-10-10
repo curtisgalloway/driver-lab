@@ -45,7 +45,9 @@ or permissions; follow the caller's authorized scope.
 1. **Collect pointers**, in order: this skill's `specs/`; loaded skills' `board-spec root: <path>`
    lines; `board-specs.yaml` at the checkout root (or project-declared multi-repository root);
    the user's configuration marker at `~/.config/board-specs/board-specs.yaml`. Expand any
-   marker's `roots` in listed order and deduplicate. Never search the checkout for markers.
+   marker's `roots` in listed order and deduplicate: those entries are relative to that marker
+   file or absolute. Skill pointer paths are relative to the checkout or absolute.
+   Never search the checkout for markers.
    CLI tools take the resulting root directories explicitly, not a config marker's roots list.
 2. **Identify format.** `format: 2` selects YAML and spec.py. Missing `format` or `format: 1`
    selects the legacy path below. Do not compose mixed formats; report a migration/precondition
@@ -71,8 +73,8 @@ or permissions; follow the caller's authorized scope.
    --with-status --format md`. The selector does not recursively render parts. Read those
    views and consult originating YAML for exact fields. Track all contributing files and layers.
 
-SF2-4 supplies Markdown render and SF2-6 supplies resolve/show/drift; they must be installed
-before this workflow runs. HTML rendering (`render --format html`) arrives later in SF2-5;
+SF2-4's Markdown render and SF2-6's resolve/show/drift are on main.
+HTML rendering (`render --format html`) arrives later in SF2-5;
 use the Markdown view now. An absent command is an unavailable precondition, never a completed
 check. Optional render commit flags and the exact CLI are in the contract.
 
@@ -114,8 +116,9 @@ fetch needed raw files at a full commit into the same cache, recording the commi
 schemas' relative-path and citation rules when suggesting records.
 
 Device trees are the public address/interrupt/clock map when a public datasheet is missing;
-say so. For production DTB/DTBO blobs, decompile or use a format reader, splitting container
-entries first; cite the pinned blob and node with class `DT`, under the tree's license.
+say so. Cite DT source (`.dts`/`.dtsi`) at a pinned commit with class `DT`, under the tree's
+license. The resolver reads pinned bytes as UTF-8 and cannot resolve a binary `.dtb`.
+A claim whose only source is a binary blob is a gap until decompiled text is published at a pin.
 Do not promote a tree's declaration into a measured hardware fact.
 
 Confirm bring-up-critical console addresses, entry state and reset vectors two ways where
@@ -166,7 +169,8 @@ Do not edit a spec or use `drift --rewrite` without an authoring request.
 ## Format 1 reading (until SF2-12)
 
 This section applies only to existing Markdown roots, not new authoring. Read `*.spec.md`
-frontmatter and fixed body sections. Match the same triggers, compose parts/instances, overlay
+frontmatter and fixed body sections under the [retained format 1 contract](FORMAT-1.md).
+Match the same triggers, compose parts/instances, overlay
 body sections by layer/pointer order. In format 1 instance `reg` is an integer/null, resources
 use `docs` and cited source commits use `ref`. Read provenance tag clauses at bullet ends,
 including document/DT parentheticals and `[src:<repo>: path:L1-L2 (symbol)]` anchors.

@@ -9,8 +9,8 @@ description: >-
 ---
 
 <!--
-SPDX-FileCopyrightText: 2026 contributors
-SPDX-License-Identifier: Apache-2.0
+SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+SPDX-License-Identifier: <file-license>
 -->
 
 Terms: a root is a marked spec directory; an overlay adds fact records. See the target repo's

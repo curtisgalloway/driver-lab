@@ -29,6 +29,7 @@ VALUES = {
     'ip-id': 'fixture-ip', 'base-root': 'fixture-docs', 'root-name': 'fixture-source',
     'layer': 'public', 'root-license': 'Apache-2.0', 'docs-license': 'CC-BY-4.0',
     'accepted-license': 'MIT', 'source-license': 'MIT',
+    'copyright-year': '2026', 'copyright-holder': 'Fixture authors',
     'commit': '1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d',
     'dt-path': 'arch/fixture.dtsi', 'driver-path': 'drivers/fixture.c',
     'dt-license-from': 'spdx-line', 'driver-license-from': 'spdx-line',
@@ -40,9 +41,11 @@ VALUES = {
 }
 
 
-def substitute(text):
+def substitute(text, file_license):
     def value(match):
         key = match.group(1)
+        if key == 'file-license':
+            return file_license
         if key in VALUES:
             return VALUES[key]
         if key.endswith('-url'):
@@ -69,9 +72,19 @@ class ScaffoldTemplates(unittest.TestCase):
 
     def write(self, template, destination):
         destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(substitute((TEMPLATES / template).read_text(encoding='utf-8')),
+        file_license = VALUES['root-license'] if str(template) in (
+            'board-specs.yaml', 'overlay.spec.yaml') else VALUES['docs-license']
+        destination.write_text(substitute((TEMPLATES / template).read_text(encoding='utf-8'),
+                                          file_license),
                                encoding='utf-8')
+        self.assert_license_header(destination.read_text(encoding='utf-8'), file_license)
         return destination
+
+    def assert_license_header(self, text, declared_license):
+        self.assertEqual(re.findall(r'(?m)^(?:# )?SPDX-License-Identifier: (.+)$', text),
+                         [declared_license])
+        self.assertEqual(re.findall(r'(?m)^(?:# )?SPDX-FileCopyrightText: (.+)$', text),
+                         ['2026 Fixture authors'])
 
     def composition(self):
         docs, source, extra = (self.tmp / name for name in ('docs', 'source', 'extra'))
@@ -102,14 +115,43 @@ class ScaffoldTemplates(unittest.TestCase):
                 self.assertEqual(code, 0, (result, err))
                 self.assertTrue(result['ok'])
                 self.assertEqual(result['findings'], [])
+                if path.name == 'board-specs.yaml':
+                    self.assert_license_header(path.read_text(), load_strict(path)['license'])
+
+    def test_every_template_header_uses_the_chosen_license(self):
+        paths = sorted(p for p in TEMPLATES.rglob('*') if p.is_file())
+        self.assertEqual(len(paths), 10)
+        for template in paths:
+            header = '\n'.join(line for line in template.read_text().splitlines()
+                               if 'SPDX-' in line)
+            for declared_license in ('CC-BY-4.0', 'Apache-2.0', 'GPL-2.0-only'):
+                with self.subTest(template=template.relative_to(TEMPLATES),
+                                  license=declared_license):
+                    self.assertIn('<copyright-year> <copyright-holder>', header)
+                    self.assertIn('<file-license>', header)
+                    self.assert_license_header(substitute(header, declared_license),
+                                               declared_license)
 
     def test_composition_and_cross_root_references_check(self):
         docs, source, extra = self.composition()
+        for root in (docs, source, extra):
+            declared_license = load_strict(root / 'board-specs.yaml')['license']
+            for path in root.glob('*.yaml'):
+                self.assert_license_header(path.read_text(), declared_license)
         code, result, err = run('check', docs, source, extra, '--require-license')
         self.assertEqual(code, 0, (result, err))
         self.assertEqual(result['specs'], 6)
         self.assertFalse([f for f in result['findings'] if f['level'] == 'error'])
         self.assertTrue(result['verification']['unverified'])
+
+    def test_soc_template_accepts_the_minimal_instances_list(self):
+        docs, source, extra = self.composition()
+        soc = docs / 'fixture-soc.spec.yaml'
+        text = soc.read_text()
+        start, end = text.index('instances:\n'), text.index('resources:\n')
+        soc.write_text(text[:start] + 'instances: []\n' + text[end:])
+        code, result, err = run('check', docs, source, extra, '--require-license')
+        self.assertEqual(code, 0, (result, err))
 
     def test_documents_only_templates_have_no_repos_and_check(self):
         docs, _, extra = self.composition()

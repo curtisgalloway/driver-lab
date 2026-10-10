@@ -178,24 +178,24 @@ evaluation; add other terms as the documents that use them are updated.
 | Context root | A root supplied to resolve dependencies; its findings print as warnings, but its underlying errors still make references into it fail. Its own freshness policy is not enforced in that run. |
 | Documents-only root | A format 2 root with `accepts: []`; source/DT/RTL anchors and, under `--require-license`, even map-only repos are refused. |
 | Provenance class / read class | The kind of evidence a support entry supplies / any class other than inference; read support states an observation rather than a conclusion. |
-| Anchor (format 2) | A structured source citation naming repo, relative path and lines/symbol, a search scope, or a device-tree blob node, depending on class. Not prose syntax. |
+| Anchor (format 2) | A structured source citation naming repo, relative path and lines/symbol, a search scope, or a node in pinned UTF-8 device-tree source, depending on class. Not prose syntax. |
 | Canonical URL / retrieval URL | The stable document address used for citation / the separate working address from which bytes can be fetched. |
 | Resource registry / map-only resource | The spec's lists of named documents, repos, series and tools / an entry used to find evidence, never itself cited as authority. |
 | Schema branch / closed record | Rules for a particular kind or class / a mapping refusing undeclared fields, so a misspelled or alternative citation cannot silently pass. |
 | JSON / mapping / scalar | A structured data notation / named keys paired with values / a single value such as a string or integer. JSON Schema describes shapes, not hardware correctness. |
 | UTF-8 / NFC / BOM | A text encoding / one normalized spelling of Unicode strings / a byte-order marker refused by the strict loader. |
 | CommonMark / GFM / containment | A defined Markdown grammar / GitHub-flavored Markdown / requiring an author field to stand alone so it cannot split or swallow later rendered facts. |
-| Critical fact / second reader | A bring-up fact whose error could stop boot / an independent verifier recorded with its own agreeing verdict, required for critical facts. |
+| Critical fact / second reader | A bring-up fact whose error could stop boot, marked `critical: true` / an independent verifier recorded with its own agreeing verdict at the current basis, required for critical facts; disagreement needs adjudication. |
 | Delta verification | Re-reading the noncurrent facts and current critical facts missing a second reader, selected by `spec.py status --stale`. |
-| Contrary evidence / citation precision | The verdict's record of a search for conflicting evidence / whether the locator identifies the exact supporting passage. |
+| Contrary evidence / citation precision | A fresh verdict's record of a search for conflicting evidence / whether the locator identifies the exact supporting passage; recorded as `contrary_evidence` and `citation_precision`, omitted only for a format 1 carry, which is not a fresh reading. |
 | Stub / Needs decision | A thin skill naming a spec and handing work to board-expert / the expert's report block returning unresolved choices to the orchestrator. |
 | Cache / materialize | The user-chosen local copy of reference resources / fetch or reuse those resources at the identities the spec records. |
 | MMIO / DMA | Memory-mapped input/output registers / direct memory access by a device without a processor moving each byte. |
 | EL / MMU / MPIDR | Arm exception level, a privilege state / memory management unit translating addresses / multiprocessor identifier used to identify cores. |
-| DT / DTB / DTBO | Device tree, a hardware configuration description / its compiled binary / a compiled overlay; format 2 `DT` support cites its pinned origin. |
+| DT / DTB / DTBO | Device tree, a hardware configuration description / its compiled binary / a compiled overlay; format 2 `DT` support cites `.dts`/`.dtsi` source at a pinned commit. A binary-only claim is a gap until decompiled text is published at a pin. |
 | PSCI / SCMI / PMIC | Arm interfaces for power-state control / system control and clocks / power-management integrated circuit. |
 | GPIO / pinmux / earlycon | General-purpose input/output pins / selecting which hardware function drives a pin / a kernel's early serial console configuration. |
 | TRM / databook / public proxy | Technical reference manual / an IP or device programming manual / a publicly obtainable manual for a matching block when the exact document is restricted. |
-| PPI / INTID | Arm GIC Private Peripheral Interrupt, a per-core interrupt / the controller's interrupt identifier; a Shared Peripheral Interrupt (SPI) number differs from its INTID by 32. |
+| PPI / INTID | Arm GIC Private Peripheral Interrupt, a per-core interrupt / the controller's interrupt identifier: SPI INTID = number + 32; PPI INTID = number + 16. |
 | NDA / BSP / MCP | Nondisclosure agreement limiting who may read or disclose material / board support package, the software supplied for a hardware platform / Model Context Protocol, the interface exposing tools to an agent. |
 | Enum | An enumeration: the closed list of values a schema allows for a field, such as a support class. |

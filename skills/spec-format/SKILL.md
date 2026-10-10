@@ -91,6 +91,9 @@ contested; a resolution records `decided` and, when relevant, the assumption tha
 carries required source-license notices, never source excerpts.
 
 Instances and variants have stable ids and support like facts, verified under those ids.
+Each SoC instance's `ip` must resolve to a spec of kind `ip` in the supplied roots.
+The valid minimal SoC instance list is `instances: []`; omit example rows until their IP
+specs and placement evidence are available.
 An instance's `reg` is a canonical hex string such as `"0xfe201000"` (lowercase, no separators
 or leading zeros), or null with a TODO; `irq` may likewise be null with a TODO. SPI/PPI numbers
 and optional INTIDs must agree; extended interrupts name a parent. `clocks: []` is allowed.
@@ -108,7 +111,7 @@ Field shapes are in `$defs.support` and its referenced definitions, not prose ta
 | `standard` | Architecture or public standard, including Linux's boot protocol; cite clauses/sections. A heading alone suffices only for an unpaged document. |
 | `doc` | Vendor/project documentation, product page, maintainer reply or cover letter; name which document and where. |
 | `rtl` | Digital design on the named revision/module; cite a document with locators or source anchors. Says nothing about analog behavior or wiring. |
-| `DT` | Device-tree values, including a decompiled production blob; name source lines or a blob node and its pinned origin. Takes the tree's license and is gated like `src`. |
+| `DT` | Device-tree values from source (`.dts`/`.dtsi`) at a pinned commit; cite source lines and optionally a node. Takes the tree's license and is gated like `src`. |
 | `src` | What code defines or does at an exact commit; source anchors required. No hardware TODO is needed for a claim about that code. |
 | `hardware` | Measurement on a named board by a stated method/date; retain revision, firmware, conditions and run IDs when relevant. |
 | `emulated` | Observation from outside a named/versioned device model, with runs or an observation fact reference. Never the only support class; requires a TODO. |
@@ -130,8 +133,10 @@ Whether a locator is correct remains the verifier's job.
 Anchors name `resources.repos` in the same file, overlays included. `src` uses a relative path,
 inclusive 1-based `lines: [first, last]` and a nearby symbol. For a negative/global claim,
 `search` replaces lines/symbol: describe the file/directory search the verifier must repeat.
-Tools check scope existence only, never execute the prose or prove the negative claim. DT
-source files require lines; blobs require a node (lines may also be present). Use `comment: true`
+Tools check scope existence only, never execute the prose or prove the negative claim. Cite DT
+source (`.dts`/`.dtsi`) at a pinned commit with source lines and optionally a node. The resolver
+reads pinned bytes as UTF-8 and cannot resolve a binary `.dtb`. A claim whose only source is a
+binary blob is a gap until decompiled text is published at a pin. Use `comment: true`
 and attribute a comment's statement as a comment. `stale: {was: <commit>}` marks changed anchors
 after drift and fails checks until re-verified and removed.
 
@@ -153,6 +158,10 @@ The third is the full reference used in answers, views and basis dependencies. C
 references must use it; short forms never search another root. Root names are required and
 unique among roots read together; renaming one breaks references. Fact ids can repeat across
 roots. Assumptions have a separate same-file namespace without `#`.
+
+Inside an overlay, `"#fact-id"` names the overlay's own fact, never a fact in the target file.
+Refer to a target fact as `"<spec id>#<fact id>"` when it is in the same root, or
+`"<spec id>@<target root name>#<fact id>"` when it is in another root.
 
 Every reference resolves unambiguously, cannot rest on a later layer, and is license-gated
 through every referenced fact's dependencies. Premises cannot cycle. Relations may cycle;
@@ -192,9 +201,10 @@ Composition (`parts`, `instances[].ip`) is not evidence and is not license-gated
 
 Discover pointers from exactly four places, never by searching a checkout for markers:
 board-expert's shipped `specs/`; loaded skills' `board-spec root: <path>` lines; the checkout's
-top-level marker; the user's board-specs configuration marker. Pointer paths may be relative
-to the checkout or user-supplied absolute paths; machine paths never go into specs. The reader
-expands marker `roots` in order; CLI arguments are explicit (`spec.py` does not expand them).
+top-level marker; the user's board-specs configuration marker. Skill pointer paths are relative
+to the checkout or user-supplied absolute paths; machine paths never go into specs. Entries in
+a marker's `roots` are relative to that marker file, or absolute, as the root schema defines.
+The reader expands marker `roots` in order; CLI arguments are explicit (`spec.py` does not expand them).
 Deduplicate roots and separate format 1/2 compositions. No symlinks within or on the route to
 a root, no nested markers.
 
@@ -208,6 +218,9 @@ rewrite base facts. Do not depend on competing overlays within one root to selec
 make ids distinct and relationships explicit.
 
 Public layers contain no internal documents/tools/host facts; vendor material stays private.
+Public roots never cite documents marked confidential or NDA, whatever their availability.
+Use a public proxy for the relevant block/revision, a GPL overlay citing public DT or source,
+or a gap instead.
 A reference may rest only on a root that checks clean. Context findings print as warnings,
 but any underlying root error makes it untrusted; references into it fail transitively.
 While any marker is unreadable, all root-qualified references fail. Repair root errors before
@@ -293,8 +306,7 @@ spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 ```
 
 Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; resolve/show/drift
-are SF2-6. SF2-4 and SF2-6 are review branches at this implementation and must land before
-consumers run the combined workflow. Inventory and migration arrive later.
+are SF2-6. SF2-4 and SF2-6 are on main. Inventory and migration arrive later.
 
 `validate` checks shape only; `--root` loads extensions. `check` adds names, composition,
 references, license/trust and records. `--context-root` supplies dependencies without enforcing

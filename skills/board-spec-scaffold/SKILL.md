@@ -65,15 +65,21 @@ those too. An internal overlay uses the same YAML shapes in a vendor/local root,
    The expert manages fetching and its cache. A skeleton request or unavailable source gets
    explicit gap records with observable TODO methods; do not fabricate a citation to fill a form.
 3. **Write YAML**, replacing every template placeholder with a real value, removing irrelevant
-   examples and researching or explicitly keeping gaps. Preserve stable fact ids; every
+   examples and researching or explicitly keeping gaps. Replace SPDX header placeholders with
+   the copyright year/holder and the target root's declared license, including documents-only
+   markers; never leave an Apache-2.0 header in a CC-BY root. Preserve stable fact ids; every
    composition id and stub id must resolve. Put evidence only in support fields. Source
    observations say what code does, hardware conclusions get their own inference. Split
    mixed read/concluded claims; quote references, locator page numbers, commits and hashes.
    A hardware-location claim using `src` needs a document class too; `DT` takes the tree's
-   license and may require a more restrictive root. Mark critical facts for two readers.
+   license and may require a more restrictive root. Cite DT source (`.dts`/`.dtsi`) at a pinned
+   commit; a claim whose only source is a binary blob is a gap until decompiled text is
+   published at a pin. Mark critical facts for two readers.
 4. **Write the marker/stub/vendor skill** if requested. All format 2 marker policy fields are
    required, even outside a published repository. Expand any root pointers explicitly for
-   commands. YAML files start with SPDX comments; SKILL.md headers go after frontmatter.
+   commands: skill pointers are relative to the checkout or absolute; marker `roots` entries
+   are relative to that marker file or absolute. YAML files start with SPDX comments;
+   SKILL.md headers go after frontmatter.
    Keep private document/bench details in private overlays. Source-license notices belong
    in `notices`, not code excerpts. A stub keeps “Board expert for” and “A stub over the
    `<id>` board spec” in its description, a `spec: <id>` line in its body, and no facts.
@@ -89,15 +95,10 @@ those too. An internal overlay uses the same YAML shapes in a vendor/local root,
    --docs-dir <documents dir>` when bytes are available. Confirm anchors ran, not merely
    exit 0; skips and unrepeatable searches remain limits. Render every relevant id using
    `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
-   --with-status --format md` and inspect it. SF2-4/SF2-6 must be installed; HTML rendering
+   --with-status --format md` and inspect it. SF2-4/SF2-6 are on main; HTML rendering
    (`render --format html`) arrives later in SF2-5, not part of this milestone's commands.
-7. **Verify** as [spec-verifier](../spec-verifier/SKILL.md) directs: fresh contexts re-derive
-   facts from evidence; the caller spawns a second independent reader for critical facts.
-   Each file gets its own YAML record. Start delta work from
-   `spec.py status <root>... --context-root <dependency root>... --stale --json`, including
-   critical facts missing a second reader. Fix FAILs, resolve adjudications, re-verify affected
-   facts, and run `check --require-verified pr` on changed roots. Use per-fact bases, not a
-   manual whole-file hash update. If verification was explicitly deferred, report the spec
+7. **Verify** by following [spec-verifier's format 2 procedure](../spec-verifier/SKILL.md).
+   If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.
 8. **Report** files produced, resolved composition, record status from `spec.py status`, gaps
    and review needs. If new stubs require an installation sync, remind the user to run it;
@@ -120,7 +121,9 @@ records with support or explicit gaps:
   teardown, DMA/interrupt model, public versions/configurations and errata. Instance values
   belong in SoC/chip rows. A code-only ordering is an observation or explicit inference.
 
-Use public proxies only when they document the relevant block/revision; name that scope. Record
+Use public proxies only when they document the relevant block/revision; name that scope.
+Public roots never cite documents marked confidential or NDA, whatever their availability.
+Use a public proxy, a GPL overlay citing public DT or source, or a gap instead. Record
 canonical and retrieval URLs separately for Arm static PDFs. Do not infer hardware state from a
 shipped build whose identity is only assumed; declare the assumption and a hardware TODO.
 Keep gotchas precise and attributed. A plain gap is useful; a confident wrong address stops boot.

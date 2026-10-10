@@ -46,8 +46,8 @@ lets an IP-vendor overlay and yours compose without either editing the other.
 vendor/<vendor>/board-specs/            any directory you control
   board-specs.yaml                      format: 2, layer: product, name: <vendor>-product
                                         license and accepts required
-  pixel-10.spec.yaml                    kind: overlay, overlays: pixel-10
-  tensor-g5.spec.yaml                   kind: overlay, overlays: tensor-g5 (use soc-vendor root)
+  pixel-10-product.spec.yaml            kind: overlay, overlays: pixel-10
+  tensor-g5-vendor.spec.yaml            kind: overlay, overlays: tensor-g5 (use soc-vendor root)
 ```
 
 - Prefer one overlay file per target per root. It declares `format: 2`, `kind: overlay`,

@@ -21,6 +21,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](SF2-8b.md))
+Outcome: complete ([evidence](../evidence/SF2-8.md)); one review round and a clean confirmation
+round. The Opus trace review found one blocker: format 1 contract sections were deleted while
+live format 1 skills still cited them; the old text now lives in a retained FORMAT-1.md. Before a
+contract file becomes a pointer, grep every skill and script docstring for its section names.
 ### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
 Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
 Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.

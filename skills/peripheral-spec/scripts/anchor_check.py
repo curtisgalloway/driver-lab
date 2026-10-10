@@ -68,7 +68,7 @@ also makes a missing ``license:`` in DIR's marker an error, as
 ``spec_check.py --require-license`` does, and requires named doc anchors in a
 root that accepts no source.
 
-A board spec (``board-expert/SPEC-FORMAT.md``) states its pins in front matter instead:
+A board spec (``board-expert/FORMAT-1.md``) states its pins in front matter instead:
 each ``resources.repos`` entry with a ``name`` and a ``ref`` is a Source pin of that name,
 at that ref, with the entry's ``license:``, and its ``[src]`` facts cite
 ``[src:<name>: path:L]``. A ``Source pin:`` line naming the same tree must agree with the
@@ -165,7 +165,7 @@ DOC_LOCATOR_RE = re.compile(r"^(?:p\.(?P<page>\d+)|pp\.(?P<p1>\d+)-(?P<p2>\d+)|"
 DOC_FORMS = "[doc:<name> p.N], [doc:<name> pp.N-M] or [doc:<name> §x.y]"
 SHA256_RE = re.compile(r"^[0-9A-Fa-f]{64}$")
 DOC_KEYS = ("name", "title", "url", "sha256", "pages", "file")
-# Top-level front-matter keys that mark a board spec (board-expert/SPEC-FORMAT.md).
+# Top-level front-matter keys that mark a board spec (board-expert/FORMAT-1.md).
 BOARD_KEYS = ("kind:", "overlays:", "resources:")
 
 
@@ -868,7 +868,7 @@ def read_front_matter(front: str | None, skip: int, report: Report, spec_check):
     if front is None:
         return None, 0
     if all(not line.strip() or line.lstrip().startswith("#") for line in front.split("\n")):
-        # Only YAML comments, such as the SPDX header (SPEC-FORMAT: the spec Markdown
+        # Only YAML comments, such as the SPDX header (FORMAT-1: the spec Markdown
         # profile keeps it out of the body): front matter with no keys.
         return None, skip
     meant = any(line.startswith(("docs:",) + BOARD_KEYS) for line in front.split("\n"))
@@ -1009,7 +1009,7 @@ def repos_entry_line(front: str | None, name: str) -> int:
 def read_repos_pins(front: str | None, meta: dict | None, report: Report) -> None:
     """A board spec's ``resources.repos`` entries are its Source pins.
 
-    A board spec (``board-expert/SPEC-FORMAT.md``) states each source tree once, as a
+    A board spec (``board-expert/FORMAT-1.md``) states each source tree once, as a
     ``resources.repos`` entry with ``name``, ``ref`` and ``license``; its ``[src]`` facts cite
     ``[src:<name>: path:L]``. Each entry with a usable name and a ``ref`` becomes a Source pin
     here, so the anchors resolve and the license gate reads the same license

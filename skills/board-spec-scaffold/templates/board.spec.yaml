@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: board
+id: <board-id>
+name: "<board-name>"
+triggers: ["<board-trigger>"]
+parts: [<soc-id>, <chip-id>]
+cache: <board-id>-resources
+resources:
+  documents:
+    - name: board-guide
+      class: doc
+      title: "<board-guide-title>"
+      url: "<board-guide-url>"
+      access: public
+orientation: >-
+  <board-orientation>
+facts:
+  - id: boot-media
+    section: quick-facts
+    title: Boot media and configuration
+    claim: >-
+      <boot-media-claim>
+    support:
+      - class: doc
+        doc: board-guide
+        at: [{heading: "<boot-media-heading>"}]
+
+  - id: debug-console
+    section: quick-facts
+    title: Debug console
+    critical: true
+    claim: Connector and UART routing is not established.
+    todo:
+      check: hardware
+      text: "<debug-console-check>"
+
+  - id: headers
+    section: quick-facts
+    title: Headers and GPIO
+    claim: Header ownership is not established.
+    todo:
+      check: hardware
+      text: "<headers-check>"
+
+  - id: power
+    section: quick-facts
+    title: Power
+    claim: PMIC and supply requirements are not established.
+    todo:
+      check: hardware
+      text: "<power-check>"
+
+  - id: handoff-link
+    section: quick-facts
+    title: Link state at hand-off
+    claim: Companion link state is not established.
+    todo:
+      check: hardware
+      text: "<handoff-link-check>"
+
+  - id: board-gotcha
+    section: gotchas
+    title: Board-specific caveat
+    claim: Board-specific bring-up limitations are not established.
+    todo:
+      check: hardware
+      text: "<board-gotcha-check>"

@@ -1,0 +1,82 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: ip
+id: <ip-id>
+name: "<ip-name>"
+triggers: ["<ip-trigger>"]
+cache: <ip-id>-resources
+resources:
+  documents:
+    - name: ip-databook
+      class: databook
+      title: "<ip-databook-title>"
+      url: "<ip-databook-url>"
+      revision: "<ip-revision>"
+      access: public
+    - name: ip-standard
+      class: standard
+      title: "<ip-standard-title>"
+      url: "<ip-standard-url>"
+      access: public
+orientation: >-
+  <ip-orientation>
+facts:
+  - id: standard-compliance
+    section: standards
+    title: Standard and interface scope
+    claim: >-
+      <standard-claim>
+    support:
+      - class: standard
+        doc: ip-standard
+        at: [{clause: "<standard-clause>"}]
+  - id: register-model
+    section: programming-model
+    title: Register organization
+    claim: >-
+      <register-model-claim>
+    support:
+      - class: databook
+        doc: ip-databook
+        at: [{section: "<register-model-section>"}]
+
+  - id: ip-init
+    section: programming-model
+    title: Initialization and reset
+    claim: Reset, init and teardown order are not established.
+    todo:
+      check: hardware
+      text: "<ip-init-check>"
+
+  - id: ip-interrupts
+    section: programming-model
+    title: Interrupt model
+    claim: Interrupt behavior is not established.
+    todo:
+      check: hardware
+      text: "<ip-interrupts-check>"
+
+  - id: ip-dma
+    section: programming-model
+    title: DMA model
+    claim: DMA behavior is not established.
+    todo:
+      check: hardware
+      text: "<ip-dma-check>"
+
+  - id: ip-variants
+    section: variants-quirks
+    title: Variants and quirks
+    claim: Revision and configuration limits are not established.
+    todo:
+      check: hardware
+      text: "<ip-variants-check>"
+
+  - id: ip-gotcha
+    section: gotchas
+    title: IP-specific caveat
+    claim: Programming-model deviations are not established.
+    todo:
+      check: hardware
+      text: "<ip-gotcha-check>"

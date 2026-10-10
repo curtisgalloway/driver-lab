@@ -97,6 +97,29 @@ class DeploymentTests(unittest.TestCase):
         )
         deployment.validate(self.document, spec)
 
+    def test_producer_classes_follow_schema_enum_not_prose(self):
+        schema = self.root / "schema.json"
+        schema.write_text(json.dumps({
+            "$comment": "Mentioning [invented] is not a definition.",
+            "$defs": {"support": {"properties": {"class": {"enum": ["doc"]}}}},
+        }))
+        with mock.patch.object(deployment, "SCHEMA", schema):
+            self.assertEqual(deployment.evidence_classes(), {"doc"})
+            self.document["plugins"][2]["class"] = "invented"
+            with self.assertRaisesRegex(check.Invalid, "unknown producer class"):
+                deployment.validate(self.document)
+            self.document["plugins"][2]["class"] = "doc"
+            deployment.validate(self.document)
+
+    def test_empty_schema_classes_refused(self):
+        schema = self.root / "schema.json"
+        schema.write_text(json.dumps({
+            "$defs": {"support": {"properties": {"class": {"enum": []}}}},
+        }))
+        with mock.patch.object(deployment, "SCHEMA", schema):
+            with self.assertRaisesRegex(check.Invalid, "provenance definitions missing"):
+                deployment.evidence_classes()
+
     def test_reader_changes_queue_even_when_sufficient_and_never_verdicts(self):
         claims, status, registry = inputs()
         complete_readings(status)

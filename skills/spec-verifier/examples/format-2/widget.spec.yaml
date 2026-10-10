@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: widget
+name: Synthetic Widget
+triggers: [synthetic widget]
+orientation: This example exercises records; it describes no real hardware.
+resources:
+  documents:
+    - name: widget-trm.txt
+      class: databook
+      title: Synthetic Widget manual
+      revision: "1"
+      url: https://example.invalid/widget-trm.txt
+      sha256: 8e73c19aecb71c5e4010de85849911c900a6d041958b16a9146d680338bc815f
+      pages: 1
+      page_numbering: printed
+      access: public
+facts:
+  - id: reset-cycles
+    section: quick-facts
+    title: Reset cycles
+    claim: Reset completes in 10 clock cycles in the synthetic Widget.
+    critical: true
+    support:
+      - class: databook
+        doc: widget-trm.txt
+        at: [{section: "1", page: "1"}]
+  - id: settle-cycles
+    section: quick-facts
+    title: Post-reset settling
+    claim: Immediately after reset completes, settling takes 4 more clock cycles before the synthetic Widget is ready.
+    support:
+      - class: databook
+        doc: widget-trm.txt
+        at: [{section: "2", page: "1"}]
+  - id: reset-budget
+    section: quick-facts
+    title: Reset budget
+    claim: The synthetic Widget is ready 14 clock cycles after reset begins.
+    support:
+      - class: inference
+        premises:
+          - fact: "#reset-cycles"
+          - fact: "#settle-cycles"
+        derivation: Reset takes 10 clock cycles, followed immediately by 4 settling cycles; the sequential phases total 14 clock cycles from reset start to ready.
+    todo:
+      check: hardware
+      text: Confirm the derived duration if a physical Widget implementing this model is built.
+      method: Count clock cycles from reset start to the ready indication on that implementation.
+  - id: power-on-state
+    section: gotchas
+    title: Power-on state
+    claim: The synthetic Widget's power-on state is unspecified.
+    todo:
+      check: document
+      text: Obtain a synthetic manual revision defining the power-on state.
+      method: Read an explicit power-on-state definition in that revision.

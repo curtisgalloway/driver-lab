@@ -1,0 +1,127 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: soc
+id: <soc-id>
+name: "<soc-name>"
+triggers: ["<soc-trigger>"]
+cache: <soc-id>-resources
+# Each instance needs an ip spec that resolves in the supplied roots.
+# Use instances: [] as the valid minimal form when no supported placements are available.
+instances:
+  - id: console-uart
+    name: "<uart-instance>"
+    ip: <ip-id>
+    reg: "<uart-base>"
+    # SPI intid = number + 32; PPI intid = number + 16.
+    irq: {kind: SPI, number: <uart-spi>, intid: <uart-intid>}
+    clocks: ["<uart-clock>"]
+    role: debug console
+    support:
+      - class: databook
+        doc: soc-trm
+        at: [{section: "<uart-section>", page: "<uart-page>"}]
+resources:
+  documents:
+    - name: soc-trm
+      class: databook
+      title: "<soc-trm-title>"
+      url: "<soc-trm-url>"
+      revision: "<soc-trm-revision>"
+      page_numbering: printed
+      access: public
+orientation: >-
+  <soc-orientation>
+facts:
+  - id: addressing-model
+    section: quick-facts
+    title: Addressing model
+    critical: true
+    claim: >-
+      <addressing-claim>
+    support:
+      - class: databook
+        doc: soc-trm
+        at: [{section: "<addressing-section>", page: "<addressing-page>"}]
+
+  - id: entry-state
+    section: quick-facts
+    title: Boot chain and entry state
+    critical: true
+    claim: Entry exception level, MMU/cache state and DTB register are not established.
+    todo:
+      check: hardware
+      text: "<entry-state-check>"
+
+  - id: memory-reservations
+    section: quick-facts
+    title: Resident memory
+    claim: Firmware and secondary-core memory reservations are not established.
+    todo:
+      check: hardware
+      text: "<memory-reservations-check>"
+
+  - id: smp-topology
+    section: quick-facts
+    title: SMP topology
+    claim: Core topology, MPIDR and secondary release are not established.
+    todo:
+      check: hardware
+      text: "<smp-topology-check>"
+
+  - id: interrupts
+    section: quick-facts
+    title: Interrupt controller
+    claim: GIC version, bases and interrupt numbering are not established.
+    todo:
+      check: hardware
+      text: "<interrupts-check>"
+
+  - id: debug-uart
+    section: quick-facts
+    title: Debug UART configuration
+    critical: true
+    claim: UART width, shift, baud, ready flag and pinmux are not established.
+    todo:
+      check: hardware
+      text: "<debug-uart-check>"
+
+  - id: timers
+    section: quick-facts
+    title: Timers
+    claim: Timer frequency and interrupts are not established.
+    todo:
+      check: hardware
+      text: "<timers-check>"
+
+  - id: clocks-power
+    section: quick-facts
+    title: Clocks and power
+    claim: Clock, reset and power ownership is not established.
+    todo:
+      check: hardware
+      text: "<clocks-power-check>"
+
+  - id: gpio-pinmux
+    section: quick-facts
+    title: GPIO and pinmux
+    claim: GPIO and pinctrl mapping is not established.
+    todo:
+      check: hardware
+      text: "<gpio-pinmux-check>"
+
+  - id: dtb-patching
+    section: quick-facts
+    title: Runtime DTB patching
+    claim: Firmware changes to the live tree are not established.
+    todo:
+      check: hardware
+      text: "<dtb-patching-check>"
+
+  - id: soc-gotcha
+    section: gotchas
+    title: SoC-specific caveat
+    claim: SoC-specific deviations are not established.
+    todo:
+      check: hardware
+      text: "<soc-gotcha-check>"

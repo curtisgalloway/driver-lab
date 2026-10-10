@@ -71,3 +71,21 @@ Run: `sf2-7a-20261009-01`. Reviews and HTML generation belong to separate units.
   The citation pass instead guards by top-level record path and has an exact diagnostic
   count test. The first mutation rerun also exposed a renamed bits guard and a layout
   mutation that crashed before its assertion; both now qualify by assertion in isolation.
+
+## 2026-10-09T21:01:31-07:00 — Review round 2, supported-subset stop rule
+
+- Round 1 and its confirmation both accepted wrong register values on valid C. The
+  orchestrator's stop-rule decision in `fix-r2-brief.md` for run `sf2-7a-20261009-01`
+  ends alternative evaluation: inventory now refuses duplicate definitions, conditional
+  definitions and dependencies, and enum/macro collisions with explicit unknown reasons.
+- A directive inside an enum refuses the entire body. Branch collection keeps alternative
+  members, including comma-free branches, while initializer identifiers remain expressions.
+  Directive text cannot close an enum or invent a member. Unknown members still count for
+  omissions. The four round-2 inputs have regressions and refusal mutations.
+- Include-guard recognition now checks the balanced whole-file wrapper and rejects outer
+  alternatives. Empty guard macros remain in the definition table, so an empty `BIT` guard
+  cannot restore an assumed built-in meaning. Object macros still expand textually.
+- D16 child bases now include inherited requirements. Tests check stale verdicts for both
+  fields and steps, new inheritance, and explicit overrides that remain independent.
+- Mutation qualification exposed a new test that indexed a removed child before asserting
+  its existence. The assertion now comes first so the refusal fails by assertion, not error.

@@ -595,6 +595,38 @@ class Peripheral(Fixture):
         after = self.bases()
         self.assertEqual({key for key in before if before[key] != after[key]}, {"seq-init"})
 
+    def test_d16_effective_requirement_stales_inheriting_children(self):
+        for fact_index, key in ((0, "reg-ctrl.en"), (3, "seq-init.s1")):
+            with self.subTest(key=key):
+                parent = self.data["facts"][fact_index]
+                group = (parent["data"]["fields"] if fact_index == 0 else
+                         parent["data"]["sequence"]["steps"])
+                child = group[0]
+                child.pop("requirement", None)
+                parent["requirement"] = "as-implemented"
+                self.record(self.checker(), key)
+                parent["requirement"] = "driver-choice"
+                checker = self.checker()
+                self.assertFalse(any(f.level == "error" for f in checker.findings), checker.findings)
+                row = next(r for r in checker.status[0]["rows"] if r["key"] == key)
+                self.assertEqual(row["status"], "stale")
+                child["requirement"] = "as-implemented"
+                before = self.bases()[key]
+                parent["requirement"] = "as-implemented"
+                self.assertEqual(before, self.bases()[key])
+                child["requirement"] = "driver-choice"
+                self.assertNotEqual(before, self.bases()[key])
+
+    def test_d16_new_inherited_requirement_changes_child_basis(self):
+        parent = self.data["facts"][0]
+        parent.pop("requirement", None)
+        parent["data"]["fields"][0].pop("requirement", None)
+        bases = self.bases()
+        self.assertIn("reg-ctrl.en", bases)
+        before = bases["reg-ctrl.en"]
+        parent["requirement"] = "as-implemented"
+        self.assertNotEqual(before, self.bases()["reg-ctrl.en"])
+
     def test_facts_symlink_is_usage_error(self):
         self.write()
         dest = Path(self.tmp.name) / "answer.facts.yaml"
@@ -779,24 +811,25 @@ class Inventory(Fixture):
         self.assertIn("ambiguous", result["unknown_reasons"]["WIDGET_CTRL"])
         self.commit_header("// SPDX-License-Identifier: GPL-2.0-only\n#define WIDGET_CTRL 0\n", "other.h")
         code, result = self.inventory("--headers", "drivers/tty/serial/widget.c", "other.h")
-        self.assertEqual(code, 0, result)
-        self.assertEqual(result["unknown"], [])
+        self.assertEqual(code, 1, result)
+        self.assertEqual(result["unknown"], ["WIDGET_CTRL"])
+        self.assertIn("multiple definitions", result["unknown_reasons"]["WIDGET_CTRL"])
 
     def test_comments_preserve_the_whole_expression(self):
         values, _ = inventory.extract("#define CTRL 0x10 /* base */ + 4\n#define MASK 0x1 /* c */ | 0x2 // rest\n")
         self.assertEqual(values, {"CTRL": 20, "MASK": 3})
         self.assertEqual(inventory.integer("1 /* multiline\ncomment */ + 2", {}), 3)
 
-    def test_duplicate_and_conditional_definitions_require_agreement(self):
+    def test_duplicate_and_conditional_definitions_are_outside_subset(self):
         text = ("#define CTRL 1\n#define CTRL 2\n#define SAME 3\n#define SAME (1 + 2)\n"
             "#ifdef CONFIG_A\n#define ALT 4\n#else\n#define ALT 8\n#endif\n"
             "#if CONFIG_B\n#define EQUAL 4\n#else\n#define EQUAL (2 + 2)\n#endif\n"
             "#if CONFIG_C\n#define MAYBE 7\n#endif\n")
         values, _ = inventory.extract(text)
-        self.assertEqual(values, {"CTRL": None, "SAME": 3, "ALT": None, "EQUAL": 4, "MAYBE": None})
+        self.assertEqual(values, {"CTRL": None, "SAME": None, "ALT": None, "EQUAL": None, "MAYBE": None})
         reasons = {}
         inventory.extract(text, reasons)
-        self.assertEqual(set(reasons), {"CTRL", "ALT", "MAYBE"})
+        self.assertEqual(set(reasons), {"CTRL", "SAME", "ALT", "EQUAL", "MAYBE"})
         self.assertIn("ambiguous", reasons["ALT"])
         self.assertIn("conditional", reasons["MAYBE"])
 
@@ -805,7 +838,86 @@ class Inventory(Fixture):
                                       "#define INDIRECT CTRL + 1\n#define RECURSE RECURSE\n")
         self.assertEqual(values, {"BASE": 3, "CTRL": 9, "GROUP": 12, "INDIRECT": 10, "RECURSE": None})
         values, _ = inventory.extract("#define BASE 1 + 2\n#define BASE 3\n#define CTRL BASE * 4\n")
-        self.assertEqual(values, {"BASE": 3, "CTRL": None})
+        self.assertEqual(values, {"BASE": None, "CTRL": None})
+
+    def test_directive_in_enum_initializer_refuses_whole_enum(self):
+        reasons = {}
+        values, _ = inventory.extract("enum { REG =\n#if A\n0x28\n#else\n+4\n#endif\n, NEXT };\n"
+                                      "#define INDIRECT REG + 1\n", reasons)
+        self.assertEqual(values, {"REG": None, "NEXT": None, "INDIRECT": None})
+        self.assertTrue(all("directive in enum body" in reason for reason in reasons.values()))
+        values, _ = inventory.extract("enum { REG =\n#if A\nVALUE_A\n#else\nVALUE_B\n#endif\n};")
+        self.assertEqual(values, {"REG": None})
+
+    def test_directed_enum_lists_members_from_every_branch(self):
+        reasons = {}
+        values, kinds = inventory.extract("enum {\n#if A\nREG_A=0x28\n#else\nREG_B=0x2c\n#endif\n};", reasons)
+        self.assertEqual(values, {"REG_A": None, "REG_B": None})
+        self.assertEqual(kinds, {"REG_A": "enum", "REG_B": "enum"})
+        self.assertEqual(set(reasons), set(values))
+        for directive in ("#define LOCAL 1", "#pragma example", "#define CLOSE }",
+                          "#define FAKE enum { INVENTED = 4 }"):
+            values, _ = inventory.extract(f"enum {{ FIRST = 1,\n{directive}\nLAST = 2 }};")
+            self.assertIsNone(values["FIRST"])
+            self.assertIsNone(values["LAST"])
+            self.assertNotIn("INVENTED", values)
+        values, _ = inventory.extract("enum {\n#if A\n#if B\nREG_A=1\n#else\nREG_B=2\n#endif\n"
+                                      "#elif C\nREG_C=3\n#else\nREG_D=4\n#endif\n, LAST };\n")
+        self.assertEqual(values, dict.fromkeys(("REG_A", "REG_B", "REG_C", "REG_D", "LAST")))
+
+    def test_enum_macro_collision_and_dependents_are_unknown(self):
+        reasons = {}
+        values, _ = inventory.extract("enum { BASE = 5 };\n#define BASE 2 + 3\n#define REG BASE * 8", reasons)
+        self.assertEqual(values, {"BASE": None, "REG": None})
+        self.assertTrue(all("enum member and a macro" in reason for reason in reasons.values()))
+        values, _, _ = inventory.extract_headers([
+            ("first.h", "enum { BASE = 5 };"), ("second.h", "#define BASE 2 + 3\n#define REG BASE * 8")])
+        self.assertEqual(values, {"BASE": None, "REG": None})
+
+    def test_conditional_dependencies_and_enums_are_unknown(self):
+        reasons = {}
+        values, _ = inventory.extract("#ifdef A\n#define BASE 5\nenum { ENUM_BASE=8, NEXT };\n#endif\n"
+                                      "#define REG BASE * 8\n#define INDIRECT ENUM_BASE + 4\n", reasons)
+        self.assertEqual(values, dict.fromkeys(("BASE", "ENUM_BASE", "NEXT", "REG", "INDIRECT")))
+        self.assertTrue(all("conditional" in reason for reason in reasons.values()))
+        values, _, _ = inventory.extract_headers([
+            ("one.h", "#if A\n#define BASE 1\n#endif"),
+            ("two.h", "#define REG BASE + 4")])
+        self.assertEqual(values, {"BASE": None, "REG": None})
+
+    def test_empty_builtin_guard_still_suppresses_builtin_meaning(self):
+        for name, call in (("BIT", "BIT(5)"), ("BIT_ULL", "BIT_ULL(5)"),
+                           ("GENMASK", "GENMASK(5, 2)"), ("GENMASK_ULL", "GENMASK_ULL(5, 2)")):
+            with self.subTest(name=name):
+                reasons = {}
+                values, _ = inventory.extract(f"#ifndef {name}\n#define {name}\n#define REG {call}\n#endif", reasons)
+                self.assertIsNone(values["REG"])
+                self.assertIn("unsupported", reasons["REG"])
+                values, _, _ = inventory.extract_headers([
+                    ("guard.h", f"#ifndef {name}\n#define {name}\n#endif"),
+                    ("reg.h", f"#define REG {call}")])
+                self.assertIsNone(values["REG"])
+                self.assertIsNotNone(inventory.extract(f"#define REG {call}")[0]["REG"])
+
+    def test_include_guard_must_wrap_whole_file_without_alternative(self):
+        for text in ("#ifndef HEADER\n#define HEADER\n#define REG 5\n#endif\n#define OUTSIDE 8\n",
+                     "#ifndef HEADER\n#define HEADER\n#define REG 5\n#else\n#define OTHER 6\n#endif\n",
+                     "#ifndef HEADER\n#define HEADER\n#define REG 5\n"):
+            reasons = {}
+            values, _ = inventory.extract(text, reasons)
+            self.assertIsNone(values["REG"])
+            self.assertIn("conditional", reasons["REG"])
+        values, _ = inventory.extract("#ifndef HEADER\n#define HEADER\nenum { REG=5, NEXT };\n"
+                                      "#if A\n#define COND 8\n#endif\n#define INDIRECT COND + 1\n#endif")
+        self.assertEqual(values, {"REG": 5, "NEXT": 6, "COND": None, "INDIRECT": None})
+
+    def test_directed_enum_unknowns_still_count_for_omissions(self):
+        self.commit_header("// SPDX-License-Identifier: GPL-2.0-only\nenum {\n#if A\nREG_A=0x28\n"
+                           "#else\nREG_B=0x2c\n#endif\n};\n")
+        code, result = self.inventory()
+        self.assertEqual(code, 1, result)
+        self.assertEqual(result["unknown"], ["REG_A", "REG_B"])
+        self.assertEqual({row["name"] for row in result["omissions"]}, {"REG_A", "REG_B"})
 
     def test_function_macros_and_all_enum_members_are_reported(self):
         text = ("#define CTRL(n) (0x10 + (n))\n"

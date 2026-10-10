@@ -2,8 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 """Compare typed register offsets and field masks with C constants at an immutable pin.
 
-Expressions use a bounded integer parser, never eval or a shell. Unsupported expressions
-remain unknown and are counted explicitly. Only structured payloads count as coverage.
+Evaluate only a supported subset: one definition per name across all cited headers,
+no macro/enum collision, and no conditional definition or dependency except inside a
+recognized whole-file include guard. Any directive in an enum body makes every member
+unknown; members from every branch are retained. Object macros expand textually and
+every token must pass the bounded integer parser (never eval or a shell). Built-in
+BIT/GENMASK meanings apply only when no header defines the name, including empty guard
+macros. Unsupported names carry reasons and still count for omissions. Only structured
+payloads count as coverage. Conditions and duplicate alternatives are never guessed.
 """
 
 from __future__ import annotations
@@ -27,7 +33,7 @@ OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
 
 def strip_comments(text):
     """Replace comments with whitespace, retaining tokens on either side."""
-    return COMMENTS.sub(lambda m: " "
+    return COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m[0])
                         if m[0].startswith(("/*", "//")) else m[0], text)
 
 
@@ -73,66 +79,118 @@ def integer(expression, names, disabled=()):
         return None
 
 
-def declarations(text):
-    """Collect every declaration, including unsupported forms, without overwriting names.
+def include_guard(lines):
+    """Opening/define/closing line indices only for a balanced whole-file guard."""
+    nonempty = [i for i, line in enumerate(lines) if line.strip()]
+    if len(nonempty) < 3:
+        return None
+    opening, defining, closing = nonempty[0], nonempty[1], nonempty[-1]
+    first = re.fullmatch(r"\s*#\s*ifndef\s+([A-Za-z_]\w*)\s*", lines[opening])
+    second = DEFINE.match(lines[defining])
+    if not (first and second and first[1] == second[1] and not second[2].strip()):
+        return None
+    depth = 0
+    for i in nonempty:
+        directive = re.match(r"\s*#\s*(\w+)\b", lines[i])
+        if not directive:
+            continue
+        op = directive[1]
+        if op in ("if", "ifdef", "ifndef"):
+            depth += 1
+        elif op in ("elif", "else") and depth == 1:
+            return None
+        elif op == "endif":
+            depth -= 1
+            if depth == 0:
+                if i == closing and re.fullmatch(r"\s*#\s*endif\s*", lines[i]):
+                    return opening, defining, closing
+                return None
+    return None
 
-    Conditions are not executed. Their branches must cover all possibilities before a
-    conditional name can be known. A conventional empty include-guard pair is ignored.
+
+def directed_enum_names(body):
+    """Collect member names through all branches without evaluating their expressions.
+
+    Each branch resumes the member/expression state at its conditional's opening.
+    This retains comma-free alternative members without treating an initializer's
+    branch-dependent identifiers as members. States merge at endif, never values.
     """
+    tokens = re.compile(r"^[ \t]*#\s*(\w+)\b[^\n]*|[A-Za-z_]\w*|"
+                        r"0[xX][0-9a-fA-F]+|\d+|\"(?:\\.|[^\"\\])*\"|"
+                        r"'(?:\\.|[^'\\])*'|[^\s]", re.M)
+    states, stack, names = {(True, 0)}, [], []
+    for token in tokens.finditer(body):
+        if token[1]:
+            op = token[1]
+            if op in ("if", "ifdef", "ifndef"):
+                stack.append((set(states), set(), False))
+            elif op in ("elif", "else") and stack:
+                entry, exits, exhaustive = stack.pop()
+                stack.append((entry, exits | states, exhaustive or op == "else"))
+                states = set(entry)
+            elif op == "endif" and stack:
+                entry, exits, exhaustive = stack.pop()
+                states |= exits | (set() if exhaustive else entry)
+            continue
+        value, updated = token[0], set()
+        for beginning, depth in states:
+            if beginning and re.fullmatch(r"[A-Za-z_]\w*", value):
+                names.append(value)
+                beginning = False
+            elif value == "(":
+                depth += 1
+            elif value == ")":
+                depth = max(0, depth - 1)
+            elif value == "," and depth == 0:
+                beginning = True
+            updated.add((beginning, depth))
+        states = updated
+    return list(dict.fromkeys(names))
+
+
+def declarations(text):
+    """Collect definitions and refusal reasons without executing the preprocessor."""
     text = strip_comments(re.sub(r"\\\n", "", text))
     lines = text.splitlines()
-    nonempty = [line.strip() for line in lines if line.strip()]
-    guard = None
-    if len(nonempty) >= 3:
-        first = re.fullmatch(r"#\s*ifndef\s+(\w+)", nonempty[0])
-        second = DEFINE.match(nonempty[1])
-        if first and second and first[1] == second[1] and not second[2].strip():
-            guard = first[1]
-    definitions, kinds, stack, groups, predecessors = {}, {}, [], {}, {}
-    enum_lines = []
+    guard = include_guard(lines)
+    definitions, stack, contexts, predecessors = {}, [], [], {}
 
-    def add(name, expression, kind):
-        definitions.setdefault(name, []).append((expression, tuple(stack)))
-        kinds[name] = kind
+    def add(name, expression, kind, reason=None):
+        definitions.setdefault(name, []).append((expression, reason, kind))
 
-    for line in lines:
+    for i, line in enumerate(lines):
+        contexts.append(bool(stack))
         directive = re.match(r"\s*#\s*(\w+)\b(.*)", line)
         if directive:
             op, tail = directive.groups()
+            if guard and i in (guard[0], guard[2]):
+                continue
             if op in ("if", "ifdef", "ifndef"):
-                if op == "ifndef" and tail.strip() == guard and not stack:
-                    continue
-                group = len(groups)
-                groups[group] = [1, False]
-                stack.append((group, 0))
-            elif op in ("else", "elif") and stack:
-                group, branch = stack.pop()
-                groups[group][0] += 1
-                groups[group][1] |= op == "else"
-                stack.append((group, branch + 1))
+                stack.append(i)
             elif op == "endif" and stack:
                 stack.pop()
             elif op == "define" and (match := DEFINE.match(line)):
                 name, body = match.groups()
-                if name != guard:
-                    add(name, None if body.startswith("(") else body.strip(), "define")
+                add(name, None if body.startswith("(") else body.strip(),
+                    "guard" if guard and i == guard[1] else "define",
+                    "conditional definition" if stack else None)
             elif op == "undef" and (match := re.match(r"\s*(\w+)", tail)):
-                add(match[1], None, "define")
+                add(match[1], None, "define", "unsupported undef directive")
             continue
-        enum_lines.append((line, tuple(stack)))
         if match := BITFIELD.match(line):
-            add(match[1], None, "bitfield")
+            add(match[1], None, "bitfield", "unsupported bitfield declaration")
 
-    enum_text = "\n".join(line for line, _ in enum_lines)
+    enum_text = re.sub(r"^[ \t]*#[^\n]*", lambda m: " " * len(m[0]), text, flags=re.M)
+    enum_text = COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m[0]), enum_text)
     for enum in re.finditer(r"\benum\b[^;{]*\{([^}]*)\}", enum_text, re.S):
-        previous = None
-        preceding = []
-        start = enum_text[:enum.start(1)].count("\n")
-        position = 0
-        for member in re.split(r",(?![^()]*\))", enum[1]):
-            first = position + len(member) - len(member.lstrip())
-            context = enum_lines[min(start + enum[1][:first].count("\n"), len(enum_lines) - 1)][1]
-            position += len(member) + 1
+        body = text[enum.start(1):enum.end(1)]
+        conditional = contexts[text[:enum.start()].count("\n")]
+        if re.search(r"^[ \t]*#", body, re.M):
+            for name in directed_enum_names(body):
+                add(name, None, "enum", "preprocessor directive in enum body")
+            continue
+        previous, preceding = None, []
+        for member in re.split(r",(?![^()]*\))", body):
             match = re.match(r"\s*([A-Za-z_]\w*)\b(.*)", member, re.S)
             if not match:
                 continue
@@ -144,11 +202,10 @@ def declarations(text):
                 predecessors.setdefault(name, []).extend(preceding)
             else:
                 expression = None
-            definitions.setdefault(name, []).append((expression, context))
-            kinds[name] = "enum"
+            add(name, expression, "enum", "conditional definition" if conditional else None)
             previous = name
             preceding.append(name)
-    return definitions, kinds, groups, predecessors
+    return definitions, predecessors
 
 
 def extract(text, reasons=None):
@@ -156,30 +213,28 @@ def extract(text, reasons=None):
 
 
 def extract_headers(headers, reasons=None):
-    """Expand object macros as tokens, with bounded alternatives for duplicate definitions."""
-    definitions, kinds, origins, groups, predecessors = {}, {}, {}, {}, {}
+    """Evaluate unique, unconditional definitions and supported dependencies only."""
+    definitions, kinds, origins, predecessors = {}, {}, {}, {}
     for header, text in headers:
-        found, types, conditions, dependencies = declarations(text)
-        offset = len(groups)
-        groups.update({g + offset: branches for g, branches in conditions.items()})
+        found, dependencies = declarations(text)
         for name, earlier in dependencies.items():
             predecessors.setdefault(name, []).extend(earlier)
         for name, rows in found.items():
-            definitions.setdefault(name, []).extend(
-                (expr, tuple((g + offset, b) for g, b in context)) for expr, context in rows)
-            kinds[name], origins[name] = types[name], header
+            definitions.setdefault(name, []).extend(rows)
+            kinds[name] = "define" if rows[-1][2] == "guard" else rows[-1][2]
+            origins[name] = header
 
-    def complete(contexts):
-        if any(len(context) > 32 for context in contexts):
-            return False
-        if () in contexts:
-            return True
-        if not contexts:
-            return False
-        group = contexts[0][0][0]
-        count, exhaustive = groups[group]
-        return exhaustive and all(complete([c[1:] for c in contexts if c[0] == (group, b)])
-                                  for b in range(count))
+    def supported(name):
+        rows = definitions[name]
+        types = {kind for _, _, kind in rows}
+        if "enum" in types and types & {"define", "guard"}:
+            raise ValueError("name is both an enum member and a macro")
+        if len(rows) != 1:
+            raise ValueError("ambiguous name: multiple definitions")
+        expression, reason, kind = rows[0]
+        if reason:
+            raise ValueError(reason)
+        return expression, kind
 
     budget = [0]
 
@@ -189,49 +244,40 @@ def extract_headers(headers, reasons=None):
             raise ValueError("macro expansion work bound")
         if expression is None or not expression or len(expression) > 4096 or len(seen) > 32:
             raise ValueError("unsupported declaration or expansion bound")
-        parts, end = [""], 0
+        parts, end = [], 0
         for token in TOKEN.finditer(expression):
-            name = token[0]
-            alternatives = {name}
+            name, value = token[0], token[0]
             if name in definitions:
                 if name in seen:
                     raise ValueError("recursive macro")
-                rows = definitions[name]
+                body, kind = supported(name)
                 for earlier in predecessors.get(name, []):
-                    if not complete([context for _, context in definitions[earlier]]):
-                        raise ValueError("implicit enum has a conditional preceding member")
-                    candidates = {integer(expr, {}, disabled=definitions)
-                                  for body, _ in definitions[earlier]
-                                  for expr in expand(body, seen + (name,))}
-                    if None in candidates or len(candidates) != 1:
+                    earlier_body, _ = supported(earlier)
+                    candidate = integer(expand(earlier_body, seen + (name,)), {}, disabled=definitions)
+                    if candidate is None:
                         raise ValueError("implicit enum has an unknown preceding member")
-                if not complete([context for _, context in rows]):
-                    raise ValueError("conditional definition may be absent")
-                alternatives = set()
-                for expr, _ in rows:
-                    for value in expand(expr, seen + (name,)):
-                        alternatives.add(f"({value})" if kinds[name] == "enum" else value)
-            parts = [p + expression[end:token.start()] + value for p in parts for value in alternatives]
-            if len(parts) > 64 or any(len(p) > 4096 for p in parts):
+                value = expand(body, seen + (name,))
+                if kind == "enum":
+                    value = f"({value})"
+            parts.extend((expression[end:token.start()], value))
+            if sum(map(len, parts)) > 4096:
                 raise ValueError("macro expansion bound")
             end = token.end()
-        return {p + expression[end:] for p in parts}
+        return "".join(parts) + expression[end:]
 
     values, unknown = {}, {}
     for name, rows in definitions.items():
+        if len(rows) == 1 and rows[0][2] == "guard":
+            continue
         budget[0] = 0
         try:
+            body, _ = supported(name)
             if any(values.get(earlier) is None for earlier in predecessors.get(name, [])):
                 raise ValueError("implicit enum has an unknown preceding member")
-            if not complete([context for _, context in rows]):
-                raise ValueError("conditional definition may be absent")
-            results = {integer(expr, {}, disabled=definitions)
-                       for body, _ in rows for expr in expand(body, (name,))}
-            if None in results:
+            value = integer(expand(body, (name,)), {}, disabled=definitions)
+            if value is None:
                 raise ValueError("unsupported expression or declaration")
-            if len(results) != 1:
-                raise ValueError("ambiguous definitions disagree")
-            values[name] = results.pop()
+            values[name] = value
         except ValueError as exc:
             values[name], unknown[name] = None, str(exc)
     if reasons is not None:

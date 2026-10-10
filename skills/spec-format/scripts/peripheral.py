@@ -30,9 +30,11 @@ def subrecords(data, base=()):
 
 
 def basis_data(rec):
-    """D16 projection: independent children and only the parent's identifying data."""
+    """D16 projection: independent children, effective requirement and parent identity."""
     data = copy.deepcopy(rec.data)
     if getattr(rec, "parent", None) is not None:
+        if "requirement" not in data and "requirement" in rec.parent.data:
+            data["requirement"] = rec.parent.data["requirement"]
         payload = rec.parent.data["data"]
         if "register" in payload:
             data["parent_identity"] = {k: payload["register"][k] for k in ("name", "offset")}

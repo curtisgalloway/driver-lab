@@ -150,7 +150,7 @@ def schema_mutations():
 def execute(case, store):
     label = case[0]
     dest = store / label
-    for relative in ("skills/spec-format", "skills/board-expert/scripts", "skills/peripheral-spec/scripts", "skills/hardware-investigator/examples"):
+    for relative in ("skills/spec-format", "skills/board-expert/scripts", "skills/hardware-investigator/examples"):
         shutil.copytree(REPO / relative, dest / relative, ignore=shutil.ignore_patterns("__pycache__"))
     if isinstance(case[1], str):
         _, module, before, after = case

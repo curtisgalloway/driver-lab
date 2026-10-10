@@ -52,5 +52,4 @@ citation_precision and all five summary counts. A PASS verdict can validate a su
 it means the reported uncertainty and evidence are accurate, not that hardware behavior passed.
 Retain GAP/UNVERIFIABLE/ADJUDICATE as needed. The orchestrator coordinates a second independent
 reader for critical facts, installs the record and runs the verification gate. List blockers by
-fact id, path/lines and reason, with FAIL corrections. Do not edit the review. Existing format 1
-work uses the unchanged verifier prompt in [FORMAT-1.md](../FORMAT-1.md).
+fact id, path/lines and reason, with FAIL corrections. Do not edit the review.

@@ -4,7 +4,7 @@ description: >-
   Verify hardware specs against their cited evidence in fresh reader contexts and write
   separate verification records. Use to verify, re-verify or audit a spec, after a spec or
   source changes, or when its checker reports stale or missing verdicts. Format 2 uses
-  fact-keyed YAML records and delta verification; format 1 remains supported until SF2-12.
+  fact-keyed YAML records and delta verification.
   Orchestrator only: readers compare evidence; the orchestrator coordinates and checks.
 ---
 
@@ -32,18 +32,15 @@ SPDX-License-Identifier: Apache-2.0
 See the [glossary](../../GLOSSARY.md), sibling [format contract](../spec-format/SKILL.md)
 and [record schema](../spec-format/schema/verify.schema.json).
 
-## Choose the format first
+## Require format 2
 
-Read the root's `board-specs.yaml`: `format: 2` selects this procedure and `*.spec.yaml`.
-A root without that field and the remaining Markdown peripheral specs and reviews use
-[FORMAT-1.md](FORMAT-1.md), retained until SF2-12. Never compose mixed formats. An invalid
-marker is a finding, not permission to guess a format.
+The root marker must declare `format: 2`; specs and records are YAML. A missing, invalid or
+unsupported format marker is a finding. Convert the root before verifying its specs.
 
 ### Board specs
 
 Board, SoC, chip, IP and overlay files use the same format 2 procedure. Each file gets its
 own record, overlays included. The record's `spec` is the file's `id`, or its `overlays` id.
-For format 1, follow [Board specs](FORMAT-1.md#board-specs).
 
 ### Peripheral specs and reviews
 
@@ -53,8 +50,7 @@ not individual anchors. Register fields and sequence steps with their own suppor
 the effective requirement and parent identifying data. Finding assessments are separate from
 verifier verdicts. Correspondence pair anchors count as support. Read the authoring procedures
 in [peripheral-spec](../peripheral-spec/SKILL.md) and
-[reference-driver-review](../reference-driver-review/SKILL.md). Existing format 1 work alone
-uses [Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews).
+[reference-driver-review](../reference-driver-review/SKILL.md).
 
 ## Coordinate a format 2 reading
 
@@ -69,7 +65,7 @@ Commands use repository-relative paths; when installed, locate the sibling
 `spec-format/scripts/spec.py`. Use Python with spec-format's hash-pinned requirements
 installed. Run `spec.py --skill` to confirm availability. `check` and `status` exist from
 SF2-3; `resolve` and `show` require SF2-6. Report a missing prerequisite rather than
-substituting format 1 tools.
+guessing at an unchecked result.
 
 1. **Check structure and licenses.** Supply the selected root and every dependency root
    needed by composition or fact references as context:
@@ -185,7 +181,7 @@ substituting format 1 tools.
   Check premises, derivation and degree of certainty. If a verdict needs an undeclared fact
   or assumption, request a declared dependency (`relates`, a premise reference or `assumes`)
   before accepting it. A record note cannot make the basis track an undeclared dependency.
-- **Source code about hardware needs documentation.** A `src` fact (format 1's `[src]`) can
+- **Source code about hardware needs documentation.** A `src` fact can
   state what code defines or does. A claim about where hardware is or what it requires needs
   document-class support too; its absence is FAIL on class. A claim that a product runs a
   particular build cannot be proved by code alone: propose a separate inference with explicit

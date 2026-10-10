@@ -5,8 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # License-gate fixtures, format 2
 
-The format 1 matrix (`peripheral-spec/tests/fixtures/license-gate/`, kept until SF2-12) rewritten
-for `spec.py check`. Everything is synthetic and self-contained: the gate reads only the repos
+The license-gate matrix for `spec.py check`, converted from the retired format 1 fixtures. Everything is synthetic and self-contained: the gate reads only the repos
 entries' licenses and the root marker, so no repository is fetched.
 
 - `roots/gpl`, `roots/docs`, `roots/permissive`: format 2 markers shaped like the three spec

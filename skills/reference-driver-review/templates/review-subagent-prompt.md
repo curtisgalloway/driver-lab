@@ -100,4 +100,4 @@ register/field payloads (the test uses SF2-7's peripheral fixture). Use each sid
 pin and header for real comparisons. Resolve or record limitations for omissions, mismatches
 and unknown expressions, never claim they passed. Return file, summary, resource entries,
 check results, coverage exclusions and unresolved questions; verification is independent via
-`templates/verifier-prompt.md`. Existing format 1 reviews use [FORMAT-1.md](../FORMAT-1.md).
+`templates/verifier-prompt.md`.

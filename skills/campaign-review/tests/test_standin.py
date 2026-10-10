@@ -296,7 +296,8 @@ finally:
         proc = subprocess.run(
             [
                 sys.executable,
-                str(ROOT / "skills/board-expert/scripts/spec_check.py"),
+                str(ROOT / "skills/spec-format/scripts/spec.py"),
+                "check",
                 str(dep.spec.parent),
             ],
             text=True,
@@ -319,7 +320,7 @@ finally:
             self.assertEqual(digest(dep.workspace / relative), checksum)
         self.assertFalse(list(dep.workspace.rglob("status.yaml")))
         self.assertFalse(list(dep.workspace.rglob("evidence.md")))
-        self.assertFalse(list(dep.workspace.rglob("*.verify.md")))
+        self.assertFalse(list(dep.workspace.rglob("*.verify.yaml")))
 
 
 if __name__ == "__main__":

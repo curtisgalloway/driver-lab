@@ -24,7 +24,7 @@ SPDX-License-Identifier: Apache-2.0
 
 See the [glossary](../../GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) before writing;
 its schemas define shapes and its text is the shared contract. QUESTIONS in board-expert is
-the interview checklist. New authoring is format 2; format 1 remains a reader-only transition.
+the interview checklist. Authoring and reading use format 2 only.
 
 ## Outputs and templates
 

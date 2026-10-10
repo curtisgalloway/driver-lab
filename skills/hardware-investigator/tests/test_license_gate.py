@@ -6,7 +6,7 @@
 Run:  python3 -m unittest discover -s skills/hardware-investigator/tests -v
 
 Exit-code contract (as the other scripts): 0 every license accepted, 1 a license refused
-(or the root cannot accept anything), 2 usage error.
+(or the marker is invalid), 2 usage error, 3 missing pinned dependency.
 """
 
 import pathlib
@@ -76,14 +76,14 @@ class LicenseGate(unittest.TestCase):
             pathlib.Path(tmp, "board-specs.yaml").write_text("layer: public\nname: bare\n")
             rc, out, _ = run("--root", tmp, "MIT")
             self.assertEqual(rc, 1)
-            self.assertIn("declares no accepts:", out)
+            self.assertIn("invalid format 2 root marker", out)
             rc, out, _ = run("--root", tmp)
             self.assertEqual(rc, 1)
 
     def test_empty_accepts_refuses_everything(self):
         with tempfile.TemporaryDirectory() as tmp:
             pathlib.Path(tmp, "board-specs.yaml").write_text(
-                "layer: public\nname: docs\nlicense: CC-BY-4.0\naccepts: []\n")
+                "format: 2\nlayer: public\nname: docs\nlicense: CC-BY-4.0\naccepts: []\n")
             rc, out, _ = run("--root", tmp, "MIT")
             self.assertEqual(rc, 1)
             self.assertIn("accepts: none", out)
@@ -91,10 +91,41 @@ class LicenseGate(unittest.TestCase):
     def test_invalid_accepts_entry_exits_one(self):
         with tempfile.TemporaryDirectory() as tmp:
             pathlib.Path(tmp, "board-specs.yaml").write_text(
-                "layer: public\nname: bad\nlicense: MIT\naccepts: [Foo Bar, MIT]\n")
+                "format: 2\nlayer: public\nname: bad\nlicense: MIT\naccepts: [Foo Bar, MIT]\n")
             rc, out, _ = run("--root", tmp, "MIT")
             self.assertEqual(rc, 1, out)
             self.assertIn("error:", out)
+
+    def test_invalid_markers_never_accept_a_license(self):
+        valid = "format: 2\nlayer: public\nname: test\nlicense: MIT\naccepts: [MIT]\n"
+        cases = {
+            "format missing": valid.replace("format: 2\n", ""),
+            "format one": valid.replace("format: 2", "format: 1"),
+            "duplicate key": valid + "accepts: []\n",
+            "noncanonical identifier": valid.replace("[MIT]", "[GPL-2.0]"),
+            "duplicate identifier": valid.replace("[MIT]", "[MIT, MIT]"),
+            "bad license": valid.replace("license: MIT", "license: Foo"),
+            "accepts expression": valid.replace("[MIT]", "[MIT OR BSD-3-Clause]"),
+            "not a mapping": "[]\n",
+            "malformed YAML": "format: [\n",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = pathlib.Path(tmp, "board-specs.yaml")
+            for label, text in cases.items():
+                with self.subTest(label=label):
+                    marker.write_text(text)
+                    rc, out, _ = run("--root", tmp, "MIT")
+                    self.assertEqual(rc, 1, out)
+                    self.assertIn("invalid format 2 root marker", out)
+                    self.assertNotIn("accepted: MIT", out)
+
+    def test_missing_pinned_dependencies_is_precondition_error(self):
+        proc = subprocess.run([sys.executable, "-S", str(SCRIPT), "--root",
+                               str(ROOTS / "permissive"), "MIT"],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 3, proc.stdout + proc.stderr)
+        self.assertIn("missing precondition", proc.stderr)
+        self.assertNotIn("accepted: MIT", proc.stdout)
 
     def test_not_a_root_is_a_usage_error(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -128,7 +128,7 @@ One loader reads every file (the [YAML loader](#the-yaml-loader)); the validator
 against the schema; a small checker does what a schema cannot
 ([Validation](#validation-schema-and-checker)). One command-line tool, `spec.py`, has the
 subcommands `check`, `resolve`, `render` (Markdown and the HTML viewer), `show`, `status`,
-`drift`, `inventory` and `migrate`,
+`drift` and `inventory`,
 following the house exit-code contract (0 passed, 1 a check failed, 2 usage, 3 missing
 precondition) and `--json`.
 
@@ -793,7 +793,7 @@ named, hashed, and cited by name and page) is the only shape.
 - Register `width` and `access` are optional when the source does not state them; absence
   means unknown. `reset` is absent or a canonical hexadecimal value, never null. A field's
   `requirement` overrides the inherited register requirement.
-- `inventory` (today's `inventory_check.py`) compares `data.register.name` and `offset`, and each
+- `inventory` compares `data.register.name` and `offset`, and each
   field's `name` and `bits`, with the header at the pin. It no longer guesses names and hex values
   out of prose, so its value-mismatch report becomes exact.
 
@@ -1072,8 +1072,8 @@ names the file line, which keeps the format writable by agents and people alike.
   is stated plainly: **the checker imports a pinned CommonMark library**, used only to detect raw
   HTML, disallowed link schemes, headings and unclosed fences in claim and prose fields, never to
   derive meaning; provenance still comes only from structured fields.
-- **Retired from the checking path**: `mdtokens.py` and its profile rules, and every Markdown
-  parse of a spec body in `spec_check.py` and `anchor_check.py`, once v1 is gone (D11). The
+- **Retired from the checking path (SF2-12)**: `mdtokens.py` and its profile rules, and every
+  Markdown parse of a spec body in `spec_check.py` and `anchor_check.py` (D11). The
   format 2 checker needs PyYAML, the validator and the CommonMark library, pinned in CI with
   hashes; without them it exits 3, never falling back to a second parser (the RG-T1 lesson: count
   the parsers). There is one Markdown parse, in one module, shared by the checker and the publish
@@ -1212,6 +1212,11 @@ specs build on the same data later; this design covers the first static version 
 
 ## Migration
 
+This section records the completed format 1 conversion. The migration command was a
+one-time tool, retired in SF2-12; current commands are listed in the
+[contract](../skills/spec-format/SKILL.md#command-line). Historical records
+and format 2 `carried_from` provenance remain.
+
 ### What converts
 
 | Item | Count | How |
@@ -1279,7 +1284,11 @@ conversion error, and is recorded as one.
 
 ### Transition (D11)
 
-driver-lab ships format 2 alongside a read-only v1 checker; each spec repository migrates in one
+The following transition is the historical migration sequence, completed in SF2-10 and
+SF2-11; SF2-12 retires its format 1 tools and migration command. It is not a current CLI
+procedure. The carried-verdict metadata and frozen archive remain.
+
+During that transition, driver-lab shipped format 2 alongside a read-only v1 checker; each spec repository migrated in one
 pull request that bumps its driver-lab pin, converts the spec and the record, switches
 `scripts/checks.sh` and adds the publish workflow; the three migrate in sequence docs,
 permissive, gpl within one unit, so no mixed v1 and v2 composition has to be supported. When all
@@ -1289,7 +1298,10 @@ checker and the publish step share (D20, D22), subject to its `dep-quality` scor
 
 ## Effects on the skills and the spec repositories
 
-| Component | Today | Format 2 |
+This table records the historical before/after design, not the current tool inventory.
+Format 2 is now the only supported reading and authoring path.
+
+| Component | Before format 2 (historical) | Format 2 |
 | --- | --- | --- |
 | `SPEC-FORMAT.md` | the contract, 780 lines, much of it the Markdown profile and tag-clause parsing rules | a shorter contract in the new `skills/spec-format/` reference skill (D7), pointing at the schema for shapes; classes, references, roots, records, rendering. The profile and tag-clause sections are deleted; `board-expert/SPEC-FORMAT.md` becomes a pointer |
 | `board-expert` (reader) | reads `*.spec.md` and record front matter | reads `spec.py render --merged --with-status` output for the composition (smaller than raw YAML, and verdicts included), and the YAML when it needs a citation's exact fields; reports full fact references (`bcm2711@hardware-specs-docs#addressing-model`) in answers; "Suggested spec change" names the fact id or proposes a new record |
@@ -1303,7 +1315,7 @@ checker and the publish step share (D20, D22), subject to its `dep-quality` scor
 | Spec repository publish workflow | none | builds both views on merges to `main` and weekly, deploys them to GitHub Pages (D5) |
 | Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | PyYAML, the chosen validator and the CommonMark library (markdown-it-py, subject to `dep-quality`), pinned, for checks, render and publish alike |
 | Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's page on the published site |
-| driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | `uv run --with pyyaml --with <validator> --with markdown-it-py==<pin> ...` |
+| driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | hash-pinned spec-format requirements in a virtual environment; `spec.py check` on the shipped root and format 2 suites; the shared SPDX suite and frozen archive checks remain |
 | Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as v1 until it migrates |
 
 ## Worked example
@@ -2037,7 +2049,9 @@ left open, also decided by the user on 2026-10-08.
 
 ## Implementation outline
 
-Session-sized units; the plan with acceptance criteria comes after this design is approved. Each
+Historical outline from the approved design; milestone numbering was refined in the
+[implementation plan](SPEC-FORMAT-V2-PLAN.md). Retired commands below describe the migration,
+not current tooling. Each
 tooling unit is reviewed by an executing reviewer (break cases including degenerate inputs,
 mutation checks) and a diff reader, the pairing RG-T1 showed finds different holes.
 

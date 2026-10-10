@@ -79,8 +79,7 @@ the options come from → default, if any.
      which.
    - No immutable pin is available → "Resolve the named branch to its current commit
      (recommended), or use a specific release commit?" Record the full commit actually read.
-     Format 2 citations use `commit`; branch `ref` entries are maps only. Format 1 roots keep
-     their existing `ref` reading until SF2-12.
+     Citations use `commit`; branch `ref` entries are maps only.
 4. **Which root, layer, and names.** For the scaffold and for overlays.
    - "Write the spec under: this repository's public root, the tree root next to the driver, a
      vendor root, or a new root?" Options from the roots collected. Default: the tree root if the
@@ -107,7 +106,7 @@ the options come from → default, if any.
    their own specs when the board facts differ materially; left out when nothing public is known.
 
 Anything not in the catalog is a gap: default it, mark it with a structured `todo` or "not
-established", and move on. Format 1 reports keep their legacy TODO wording until SF2-12.
+established", and move on.
 
 ## The `Needs decision` block
 

@@ -183,13 +183,6 @@ class LicenseGateMatrix(TempRoots):
         self.assertEqual(rows, {p.name for p in (GATE / "specs").glob("*.spec.yaml")})
         self.assertTrue(set(expected["without_require_license"]) <= rows)
 
-    def test_codes_match_format_1(self):
-        v1 = json.loads((HERE.parents[1] / "peripheral-spec" / "tests" / "fixtures"
-                         / "license-gate" / "expected.json").read_text(encoding="utf-8"))
-        v2 = json.loads((GATE / "expected.json").read_text(encoding="utf-8"))
-        for name, codes in v1.items():
-            if name.endswith("-spec.md"):
-                self.assertEqual(v2[name.replace("-spec.md", ".spec.yaml")], codes, name)
 
 
 class BoardOverlays(TempRoots):

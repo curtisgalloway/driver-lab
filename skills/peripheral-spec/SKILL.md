@@ -215,10 +215,3 @@ line ranges; changed anchors get `stale: {was: <old commit>}`. Changed search sc
 failures refuse rewriting. Re-read affected evidence before clearing stale fields, update
 verdict bases and run the gate again. Semantic edits stale per-fact verification bases;
 `spec_sha256` is informational. Never clear a stale field just to make a check green.
-
-## Format 1 (retained until SF2-12)
-
-Existing Markdown peripheral specs use [FORMAT-1.md](FORMAT-1.md), including its unchanged
-spec and verifier templates. A marker without `format`, or with `format: 1`, selects that
-legacy procedure; invalid markers are findings. Do not feed those files to format 2 commands,
-compose formats together or author new format 1 specs. Legacy scripts remain unchanged.

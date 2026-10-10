@@ -142,44 +142,33 @@ class Standin:
             "# Invented storage note\n\n## 1\n"
             "Power removal erases the event count. It is not retained.\n"
         )
-        self.spec = self.workspace / "specs" / (self.ids["spec"] + ".spec.md")
+        self.spec = self.workspace / "specs" / (self.ids["spec"] + ".spec.yaml")
+        docs = [
+            dict(name=self.ids[key], **{"class": "databook"}, title=self.ids[key],
+                 url="https://example.invalid/" + path.name, sha256=digest(path),
+                 access="internal", note="Local fixture: ../sources/" + path.name)
+            for key, path in zip(("document", "other-document"), self.documents)
+        ]
+        claims = [
+            ("width", "quick-facts", "Width", "The count occupies 12 bits.", "document", "1"),
+            ("read-effect", "quick-facts", "Read effect", "A read does not clear the count.",
+             "document", "1"),
+            ("saturation", "quick-facts", "Saturation", "Counting saturates at 4095 until reset.",
+             "document", "2"),
+            ("retention", "gotchas", "Retention", "Loss of power discards the count.",
+             "other-document", "1"),
+        ]
         meta = dict(
-            kind="chip",
-            id=self.ids["spec"],
-            name="Invented event counter",
-            triggers=[self.ids["spec"]],
-            instances=[],
-            resources={
-                "docs": [
-                    dict(
-                        title=self.ids[key],
-                        path="../sources/" + path.name,
-                        access="internal",
-                        cite=True,
-                    )
-                    for key, path in zip(("document", "other-document"), self.documents)
-                ]
-            },
+            format=2, kind="chip", id=self.ids["spec"], name="Invented event counter",
+            triggers=[self.ids["spec"]], resources={"documents": docs},
+            facts=[dict(id=key, section=section, title=title, claim=claim,
+                        support=[{"class": "databook", "doc": self.ids[doc],
+                                  "at": [{"section": locator}]}])
+                   for key, section, title, claim, doc, locator in claims],
         )
-        self.spec.write_text(
-            "---\n"
-            + HEADER  # a spec's SPDX header: YAML comments in its frontmatter (SPEC-FORMAT)
-            + yaml.safe_dump(meta, sort_keys=False)
-            + "---\n"
-            + "\n# Invented event counter\n\n## Orientation\n"
-            "A fictional component for testing the review method only.\n"
-            "\n## Quick-facts\n"
-            "- **Width** — The count occupies 12 bits. "
-            f"[databook] ({self.ids['document']} §1)\n"
-            "- **Read effect** — A read does not clear the count. "
-            f"[databook] ({self.ids['document']} §1)\n"
-            "- **Saturation** — Counting saturates at 4095 until reset. "
-            f"[databook] ({self.ids['document']} §2)\n"
-            "\n## Gotchas\n"
-            "- **Retention** — Loss of power discards the count. "
-            f"[databook] ({self.ids['other-document']} §1)\n"
-        )
-        save_yaml(self.spec.parent / "board-specs.yaml", dict(layer="local"))
+        save_yaml(self.spec, meta)
+        save_yaml(self.spec.parent / "board-specs.yaml",
+                  dict(format=2, layer="local", name="standin", license="Apache-2.0", accepts=[]))
         self._plugins()
         self._metadata()
         self.save()
@@ -459,7 +448,7 @@ class Standin:
         instructions.mkdir()
         for name, source in (
             ("spec-verifier.md", "skills/spec-verifier/SKILL.md"),
-            ("SPEC-FORMAT.md", "skills/board-expert/SPEC-FORMAT.md"),
+            ("SPEC-FORMAT.md", "skills/spec-format/SKILL.md"),
         ):
             shutil.copyfile(ROOT / source, instructions / name)
         inputs = {
@@ -476,7 +465,8 @@ class Standin:
             MARKDOWN_HEADER + "\n# CR7 live tier-1 re-verification\n\n"
             f"Model: {unit['model']['name']}; version: {unit['model']['version']}.\n"
             f"Workspace: {self.workspace}\n"
-            f"Spec: specs/{self.spec.name}\n\n"
+            f"Spec: specs/{self.spec.name}\n"
+            f"Tool: {ROOT / 'skills/spec-format/scripts/spec.py'}.\n\n"
             "You are a fresh spec-verifier reader. Read\n"
             "instructions/spec-verifier.md and instructions/SPEC-FORMAT.md.\n"
             "The input is a local-layer chip spec using the board-spec format.\n"
@@ -485,26 +475,29 @@ class Standin:
             "or network.\n\n"
             "Read only this workspace and this brief. Do not read the public\n"
             "repository, campaign index, test generator, earlier records, sibling\n"
-            "run artifacts or conversation. Do not run a sweep or edit any input.\n"
+            "run artifacts or conversation. Use the declared tool for check/status only;\n"
+            "do not read its source. Do not run a sweep or edit any input.\n"
             "The orchestrator has mechanically checked the spec and hashes.\n\n"
-            "Scope: every fact, keyed Quick-facts/1, Quick-facts/2, Quick-facts/3,\n"
-            "Gotchas/1. The first three are the re-verification scope; include the\n"
+            "Scope: every fact, keyed width, read-effect, saturation, retention.\n"
+            "The first three are the re-verification scope; include the\n"
             "last as the full small spec's dependency check. Numeric campaign\n"
             "sections 1 and 2 mean Quick-facts and Gotchas. There are no other\n"
             "dependencies, register maps, init sequences or bring-up-critical facts\n"
             "requiring a second reader under the chip-spec procedure.\n\n"
-            "Open both sources named by resources.docs.path, relative to the spec\n"
-            "directory, and verify each claim against its cited section. Report a\n"
+            "Open both local sources identified in resources.documents notes, relative\n"
+            "to the spec directory, and verify each claim against its cited section. Report a\n"
             "verdict per fact, including discrepancies and proposed corrections.\n"
             "Do not edit the spec. Return only the complete verification record as\n"
-            "your final answer, with YAML frontmatter and per-claim verdict lines.\n"
+            "your final answer, as format 2 YAML with fact-keyed verdicts and basis hashes.\n"
             f"Set spec to {self.ids['spec']}, spec_file to {self.spec.name},\n"
             f"and spec_sha256 to {digest(self.spec)}. Record your actual model,\n"
             "harness and date; list both source IDs, local relative paths, edition\n"
             "and SHA-256, fetch status and summary counts. Compute hashes yourself.\n"
+            "Use spec.py status for basis/upstream hashes; include contrary_evidence\n"
+            "and citation_precision. Do not infer verdict freshness from spec_sha256.\n"
             "No source code or long source quotations in the record.\n\n"
             "The orchestrator saves your final answer under specs/resources/ as\n"
-            f"{self.ids['spec']}.verify.md, checks it and records session provenance.\n"
+            f"{self.ids['spec']}.verify.yaml, checks it and records session provenance.\n"
         )
         handoff = dict(
             state="awaiting orchestrator reader; no reading performed",
@@ -514,7 +507,7 @@ class Standin:
             input_hashes=str(self.directory / "input-hashes.json"),
             brief_sha256=digest(brief),
             record=str(
-                self.spec.parent / "resources" / (self.ids["spec"] + ".verify.md")
+                self.spec.parent / "resources" / (self.ids["spec"] + ".verify.yaml")
             ),
             scope={"1": "Quick-facts", "2": "Gotchas"},
             limitations=[

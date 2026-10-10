@@ -81,7 +81,8 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
    <python> <gate.py> --root <root> GPL-2.0-only
    ```
 
-   Exit 0 accepts; 1 refuses (`A OR B` needs either, `A AND B` both). A missing/invalid marker
+   Exit 0 accepts; 1 refuses (`A OR B` needs either, `A AND B` both); 2 is a usage error (not a
+   spec root); 3 means the pinned format 2 dependencies or schema are missing. A missing/invalid marker
    is an error; absence of a usable policy is no permission to cite. Stop when the only usable
    source is refused, or continue with an independently accepted source and list the refusal.
 5. Read accepted bytes at the immutable commit. Obtain its full hash from the source checkout;
@@ -148,11 +149,8 @@ facts path, check/resolve results and counts, and remaining gaps with what would
 No home paths or private machine identities go into public records. An acceptance or a resolved
 anchor is not a verifier PASS.
 
-## Worked example and format 1
+## Worked example
 
 [WORKED-EXAMPLE.md](WORKED-EXAMPLE.md) runs accepting, refusing and alternate-source cases
 against the synthetic widget sources. Its facts fixtures were converted in SF2-7; the example
 now explicitly uses records and checks every command.
-Existing format 1 facts/procedures select [FORMAT-1.md](FORMAT-1.md) until SF2-12, with
-peripheral-spec's format 1 grammar there. A root without `format`, or with `format: 1`, is
-legacy; invalid markers are findings. Never compose mixed formats or author new format 1 files.

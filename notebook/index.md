@@ -55,6 +55,12 @@ Outcome: complete ([evidence](../evidence/SF2-11.md)); docs, permissive and gpl 
 publish three Pages sites. Downstream CI reads the upstream `main`, so it is red until the upstream
 merges, and with no branch protection the re-run after each merge is the only gate.
 
+### [SF2-12 — Format 1 retired](SF2-12.md)
+Entries: 2026-10-10
+Outcome: complete ([evidence](../evidence/SF2-12.md)); the format 1 checkers, migration tool and
+fixtures are gone and the full checks list passes. Passing consumer tests prove little when they
+still build the old format: `bringup-kit`'s replay tests never touch the format 2 reader.
+
 ### [SF2-5 — The viewer and publishing](SF2-5.md)
 Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
 Outcome: complete ([evidence](../evidence/SF2-5.md)); one review round and a clean confirmation

@@ -189,10 +189,3 @@ Drift marks changed anchors stale and moves unique relocated ranges. Re-read bef
 `stale`; changed search scopes or operational errors refuse rewriting. Update per-fact verdicts
 through spec-verifier; whole-file hashes do not establish freshness. A reference revision
 change merits a new applicability and comparison pass, not automatic renewal of old findings.
-
-## Format 1 (retained until SF2-12)
-
-Existing Markdown reviews use [FORMAT-1.md](FORMAT-1.md) and its unchanged appended review and
-verifier prompts. It also points to peripheral-spec's format 1 grammar. Roots without `format`,
-or with `format: 1`, select that procedure; invalid markers are findings. Never mix formats or
-write new format 1 reviews. The legacy checkers stay unchanged until SF2-12.

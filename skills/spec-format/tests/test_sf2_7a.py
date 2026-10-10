@@ -953,5 +953,82 @@ class Inventory(Fixture):
         self.assertEqual(inventory.integer("GENMASK(3, 2)", {}), 12)
 
 
+class InventoryRound3Tests(unittest.TestCase):
+    def test_multiline_comments_and_splices_do_not_shorten_definitions(self):
+        text = ("#define REG 1 /* a\nb */ + 2\n"
+                "#define JOIN 1 + \\\n2\n"
+                "#define LINE 4 // continued \\\n+ 8\n"
+                "#define SPLIT 1 /* gap\n gap */ 2\n")
+        values, _ = inventory.extract(text)
+        self.assertEqual(values, {"REG": 3, "JOIN": 3, "LINE": 4, "SPLIT": None})
+        self.assertEqual(inventory.strip_comments("1/* a\nb */+2"), "1 +2")
+
+    def test_token_whitelist_refuses_every_unsupported_form(self):
+        cases = ("1 ## 2", "1 # ignored", "sizeof(int)", "(unsigned) 1", '"text"',
+                 "1 ? 2 : 3", "OTHER(1)", "1 && 2", "1 || 2", "1 == 1",
+                 "1 < 2", "1 ** 2", "1 // 2", "1.0", "1e2", "0b10", "08",
+                 "1UU", "1lL", "++1", "1--1", "(1, 2)", "1[0]")
+        for expression in cases:
+            with self.subTest(expression=expression):
+                reasons = {}
+                values, _ = inventory.extract("#define REG " + expression, reasons)
+                if expression == "1 // 2":
+                    self.assertEqual(values["REG"], 1)
+                else:
+                    self.assertIsNone(values["REG"])
+                    self.assertTrue(reasons.get("REG"))
+
+    def test_supported_literals_operators_names_and_builtins(self):
+        cases = {"017UL + 0x10u + 2LL": 33, "7 / 2": 3, "7 % 2": 1,
+                 "+4": 4, "-0": 0, "0xffffffffU": 0xffffffff,
+                 "0xffffffffU >> 1": 0x7fffffff, "BIT(31)": 0x80000000,
+                 "GENMASK(31, 0)": 0xffffffff, "(3 | 8) ^ (6 & 3)": 9}
+        for expression, expected in cases.items():
+            with self.subTest(expression=expression):
+                self.assertEqual(inventory.integer(expression, {}), expected)
+        values, _ = inventory.extract("#define BASE 017U\nenum { FIRST = BASE + 1, LAST };\n"
+                                      "#define REG LAST * 2\n")
+        self.assertEqual(values, {"BASE": 15, "FIRST": 16, "LAST": 17, "REG": 34})
+
+    def test_intermediate_bounds_division_and_shifts_refuse(self):
+        cases = ("((0xffffffffU + 2U) >> 1)", "(0x100000000ULL - 1)",
+                 "(0U - 1U) + 2U", "(65536U * 65536U) >> 1", "~0U",
+                 "-1", "1 / 0", "1 % 0", "0 >> 32", "1U << 32",
+                 "BIT(32)", "GENMASK(32, 0)", "1 << -1",
+                 "((2147483647 + 1) >> 1)")
+        for expression in cases:
+            with self.subTest(expression=expression):
+                reasons = {}
+                values, _ = inventory.extract("#define REG " + expression, reasons)
+                self.assertIsNone(values["REG"])
+                self.assertTrue(reasons.get("REG"))
+
+    def test_nested_enum_body_keeps_all_members_as_unknown_and_omitted(self):
+        bodies = ("FIRST = sizeof(struct { int x; }), LAST = 7",
+                  "FIRST = sizeof(int), LAST = 7",
+                  "FIRST = sizeof(struct { struct { int x; } y; int z; }), LAST = 7",
+                  "FIRST = CALL((struct X){1, 2}), LAST = 7")
+        for body in bodies:
+            with self.subTest(body=body):
+                reasons = {}
+                values, kinds, origins = inventory.extract_headers([
+                    ("fixture.h", "enum { " + body + " };\nenum { OUTSIDE = 9 };" )], reasons)
+                self.assertEqual(values, {"FIRST": None, "LAST": None, "OUTSIDE": 9})
+                self.assertEqual(set(reasons), {"FIRST", "LAST"})
+                self.assertTrue(all("enum body" in reason for reason in reasons.values()))
+                result = inventory.compare({"facts": []}, values, origins, kinds)
+                self.assertEqual({row["name"] for row in result["omissions"]}, set(values))
+
+    def test_macro_tokens_cannot_merge_and_enum_names_have_integer_type(self):
+        values, _ = inventory.extract("#define LT <\n#define BAD 1 LT< 2\n"
+                                      "#define PLUS +\n#define GOOD 1 PLUS+2\n"
+                                      "enum { TOP = 2147483647U };\n"
+                                      "#define OVER ((TOP + 1) >> 1)\n")
+        self.assertEqual(values, {"LT": None, "BAD": None, "PLUS": None, "GOOD": 3,
+                                  "TOP": 2147483647, "OVER": None})
+        values, _ = inventory.extract("enum { BIG = 0xffffffffU };\n#define ALIAS BIG\n")
+        self.assertEqual(values, {"BIG": None, "ALIAS": None})
+
+
 if __name__ == "__main__":
     unittest.main()

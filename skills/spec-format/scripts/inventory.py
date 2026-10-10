@@ -5,10 +5,18 @@
 Evaluate only a supported subset: one definition per name across all cited headers,
 no macro/enum collision, and no conditional definition or dependency except inside a
 recognized whole-file include guard. Any directive in an enum body makes every member
-unknown; members from every branch are retained. Object macros expand textually and
-every token must pass the bounded integer parser (never eval or a shell). Built-in
+unknown; nested braces or sizeof also refuse the whole body, retaining every member.
+Line splices precede comment removal; a block comment becomes one space before any
+directive splitting. Object macros expand textually. Every token must pass an explicit
+C whitelist before the bounded integer parser (never eval or a shell): decimal, hex
+or octal integers with C suffixes, known names, supported calls and integer operators.
+Arithmetic uses exact Python integers, refusing any intermediate outside the unsigned
+32-bit range, signed overflow, invalid division or shifts. Wraparound is never modeled;
+unary complement's negative exact result is unknown. Built-in
 BIT/GENMASK meanings apply only when no header defines the name, including empty guard
-macros. Unsupported names carry reasons and still count for omissions. Only structured
+macros. Enum names use their integer value, not their initializer's suffix; enum values
+outside the signed 32-bit range are conservatively unknown. Expansion preserves token
+boundaries. Unsupported names carry reasons and still count for omissions. Only structured
 payloads count as coverage. Conditions and duplicate alternatives are never guessed.
 """
 
@@ -27,55 +35,92 @@ TOKEN = re.compile(r"\b[A-Za-z_]\w*\b")
 COMMENTS = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|/\*.*?\*/|//[^\n]*', re.S)
 BITFIELD = re.compile(r"^\s*(?:unsigned\s+)?(?:int|long|char|short|u(?:int)?\d+(?:_t)?)\s+(\w+)\s*:\s*\d+\s*;")
 OPS = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
+       ast.Div: operator.floordiv, ast.Mod: operator.mod,
        ast.BitOr: operator.or_, ast.BitAnd: operator.and_, ast.BitXor: operator.xor,
        ast.LShift: operator.lshift, ast.RShift: operator.rshift}
+LEXEMES = re.compile(r"[0-9][A-Za-z_0-9.]*|[A-Za-z_]\w*|<<|>>|\+\+|--|##|[^\s]", re.ASCII)
+LITERAL = re.compile(r"(0[xX][0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)([uU](?:ll|LL|[lL])?|(?:ll|LL|[lL])[uU]?)?")
+BUILTINS = {"BIT", "BIT_ULL", "GENMASK", "GENMASK_ULL"}
 
 
 def strip_comments(text):
     """Replace comments with whitespace, retaining tokens on either side."""
-    return COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m[0])
+    return COMMENTS.sub(lambda m: " "
                         if m[0].startswith(("/*", "//")) else m[0], text)
 
 
-def integer(expression, names, disabled=()):
+def integer(expression, names, disabled=(), reasons=None):
     """Integer or None for a bounded subset of C constant expressions."""
-    expression = " ".join(strip_comments(expression).split())
-    expression = re.sub(r"\b(0[xX][0-9a-fA-F]+|[0-9]+)[uUlL]+\b", r"\1", expression)
-    if len(expression) > 4096:
-        return None
+    literals = {}
+
+    def prepare():
+        source = strip_comments(re.sub(r"\\\r?\n", "", expression))
+        if len(source) > 4096:
+            raise ValueError("expression length bound")
+        parts, column = [], 0
+        for token in LEXEMES.findall(source):
+            if match := LITERAL.fullmatch(token):
+                digits, suffix = match.groups()
+                base = 16 if digits.lower().startswith("0x") else 8 if digits.startswith("0") else 10
+                value = int(digits, base)
+                literals[column] = (value, bool(suffix and "u" in suffix.lower()) or
+                                    (base != 10 and value > 0x7fffffff))
+                token = str(value)
+            elif re.fullmatch(r"[A-Za-z_]\w*", token, re.ASCII):
+                if token not in names and token not in BUILTINS:
+                    raise ValueError("unsupported name: " + token)
+            elif token not in {"+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^", "~", "(", ")", ","}:
+                raise ValueError("unsupported token: " + token)
+            parts.append(token)
+            column += len(token) + 1
+        return " ".join(parts)
 
     def read(node, depth=0):
         if depth > 32:
             raise ValueError("expression nesting")
         if isinstance(node, ast.Constant) and type(node.value) is int:
-            value = node.value
+            value, unsigned = literals[node.col_offset]
         elif isinstance(node, ast.Name) and names.get(node.id) is not None:
-            value = names[node.id]
+            value, unsigned = names[node.id], False
         elif isinstance(node, ast.BinOp) and type(node.op) in OPS:
-            left, right = read(node.left, depth + 1), read(node.right, depth + 1)
-            if isinstance(node.op, (ast.LShift, ast.RShift)) and not 0 <= right <= 4096:
+            (left, left_unsigned), (right, right_unsigned) = read(node.left, depth + 1), read(node.right, depth + 1)
+            unsigned = left_unsigned if isinstance(node.op, (ast.LShift, ast.RShift)) else left_unsigned or right_unsigned
+            if isinstance(node.op, (ast.LShift, ast.RShift)) and not 0 <= right <= 31:
                 raise ValueError("shift bound")
+            if isinstance(node.op, (ast.Div, ast.Mod)) and right == 0:
+                raise ValueError("division by zero")
             value = OPS[type(node.op)](left, right)
+            if isinstance(node.op, (ast.Add, ast.Sub, ast.Mult, ast.LShift)) and not unsigned and value > 0x7fffffff:
+                raise ValueError("possible signed overflow")
+        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub, ast.Invert)):
+            value, unsigned = read(node.operand, depth + 1)
+            if isinstance(node.op, ast.USub):
+                value = -value
+            elif isinstance(node.op, ast.Invert):
+                value = ~value
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and not node.keywords:
             if node.func.id in disabled or node.func.id in names:
                 raise ValueError("locally defined call")
-            values = [read(arg, depth + 1) for arg in node.args]
-            if node.func.id in ("BIT", "BIT_ULL") and len(values) == 1 and 0 <= values[0] <= 4096:
+            values = [read(arg, depth + 1)[0] for arg in node.args]
+            unsigned = True
+            if node.func.id in ("BIT", "BIT_ULL") and len(values) == 1 and 0 <= values[0] <= 31:
                 value = 1 << values[0]
-            elif node.func.id in ("GENMASK", "GENMASK_ULL") and len(values) == 2 and 0 <= values[1] <= values[0] <= 4096:
+            elif node.func.id in ("GENMASK", "GENMASK_ULL") and len(values) == 2 and 0 <= values[1] <= values[0] <= 31:
                 high, low = values
                 value = ((1 << (high - low + 1)) - 1) << low
             else:
                 raise ValueError("unsupported call")
         else:
             raise ValueError("unsupported expression")
-        if value < 0 or value.bit_length() > 4096:
-            raise ValueError("integer bound")
-        return value
+        if not 0 <= value <= 0xffffffff:
+            raise ValueError("integer outside unsigned 32-bit range")
+        return value, unsigned
 
     try:
-        return read(ast.parse(expression, mode="eval").body)
-    except (SyntaxError, ValueError, RecursionError):
+        return read(ast.parse(prepare(), mode="eval").body)[0]
+    except (SyntaxError, ValueError, RecursionError) as exc:
+        if reasons is not None:
+            reasons.append(str(exc))
         return None
 
 
@@ -137,9 +182,9 @@ def directed_enum_names(body):
             if beginning and re.fullmatch(r"[A-Za-z_]\w*", value):
                 names.append(value)
                 beginning = False
-            elif value == "(":
+            elif value in ("(", "{", "["):
                 depth += 1
-            elif value == ")":
+            elif value in (")", "}", "]"):
                 depth = max(0, depth - 1)
             elif value == "," and depth == 0:
                 beginning = True
@@ -148,9 +193,25 @@ def directed_enum_names(body):
     return list(dict.fromkeys(names))
 
 
+def enum_bodies(text):
+    """Yield complete enum bodies; directive and quoted braces cannot close them."""
+    masked = re.sub(r"^[ \t]*#[^\n]*", lambda m: " " * len(m[0]), text, flags=re.M)
+    masked = COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m[0]), masked)
+    for opening in re.finditer(r"\benum\b[^;{]*\{", masked):
+        start, depth = opening.end(), 1
+        for index in range(start, len(masked)):
+            if masked[index] == "{":
+                depth += 1
+            elif masked[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    yield opening.start(), text[start:index]
+                    break
+
+
 def declarations(text):
     """Collect definitions and refusal reasons without executing the preprocessor."""
-    text = strip_comments(re.sub(r"\\\n", "", text))
+    text = strip_comments(re.sub(r"\\\r?\n", "", text))
     lines = text.splitlines()
     guard = include_guard(lines)
     definitions, stack, contexts, predecessors = {}, [], [], {}
@@ -180,14 +241,15 @@ def declarations(text):
         if match := BITFIELD.match(line):
             add(match[1], None, "bitfield", "unsupported bitfield declaration")
 
-    enum_text = re.sub(r"^[ \t]*#[^\n]*", lambda m: " " * len(m[0]), text, flags=re.M)
-    enum_text = COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m[0]), enum_text)
-    for enum in re.finditer(r"\benum\b[^;{]*\{([^}]*)\}", enum_text, re.S):
-        body = text[enum.start(1):enum.end(1)]
-        conditional = contexts[text[:enum.start()].count("\n")]
+    for start, body in enum_bodies(text):
+        conditional = contexts[text[:start].count("\n")]
         if re.search(r"^[ \t]*#", body, re.M):
             for name in directed_enum_names(body):
                 add(name, None, "enum", "preprocessor directive in enum body")
+            continue
+        if re.search(r"[{}]|\bsizeof\b", body):
+            for name in directed_enum_names(body):
+                add(name, None, "enum", "nested brace or sizeof in enum body")
             continue
         previous, preceding = None, []
         for member in re.split(r",(?![^()]*\))", body):
@@ -247,6 +309,8 @@ def extract_headers(headers, reasons=None):
         parts, end = [], 0
         for token in TOKEN.finditer(expression):
             name, value = token[0], token[0]
+            if name == "sizeof":
+                raise ValueError("unsupported sizeof expression")
             if name in definitions:
                 if name in seen:
                     raise ValueError("recursive macro")
@@ -258,7 +322,11 @@ def extract_headers(headers, reasons=None):
                         raise ValueError("implicit enum has an unknown preceding member")
                 value = expand(body, seen + (name,))
                 if kind == "enum":
-                    value = f"({value})"
+                    enum_value = integer(value, {}, disabled=definitions)
+                    if enum_value is None or enum_value > 0x7fffffff:
+                        raise ValueError("unsupported enum integer type or value")
+                    value = f"({enum_value})"
+                value = " " + value + " "
             parts.extend((expression[end:token.start()], value))
             if sum(map(len, parts)) > 4096:
                 raise ValueError("macro expansion bound")
@@ -271,12 +339,15 @@ def extract_headers(headers, reasons=None):
             continue
         budget[0] = 0
         try:
-            body, _ = supported(name)
+            body, declaration_kind = supported(name)
             if any(values.get(earlier) is None for earlier in predecessors.get(name, [])):
                 raise ValueError("implicit enum has an unknown preceding member")
-            value = integer(expand(body, (name,)), {}, disabled=definitions)
+            failures = []
+            value = integer(expand(body, (name,)), {}, disabled=definitions, reasons=failures)
             if value is None:
-                raise ValueError("unsupported expression or declaration")
+                raise ValueError("unsupported expression or declaration: " + "; ".join(failures))
+            if declaration_kind == "enum" and value > 0x7fffffff:
+                raise ValueError("unsupported enum integer type or value")
             values[name] = value
         except ValueError as exc:
             values[name], unknown[name] = None, str(exc)

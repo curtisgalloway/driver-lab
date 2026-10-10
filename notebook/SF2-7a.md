@@ -89,3 +89,33 @@ Run: `sf2-7a-20261009-01`. Reviews and HTML generation belong to separate units.
   fields and steps, new inheritance, and explicit overrides that remain independent.
 - Mutation qualification exposed a new test that indexed a removed child before asserting
   its existence. The assertion now comes first so the refusal fails by assertion, not error.
+
+## 2026-10-09T21:24:45-07:00 — Review round 3, refuse unrecognized tokens and arithmetic
+
+- The round-2 confirmation found another shortened multiline-comment definition, token
+  pasting interpreted as a comment, arithmetic that ignored C wraparound, and an enum
+  member lost after a nested struct brace. The orchestrator's `fix-r3-brief.md` for run
+  `sf2-7a-20261009-01` requires refusing anything not fully understood.
+- Line splices now precede comment removal, and each block comment becomes one space
+  before directive splitting. An explicit C token whitelist checks complete integer
+  literals (including octal and legal suffixes), supported names, operators and calls.
+  Unknown syntax keeps a refusal reason rather than shortening the definition.
+- Division and remainder use exact integers. Every intermediate stays inside the
+  unsigned 32-bit range; invalid shifts, zero divisors and possible signed overflow
+  are refused. Unary complement's negative exact result is also unknown. No wrapping
+  arithmetic is simulated.
+- Enum scanning balances the enum's own braces while masking directive and quoted text.
+  Nested braces or `sizeof` refuse every member; the member collector tracks nested
+  parentheses, braces and brackets so later members remain named and count for omissions.
+- Reviewing expansion exposed two additional hazards: adjacent replacement tokens could
+  form a new operator, and an enum initializer's unsigned suffix could change arithmetic
+  on its name. Expansions now preserve token boundaries; enum references use their
+  evaluated integer value. Enum values outside the signed 32-bit range are refused.
+- A seeded compiler comparison checks random whitelist expressions, macro and enum
+  references, and all four confirmation inputs. It accepts only an equal integer or
+  an unknown, bounds compilation and execution time, and skips explicitly when no C
+  compiler is available. Refusal mutations cover the new independent guards.
+- Mutation qualification found that disabling the entire token whitelist let a Python
+  binary literal reach the parser's internal literal lookup and fail with an error.
+  The mutation now removes only the preprocessor-operator refusals, producing an
+  assertion failure for the token-pasting regression without unrelated parser errors.

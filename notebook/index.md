@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T21:31:15-07:00
+Updated: 2026-10-09T22:22:04-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -20,6 +20,13 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 > [license-split design](../docs/LICENSE-SPLIT.md), requirement LS-R20.
 
 ## Chapters
+
+### [SF2-7b — Reviews and the HTML generated sections](SF2-7b.md)
+Entries: 2026-10-09T22:18:09-07:00 through 2026-10-09T23:17:02-07:00
+Outcome: complete ([evidence](../evidence/SF2-7b.md)). Reviews and the HTML generated sections
+shipped with no blocker in round 1; a confirmation regression (the pair exemption leaking into
+instance and variant rows) was fixed directly. Deciding that a pair's anchors are its support
+removed a forced Gap badge.
 
 ### [SF2-7a — Peripheral specs and facts files in format 2](SF2-7a.md)
 Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T21:46:57-07:00

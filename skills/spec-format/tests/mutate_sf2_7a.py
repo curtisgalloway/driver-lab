@@ -36,7 +36,7 @@ CODE = [
     ("target-role", "peripheral", 'if entry and entry[0].get("role") != "target":', 'if False:'),
     ("subkey-support", "peripheral", 'if "support" in row and path[-2] in ("fields", "steps"):', 'if False:'),
     ("subkey-duplicate", "speccheck", 'self.add(f, path + ("id",), f"sub-key {rid!r} is used twice")', 'pass'),
-    ("nested-citations", "speccheck", 'yield from supports(value, base + (key,))', 'yield from supports(value, base + (key,)) if key != "data" else ()'),
+    ("nested-citations", "speccheck", 'yield from supports(value, base + (key,), False)', 'yield from supports(value, base + (key,), False) if key != "data" else ()'),
     ("subkey-parent-basis", "peripheral", 'data["parent_identity"] = {k: payload["register"][k] for k in ("name", "offset")}', 'pass'),
     ("subkey-step-order", "peripheral", 'data["parent_identity"] = {"steps": [row["id"] for row in payload["sequence"]["steps"]]}', 'pass'),
     ("subkey-effective-requirement", "peripheral", 'data["requirement"] = rec.parent.data["requirement"]', 'pass'),
@@ -150,7 +150,7 @@ def schema_mutations():
 def execute(case, store):
     label = case[0]
     dest = store / label
-    for relative in ("skills/spec-format", "skills/board-expert/scripts", "skills/hardware-investigator/examples"):
+    for relative in ("skills/spec-format", "skills/board-expert/scripts", "skills/peripheral-spec/scripts", "skills/hardware-investigator/examples"):
         shutil.copytree(REPO / relative, dest / relative, ignore=shutil.ignore_patterns("__pycache__"))
     if isinstance(case[1], str):
         _, module, before, after = case

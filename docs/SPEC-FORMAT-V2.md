@@ -860,7 +860,9 @@ judgment is named `assessment`, not `verdict`, so it cannot be confused with the
 verdict on the finding. A `missing` finding's implementation side is a `search` anchor. `bug`
 requires `settled_by` with a document class, or `self_evident: true` with the reason; `suspect`
 lands on the generated verify-on-hardware list. `correspondence` facts carry
-`data.pair: {impl: [anchors], ref: [anchors]}`; `coverage` facts carry
+`data.pair: {impl: [anchors], ref: [anchors]}`. These anchors count as the fact's support
+for gap and todo rules: a fact backed only by its pair needs no todo, shows no Gap badge,
+and accepts a supported-fact verdict. Its freshness tracks both sides' anchors. `coverage` facts carry
 `data.coverage: {area, compared: true|false, read: "...", reason: "..."}`. A fix landing sets
 `resolution: {status: fixed, commit: <full>}` and moves the `impl` pin through `spec.py drift`.
 

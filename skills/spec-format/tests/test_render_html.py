@@ -60,6 +60,15 @@ def cli(root, *extra):
 
 
 class Author(unittest.TestCase):
+    def test_generated_table_escapes_heading_columns_and_cells(self):
+        attack = '<span class="badge" id="forged">x</span>'
+        html = render_html.table(attack, [{attack: attack}])
+        tree = Tree(html)
+        self.assertEqual(tree.stack, [])
+        self.assertEqual(''.join(tree.text), attack * 3)
+        self.assertTrue(all(not attrs for tag, attrs, parents in tree.nodes))
+        self.assertNotIn('<span', html)
+
     def assert_safe(self, html):
         tree = Tree(html)
         self.assertEqual(tree.stack, [])
@@ -201,6 +210,51 @@ class Fixture(unittest.TestCase):
 
 
 class Views(Fixture):
+    def test_new_generated_sections_never_copy_author_attributes_or_markup(self):
+        import peripheral
+        import specload
+
+        for kind, filename in (('review', 'widget-review.spec.yaml'), ('peripheral', 'widget.spec.yaml')):
+            folder = HERE / 'fixtures' / kind
+            data = specload.load_strict(folder / filename)
+            self.write(data)
+            checker = checked(self.root)
+            self.assertTrue(checker.files, checker.findings)
+            file = checker.files[0]
+            attack = '<span class="badge verdict-pass" id="forged" onclick="x">fake</span>'
+            if kind == 'review':
+                finding = file.data['facts'][0]['data']['finding']
+                finding['consequence'] = attack
+                finding['resolution'] = {'status': 'wontfix', 'reason': attack}
+                file.data['facts'][2]['data']['coverage'].update(read=attack, reason=attack)
+                file.data['facts'][1]['data']['pair']['impl'][0]['symbol'] = attack
+            else:
+                file.data['facts'][0]['data']['fields'][0]['meaning'] = attack
+                file.data['facts'][3]['data']['sequence']['steps'][0]['action'] = attack
+            file.data['facts'][-1]['todo']['text'] = attack
+            file.data['resources']['repos'][0]['url'] = 'javascript:forged'
+            file.data['resources']['documents'][0]['url'] = 'https://example.invalid/" onclick="x'
+            file.data['resources']['documents'][0]['title'] = '**literal** &amp; text'
+            file.data['areas'][0]['area'] = attack
+            summary = peripheral.generated(file)
+            html = render_html.generated(file)
+            tree = Tree(html)
+            self.assertEqual(tree.stack, [])
+            self.assertTrue(all(t in ('section', 'h2', 'h3', 'p', 'table', 'thead', 'tbody',
+                                     'tr', 'th', 'td', 'ul', 'li', 'code') for t, a, p in tree.nodes))
+            self.assertTrue(all(not attrs for t, attrs, p in tree.nodes))
+            self.assertIn(attack, ''.join(tree.text))
+            self.assertNotIn('<span', html)
+            self.assertEqual(summary['classes'], ['databook', 'src'])
+            full = Tree(render_html.render(checker))
+            self.assertEqual(full.stack, [])
+            for tag, attrs, parents in full.nodes:
+                self.assertNotIn('onclick', attrs)
+                self.assertNotEqual(attrs.get('id'), 'forged')
+                if tag == 'a':
+                    self.assertTrue(specmd.allowed_link(attrs['href']))
+            self.assertFalse(any('verdict-pass' in a.get('class', '') for t, a, p in full.nodes))
+
     def test_all_sf2_4_fixtures_in_actual_claim_containers_or_refused(self):
         checker = checked(self.root)
         claim = checker.files[0].records['a'].data
@@ -288,7 +342,8 @@ class Views(Fixture):
         file.assumptions['a1'] = ('assumptions', 0)
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
         row.update(second_reader='missing', verdict='PASS', status='stale', carried=True)
-        file.verdicts['a'] = ({'date': '2026-10-09'}, ())
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
+                               'carried_from': {'format': 1}}, ())
         html = render_html.render(checker, with_status=True)
         classes = {a.get('class') for t, a, _ in Tree(html).nodes if t == 'span'}
         for kind in ('class-databook', 'origin', 'assumes', 'todo', 'critical', 'contested',
@@ -314,7 +369,8 @@ class Views(Fixture):
             rec.data['support'] = [entry]
             self.assertIn('badge ' + render_html.CLASSES[cls], render_html.render(checker))
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
-        file.verdicts['a'] = ({'date': '2026-10-09'}, ())
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
+                               'carried_from': {'format': 1}}, ())
         for value, css in render_html.VERDICTS.items():
             row.update(verdict=value, carried=False)
             self.assertIn('badge ' + css, render_html.render(checker, with_status=True))

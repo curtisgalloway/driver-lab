@@ -158,6 +158,27 @@ def support(checker, file, entries, notes):
     return ''.join(out)
 
 
+def verification(file, key, row, notes):
+    """Complete parent and child record metadata, using fixed elements and escaped text."""
+    out = []
+    verdict = file.verdicts.get(key, (None, None))[0]
+    if row['verdict']:
+        text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')
+        out.append(badge(VERDICTS[row['verdict']], text))
+        out.append('<p>Verifier: ' + literal(verdict['verifier']) + '</p>')
+        for reader in verdict.get('readers', []):
+            out.append('<p>Reader: ' + literal(reader['verifier']) + ' · ' +
+                       literal(reader['verdict']) + '</p>')
+    if row['second_reader'] == 'missing':
+        out.append('<p>second reader missing</p>')
+    if row['carried']:
+        out.append('<p>carried from format ' + literal(verdict['carried_from']['format']) + '</p>')
+    out.append(badge(FRESHNESS[row['status']], row['status']))
+    if verdict and 'note' in verdict:
+        notes.append(('Record note', verdict['note']))
+    return ''.join(out)
+
+
 def fact(checker, rec, status, with_status):
     data, file = rec.data, rec.file
     out = ['<article class="fact" id="' + escape(rec.full, quote=True) + '"><header><h4>' +
@@ -172,7 +193,7 @@ def fact(checker, rec, status, with_status):
         out.append('</dl>')
     out.append('</div><div class="provenance">')
     notes = []
-    if not data.get('support'):
+    if not speccheck.has_support(data):
         out.append(badge('gap', 'Gap'))
     out.append(support(checker, file, data.get('support', []), notes))
     out.append(badge('origin', file.root.layer + ' · ' + file.root.label))
@@ -187,6 +208,12 @@ def fact(checker, rec, status, with_status):
     for key in ('requirement', 'assessment'):
         if key in data:
             out.append(badge(key, data[key]))
+    finding = data.get('data', {}).get('finding', {})
+    if finding:
+        out.append(badge('assessment', finding['assessment']))
+        if finding.get('settled_by'):
+            out.append('<p>Settled by</p>')
+        out.append(support(checker, file, finding.get('settled_by', []), notes))
     if 'scope' in data:
         out.append('<p>Scope: ' + literal(data['scope']) + '</p>')
     for relation in data.get('relates', []):
@@ -205,22 +232,90 @@ def fact(checker, rec, status, with_status):
         if 'note' in conflict:
             notes.append(('Conflict note', conflict['note']))
     row = status[file][rec.id]
-    verdict = file.verdicts.get(rec.id, (None, None))[0]
     if data.get('critical'):
         out.append(badge('critical', 'bring-up critical' +
                          (' · second reader missing' if row['second_reader'] == 'missing' else '')))
     if with_status:
-        if row['verdict']:
-            text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')
-            out.append(badge(VERDICTS[row['verdict']], text))
-        out.append(badge(FRESHNESS[row['status']], row['status']))
-        if verdict and 'note' in verdict:
-            notes.append(('Record note', verdict['note']))
+        out.append(verification(file, rec.id, row, notes))
     out.append('<p>Fact reference: <code>' + literal(rec.full) + '</code></p></div>')
+    out.append(payload(checker, rec, status, with_status))
     if 'note' in data:
         notes.append(('Fact note', data['note']))
     out.extend(field(label, text) for label, text in notes)
     out.append('</article>')
+    return ''.join(out)
+
+
+def table(title, entries):
+    """Fixed table elements; every input cell and column name is literal text."""
+    if not entries:
+        return ''
+    keys = list(dict.fromkeys(k for entry in entries for k in entry))
+    out = ['<h3>' + literal(title) + '</h3><table><thead><tr>']
+    out.extend('<th>' + literal(key) + '</th>' for key in keys)
+    out.append('</tr></thead><tbody>')
+    for entry in entries:
+        out.append('<tr>')
+        out.extend('<td>' + literal(entry.get(key, '')) + '</td>' for key in keys)
+        out.append('</tr>')
+    out.append('</tbody></table>')
+    return ''.join(out)
+
+
+def payload(checker, rec, status, with_status):
+    """Keep child support, requirements and verdicts visible even when a claim exists."""
+    import peripheral
+
+    data = rec.data.get('data', {})
+    out = []
+    for name in ('register', 'layout', 'finding', 'coverage'):
+        if name in data:
+            entries = [{k: v for k, v in data[name].items() if k != 'settled_by'}]
+            out.append(table(name.capitalize() + ' (generated)', entries))
+    for side, anchors in data.get('pair', {}).items():
+        notes = []
+        out.append('<div class="provenance"><p>Correspondence side: ' + literal(side) + '</p>')
+        out.append(support(checker, rec.file, [{'class': 'src', 'anchors': anchors}], notes))
+        out.append('</div>')
+    for row, path in peripheral.children(rec.data, rec.path):
+        key = row.get('id', row.get('before', '') + '->' + row.get('after', ''))
+        out.append(table('Payload entry ' + rec.id + '.' + key,
+                         [{k: v for k, v in row.items() if k not in ('support', 'note')}]))
+        notes = []
+        out.append('<div class="provenance">')
+        out.append(support(checker, rec.file, row.get('support', []), notes))
+        requirement = row.get('requirement', rec.data.get('requirement'))
+        if requirement:
+            out.append(badge('requirement', requirement))
+        child = status[rec.file].get(rec.id + '.' + key)
+        if with_status and child:
+            out.append(verification(rec.file, rec.id + "." + key, child, notes))
+        out.append('</div>')
+        if 'note' in row:
+            notes.append(('Payload note', row['note']))
+        out.extend(field(label, text) for label, text in notes)
+    return ''.join(out)
+
+
+def generated(file):
+    import peripheral
+
+    summary = peripheral.generated(file)
+    out = ['<section><h2>Provenance notice (generated): ' + literal(file.root.label) +
+           '</h2><p>Support classes: ' + literal(', '.join(summary['classes'])) + '.</p>']
+    out.append(table('Canonical references (generated)', summary['references']))
+    out.append(table('Register map (generated)', peripheral.register_rows(summary)))
+    out.append(table('Findings (generated)', summary['findings']))
+    out.append(table('Correspondence (generated)', summary['pairs']))
+    out.append(table('Comparison coverage (generated)', summary['coverage']))
+    if summary['verify']:
+        out.append('<h2>Verify on hardware (generated)</h2><ul>')
+        for row in summary['verify']:
+            out.append('<li><code>' + literal(row['fact']) + '</code>: ' + literal(row['text']) + '</li>')
+        out.append('</ul>')
+    out.append(table('Open questions (generated)', summary['questions']))
+    out.append(table('Area confidence', file.data.get('areas', [])))
+    out.append('</section>')
     return ''.join(out)
 
 
@@ -304,6 +399,11 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
             if key in base.data:
                 out.append('<p>' + literal(key) + ': ' + literal(base.data[key]) + '</p>')
         out.extend(resources(f) for f in group)
+        typed_spec = any(f.spec_id == base.spec_id and f.kind in ('peripheral', 'review')
+                         for f in checker.files)
+        for file in group:
+            if typed_spec or any('data' in f for f in file.data['facts']):
+                out.append(generated(file))
         if any(key in f.data for f in group for key in ('orientation', 'milestones', 'notes')):
             out.append('<section class="context"><h2>Context (not facts)</h2>')
             for file in group:

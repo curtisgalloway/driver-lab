@@ -126,17 +126,27 @@ def check_file(checker, file):
 
 
 def generated(file):
-    """Exact structured projection for generated Markdown sections (no prose parsing)."""
+    """Exact structured projection for both reading views (no prose parsing)."""
     registers, verify, questions = [], [], []
+    findings, pairs, coverage = [], [], []
     for fact in file.data["facts"]:
         fid = fact["id"]
         payload = fact.get("data", {})
+        if "finding" in payload:
+            findings.append(dict(payload["finding"], fact=fid))
+            if payload["finding"]["assessment"] == "suspect":
+                verify.append({"fact": fid, "text": payload["finding"]["consequence"]})
+        if "pair" in payload:
+            pairs.append(dict(payload["pair"], fact=fid))
+        if "coverage" in payload:
+            coverage.append(dict(payload["coverage"], fact=fid))
         if "register" in payload:
             registers.append(dict(payload["register"], fact=fid, fields=payload.get("fields", [])))
         sequence_steps = payload.get("sequence", {}).get("steps", [])
-        if fact.get("requirement") == "as-implemented" and not sequence_steps:
+        suspect = payload.get("finding", {}).get("assessment") == "suspect"
+        if fact.get("requirement") == "as-implemented" and not sequence_steps and not suspect:
             verify.append({"fact": fid, "text": fact.get("claim", payload.get("register", {}).get("name", fid))})
-        elif fact.get("todo", {}).get("check") == "hardware" and not sequence_steps:
+        elif fact.get("todo", {}).get("check") == "hardware" and not sequence_steps and not suspect:
             verify.append({"fact": fid, "text": fact.get("claim", fid)})
         for row, at in children(fact):
             if row.get("requirement", fact.get("requirement")) == "as-implemented":
@@ -157,4 +167,17 @@ def generated(file):
     classes = sorted({entry["class"] for fact in file.data["facts"]
                       for entry, _ in speccheck.supports(fact, ())})
     return {"registers": registers, "verify": verify, "questions": questions,
-            "references": references, "classes": classes}
+            "references": references, "classes": classes,
+            "findings": findings, "pairs": pairs, "coverage": coverage}
+
+
+def register_rows(summary):
+    """Both views use the same ordered register columns and field values."""
+    rows = []
+    for register in summary["registers"]:
+        row = {key: register.get(key, "")
+               for key in ("fact", "offset", "name", "width", "access", "reset")}
+        row["fields"] = [{k: field[k] for k in ("id", "name", "bits", "meaning")}
+                         for field in register["fields"]]
+        rows.append(row)
+    return rows

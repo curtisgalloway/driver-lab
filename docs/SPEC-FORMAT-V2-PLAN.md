@@ -117,7 +117,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
 | SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](../evidence/SF2-5.md)) |
 | SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
-| SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | in progress: SF2-7a complete ([evidence](../evidence/SF2-7a.md)); SF2-7b (reviews) and HTML sections pending |
+| SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)) |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
@@ -521,8 +521,8 @@ Several payloads but one pattern. Split point: reviews (`finding`, `pair`, `cove
 fixtures become SF2-7b.
 
 ### Evidence and findings
-Status: in progress: SF2-7a complete ([evidence](../evidence/SF2-7a.md)); SF2-7b (reviews) and HTML
-sections pending. Evidence: `evidence/SF2-7a.md`. Notebook: `notebook/SF2-7a.md`.
+Status: complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)). Evidence:
+`evidence/SF2-7a.md`, `evidence/SF2-7b.md`. Notebook: `notebook/SF2-7a.md`, `notebook/SF2-7b.md`.
 
 ---
 

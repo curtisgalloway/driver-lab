@@ -115,7 +115,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
-| SF2-5 | The viewer and publishing | SF2-4 | pending |
+| SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](../evidence/SF2-5.md)) |
 | SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
@@ -425,7 +425,10 @@ Needs the design's viewer section and SF2-4's renderer. Split point: the workflo
 (step 3) moves to SF2-11 if the viewer takes the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-5.md`. Notebook: `notebook/SF2-5.md`.
+Status: complete. Evidence: [SF2-5](../evidence/SF2-5.md) (acceptance table, one review round
+with two reviewers and a clean confirmation, mutation results). Notebook: [SF2-5](../notebook/SF2-5.md).
+**Open limitations:** deploy concurrency serializes but does not order deployments when builds
+finish out of order; enabling Pages and installing the template in the spec repositories is SF2-11.
 
 ---
 

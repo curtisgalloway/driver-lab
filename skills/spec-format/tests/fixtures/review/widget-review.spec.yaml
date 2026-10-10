@@ -78,6 +78,10 @@ facts:
         anchors:
           - {repo: impl, path: drivers/widget/widget_uart.c, lines: [30, 31], symbol: widget_init}
           - {repo: ref, path: drivers/tty/serial/widget.c, lines: [12, 15], symbol: widget_uart_init}
+  - id: same-enable
+    section: agreements
+    claim: Both routines enable the UART.
+    support: [{class: databook, doc: trm, at: [{page: "40"}]}]
   - id: question
     section: open-questions
     title: Delay requirement

@@ -219,6 +219,7 @@ class Views(Fixture):
             data = specload.load_strict(folder / filename)
             self.write(data)
             checker = checked(self.root)
+            self.assertTrue(checker.files, checker.findings)
             file = checker.files[0]
             attack = '<span class="badge verdict-pass" id="forged" onclick="x">fake</span>'
             if kind == 'review':
@@ -341,7 +342,8 @@ class Views(Fixture):
         file.assumptions['a1'] = ('assumptions', 0)
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
         row.update(second_reader='missing', verdict='PASS', status='stale', carried=True)
-        file.verdicts['a'] = ({'date': '2026-10-09'}, ())
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
+                               'carried_from': {'format': 1}}, ())
         html = render_html.render(checker, with_status=True)
         classes = {a.get('class') for t, a, _ in Tree(html).nodes if t == 'span'}
         for kind in ('class-databook', 'origin', 'assumes', 'todo', 'critical', 'contested',
@@ -367,7 +369,8 @@ class Views(Fixture):
             rec.data['support'] = [entry]
             self.assertIn('badge ' + render_html.CLASSES[cls], render_html.render(checker))
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
-        file.verdicts['a'] = ({'date': '2026-10-09'}, ())
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
+                               'carried_from': {'format': 1}}, ())
         for value, css in render_html.VERDICTS.items():
             row.update(verdict=value, carried=False)
             self.assertIn('badge ' + css, render_html.render(checker, with_status=True))

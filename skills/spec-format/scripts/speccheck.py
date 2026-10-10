@@ -193,6 +193,11 @@ class Record:
         return f"{self.file.spec_id}@{self.file.root.label}#{self.id}"
 
 
+def has_support(data: dict) -> bool:
+    """A correspondence pair supplies source support for its owning fact."""
+    return bool(data.get("support") or data.get("data", {}).get("pair"))
+
+
 def supports(data: dict, base: tuple, _payload=True):
     """Own, premise, conflict and settlement support, plus the fact's pair sides.
 
@@ -1041,6 +1046,10 @@ class Checker:
                 self.add(f, ("facts", i, "section"), f"section {fact['section']!r} is not a "
                                                      f"section of the target, kind {tf.kind} "
                                                      f"({', '.join(allowed)})")
+            if tf.kind == "review" and any(
+                    key in fact.get("data", {}) for key in ("register", "sequence", "layout")):
+                self.add(f, ("facts", i, "data"),
+                         "review overlay refuses register, sequence and layout payloads")
         if "instances" in f.data and tf.kind not in ("soc", "chip"):
             self.add(f, ("instances",), f"instances: the target {target!r} is of kind "
                                         f"{tf.kind}, which has no instances")

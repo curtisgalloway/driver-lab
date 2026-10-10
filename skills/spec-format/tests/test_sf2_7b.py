@@ -18,6 +18,8 @@ import render_md
 import speccheck
 import specload
 from test_sf2_7a import Fixture, run
+import test_sf2_7a
+from test_schema import dump
 from test_resolve import GitFixture, SOURCE
 
 class Tables(HTMLParser):
@@ -81,6 +83,11 @@ class ReviewFixture(Fixture):
     def finding(self):
         return self.data['facts'][0]['data']['finding']
 
+    def checker(self):
+        checker = super().checker()
+        self.assertTrue(checker.files, checker.findings)
+        return checker
+
     def schema_invalid(self):
         self.write()
         code, result = run('validate', self.file)
@@ -110,7 +117,21 @@ class ReviewRules(ReviewFixture):
         file = checker.files[0]
         article = render_html.fact(checker, file.records['f-baud-latch'], status, False)
         self.assertIn('badge class-databook', article)
+        self.assertIn('<p>Settled by</p><ul>', article)
+        self.assertIn('Finding (generated)', Tables(article).tables)
+        self.assertNotIn('settled_by', Tables(article).tables['Finding (generated)'][0][0])
+        self.assertEqual(Tables(article).tables['Finding (generated)'][0],
+                         [['category', 'assessment', 'consequence', 'resolution'],
+                          ['differs', 'bug', 'the first frames go out at the previous baud rate',
+                           '{"status": "open"}']])
+        coverage = render_html.payload(checker, file.records['dma-coverage'], status, False)
+        self.assertIn('Coverage (generated)', Tables(coverage).tables)
+        self.assertEqual(Tables(coverage).tables['Coverage (generated)'][0],
+                         [['area', 'compared', 'read', 'reason'],
+                          ['dma', 'False', 'Initialization routines only.', 'No DMA implementation was supplied.']])
         pair = render_html.payload(checker, file.records['init-pair'], status, False)
+        self.assertIn('Correspondence side: impl</p>', pair)
+        self.assertIn('Correspondence side: ref</p>', pair)
         self.assertIn('impl@' + '2' * 40, pair)
         self.assertIn('ref@' + '1' * 40, pair)
         pair_md = render_md.View()
@@ -119,6 +140,7 @@ class ReviewRules(ReviewFixture):
         self.assertIn('ref@' + '1' * 40, '\n'.join(pair_md))
         finding_md = render_md.View()
         render_md._payload(finding_md, checker, file.records['f-baud-latch'], status, False)
+        self.assertIn('Settled by:\n\n- databook: Widget TRM;', '\n'.join(finding_md))
         self.assertIn('databook: Widget TRM; ' + render_md.escape('§4.2, p. 40'), '\n'.join(finding_md))
 
     def test_bug_needs_independent_justification(self):
@@ -141,6 +163,14 @@ class ReviewRules(ReviewFixture):
                       [{'class': 'inference', 'premises': [{'fact': '#init-pair'}], 'derivation': 'it follows'}]):
             self.data = copy.deepcopy(base)
             self.finding['settled_by'] = entry
+            self.schema_invalid()
+        for key in ('doc', 'extra'):
+            self.data = copy.deepcopy(base)
+            entry = self.finding['settled_by'][0]
+            if key == 'doc':
+                entry.pop(key)
+            else:
+                entry[key] = 'forbidden'
             self.schema_invalid()
         for field, value, diagnostic in (('doc', 'missing', "document 'missing'"),
                                          ('class', 'doc', 'of class databook')):
@@ -272,6 +302,9 @@ class ReviewRules(ReviewFixture):
     def test_missing_requires_implementation_search_and_both_sides(self):
         self.finding['category'] = 'missing'
         self.invalid('impl search anchor')
+        self.data['facts'][0]['support'][0]['anchors'][1] = {
+            'repo': 'ref', 'path': 'drivers/tty/serial/widget.c', 'search': 'widget_init'}
+        self.invalid('impl search anchor')
         anchors = self.data['facts'][0]['support'][0]['anchors']
         anchors[0] = {'repo': 'impl', 'path': 'drivers/widget/widget_uart.c', 'search': 'widget_init'}
         self.assertEqual(self.check()[0], 0)
@@ -279,6 +312,98 @@ class ReviewRules(ReviewFixture):
         self.invalid('both impl and ref')
         self.data['resources']['repos'][0]['role'] = 'source'
         self.invalid('both impl and ref')
+
+    def test_review_identity_notes_and_cache_shapes(self):
+        base = copy.deepcopy(self.data)
+        for field, values in (('id', ['widget/review', 'widget\\review', '..', 'widget..review']),
+                              ('notes', [None, [], {}, 1, False, '', ' ']),
+                              ('cache', ['resources/cache', '../cache', 'cache\\nested'])):
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    self.data = copy.deepcopy(base)
+                    self.data[field] = value
+                    self.schema_invalid()
+                    code, result = run('render', self.root, '--format', 'html')
+                    self.assertEqual(code, 1, result)
+                    self.assertNotEqual(result.get('error'), 'internal', result)
+        self.data = copy.deepcopy(base)
+        self.assertEqual(self.check()[0], 0)
+        for fmt, key in (('html', 'html'), ('md', 'markdown')):
+            code, result = run('render', self.root, '--format', fmt)
+            self.assertEqual(code, 0, result)
+            self.assertIn('Both routines enable the UART.', result[key])
+
+    def test_review_overlay_findings_and_target_payload_restrictions(self):
+        overlay = Path(self.tmp.name) / 'overlay'
+        overlay.mkdir()
+        (overlay / 'board-specs.yaml').write_text(
+            'format: 2\nlayer: local\nname: local\nlicense: Apache-2.0\naccepts: [GPL-2.0-only, MIT]\n')
+        path = overlay / 'widget-overlay.spec.yaml'
+        original = specload.load_strict(HERE / 'fixtures/review/widget-overlay.spec.yaml')
+        path.write_text(dump(original))
+        code, result = run('check', self.root, overlay)
+        self.assertEqual(code, 0, result)
+        for fmt in ('html', 'md'):
+            code, result = run('render', self.root, overlay, '--format', fmt, '--merged')
+            self.assertEqual(code, 0, result)
+        payloads = {'register': {'name': 'CTRL', 'offset': '0x0'},
+                    'sequence': {'steps': [{'id': 's1', 'action': 'Write CTRL.'}]},
+                    'layout': {'name': 'frame', 'size': 4, 'fields': [
+                        {'id': 'word', 'name': 'word', 'offset': '0x0', 'size': 4, 'meaning': 'word'}]}}
+        for kind in ('review', 'overlay'):
+            for name, payload in payloads.items():
+                with self.subTest(kind=kind, payload=name):
+                    fact = {'id': 'invalid', 'section': 'identity', 'title': 'Invalid payload',
+                            'claim': 'An incompatible payload.', 'data': {name: payload},
+                            'todo': {'check': 'source', 'text': 'Read it.'}}
+                    if kind == 'review':
+                        self.data['facts'] = [fact]
+                        self.schema_invalid()
+                    else:
+                        self.data = copy.deepcopy(specload.load_strict(
+                            HERE / 'fixtures/review/widget-review.spec.yaml'))
+                        self.write()
+                        data = copy.deepcopy(original)
+                        data['facts'] = [fact]
+                        path.write_text(dump(data))
+                        code, result = run('check', self.root, overlay)
+                        self.assertEqual(code, 1, result)
+                        self.assertTrue(any('review overlay refuses' in f['message']
+                                            for f in result['findings']), result)
+
+    def test_pair_only_is_supported_without_todo_or_gap_badge(self):
+        self.data['facts'] = [self.data['facts'][1]]
+        fact = self.data['facts'][0]
+        fact.pop('support')
+        self.assertNotIn('todo', fact)
+        self.assertEqual(self.check()[0], 0)
+        checker = self.checker()
+        file = checker.files[0]
+        basis = records.Freshness(checker).basis(file.records['init-pair'])[0]
+        verdict = {'verdict': 'PASS', 'date': '2026-10-09', 'verifier': 'reader A',
+                   'contrary_evidence': 'none-found', 'citation_precision': 'exact', 'basis': basis}
+        record = {'format': 2, 'spec': 'widget-review', 'spec_file': self.file.name,
+                  'spec_sha256': '0' * 64, 'canonical': 'fact-v1', 'sources': [],
+                  'summary': {'pass': 1, 'fail': 0, 'gap': 0, 'unverifiable': 0, 'adjudicate': 0},
+                  'verdicts': {'init-pair': verdict}}
+        dest = self.root / 'resources'
+        dest.mkdir()
+        path = dest / 'widget-review.verify.yaml'
+        path.write_text(dump(record))
+        self.assertEqual(self.check()[0], 0)
+        for fmt, key, gap in (('html', 'html', 'badge gap'), ('md', 'markdown', '- Gap')):
+            code, result = run('render', self.root, '--format', fmt, '--with-status')
+            self.assertEqual(code, 0, result)
+            self.assertNotIn(gap, result[key])
+            self.assertIn('PASS', result[key])
+        verdict['verdict'] = 'GAP'
+        record['summary']['pass'] = 0
+        record['summary']['gap'] = 1
+        path.write_text(dump(record))
+        self.invalid("GAP is a gap fact's verdict")
+        self.data['facts'][0]['support'] = [{'class': 'press', 'title': 'News',
+                                           'url': 'https://example.invalid/news'}]
+        self.schema_invalid()
 
     def test_pair_side_roles(self):
         for side, other in (('impl', 'ref'), ('ref', 'impl')):
@@ -415,6 +540,7 @@ class Generated(ReviewFixture):
         checker = self.checker()
         file = checker.files[0]
         status = {e['file']: {r['key']: r for r in e['rows']} for e in checker.status}
+        file.verdicts['reg-ctrl.en'] = ({'date': '2026-10-09', 'verifier': 'reader A'}, None)
         status[file]['reg-ctrl.en'].update(verdict='PASS', status='current')
         html = render_html.payload(checker, file.records['reg-ctrl'], status, True)
         for text in ('lines 5–5', 'badge requirement">as-implemented', 'badge verdict-pass',
@@ -423,6 +549,57 @@ class Generated(ReviewFixture):
         plain = render_html.payload(checker, file.records['reg-ctrl'], status, False)
         self.assertNotIn('badge verdict-pass', plain)
         self.assertNotIn('badge status-current', plain)
+
+    def test_child_complete_verification_metadata_for_fields_and_steps(self):
+        self.file.unlink()
+        self.file = self.root / 'widget.spec.yaml'
+        self.data = specload.load_strict(HERE / 'fixtures/peripheral/widget.spec.yaml')
+        for fact_id, key in (('reg-ctrl', 'reg-ctrl.en'), ('seq-init', 'seq-init.s1')):
+            parent = next(f for f in self.data['facts'] if f['id'] == fact_id)
+            parent['critical'] = True
+            test_sf2_7a.Peripheral.record(self, self.checker(), key)
+            path = self.root / 'resources/widget.verify.yaml'
+            record = specload.load_strict(path)
+            v = record['verdicts'][key]
+            v['note'] = 'Record **child** note.'
+            path.write_text(dump(record))
+            checker = self.checker()
+            file = checker.files[0]
+            status = {e['file']: {r['key']: r for r in e['rows']} for e in checker.status}
+            html = render_html.payload(checker, file.records[fact_id], status, True)
+            for text in ('PASS 2026-10-09', 'Verifier: reader A', 'second reader missing',
+                         'Record note', 'Record <strong>child</strong> note.', 'badge status-current'):
+                self.assertIn(text, html)
+            v['readers'] = [{'verifier': 'reader B', 'verdict': 'PASS'}]
+            v['carried_from'] = {'repo': 'prior', 'commit': 'a' * 40, 'path': 'widget.verify.yaml',
+                                 'key': key, 'format': 2}
+            path.write_text(dump(record))
+            checker = self.checker()
+            self.assertFalse(any(f.level == 'error' for f in checker.findings), checker.findings)
+            file = checker.files[0]
+            status = {e['file']: {r['key']: r for r in e['rows']} for e in checker.status}
+            html = render_html.payload(checker, file.records[fact_id], status, True)
+            self.assertIn('Reader: reader B · PASS', html)
+            self.assertIn('carried from format 2', html)
+            self.assertNotIn('second reader missing', html)
+            plain = render_html.payload(checker, file.records[fact_id], status, False)
+            for text in ('PASS 2026-10-09', 'reader B', 'carried from', 'Record note'):
+                self.assertNotIn(text, plain)
+
+    def test_child_record_names_are_literal_text(self):
+        self.data = specload.load_strict(HERE / 'fixtures/peripheral/widget.spec.yaml')
+        checker = self.checker()
+        file = checker.files[0]
+        status = {e['file']: {r['key']: r for r in e['rows']} for e in checker.status}
+        attack = '<span class="forged" onclick="x">forged reader</span>'
+        file.verdicts['reg-ctrl.en'] = ({'date': '2026-10-09', 'verifier': attack,
+                                       'readers': [{'verifier': attack, 'verdict': 'PASS'}]}, None)
+        status[file]['reg-ctrl.en'].update(verdict='PASS', status='current')
+        html = render_html.payload(checker, file.records['reg-ctrl'], status, True)
+        self.assertNotIn(attack, html)
+        self.assertEqual(html.count(render_html.literal(attack)), 2)
+        self.assertNotIn('<span class="forged"', html)
+        self.assertNotIn(' onclick="x"', html)
 
     def test_full_views_emit_all_generated_sections(self):
         for data in (self.data, specload.load_strict(HERE / 'fixtures/peripheral/widget.spec.yaml')):

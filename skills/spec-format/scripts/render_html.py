@@ -158,6 +158,27 @@ def support(checker, file, entries, notes):
     return ''.join(out)
 
 
+def verification(file, key, row, notes):
+    """Complete parent and child record metadata, using fixed elements and escaped text."""
+    out = []
+    verdict = file.verdicts.get(key, (None, None))[0]
+    if row['verdict']:
+        text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')
+        out.append(badge(VERDICTS[row['verdict']], text))
+        out.append('<p>Verifier: ' + literal(verdict['verifier']) + '</p>')
+        for reader in verdict.get('readers', []):
+            out.append('<p>Reader: ' + literal(reader['verifier']) + ' · ' +
+                       literal(reader['verdict']) + '</p>')
+    if row['second_reader'] == 'missing':
+        out.append('<p>second reader missing</p>')
+    if row['carried']:
+        out.append('<p>carried from format ' + literal(verdict['carried_from']['format']) + '</p>')
+    out.append(badge(FRESHNESS[row['status']], row['status']))
+    if verdict and 'note' in verdict:
+        notes.append(('Record note', verdict['note']))
+    return ''.join(out)
+
+
 def fact(checker, rec, status, with_status):
     data, file = rec.data, rec.file
     out = ['<article class="fact" id="' + escape(rec.full, quote=True) + '"><header><h4>' +
@@ -172,7 +193,7 @@ def fact(checker, rec, status, with_status):
         out.append('</dl>')
     out.append('</div><div class="provenance">')
     notes = []
-    if not data.get('support'):
+    if not speccheck.has_support(data):
         out.append(badge('gap', 'Gap'))
     out.append(support(checker, file, data.get('support', []), notes))
     out.append(badge('origin', file.root.layer + ' · ' + file.root.label))
@@ -190,6 +211,8 @@ def fact(checker, rec, status, with_status):
     finding = data.get('data', {}).get('finding', {})
     if finding:
         out.append(badge('assessment', finding['assessment']))
+        if finding.get('settled_by'):
+            out.append('<p>Settled by</p>')
         out.append(support(checker, file, finding.get('settled_by', []), notes))
     if 'scope' in data:
         out.append('<p>Scope: ' + literal(data['scope']) + '</p>')
@@ -209,17 +232,11 @@ def fact(checker, rec, status, with_status):
         if 'note' in conflict:
             notes.append(('Conflict note', conflict['note']))
     row = status[file][rec.id]
-    verdict = file.verdicts.get(rec.id, (None, None))[0]
     if data.get('critical'):
         out.append(badge('critical', 'bring-up critical' +
                          (' · second reader missing' if row['second_reader'] == 'missing' else '')))
     if with_status:
-        if row['verdict']:
-            text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')
-            out.append(badge(VERDICTS[row['verdict']], text))
-        out.append(badge(FRESHNESS[row['status']], row['status']))
-        if verdict and 'note' in verdict:
-            notes.append(('Record note', verdict['note']))
+        out.append(verification(file, rec.id, row, notes))
     out.append('<p>Fact reference: <code>' + literal(rec.full) + '</code></p></div>')
     out.append(payload(checker, rec, status, with_status))
     if 'note' in data:
@@ -253,7 +270,8 @@ def payload(checker, rec, status, with_status):
     out = []
     for name in ('register', 'layout', 'finding', 'coverage'):
         if name in data:
-            out.append(table(name.capitalize() + ' (generated)', [data[name]]))
+            entries = [{k: v for k, v in data[name].items() if k != 'settled_by'}]
+            out.append(table(name.capitalize() + ' (generated)', entries))
     for side, anchors in data.get('pair', {}).items():
         notes = []
         out.append('<div class="provenance"><p>Correspondence side: ' + literal(side) + '</p>')
@@ -271,9 +289,7 @@ def payload(checker, rec, status, with_status):
             out.append(badge('requirement', requirement))
         child = status[rec.file].get(rec.id + '.' + key)
         if with_status and child:
-            if child['verdict']:
-                out.append(badge(VERDICTS[child['verdict']], child['verdict']))
-            out.append(badge(FRESHNESS[child['status']], child['status']))
+            out.append(verification(rec.file, rec.id + "." + key, child, notes))
         out.append('</div>')
         if 'note' in row:
             notes.append(('Payload note', row['note']))

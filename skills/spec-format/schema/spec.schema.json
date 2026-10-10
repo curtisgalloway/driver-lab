@@ -522,6 +522,7 @@
       "$comment": "For anything that carries support: a fact, an instance row, a variant row.",
       "anyOf": [
         {"required": ["support"]},
+        {"required": ["data"], "properties": {"data": {"required": ["pair"]}}},
         {"required": ["todo"], "$comment": "message: a gap (no support) must carry a todo"}
       ],
       "allOf": [

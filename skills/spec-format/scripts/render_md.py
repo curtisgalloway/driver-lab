@@ -196,7 +196,7 @@ def _fact(out, checker, rec, status, with_status):
                 out.append("- " + escape(key) + ": " + escape(_value(value)))
         out.append("")
     out.extend(["Provenance (generated):", ""])
-    if not data.get("support"):
+    if not speccheck.has_support(data):
         out.append("- Gap")
     notes = []
     _support(out, checker, file, data.get("support", []), notes=notes)
@@ -260,6 +260,8 @@ def _payload(out, checker, rec, status, with_status):
     if "finding" in payload:
         finding = payload["finding"]
         _table(out, "Finding (generated)", [{k: v for k, v in finding.items() if k != "settled_by"}])
+        if finding.get("settled_by"):
+            out.extend(["Settled by:", ""])
         _support(out, checker, rec.file, finding.get("settled_by", []))
         out.append("")
     if "pair" in payload:

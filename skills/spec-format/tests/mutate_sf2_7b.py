@@ -15,6 +15,27 @@ import tempfile
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
 CODE = [
+    ('missing-search-impl-side', 'review', '"search" in anchor for anchor in sides["impl"]', '"search" in anchor for side in sides.values() for anchor in side'),
+    ('review-overlay-payload', 'speccheck', 'if tf.kind == "review" and any(', 'if False and any('),
+    ('pair-gap-support', 'speccheck', 'return bool(data.get("support") or data.get("data", {}).get("pair"))', 'return bool(data.get("support"))'),
+    ('pair-gap-verdict', 'records', 'gap = not speccheck.has_support(rec.data)', 'gap = "support" not in rec.data'),
+    ('pair-gap-html', 'render_html', 'if not speccheck.has_support(data):', 'if not data.get("support"):'),
+    ('pair-gap-markdown', 'render_md', 'if not speccheck.has_support(data):', 'if not data.get("support"):'),
+    ('html-child-metadata', 'render_html', 'out.append(verification(rec.file, rec.id + "." + key, child, notes))', 'pass'),
+    ('html-verdict-date', 'render_html', "text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')", "text = row['verdict']"),
+    ('html-verifier', 'render_html', "out.append('<p>Verifier: ' + literal(verdict['verifier']) + '</p>')", 'pass'),
+    ('html-verifier-escape', 'render_html', "literal(verdict['verifier'])", "str(verdict['verifier'])"),
+    ('html-reader-escape', 'render_html', "literal(reader['verifier'])", "str(reader['verifier'])"),
+    ('html-readers', 'render_html', "for reader in verdict.get('readers', []):", 'for reader in []:'),
+    ('html-second-reader', 'render_html', "out.append('<p>second reader missing</p>')", 'pass'),
+    ('html-carried', 'render_html', "out.append('<p>carried from format ' + literal(verdict['carried_from']['format']) + '</p>')", 'pass'),
+    ('html-record-note', 'render_html', "notes.append(('Record note', verdict['note']))", 'pass'),
+    ('html-finding-table', 'render_html', "for name in ('register', 'layout', 'finding', 'coverage'):", "for name in ('register', 'layout', 'coverage'):"),
+    ('html-fact-coverage-table', 'render_html', "for name in ('register', 'layout', 'finding', 'coverage'):", "for name in ('register', 'layout', 'finding'):"),
+    ('html-pair-side-label', 'render_html', "out.append('<div class=\"provenance\"><p>Correspondence side: ' + literal(side) + '</p>')", "out.append('<div class=\"provenance\">')"),
+    ('markdown-pair-side-label', 'render_md', 'out.extend(["Correspondence side: " + code(side), ""])', 'pass'),
+    ('html-settled-by-label', 'render_html', "out.append('<p>Settled by</p>')", 'pass'),
+    ('markdown-settled-by-label', 'render_md', 'out.extend(["Settled by:", ""])', 'pass'),
     ('bug-justification', 'review', 'if finding["assessment"] == "bug" and not (', 'if False and not ('),
     ('both-review-sides', 'review', 'if not all(sides.values()):', 'if False:'),
     ('missing-search', 'review', 'if finding["category"] == "missing" and not any(', 'if False and not any('),
@@ -46,8 +67,8 @@ CODE = [
     ('html-pair-citation', 'render_html', "out.append(support(checker, rec.file, [{'class': 'src', 'anchors': anchors}], notes))", 'pass'),
     ('html-child-support', 'render_html', "out.append(support(checker, rec.file, row.get('support', []), notes))", 'pass'),
     ('html-child-requirement', 'render_html', "requirement = row.get('requirement', rec.data.get('requirement'))", "requirement = row.get('requirement')"),
-    ('html-child-verdict', 'render_html', "out.append(badge(VERDICTS[child['verdict']], child['verdict']))", 'pass'),
-    ('html-child-freshness', 'render_html', "out.append(badge(FRESHNESS[child['status']], child['status']))", 'pass'),
+    ('html-child-verdict', 'render_html', "out.append(badge(VERDICTS[row['verdict']], text))", 'pass'),
+    ('html-child-freshness', 'render_html', "out.append(badge(FRESHNESS[row['status']], row['status']))", 'pass'),
     ('html-payload-note', 'render_html', "notes.append(('Payload note', row['note']))", 'pass'),
     ('html-provenance', 'render_html', "literal(', '.join(summary['classes']))", "literal('')"),
     ('html-canonical', 'render_html', "out.append(table('Canonical references (generated)', summary['references']))", 'pass'),
@@ -101,6 +122,16 @@ def schema_mutations():
     for index, name in enumerate(('findings', 'correspondence', 'coverage')):
         for delta, label in ((0, 'needs-payload'), (1, 'payload-section')):
             result.append((name + '-' + label, ('$defs', 'fact', 'allOf', 6 + index * 2 + delta), 'set', {}))
+    result.extend([
+        ('pair-support-todo', ('$defs', 'supportRules', 'anyOf', 1), 'set', {'required': ['support']}),
+        ('settlement-document-required', ('$defs', 'support', 'allOf', 0, 'then', 'required'), 'remove', 'doc'),
+        ('settlement-extra-keys', ('$defs', 'support', 'unevaluatedProperties'), 'set', True),
+        ('review-agreements-section', ('allOf', -2, 'then', 'properties', 'facts', 'items', 'properties', 'section', 'enum'), 'remove', 'agreements'),
+        ('overlay-findings-section', ('allOf', 4, 'then', 'properties', 'facts', 'items', 'properties', 'section', 'enum'), 'remove', 'findings'),
+        ('review-id-shape', ('allOf', -2, 'then', 'properties', 'id'), 'set', {}),
+        ('review-notes-shape', ('allOf', -2, 'then', 'properties', 'notes'), 'set', {}),
+        ('review-cache-shape', ('allOf', -2, 'then', 'properties', 'cache'), 'set', {}),
+    ])
     return result
 
 

@@ -413,6 +413,8 @@ def check_structure(checker, schemas):
 
 
 def check_record(checker, schemas, root, rpath, stems, by_path):
+    import speccheck
+
     raw = []
     ok, _, loaded = checker.api.validate_file(rpath, schemas, None, raw)
     checker._schema_findings(raw, root)
@@ -467,7 +469,7 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
             continue
         rec = f.records[key]
         if rec.path[0] == "facts":
-            gap = "support" not in rec.data
+            gap = not speccheck.has_support(rec.data)
             if gap and v["verdict"] != "GAP":
                 checker.add(where, kpath + ("verdict",), f"verdict {v['verdict']} for {fid!r}, "
                                                          f"a gap fact (no support): its verdict "

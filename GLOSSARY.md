@@ -199,3 +199,12 @@ evaluation; add other terms as the documents that use them are updated.
 | PPI / INTID | Arm GIC Private Peripheral Interrupt, a per-core interrupt / the controller's interrupt identifier: SPI INTID = number + 32; PPI INTID = number + 16. |
 | NDA / BSP / MCP | Nondisclosure agreement limiting who may read or disclose material / board support package, the software supplied for a hardware platform / Model Context Protocol, the interface exposing tools to an agent. |
 | Enum | An enumeration: the closed list of values a schema allows for a field, such as a support class. |
+| Orchestrator | The coordinating agent that selects verification work, launches independent readers, assembles their records and runs the checks. In spec verification it does not read sources or edit the spec. |
+| Harness | The application running an agent and providing its tools; record it with the model and a distinct reader identity so two sessions cannot be confused. |
+| Verdict (format 2) | A recorded comparison result: PASS (supported as stated), FAIL (wrong or misclassified, with a correction), UNVERIFIABLE (evidence unavailable), GAP (a fact with no support), or ADJUDICATE (independent readings awaiting the user's decision). Freshness is separate: a current verdict can still be UNVERIFIABLE. |
+| Document class | A support entry of class `databook`, `standard` or `doc`, naming a document and structured locators. Source code alone does not establish where hardware is or what it requires. |
+| TODO method | A proposed way to settle a fact's remaining question, stored in `todo.method` or described in `todo.text`; the verifier checks whether it can observe that question under the stated conditions. |
+| D16 sub-key | A verdict key of the form `fact-id.sub-id` for a register field or sequence step with its own support. The schema reserves this form; the current checker rejects it until SF2-7 implements those records. |
+| Premise / derivation | Evidence or an explicit assumption an inference rests on / the reasoning that connects those premises to its conclusion. |
+| Unicode NFC / case folding | A standard way to represent equivalent characters identically / comparing letters without case differences. The verifier identity comparison also collapses whitespace; it is not proof that two named readers are independent. |
+| SHA-256 / ISO date | The digest algorithm used for file identities and fact bases / a date written `YYYY-MM-DD`, such as `2026-10-09`. A file digest identifies bytes, while a basis also fingerprints declared dependencies. |

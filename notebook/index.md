@@ -26,6 +26,11 @@ Entries: 2026-10-09T16:11-07:00 through 2026-10-09T16:26-07:00
 Outcome: implementation checkpoint; awaiting independent review. The schema is the contract's
 authority; the reader/scaffold use format 2 with an explicit format 1 transition. Command names
 were checked against SF2-4/SF2-6. Git-dependent checks remain with the orchestrator.
+### [SF2-8b — Spec verifier in format 2](SF2-8b.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T16:17-07:00
+Outcome: implementation ready for orchestrator review; format 2 delta records and readers,
+format 1 retained, runnable synthetic record checked verbatim. Export-dependent utility and
+campaign stand-in tests need a real-checkout rerun; full spec-format suite passes.
 ### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
 Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
 Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.

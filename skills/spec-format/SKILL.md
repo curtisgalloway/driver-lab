@@ -47,9 +47,11 @@ schema; identity comes from `id`, or `overlays`. Conventionally name base files 
 use distinct filenames for overlays. Put SPDX copyright and license comments at the top,
 matching the target repository's license. No frontmatter or Markdown body surrounds format 2.
 
-Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `facts`. Peripheral/review kinds,
-`data`, `requirement` and verdict sub-keys arrive in SF2-7; the current checker refuses them.
-Do not invent fields from a future design example.
+Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `peripheral`, `review` and
+`facts`. SF2-7 implements peripheral/review `data` payloads, `requirement` and verdict sub-keys.
+Use [peripheral-spec](../peripheral-spec/SKILL.md),
+[reference-driver-review](../reference-driver-review/SKILL.md) and
+[hardware-investigator](../hardware-investigator/SKILL.md) for their authoring procedures.
 
 Place facts by kind:
 
@@ -316,6 +318,7 @@ Install [requirements.txt](requirements.txt) in a virtual environment with pip's
 
 ```text
 spec.py validate <file>... [--root <dir>] [--json]
+spec.py check <file.facts.yaml>... --root <dir> [--require-license] [--json]
 spec.py check <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stub <SKILL.md>]... [--stubs-from <dir>]...
     [--require-verified pr|main] [--json]
@@ -328,6 +331,7 @@ spec.py resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
     [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
 spec.py show <file>... [same resolver options]
 spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
+spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
 ```
 
 Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; HTML render and the

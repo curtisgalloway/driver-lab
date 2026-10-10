@@ -47,13 +47,14 @@ For format 1, follow [Board specs](FORMAT-1.md#board-specs).
 
 ### Peripheral specs and reviews
 
-**Future (SF2-7):** Format 2 peripheral specs and reviews will use this procedure, with
-verdicts covering facts rather than each anchor independently. D16 reserves
-`fact-id.sub-id` for a register field or sequence step with its own support. The current
-schema accepts only `board`, `soc`, `chip`, `ip`, `overlay` and `facts`; peripheral/review
-kinds and sub-keys await SF2-7. Do not invent accepted kinds or sub-keys or drop evidence
-to force a record through. Until then, follow the format 1
-[Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews) procedure.
+Format 2 peripheral specs and reviews use this same procedure. Verdicts cover facts,
+not individual anchors. Register fields and sequence steps with their own support get
+`fact-id.sub-id` keys (D16); otherwise the parent verdict covers them. Their bases include
+the effective requirement and parent identifying data. Finding assessments are separate from
+verifier verdicts. Correspondence pair anchors count as support. Read the authoring procedures
+in [peripheral-spec](../peripheral-spec/SKILL.md) and
+[reference-driver-review](../reference-driver-review/SKILL.md). Existing format 1 work alone
+uses [Peripheral specs and reviews](FORMAT-1.md#peripheral-specs-and-reviews).
 
 ## Coordinate a format 2 reading
 

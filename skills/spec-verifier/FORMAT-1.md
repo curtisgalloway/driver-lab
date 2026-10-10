@@ -220,8 +220,8 @@ anchor is verified back to source**, in two layers:
    against the headers are findings. Any `[stale: was <pin>]` marker is a `FAIL` until a person
    re-verifies the claim and clears it.
 2. **Judge every anchor, by reading.** Run the creating skill's own independent verifier as it
-   defines it (`peripheral-spec/templates/verifier-prompt.md`, or
-   `reference-driver-review/templates/verifier-prompt.md` for a review): a fresh subagent that
+   defines it ([peripheral-spec format 1 verifier](../peripheral-spec/FORMAT-1.md#format-1-template-verifier-promptmd), or
+   [review format 1 verifier](../reference-driver-review/FORMAT-1.md#format-1-template-verifier-promptmd) for a review): a fresh subagent that
    renders the review sheet with `anchor_check.py --show`, which places each claim beside the
    source lines it cites, reads the main source files in full once, and decides for every anchor
    whether the cited lines *support the claim*, not merely whether they resolve: a range that

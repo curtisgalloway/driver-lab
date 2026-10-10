@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 contributors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-2.0-only
 format: 2
 kind: facts
 resources:
@@ -61,13 +61,32 @@ facts:
       - 7
       - 7
       symbol: WIDGET_LCR
-  claim: LCR is at offset 0x08, and a write to it latches BAUD.
+      comment: true
+  claim: LCR is at offset 0x08; the source comment says a write to it latches BAUD.
 - id: seq-init
   section: facts
   title: Initialization
   claim: The driver initializes the block by clearing CTRL, writing BAUD, writing LCR, then setting the
     enable bit.
   requirement: as-implemented
+  data:
+    sequence:
+      steps:
+      - id: disable
+        action: Clear CTRL.
+      - id: baud
+        action: Write the divisor to BAUD.
+      - id: lcr
+        action: Write the line-control value to LCR.
+      - id: enable
+        action: Set the CTRL enable bit.
+      order:
+      - before: disable
+        after: baud
+      - before: baud
+        after: lcr
+      - before: lcr
+        after: enable
   support:
   - class: src
     anchors:

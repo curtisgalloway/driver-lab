@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 contributors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-2.0-only
 format: 2
 layer: public
 name: widget-peripheral
-license: Apache-2.0
+license: GPL-2.0-only
 accepts: [GPL-2.0-only, MIT, Apache-2.0]

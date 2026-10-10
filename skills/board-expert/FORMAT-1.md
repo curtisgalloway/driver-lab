@@ -1,4 +1,6 @@
 > **Format 1 contract, retained until SF2-12.** The original text below is unchanged.
+> Peripheral grammar and placement references below select
+> [peripheral-spec/FORMAT-1.md](../peripheral-spec/FORMAT-1.md).
 > New authoring follows [spec-format](../spec-format/SKILL.md), the format 2 contract.
 
 <!--

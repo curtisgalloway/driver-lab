@@ -1,69 +1,103 @@
 <!--
 SPDX-FileCopyrightText: 2026 Curtis Galloway
 SPDX-License-Identifier: Apache-2.0
-Fill-in prompt for the review-writing subagent; substitute every <angle-bracket> placeholder.
+Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-Review the <PERIPHERAL> driver (<IP block>, compatible "<dt-compat>") at <impl checkout>, pinned
-at <impl-repo-name>@<commit>, against the REFERENCE implementation at <ref checkout>, pinned at
-<ref-repo-name>@<commit> (<how the reference was chosen: board expert / user; license>).
-<board/revision facts>. Load `reference-driver-review` and follow it; its anchor rules are
-`peripheral-spec`'s with `[impl:]`/`[ref:]` tags.
+# Format 2 review drafting prompt
 
-OUTPUT: write the finished review to <scratch path>. Return the review path, a one-paragraph
-summary (the headline findings), and both pins (`Impl pin: <impl-repo-name>@<commit>`,
-`Ref pin: <ref-repo-name>@<commit>`).
+**Terms:** roles identify the two trees; an assessment judges a difference; a verifier verdict
+judges the finding's evidence. See [the glossary](../../../GLOSSARY.md).
 
-HOW TO READ (fan out, then draft): do not read both trees yourself. First have one investigator
-build the CORRESPONDENCE MAP (implementation file/function ↔ reference counterpart, anchored both
-sides, plus the unmapped remainder on each side); give it to the others. Then spawn paired-slice
-investigators, each reading its slice of BOTH trees and returning findings that already carry
-`[impl: path:L1-L2 (symbol)]` and `[ref: path:L1-L2 (symbol)]` anchors: constants (register
-offsets, masks, magic values, both sides' headers), sequences (probe/init/reset/teardown ordering,
-delays, timeouts), interrupts & DMA (enable/ack semantics, descriptor layouts), and error paths &
-quirks (recovery, errata workarounds, revision gates — read these closely; workarounds encode
-hardware facts no databook states). Run the CONSTANTS slice TWICE with independent investigators
-and diff their findings before drafting: a divergence only one found gets a third look against
-both headers. You synthesize; open a tree only to settle a conflict between investigators or to
-tighten an anchor. NEVER write an anchor for lines you did not read or that an investigator did
-not return — a plausible wrong line number resolves fine and is the one fabrication the checker
-cannot catch. (For a small driver you may read both sides yourself.)
+Review <peripheral> (<IP block>, <board/revision>) at <impl-checkout>, <impl-commit>, against
+<ref-checkout>, <ref-commit>. Reference choice and applicability: <reference choice>.
+Destination root: <root>; output: <scratch-review>. Load `reference-driver-review`,
+`peripheral-spec` and `spec-format`. Confirm cited file licenses and the destination's accepts
+list first. Quote sparingly, preserve notices, never paste reference code into the implementation.
 
-EVERY FINDING carries: a category — differs (both do it, differently) / missing (reference does
-it, implementation does not) / extra (implementation only); exactly one verdict — [bug] (the
-implementation is wrong for a reason that stands WITHOUT the reference: a [doc:] backs it, or the
-defect is self-evident), [suspect] (nothing settles it — goes on the verify-on-hardware list),
-[benign] (justification stated in the finding; "probably fine" is [suspect]), or [ref-issue] (the
-reference looks wrong or serves a different revision); anchors on BOTH sides; and the consequence.
-The implementation side of a MISSING finding cannot be anchored to presence: cite the function or
-file extent and say the absence was established by search. The databook is the tie-breaker — keep
-[doc: <document> §<section>] citations; "the reference does it differently" alone is never [bug].
+Build correspondence first, then fan out paired constants, sequences, interrupt/DMA and
+error/quirk slices. Run constants twice independently, resolving differences against both
+headers. Preserve investigators' ids and structured support; no invented line citations.
 
-Quote the reference sparingly (a few lines, only when the exact expression IS the finding) and
-never paste reference code into the implementation.
+Start from this minimal complete finding template. The fixture pins/paths and suspect
+example are synthetic; substitute read evidence and its actual applicability for real work.
 
-SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    uv run --with markdown-it-py==4.2.0 python3 <peripheral-spec>/scripts/anchor_check.py <scratch path> \
-        --impl-repo <impl checkout> --ref-repo <ref checkout>
-    python3 <peripheral-spec>/scripts/inventory_check.py <scratch path> \
-        --repo <ref checkout>@<ref-commit> --headers <reference register header(s)>
-    python3 <peripheral-spec>/scripts/inventory_check.py <scratch path> \
-        --repo <impl checkout> --headers <implementation register header(s)>
-The reference-header inventory run is the uncompared-register detector: cover each reported name
-or list it as out of scope with a reason. Then read a sample of `anchor_check.py … --show` and
-confirm the cited lines on each side say what the findings say. Recount every count you state
-before you return it.
+```yaml
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: review
+id: <review-id>
+name: <review-name>
+resources:
+  repos:
+    - name: impl
+      role: impl
+      url: https://example.invalid/impl
+      commit: "<impl-commit>"
+      license: MIT
+      files: [{path: drivers/widget/widget_uart.c, license_from: spdx-line}]
+    - name: ref
+      role: ref
+      url: https://example.invalid/reference
+      commit: "<ref-commit>"
+      license: GPL-2.0-only
+      files: [{path: drivers/tty/serial/widget.c, license_from: spdx-line}]
+facts:
+  - id: f-baud-latch
+    section: findings
+    claim: The implementation writes LCR before BAUD while the reference writes BAUD first.
+    data:
+      finding:
+        category: differs
+        assessment: suspect
+        consequence: The previous divisor may be latched on the first frame.
+        resolution: {status: open}
+    todo: {check: hardware, text: Observe the first frame rate after changing BAUD.}
+    support:
+      - class: src
+        anchors:
+          - {repo: impl, path: drivers/widget/widget_uart.c, lines: [30, 31], symbol: widget_init}
+          - {repo: ref, path: drivers/tty/serial/widget.c, lines: [13, 14], symbol: widget_uart_init}
+```
 
-OPEN the review with the REVIEW NOTICE (required section 1): implementation pin vs reference pin;
-how the reference was chosen and why it is authoritative; the evidence rule (databook outranks
-both trees; the reference is evidence, not truth); run `anchor_check.py --drift` after fixes land;
-verification record at the end.
+Add identity/applicability records and notes about reference choice and revision risks,
+correspondence `data.pair: {impl: [anchors], ref: [anchors]}`, coverage
+`data.coverage: {area, compared, read, reason}`, findings, agreements and open questions.
+Pair-only evidence is support and needs no artificial TODO. All unmapped routines need a
+finding or scope reason. A zero-finding area states what was read to earn it. `areas` carries
+confidence. Do not create a placeholder verification record.
 
-Cover, in order: hardware identity & applicability (which IP revision(s) each side targets —
-version checks, compatible strings, quirk tables, anchored both sides — and the risk if they do
-not coincide); reference provenance (repo, revision, license, paths); the correspondence map
-(every unmapped entry becomes a finding or an explicit out-of-scope entry); comparison coverage
-(areas compared and not, with reasons — a zero-finding area must say what was read to earn it);
-FINDINGS ([bug] first, then [suspect]); agreements worth recording (non-obvious values both sides
-agree on — brief); the VERIFY-ON-HARDWARE LIST (every [suspect], with what to probe); OPEN
-QUESTIONS; and an EMPTY verification record (pins, date, verdict, report paths, sha256).
+Every finding needs category (`differs`, `missing`, `extra`), assessment (`bug`, `suspect`,
+`benign`, `ref-issue`), consequence, resolution and both-side evidence. Use implementation
+search evidence for `missing`. For `extra`, the checker requires some ref-side anchor,
+without requiring a search anchor; the verifier must establish the claimed reference absence.
+A bug needs document-class `settled_by` or `self_evident: true` with `reason`, never the
+reference's difference alone. Benign needs a justification; suspect needs a hardware probe.
+Separate `requirement` (why behavior is needed) from assessment. Attribute comments and
+separate source observation from hardware inference. Findings remain stable ids when fixed;
+record full fixing commit, then inspect/rewrite the impl pin through spec.py drift.
+
+Use tight inclusive lines with symbols or scoped search anchors, all `class: src` regardless
+of repo role. List every search scope in that repo entry's `files`, including `dir/` scopes.
+Documents are named resources with matching support class and string locators,
+canonical citation versus retrieval URL, revision, hashes/page counts. Public roots exclude
+confidential and NDA material; applicable public proxies state their limits.
+
+Self-check with the hash-pinned interpreter `<python>` and sibling `<spec.py>`:
+
+```bash
+<python> <spec.py> check <root> --require-license
+<python> <spec.py> resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+<python> <spec.py> show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+<python> <spec.py> inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
+```
+
+`<review>` is the assembled file; tests substitute SF2-7's review fixture. Inspect skipped
+counts; supply document bytes through `--docs-dir DIR` with `DIR/NAME` files. Inventory cannot
+check finding prose: `<register-spec>` is a companion peripheral/facts file with actual
+register/field payloads (the test uses SF2-7's peripheral fixture). Use each side's own companion,
+pin and header for real comparisons. Resolve or record limitations for omissions, mismatches
+and unknown expressions, never claim they passed. Return file, summary, resource entries,
+check results, coverage exclusions and unresolved questions; verification is independent via
+`templates/verifier-prompt.md`. Existing format 1 reviews use [FORMAT-1.md](../FORMAT-1.md).

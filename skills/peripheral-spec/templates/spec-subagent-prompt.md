@@ -1,100 +1,110 @@
 <!--
 SPDX-FileCopyrightText: 2026 Curtis Galloway
 SPDX-License-Identifier: Apache-2.0
-Fill-in prompt for the spec-writing subagent; substitute every <angle-bracket> placeholder.
+Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-Produce a PERIPHERAL hardware/driver spec for <PERIPHERAL> (<IP block>, compatible
-"<dt-compat>", on <bus>, CPU-phys <addr>, IRQ <irq>) from the driver source at <source checkout>
-pinned at <repo-name>@<commit>, so an engineer can implement a <OS> <framework> driver in
-<language>. <board/prereq facts>. The spec will live in <spec repository: hardware-specs-gpl |
-hardware-specs-docs | hardware-specs-permissive | a private location>, whose license fits the
-sources it cites (`peripheral-spec`, "Where the spec goes"): read the source, cite it,
-quote it sparingly. Load `peripheral-spec` and follow it.
+# Format 2 peripheral drafting prompt
 
-OUTPUT: write the finished spec to <scratch path>. Return the spec path, a one-paragraph summary
-(for the docs index), and the pins (`Source pin: <repo-name>@<commit> <SPDX license>`, one per
-source tree, and `Target pin:` if a target tree was read).
+**Terms:** a fact is an identified evidence record; a payload holds typed register/sequence/layout
+values; a root declares license policy. See [the glossary](../../../GLOSSARY.md).
 
-HOW TO READ (fan out, then draft): do not read the whole tree yourself. Spawn investigators, each
-owning one slice and returning ANCHORED facts — tables and steps that already carry
-`[src: path:L1-L2 (symbol)]` tags: a register-map investigator (headers, register typedefs,
-device tree), a sequences investigator (probe, init, power on/off, teardown, error paths), a
-firmware/tuning investigator if there is a blob or a table path, and a target-tree surveyor for
-HALF 2 (returns `[tgt:]` anchors). Run the REGISTER-MAP slice TWICE with two independent
-investigators (same brief, no shared context) and diff their tables before drafting: every
-disagreement — an offset, a width, a bit, a register only one of them found — gets a third look
-against the header before it is written down. You synthesize; open the source only to settle a
-conflict between investigators or to tighten an anchor. NEVER write an anchor for lines you did not read or
-that an investigator did not return — a plausible wrong line number resolves fine and is the one
-fabrication the checker cannot catch. (For a small single-file peripheral you may read it all
-yourself.)
+Produce a spec for <peripheral> (<IP block>, <board and instance>) from <source-checkout> at
+<source-commit>, with integration for <target OS> at <target-checkout>. Destination: <root>;
+output: <scratch-spec>. Load `peripheral-spec` and `spec-format`. Confirm every cited file's
+license before reading for evidence; enforce the placement rule and preserve source notices.
+Never cite confidential or NDA material in a public root. Return the file, summary, immutable
+resource entries and scope limits. Do not write driver code or a placeholder verification record.
 
-ANCHORING RULES (the point of this spec):
-- Every fact derived from source carries `[src: <path>:<L1>[-<L2>] (<symbol>)]` — repo-relative
-  path, 1-based inclusive lines, and ALWAYS the symbol (the #define / struct / function the lines
-  belong to). Every datasheet fact carries `[doc: <document> §<section>]` with a section, chapter,
-  or table number. A fact with neither is an error. Prefer both: the datasheet says why, the
-  anchor says where.
-- Anchor the LOAD-BEARING lines, as tight as the claim: a register offset → its #define; a bit →
-  its mask; a layout → the struct; a sequence step → the statement(s) that perform it, not the
-  guard above them, not the helper's body, not the enclosing function; a claim about how a
-  register is accessed (readw/readb) → an accessor call; a claim resting on a call site → the call
-  site. A negative claim ("never written", "no handler in the file") cannot be anchored to
-  presence: cite the file's extent and say it was established by search.
-- A line containing only tags anchors the table or list that follows it (block anchor). Blank
-  lines between are fine; a sentence between is not. Rows from elsewhere carry their own tag.
-- State the pins once near the top on their own lines, each with the SPDX license of the files
-  cited through it: `Source pin: <repo-name>@<commit> <SPDX license>` and
-  `Target pin: <target-name>@<commit> <SPDX license>`. Several source trees (or files under
-  different licenses in one tree) get one pin each, with distinct names, and every anchor names
-  its pin: `[src:<pin>: path:L1-L2 (symbol)]`. Investigators return the pin name with each anchor.
-- Documents you cite by page go in the front-matter `docs:` registry (name, title, url, sha256,
-  optional pages and file) and are cited `[doc:<name> p.N]` with no space after `doc:`.
-- Quote at most a few lines, only when the exact expression matters, and still anchor it.
+Fan out register, sequence, tuning and target slices to `hardware-investigator`; obtain
+`kind: facts` YAML, not prose citations. Run registers twice independently and resolve all
+value/coverage disagreements against the headers. Preserve ids and support, changing only
+`section: facts` to the receiving section; explicitly settle id/resource collisions and reference
+mappings. Invent no anchor for a line you did not read and no investigator returned.
 
-HARDWARE VS DRIVER: a `[src:]`-only fact says what the driver does, not what the silicon
-requires. Label every sequence step and hardware-behavior claim with exactly one of
-`[hw-required]` (a document says so — must also carry `[doc:]`), `[comment-explained]` (the
-code's own comment or commit gives the reason — anchor it), `[driver-choice]` (policy; hardware
-permits alternatives), or `[as-implemented]` (nothing found says why — unverified against the
-hardware). Registers the driver never touches may appear with `[doc:]` only, so the register map
-covers the block, not just the driver's footprint. Use `<board-expert>` for board specifics and
-cached references.
+Start from this minimal complete record template (its supported subset is not a finished spec).
+Use the target's license in the SPDX header. Unknown register width/access/reset are absent.
 
-SELF-CHECK before returning (fix every error and every warning you cannot justify):
-    uv run --with markdown-it-py==4.2.0 python3 <this-skill>/scripts/anchor_check.py <scratch path> --repo <pin>=<source checkout> \
-        [--repo <pin>=<checkout> ...] [--target-repo <target checkout>] \
-        [--root <the spec repository's specs/ root> --require-license]
-    python3 <this-skill>/scripts/inventory_check.py <scratch path> --repo <pin>=<source checkout> \
-        --headers <the register header(s), repo-relative> \
-        --dt <the board .dtsi, repo-relative> --dt-node <the node label>
-With several pins, run the inventory check once per pin whose tree holds the headers (it
-compares one tree per run). It lists header names and device-tree items (names, SPIs, reg bases, phandles,
-constants, boolean properties) the spec never mentions: cover each, or list it explicitly as out
-of scope with a reason. Then read a sample of `anchor_check.py … --show` and confirm the
-cited lines say what the claims say. Recount every count you state ("eight entry points", "a
-3-word hole") against the code before you return it.
+```yaml
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+format: 2
+kind: peripheral
+id: <device-id>
+name: <device-name>
+resources:
+  repos:
+    - name: linux
+      role: source
+      url: https://example.invalid/source
+      commit: "<source-commit>"
+      license: <source-license>
+      files: [{path: <header>, license_from: spdx-line}]
+facts:
+  - id: reg-ctrl
+    section: registers
+    data:
+      register: {name: WIDGET_CTRL, offset: "0x0"}
+      fields:
+        - id: en
+          name: WIDGET_CTRL_EN
+          bits: [0, 0]
+          meaning: block enable
+          support:
+            - class: src
+              anchors: [{repo: linux, path: <header>, lines: [5, 5], symbol: WIDGET_CTRL_EN}]
+    support:
+      - class: src
+        anchors: [{repo: linux, path: <header>, lines: [4, 4], symbol: WIDGET_CTRL}]
+  - id: seq-init
+    section: sequences
+    claim: The driver clears CTRL before programming the UART.
+    requirement: as-implemented
+    data:
+      sequence:
+        steps:
+          - id: s1
+            action: write 0 to CTRL
+            support:
+              - class: src
+                anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
+    support:
+      - class: src
+        anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
+```
 
-OPEN the spec with the PROVENANCE NOTICE (required section 1): derived from <repo-name>@<commit>
-(each pin, with its license); lives in <spec repository>, whose license fits them;
-every fact anchored; the source is authoritative — where they disagree fix the spec; run
-`anchor_check.py --drift` before trusting the spec at a newer commit; the verification record at
-the end says when the claims were last checked.
+Add complete register fields in databook order, performing steps and separate ordering
+constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,
+gotchas and questions. Every actionable item is a supported record or a gap TODO; orientation
+is not evidence. Target facts use a repo with `role: target` and `class: src` anchors. Source
+and target in one tree still need a target-role entry for the target section.
 
-Cover (HALF 1 hardware): IP identity & provenance (incl. the driver's own identity checks,
-anchored); canonical references TABLE (datasheets + public proxies + the pinned source); register
-map (grouped per databook, offsets+bits, anchored; untouched registers from documents); ordered
-init sequences (prerequisites, steps anchored to the performing statements, every step labeled);
-data/descriptor formats; interrupts (routing, status bits, ack/clear, handler anchored — or the
-evidence of absence); DMA/addressing; sub-protocols.
-Cover (HALF 2, target tree at <target path>, if any): which existing driver to model on, the OS
-protocol(s) to implement, reuse-vs-write, bind rule + board node shape, packaging — each claim
-with a `[tgt:]` anchor. If source and target are the same tree, say so and use `[src:]`.
-End with: milestones; consolidated gotchas (anchored to the workaround code); per-area confidence
-(datasheet+code / code only / inferred); the VERIFY-ON-HARDWARE LIST (every `[as-implemented]`
-claim and every register whose width, reset value, or bit position rests on code alone); OPEN
-QUESTIONS (what neither code nor documents settle — an empty list is a claim the verifier will
-test); and an EMPTY verification record (pins, date, verdict, report paths, sha256).
-Be exhaustive on registers/sequences/references — every claim must be checkable against the
-pinned tree.
+`requirement` is `hw-required` (document-class support required), `comment-explained` (attribute
+comments), `driver-choice` or `as-implemented`; children inherit or override it. Fields/steps
+with their own support receive separate verifier sub-keys. Do not guess hardware requirements
+from driver habits. Return inference as a separate record with premises/derivation and TODO.
+Use `areas` for confidence. Hardware TODOs cover code-only width/reset/bit assumptions and
+observable checks; the generated lists collect these records.
+
+Document support names `resources.documents` with matching class and precise string locators.
+Keep canonical citation URLs separate from workable retrieval URLs, with hashes and page counts.
+For Arm manuals, retain the developer page and static documentation-service PDF retrieval.
+Quote only a few lines when their expression matters. Use inclusive performing lines and
+symbols, or a scoped `search` anchor for negative/global claims. Repeat counts yourself.
+
+Before returning, use the pinned interpreter `<python>` and sibling `<spec.py>`:
+
+```bash
+<python> <spec.py> check <root> --require-license
+<python> <spec.py> resolve <spec> --root <root> --repo linux=<source-checkout>
+<python> <spec.py> inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+<python> <spec.py> show <spec> --root <root> --repo linux=<source-checkout>
+```
+
+Here `<spec>` is the assembled, complete map in `<root>`, not the minimal template alone;
+SF2-7's widget fixture is the executable test substitution. Repeat repo bindings for additional
+sources and target entries. Supply document bytes as `--docs-dir DIR` with `DIR/NAME` files.
+Inspect skipped counts. Inventory unknowns, mismatches and strict omissions are failures;
+resolve or report them, never claim a pass. Return check results, omissions/scope limits and
+open questions. Independent verification uses `templates/verifier-prompt.md` and `spec-verifier`.
+For existing format 1 work use only [FORMAT-1.md](../FORMAT-1.md).

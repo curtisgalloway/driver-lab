@@ -49,6 +49,12 @@ Outcome: complete ([evidence](../evidence/SF2-10.md)); the three draft branches 
 rounds. When a fidelity check is unsure, keep the verdict fresh: all three uncertain carries
 cited headings that did not exist.
 
+### [SF2-11 — The three spec repositories cut over and published](SF2-11.md)
+Entries: 2026-10-09 through 2026-10-10
+Outcome: complete ([evidence](../evidence/SF2-11.md)); docs, permissive and gpl merged in order and
+publish three Pages sites. Downstream CI reads the upstream `main`, so it is red until the upstream
+merges, and with no branch protection the re-run after each merge is the only gate.
+
 ### [SF2-5 — The viewer and publishing](SF2-5.md)
 Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
 Outcome: complete ([evidence](../evidence/SF2-5.md)); one review round and a clean confirmation

@@ -412,6 +412,10 @@ def check_record(checker, schemas, root, rpath, stems, by_path):
     stem = rpath.name[:-len(RECORD_SUFFIX)]
     owners = stems.get(stem, [])
     where = (rpath, root, loaded)
+    if ok:
+        import textcheck
+
+        textcheck.check_data(checker, where, loaded.data)
     if not owners:
         checker.add(where, ("spec_file",) if ok else (),
                     f"no spec file named {stem}{SPEC_SUFFIX} in root {root.label}: a record "

@@ -14,12 +14,21 @@ evaluation; add other terms as the documents that use them are updated.
 | Skill | Instructions and optional supporting tools that guide an agent through a task. |
 | Plugin | A package of related skills and optional tools. |
 | Specification (spec) | A document describing hardware behavior precisely enough to implement a driver. |
+| CommonMark | A defined set of Markdown rules for interpreting headings, lists, links and code. |
+| GFM | GitHub Flavored Markdown: GitHub's Markdown rules, which add tables, footnotes and automatic links to CommonMark. |
+| Code span / code fence | Literal inline text between backticks / a literal block between delimiter lines. The view sizes delimiters so content cannot close them. |
+| Autolink | Text a Markdown renderer turns into a link automatically, such as a URL or email address. |
+| Nesting depth | How many Markdown containers or inline constructs surround a piece of text. |
 | Driver | Software through which an operating system controls a device. |
 | OS / kernel | Operating system / its core that manages hardware and supplies driver interfaces. |
 | API | An interface a program uses to call another software component. |
 | SDK | Software development kit: headers, libraries, and tools for building against a platform. |
 | Corpus | The pinned collection of source code and documents used as reference evidence. |
 | Pin | An exact revision, edition, or file digest identifying an input. |
+| Symbolic link / hard link | A path pointing to another path / another name for the same underlying file. Replacing a symbolic link replaces the pointer; replacing one hard link separates it from the other names. |
+| Mode bits | Unix file flags recording read, write and execute permissions and special modes. |
+| Setuid / setgid | Unix mode flags that can make an executable run with its owner's user identity / its group's identity. Spec files with either flag are refused for rewriting. |
+| Data path | The sequence of mapping keys and list positions naming a parsed value, such as `$['facts'][0]['title']`. Rewrite refusals name the first differing path. |
 | QEMU / device model | An open-source machine emulator / its software imitation of a hardware device, which a guest OS drives as if it were real. A device model is a separate implementation, not the silicon. |
 | Differential test | Running a reference driver and a candidate under identical scenarios and comparing their outcomes and register traces. |
 | Emulated evidence | A result observed on a device model (QEMU or another emulator; class `[emulated]`, adopted 2026-09-25); weaker than a hardware measurement because models are often lenient. It cites the model version and the runs, states what was observed from outside the model, and is never the sole authority for a fact. |

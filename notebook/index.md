@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T16:17-07:00
+Updated: 2026-10-09T18:30:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -26,6 +26,20 @@ Entries: 2026-10-09T16:11-07:00 through 2026-10-09T16:17-07:00
 Outcome: implementation ready for orchestrator review; format 2 delta records and readers,
 format 1 retained, runnable synthetic record checked verbatim. Export-dependent utility and
 campaign stand-in tests need a real-checkout rerun; full spec-format suite passes.
+### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
+chose "author text inert in the .md view": every author field is fenced and generated identifiers
+are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
+rely on a proof that text is safe.
+### [SF2-6 — Resolve, show and drift](SF2-6.md)
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation
+round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
+"verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
+and keeps the original on any other difference. Do not patch a splicer a second time; verify its
+output. Recheck file policy beside the final comparison, not only before staging.
 
 ### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00

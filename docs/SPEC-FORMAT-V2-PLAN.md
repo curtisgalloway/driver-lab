@@ -114,9 +114,9 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
-| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | pending |
+| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
 | SF2-5 | The viewer and publishing | SF2-4 | pending |
-| SF2-6 | Resolve, show and drift | SF2-2 | pending |
+| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | pending |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
@@ -377,7 +377,11 @@ Needs the design's Rendering section and the CommonMark library's token API. Spl
 the renderer (steps 3–4) moves to SF2-5 if the text module and its fixtures take the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-4.md`. Notebook: `notebook/SF2-4.md`.
+Status: complete. Evidence: [SF2-4](../evidence/SF2-4.md) (acceptance table, four fix rounds
+and a confirmation review, mutation results). Notebook: [SF2-4](../notebook/SF2-4.md). Round 2
+met the stop rule (author text escaped its container under GFM a second time) and the user chose
+"author text inert in the .md view"; the confirmation round added a delimiter bound. **Open
+limitations:** the HTML viewer must use the same CommonMark preset (SF2-5); see the evidence.
 
 ---
 
@@ -467,7 +471,8 @@ Needs `fetch_src_pins.py`, the anchor-resolution parts of `anchor_check.py` and 
 anchor section. Split point: `drift` (step 2) becomes SF2-6b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-6.md`. Notebook: `notebook/SF2-6.md`.
+Status: complete. Evidence: [SF2-6](../evidence/SF2-6.md) (acceptance table, three review rounds
+and a confirmation round, decisions, limitations). Notebook: [SF2-6](../notebook/SF2-6.md).
 
 ---
 

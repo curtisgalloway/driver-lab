@@ -107,7 +107,10 @@ class Finding:
         return dataclasses.asdict(self)
 
     def __str__(self):
-        return f"{self.path}:{self.line}:{self.column}: {self.level}: {self.message}"
+        import specload
+
+        return specload.visible_name(
+            f"{self.path}:{self.line}:{self.column}: {self.level}: {self.message}")
 
 
 @dataclasses.dataclass(eq=False)
@@ -345,6 +348,9 @@ class Checker:
         root.rank = LAYERS.index(root.layer)
         root.extension = self.api.load_extension(marker, data, [])
         where = (marker, root, loaded)
+        import textcheck
+
+        textcheck.check_backticks(self, where, data)
         try:
             self.spdx.parse(data["license"])
         except self.spdx.SpdxError as exc:
@@ -475,6 +481,9 @@ class Checker:
                 seen.add(item["path"])
 
     def check_file(self, f: SpecFile):
+        import textcheck
+
+        textcheck.check_file(self, f)
         cited = set()  # repos names an anchor or a notice of this file names
         for rec in f.records.values():
             self.check_record(f, rec, cited)
@@ -507,6 +516,8 @@ class Checker:
             if "doc" in entry:
                 self.check_citation(f, what, entry, path)
         for anchor, path in anchors(rec.data, rec.path):
+            if "stale" in anchor:
+                self.add(f, path + ("stale",), f"{what}: stale anchor; re-verify and remove stale")
             name = anchor["repo"]
             cited.add(name)
             if "lines" in anchor and anchor["lines"][0] > anchor["lines"][1]:
@@ -606,6 +617,9 @@ class Checker:
 
     def check_placeholders(self, f: SpecFile):
         import specmd
+        import textcheck
+
+        author_paths = {path for path, _, _ in textcheck.fields(f.data)}
 
         def walk(node, path):
             if isinstance(node, dict):
@@ -617,7 +631,7 @@ class Checker:
                 for i, v in enumerate(node):
                     walk(v, path + (i,))
             elif isinstance(node, str) and "<" in node:
-                found = specmd.placeholders(node)
+                found = specmd.placeholders(node, skip_html=path in author_paths)
                 if found:
                     self.add(f, path, f"{_where(path)}: unsubstituted template placeholder "
                                       f"{found[0][2]!r}")

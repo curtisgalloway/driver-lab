@@ -1,0 +1,515 @@
+[
+  {
+    "name": "empty",
+    "text": "",
+    "findings": []
+  },
+  {
+    "name": "whitespace",
+    "text": " \n\t\n",
+    "findings": []
+  },
+  {
+    "name": "separators",
+    "text": "***\n\n---\n\n___",
+    "findings": []
+  },
+  {
+    "name": "angles",
+    "text": "<0 0 0> and <&gic>",
+    "findings": []
+  },
+  {
+    "name": "span",
+    "text": "`<linux/of.h>`",
+    "findings": []
+  },
+  {
+    "name": "fenced",
+    "text": "```c\n<script>x</script>\n```",
+    "findings": []
+  },
+  {
+    "name": "indented",
+    "text": "    <script>x</script>",
+    "findings": []
+  },
+  {
+    "name": "encoded",
+    "text": "&lt;script&gt;",
+    "findings": []
+  },
+  {
+    "name": "escaped",
+    "text": "\\<script>",
+    "findings": []
+  },
+  {
+    "name": "https",
+    "text": "<https://example.invalid>",
+    "findings": []
+  },
+  {
+    "name": "email",
+    "text": "<x@example.invalid>",
+    "findings": []
+  },
+  {
+    "name": "http",
+    "text": "[x](http://example.invalid)",
+    "findings": []
+  },
+  {
+    "name": "anchor",
+    "text": "[x](#here)",
+    "findings": []
+  },
+  {
+    "name": "mailto",
+    "text": "[x](mailto:x@example.invalid)",
+    "findings": []
+  },
+  {
+    "name": "title",
+    "text": "[x](https://example.invalid \"<script>\")",
+    "findings": []
+  },
+  {
+    "name": "image",
+    "text": "![x](https://example.invalid/a.png)",
+    "findings": []
+  },
+  {
+    "name": "quote-fence",
+    "text": "> ```\n> x\n> ```",
+    "findings": []
+  },
+  {
+    "name": "list-fence",
+    "text": "- ~~~\n  x\n  ~~~",
+    "findings": []
+  },
+  {
+    "name": "long-close",
+    "text": "```\nx\n````",
+    "findings": []
+  },
+  {
+    "name": "three-indent",
+    "text": "```\nx\n   ```",
+    "findings": []
+  },
+  {
+    "name": "script",
+    "text": "<script>x</script>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "comment",
+    "text": "<!-- x -->",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "processing",
+    "text": "<?x?>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "declaration",
+    "text": "<!DOCTYPE html>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "cdata",
+    "text": "<![CDATA[x]]>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "block",
+    "text": "<div>\nx\n</div>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "tag",
+    "text": "<custom x=\"y\">\nx",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "inline",
+    "text": "x <b>y</b>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "inline-comment",
+    "text": "x <!--y-->",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "quote-html",
+    "text": "> <div>",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "javascript",
+    "text": "[x](javascript:alert(1))",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "case-scheme",
+    "text": "[x](JaVaScRiPt:alert(1))",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "entity-scheme",
+    "text": "[x](jav&#x61;script:alert(1))",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "auto-script",
+    "text": "<javascript:alert(1)>",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "vbscript",
+    "text": "[x](vbscript:x)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "data-image",
+    "text": "![x](data:image/png;base64,xx)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "file",
+    "text": "[x](file:///etc/example)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "relative",
+    "text": "[x](relative.md)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "network",
+    "text": "[x](//example.invalid/x)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "empty-url",
+    "text": "[x]()",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "ref-link",
+    "text": "[x][bad]\n\n[bad]: javascript:x",
+    "findings": [
+      [
+        3,
+        "reference"
+      ],
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "image-ref",
+    "text": "![x][bad]\n\n[bad]: data:image/png;base64,xx",
+    "findings": [
+      [
+        3,
+        "reference"
+      ],
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "atx",
+    "text": "# h",
+    "findings": [
+      [
+        1,
+        "heading"
+      ]
+    ]
+  },
+  {
+    "name": "setext",
+    "text": "h\n---",
+    "findings": [
+      [
+        1,
+        "heading"
+      ]
+    ]
+  },
+  {
+    "name": "quote-heading",
+    "text": "> ## h",
+    "findings": [
+      [
+        1,
+        "heading"
+      ]
+    ]
+  },
+  {
+    "name": "list-heading",
+    "text": "- # h",
+    "findings": [
+      [
+        1,
+        "heading"
+      ]
+    ]
+  },
+  {
+    "name": "late-heading",
+    "text": "text\n\n## h",
+    "findings": [
+      [
+        3,
+        "heading"
+      ]
+    ]
+  },
+  {
+    "name": "lone-fence",
+    "text": "```",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "tilde",
+    "text": "~~~\nx",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "overindent",
+    "text": "```\nx\n    ```",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "tab-close",
+    "text": "```\nx\n\t```",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "wrong-marker",
+    "text": "```\nx\n~~~",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "short-close",
+    "text": "````\nx\n```",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "tail",
+    "text": "```\nx\n``` tail",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "quote-unclosed",
+    "text": "> ```\n> x\n\noutside",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "list-unclosed",
+    "text": "- ```\n  x\n\noutside",
+    "findings": [
+      [
+        1,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "second-unclosed",
+    "text": "```\nx\n```\n\n~~~\ny",
+    "findings": [
+      [
+        5,
+        "fence"
+      ]
+    ]
+  },
+  {
+    "name": "image-alt-html",
+    "text": "![<b>](https://example.invalid/x)",
+    "findings": [
+      [
+        1,
+        "html"
+      ]
+    ]
+  },
+  {
+    "name": "uppercase-allowed-scheme",
+    "text": "[x](HTTPS://example.invalid/x)",
+    "findings": []
+  },
+  {
+    "name": "scheme-must-start-url",
+    "text": "[x](javascript:https://example.invalid)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  },
+  {
+    "name": "anchor-must-start-url",
+    "text": "[x](relative#section)",
+    "findings": [
+      [
+        1,
+        "link"
+      ]
+    ]
+  }
+]

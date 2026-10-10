@@ -207,6 +207,10 @@ def enum_bodies(text):
                 if depth == 0:
                     yield opening.start(), text[start:index]
                     break
+        else:
+            # No closing brace found (an unbalanced brace in an inactive branch, say): the
+            # members cannot be listed, so report the enum itself rather than nothing.
+            yield opening.start(), None
 
 
 def declarations(text):
@@ -242,6 +246,10 @@ def declarations(text):
             add(match[1], None, "bitfield", "unsupported bitfield declaration")
 
     for start, body in enum_bodies(text):
+        if body is None:
+            line = text[:start].count("\n") + 1
+            add(f"enum@line{line}", None, "enum", "enum closing brace not found; members cannot be listed")
+            continue
         conditional = contexts[text[:start].count("\n")]
         if re.search(r"^[ \t]*#", body, re.M):
             for name in directed_enum_names(body):

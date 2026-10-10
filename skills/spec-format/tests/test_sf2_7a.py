@@ -766,6 +766,16 @@ class Inventory(Fixture):
         self.assertEqual(code, 1, result)
         self.assertTrue(any("MISSING" in f["message"] for f in result["findings"]))
 
+    def test_unclosed_enum_is_reported_not_dropped(self):
+        # An unbalanced brace in an inactive branch hides the enum's closing brace.
+        src = "enum { FIRST = 1,\n#if 0\n{\n#endif\nLAST = 7 };\n"
+        values, kinds = inventory.extract(src)
+        self.assertEqual(kinds, {"enum@line1": "enum"})
+        self.assertIsNone(values["enum@line1"])
+        reasons = {}
+        inventory.extract(src, reasons)
+        self.assertIn("closing brace not found", str(reasons))
+
     def test_constant_parser_bounds_and_unknowns(self):
         values, kinds = inventory.extract("#define CTRL 0x10UL\n#define MASK GENMASK(5, 2)\n#define ENABLE BIT(1)\n#define NEXT (CTRL + 4)\n#define UNKNOWN SOME_CALL(2)\n#define TOO_BIG (1 << 1000000)\n")
         self.assertEqual(values, {"CTRL": 16, "MASK": 60, "ENABLE": 2, "NEXT": 20, "UNKNOWN": None, "TOO_BIG": None})

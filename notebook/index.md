@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T15:53:47-07:00
+Updated: 2026-10-09T18:30:00-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -21,6 +21,13 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
+Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
+chose "author text inert in the .md view": every author field is fenced and generated identifiers
+are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
+rely on a proof that text is safe.
 ### [SF2-6 — Resolve, show and drift](SF2-6.md)
 Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
 Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation

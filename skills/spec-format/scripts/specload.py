@@ -37,6 +37,7 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Any
+from textnames import NAME_CATEGORIES, visible_name
 
 import yaml
 from yaml.composer import Composer
@@ -75,7 +76,7 @@ class LoadError(Exception):
     """A file that `load_strict` refuses, with where and why."""
 
     def __init__(self, path: Path | str, line: int, column: int, problem: str):
-        self.path = str(path)
+        self.path = visible_name(path)
         self.line = line
         self.column = column
         self.problem = problem
@@ -278,6 +279,8 @@ def load_strict_marked(path: Path | str, raw: bytes | None = None) -> Loaded:
     When `raw` is supplied, parse those bytes without reading the path.
     """
     path = Path(path)
+    if any(unicodedata.category(c) in NAME_CATEGORIES for c in str(path)):
+        raise LoadError(path, 1, 1, "file name contains a forbidden Unicode character")
     raw = path.read_bytes() if raw is None else raw
     source = _decode(path, raw)
     check_text(path, source)

@@ -14,6 +14,10 @@ follows them. Where the body depends on one, it names it (D1–D22).
 
 ## Terms
 
+- **CommonMark / GFM** — Markdown formatting rules / GitHub's additions, including tables,
+  footnotes and automatic links. **Code spans / fences** display inline text / blocks
+  literally. **Nesting depth** counts the constructs surrounding text. See the
+  [glossary](../GLOSSARY.md).
 - **Spec** — a hardware description an agent reads instead of the original sources: a board, an
   SoC, a companion chip, an IP block (the *board-spec* kinds), one peripheral's programming model
   (a *peripheral spec*), or a driver compared against a reference driver (a *review*).
@@ -873,7 +877,7 @@ copies its records into the spec unchanged, ids included.
 | Patterns: fact ids, fact references, commits, sha256, `https://` URLs, hex values, dates | yes | | |
 | Unique fact ids within a file | | yes (`uniqueItems` compares whole items, not a key) | |
 | Fact ids unique per spec id per root; root names present and unique; references into another root qualified by root | | yes | |
-| No raw HTML in claim, prose and note fields; each field self-contained: no heading, no unclosed fence (CommonMark parse, below; D20, D22) | | yes | |
+| No raw HTML in author fields; no heading, unclosed fence, reference definition or footnote; nesting at most 16 (CommonMark parse, below; D20, D22) | | yes | |
 | Every `repo`, `doc`, `assumption` name resolves in the file's `resources` | | yes | |
 | Citation `class` matches the document's `class`; numeric pages within `pages` | | yes | |
 | Fact references resolve; no cycles; layer order respected | | yes | |
@@ -906,11 +910,14 @@ candidate; [Dependencies](#dependencies)) and fails, naming the fact and field:
   an autolink or link whose scheme that rule would drop, so the author learns at check time, not
   from a missing link in the viewer;
 - **a heading** of any level (ATX or setext) inside the field, and **a code fence that never
-  closes** (D22): either would split or swallow the blocks that follow in the Markdown view. The
-  publish step repeats the check.
+  closes** (D22); **link reference definitions**, **footnote references and definitions**, and
+  **block or inline nesting deeper than 16**. These checks still serve the HTML viewer,
+  which renders each field's Markdown. The Markdown view displays author text inside fences;
+  render repeats the field checks and checks the assembled fences separately.
 
 The parse never derives meaning. Its result is only "this field contains raw HTML, a disallowed
-link scheme, a heading or an unclosed fence, at this line"; no provenance, class, citation, id
+link scheme, a heading, an unclosed fence, a reference definition, a footnote or excessive
+nesting, at this line"; no provenance, class, citation, id
 or value is ever read from it. Provenance comes only from the structured fields. This is
 deliberately not the v1 arrangement, where the parse *was* the source of provenance and every
 disagreement between it and the rendered text was a bypass: here a disagreement can at worst let
@@ -1096,31 +1103,59 @@ are generated; neither is committed or edited (D5). Both carry the same content:
 - Nothing generated is committed, so there is no freshness check: what is published is what the
   last build of `main` produced, and the banner says which commits it was built from.
 
-### The Markdown view: how author Markdown is embedded
+### The Markdown view: inert author text
 
-Claims, prose and notes are CommonMark without raw HTML (D4). The renderer keeps them apart from
-everything it generates:
+The user revised the Markdown view on 2026-10-09 after CommonMark and GitHub's GFM
+(GitHub Flavored Markdown) disagreed on fences, tables and footnotes. The HTML viewer still
+renders each field's CommonMark (D4); the Markdown view displays its source verbatim.
 
-1. **Generated text is generated.** Titles, fact references, citations, scope, TODOs and status
-   come only from structured fields and are escaped (backslash escapes for Markdown syntax
-   characters; code spans with a backtick fence longer than their content), so a title or a
-   citation is never interpreted as Markdown.
-2. **One block per fact.** Each fact is a heading (`####` under its section, the escaped title),
-   then the claim exactly as written, as its own blocks separated by blank lines, then a
-   generated **provenance block**: a fixed label line followed by a list, one item per support
-   entry (class, then the rendered citation), then premises and derivation for an inference, the
-   TODO, the scope, and the fact's full reference as a code span.
-3. **Containment** (D22). A claim or prose field must stand alone: no heading and no unclosed
-   code fence (either would split or swallow the blocks that follow). The checker fails such a
-   field ([Validation](#validation-schema-and-checker)), and the publish step checks again with
-   the same parse before it renders, so a view is never built from a field that slipped past.
-   The parse checks layout only; it decides nothing about the fact.
+1. **Author fields are inert.** Claims, orientation, milestones, notes (fact, support,
+   conflict, resource and verification record), notices and inference `states` each follow a
+   generated label and a blank line, inside a top-level backtick fence with no info string.
+   The fence is at column zero, at least three backticks, and one longer than the longest
+   run in the field. Contents are verbatim; no author block sits inside the provenance list.
+   Support and conflict notes and stated premises follow the complete generated list, then
+   the fact's own note. Notices retain their text, including headings and raw HTML.
+2. **Generated values are literal.** Titles remain checked as Markdown, but display as
+   generated text. Values containing `@`, `:`, `www.`, `|`, `*`, `_`, a backtick, `<` or `[` use
+   code spans whose delimiter cannot close early. Other generated values use escaped text.
+   Table cells also escape pipes for GFM's table splitting. Headings contain generated text
+   only; they never carry an author field.
+   **Backtick bound (user decision, 2026-10-09):** `check` refuses a run of more than
+   32 consecutive backticks in every author field and generated string taken from a spec,
+   verification record or root file, including notices, mapping keys and source paths.
+   The diagnostic names the field and says "a run of more than 32 backticks". Delimiter
+   sizing stays the same; render asserts that no emitted fence or span exceeds 33 backticks.
+   GFM's cmark-gfm parser caps fences at 255 backticks and inline delimiters at 80:
+   a 256-backtick wrapper can close at an author's 255-backtick fence, and an 81-backtick
+   span can expose active Markdown. The 32-backtick input bound keeps both containers
+   below those limits without depending on the assembled CommonMark check to detect it.
+3. **Containment (D22).** `check` still rejects raw HTML, disallowed links, headings,
+   unclosed fences, reference definitions and footnote references or definitions in author
+   fields, for the HTML viewer. Block or inline nesting deeper than 16 is an error; the
+   parser's limit is 64, well above the field limit and below Python's recursion ceiling.
+   Reaching that limit during block or inline parsing, including silent link-label
+   lookahead, is recorded as a nesting error even if the parser collapses the input to text
+   or drops its tail. The plain substring `[^` anywhere in
+   author text is rejected too, including formatted or backtick-containing labels and code;
+   token-level footnote checks remain. Notices are exempt from these CommonMark checks,
+   but still subject to the backtick bound.
+   Render repeats the field checks, then parses the assembled view. Every author fence must
+   have its expected position and content, be closed and at the top level, with no info
+   string. Outside fences, only generated headings, lists, paragraphs, tables and code spans
+   are allowed: no links, images, HTML or autolinks. The assembled check is CommonMark-only;
+   GFM safety rests on `escape()` for generated values and the bounded top-level fences for
+   author fields. A failure emits
+   diagnostics and no partial view. Parsing supplies layout checks, never fact meaning.
 
-What the Markdown view **cannot** do: an author can type anything the renderer emits. A claim or
-an orientation paragraph can contain a bold "Provenance" line and a list that looks like a
-citation, and in plain Markdown it will look like one. The Markdown view is a convenience for
-reading on GitHub, in a terminal or in an agent's context; it does not guarantee that a cited
-fact looks different from prose that imitates one. The viewer does.
+The banner accepts repeatable `--source-commit ROOT=SHA`, with a lowercase 40-hex commit
+for each rendered root directory; an omitted root shows “unavailable”. A bare SHA is accepted
+only when exactly one root is rendered. `--tool-commit` identifies the rendering tool separately.
+No Git subprocess runs, and each source SHA256 covers the loader's checked bytes.
+
+A claim imitating “Provenance (generated)” now appears inside its labeled fence. The HTML
+viewer provides badges and formatted author Markdown; the Markdown view provides literal
+source text separated from generated provenance.
 
 ### The viewer: badges prose cannot produce
 
@@ -1816,80 +1851,127 @@ to that repository until it is re-verified (D19).
 ### Markdown view (merged, with status; slice)
 
 The Markdown view CI publishes for the merged `bcm2711`. Headings, provenance blocks and status
-are generated from fields; the claim paragraphs are the authors' text as written. The viewer shows
+are generated from fields; the fenced claims are the authors' text as written. The viewer shows
 the same facts with badges ([Rendering and the viewer](#rendering-and-the-viewer)).
 
-~~~markdown
-<!-- Generated by spec.py render from hardware-specs-docs, hardware-specs-permissive and
-     hardware-specs-gpl at <commits> (canonical form fact-v1, driver-lab <commit>). Do not edit. -->
+This slice follows the SF2-4 fixture view: resource tables and other facts are omitted.
+`uses` and `derivation` are literal generated values; values carrying Markdown syntax use
+code spans. Stated premises and notes are top-level author fences; premise citations are
+nested list items. Repository citations retain full commits. The banner uses explicit
+`--source-commit` and `--tool-commit` values when supplied, otherwise “unavailable”; SHA256
+is over the checked bytes (hashes below are abbreviated as a label). The docs fixture has
+no verification record, and carried zero basis hashes in the GPL fixture read stale.
 
-# Broadcom BCM2711 (Raspberry Pi 4, Raspberry Pi 400, Compute Module 4 and 4S)
+~~~markdown
+Generated by `spec.py render`. Do not edit.
+
+Canonical form `fact-v1`; driver-lab unavailable.
+
+Source `hardware-specs-docs:bcm2711.spec.yaml`; commit unavailable; SHA256 `<checked-byte hash>`.
+
+Source `hardware-specs-permissive:bcm2711.spec.yaml`; commit unavailable; SHA256 `<checked-byte hash>`.
+
+Source `hardware-specs-gpl:bcm2711.spec.yaml`; commit unavailable; SHA256 `<checked-byte hash>`.
+
+# Broadcom BCM2711 \(Raspberry Pi 4\, Raspberry Pi 400\, Compute Module 4 and 4S\)
 
 `bcm2711` · soc · triggers: bcm2711, raspberry pi 4 soc, pi 4 soc, pi 400 soc, cm4 soc
 
 ## Context (not facts)
 
-The BCM2711 is the SoC of the Raspberry Pi 4 Model B, ...
+Orientation (author text):
+
+```
+The BCM2711 is the SoC of the Raspberry Pi 4 Model B, the Raspberry Pi 400 and Compute Modules 4 and 4S: four 64-bit Cortex-A72 cores beside a VideoCore VI GPU. (The rest of the published Orientation text follows unchanged.)
+```
 
 ## Quick-facts
 
 #### Addressing model
 
-The chip has a full 35-bit address map, ... is `0x0_FE20_1000` in Low Peripheral mode.
+Claim (author text):
 
-**Provenance** (generated):
+```
+The chip has a full 35-bit address map, seen by the Arm cores and by "large address" masters such as the DMA4 engines, and a 32-bit "legacy master" view seen by the other DMA masters. The datasheet gives peripheral addresses in the legacy view, except the Arm-only GIC-400 and ARM_LOCAL blocks. In the full map, Main peripherals are `0x4_7C00_0000`–`0x4_7FFF_FFFF` and ARM Local peripherals `0x4_C000_0000`–`0x4_FFFF_FFFF`. When the VideoCore enables Low Peripheral mode, the Arm cores alone see Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000`–`0x0_FFFF_FFFF`. Translation: legacy `0x7Enn_nnnn` is full-map `0x4_7Enn_nnnn` and Low Peripheral `0x0_FEnn_nnnn`, so UART0 at legacy `0x7E20_1000` is `0x0_FE20_1000` in Low Peripheral mode.
+```
 
-- databook: BCM2711 ARM Peripherals (release 4), §1.2.1–1.2.4, pp. 4–6; §6.5.1–6.5.2, p. 92;
-  §11.5, pp. 146–147
-- `bcm2711@hardware-specs-docs#addressing-model` · bring-up critical · PASS 2026-10-08 (carried
-  from format 1)
+Provenance (generated):
+
+- databook: BCM2711 ARM Peripherals \(release 4 \(2022\-01\-18\)\, Raspberry Pi document RP\-008248\-DS\); §1\.2\.1–1\.2\.4\, pp\. 4–6; §6\.5\.1–6\.5\.2\, p\. 92; §11\.5\, pp\. 146–147
+- `bcm2711@hardware-specs-docs#addressing-model` · bring-up critical · unverified (second reader missing)
 
 #### High peripheral mode is likely the full map
 
-High peripheral mode is likely the one in which the Arm cores use the full-map addresses.
+Claim (author text):
 
-**Provenance** (generated):
+```
+High peripheral mode is likely the one in which the Arm cores use the full-map addresses.
+```
+
+Provenance (generated):
 
 - inference, from:
-  - the documentation names high peripheral mode as the alternative to the default (doc:
-    Raspberry Pi documentation, legacy config.txt boot options, "arm_peri_high")
-  - the datasheet gives the Arm cores only two views, ... (databook: BCM2711 ARM Peripherals,
-    §1.2.1, p. 4; §1.2.3, p. 6)
-- derivation: if high peripheral mode is not Low Peripheral mode, it is the full map; ...
-- TODO (verify on hardware): with arm_peri_high=1, read the GIC distributor's ID registers at
-  the full-map address.
+  - Stated premise (author text below)
+    - doc: `Raspberry Pi documentation, legacy config.txt boot options (legacy_config_txt/boot.adoc)`; `heading: arm_peri_high`
+  - Stated premise (author text below)
+    - databook: BCM2711 ARM Peripherals \(release 4 \(2022\-01\-18\)\, Raspberry Pi document RP\-008248\-DS\); §1\.2\.1\, p\. 4; §1\.2\.3\, p\. 6
+- derivation: if high peripheral mode is not Low Peripheral mode\, it is the full map\; neither source uses both names
+- TODO (verify on hardware): `with arm_peri_high=1, read the GIC distributor's ID registers at the full-map address.`
 - `bcm2711@hardware-specs-docs#high-peripheral-mode-is-full-map` · unverified
 
-### Overlay: public (hardware-specs-gpl)
+States (author text):
+
+```
+the documentation names high peripheral mode as the alternative to the default
+```
+
+States (author text):
+
+```
+the datasheet gives the Arm cores only two views, the full 35-bit map and Low Peripheral mode
+```
+
+### Overlay: public (hardware\-specs\-gpl)
 
 #### The tree describes Low Peripheral mode
 
-The tree describes Low Peripheral mode.
+Claim (author text):
 
-**Provenance** (generated):
+```
+The tree describes Low Peripheral mode.
+```
+
+Provenance (generated):
 
 - inference, from:
-  - `bcm2711@hardware-specs-gpl#address-translation-in-the-tree` (Address translation in the
-    tree): the tree's physical targets
-  - `bcm2711@hardware-specs-docs#addressing-model` (Addressing model): Low Peripheral mode
-    places Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000`
-- derivation: the targets fall in those ranges, not in the full-map ranges ...
-- TODO (verify on hardware): compare the live tree on a board booted with arm_peri_high=1.
+  - `bcm2711@hardware-specs-gpl#address-translation-in-the-tree` (Address translation in the tree): the tree\'s physical targets
+  - `bcm2711@hardware-specs-docs#addressing-model` (Addressing model): `` Low Peripheral mode places Main peripherals at `0x0_FC00_0000`–`0x0_FF7F_FFFF` and ARM Local at `0x0_FF80_0000` ``
+- derivation: `` the targets fall in those ranges, not in the full-map ranges at `0x4_7C00_0000` and `0x4_C000_0000` ``
+- TODO (verify on hardware): `compare the live tree on a board booted with arm_peri_high=1.`
 - `bcm2711@hardware-specs-gpl#tree-describes-low-peripheral-mode` · unverified
 
 #### GIC node
 
-`arm,gic-400`, `#interrupt-cells = <3>`, ...
+Claim (author text):
 
-**Provenance** (generated):
+```
+`arm,gic-400`, `#interrupt-cells = <3>`, with distributor `0x4004_1000` (4 KB), CPU interface `0x4004_2000` (8 KB), virtual interface control `0x4004_4000` and virtual CPU interface `0x4004_6000` in the `soc` bus's ARM Local range, so `0xFF84_1000` and `0xFF84_2000` for the first two; its maintenance interrupt is PPI 9 (ID 25), encoded with the `IRQ_TYPE_LEVEL_HIGH` flag on all four CPUs.
+```
 
-- DT: linux@8d3ae59 (GPL-2.0-only) arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66
-- `bcm2711@hardware-specs-gpl#gic-node` · bring-up critical · PASS 2026-10-08 (carried from
-  format 1; second reader missing)
+Provenance (generated):
+
+- DT: `linux@8d3ae59288f1e7d58d76558a6ee96d533bc5019f (GPL-2.0-only) arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66`
+- `bcm2711@hardware-specs-gpl#gic-node` · bring-up critical · PASS 2026\-10\-08 · stale (carried from format 1\; second reader missing)
+
+Record note (author text):
+
+```
+lines 56-66: `arm,gic-400`, three interrupt cells, reg 0x40041000/0x1000, 0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to 0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
+```
 ~~~
 
-Nothing in this Markdown stops a claim from containing its own "**Provenance** (generated):"
-line; that is the limit the viewer exists to close.
+Author text can contain a "Provenance (generated):" line, but it remains literal fenced
+text and cannot create a generated provenance block.
 
 ## Decisions (2026-10-08)
 
@@ -1902,7 +1984,7 @@ left open, also decided by the user on 2026-10-08.
 | D1 | Fact ids in overlays | **Root-qualified references** (not the recommended root prefix). Ids are free and unique per spec id per root; a reference into another root names it, `bcm2711@hardware-specs-gpl#gic-node`; `#<id>` and `<spec id>#<id>` stay short within a root | no collisions across repositories and no extra marker field; every cross-root reference says which repository it points into ([References](#references)) |
 | D2 | Freshness of verdicts | Per-fact basis hashes; `spec_sha256` kept for information | delta verification becomes mechanical and format-only edits stale nothing |
 | D3 | Facts that mix classes | Read classes support a claim jointly; an `inference` stands alone in its fact | keeps most v1 bullets whole while every conclusion gets its own verifiable record |
-| D4 | Markup in claims and prose | **CommonMark allowed, enforced separation in the viewer** (not the recommended plain text). Claims, prose and notes may use lists, emphasis, links, tables and code; **no raw HTML**, rejected by the checker (a decision, confirmed by the user, not an overridable default); no tool parses the Markdown for meaning; the viewer's badges, drawn from fields, carry provenance | authors keep full Markdown; the Markdown view cannot stop prose that imitates a cited fact, so the guarantee lives in the viewer, where author text cannot produce a badge ([Rendering and the viewer](#rendering-and-the-viewer)) |
+| D4 | Markup in claims and prose | **CommonMark allowed, enforced separation in the viewer** (not the recommended plain text). Claims, prose and notes may use lists, emphasis, links, tables and code; **no raw HTML**, rejected by the checker (a decision, confirmed by the user, not an overridable default); no tool parses the Markdown for meaning; the viewer's badges, drawn from fields, carry provenance | authors keep full Markdown for the viewer; the Markdown view displays author fields in labeled top-level fences (user revision 2026-10-09), while the viewer prevents author text from producing a badge ([Rendering and the viewer](#rendering-and-the-viewer)) |
 | D5 | Where rendered views live | **Built and published by CI** (Pages on `main`, an artifact on pull requests), **not committed** (not the recommended committed `rendered/`) | no generated files in the repositories and no freshness check; readers use the published site |
 | D6 | Scalar types | The loader resolves only `true`, `false`, `null` and decimal integers; hex values are strings with patterns | no implicit-typing surprises; values keep their spelling |
 | D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
@@ -1920,13 +2002,13 @@ left open, also decided by the user on 2026-10-08.
 | D19 | Cross-root staleness (raised from the draft's Risks table) | A fact staled through a reference into another root is a **warning on the dependent repository's `main`**; **any pull request to the dependent repository must re-verify** it (`--require-verified` treats it as an error there) | an upstream merge never turns another repository's `main` red, and stale facts cannot ride along on the next change there ([Freshness](#freshness-per-fact-basis-hashes-d2)) |
 | D20 | How "no raw HTML" is checked (raised by the first revision) | **Parse with CommonMark**: the checker rejects only what CommonMark treats as raw HTML, inline or block; code spans and code blocks are not HTML; autolinks (`<https://…>`) are allowed, under the link-scheme rule. Replaces the draft's lexical rule | no false rejections of angle brackets in code, at the cost of the checker importing a pinned CommonMark library, used only for this and D22, never for meaning |
 | D21 | Links and images in author text (raised by the first revision) | As drafted: images render as links, never `<img>`; link and autolink schemes limited to `https`, `http`, `mailto` and in-page anchors | no remote content loads from a spec page, and no script URL becomes a link |
-| D22 | Containment (raised by the first revision) | **In the checker too**: a heading inside a claim or prose field, or a code fence that never closes, fails the checker, and still the publish step | an author learns at check time, before review, not when the published view is built |
+| D22 | Containment (raised by the first revision) | **In the checker too**: headings, unclosed fences, reference definitions, footnotes and nesting deeper than 16 fail author-field checks for the HTML viewer. The Markdown view fences author fields and checks their exact assembled containment (user revision 2026-10-09) | an author learns at check time, before review, not when the published view is built |
 
 ## Risks
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
-| Author Markdown imitates provenance (D4) | in the Markdown view, a claim or prose paragraph can look like a cited fact | stated as a limit of the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on v1 tag spellings in text; review reads the viewer, not the Markdown |
+| Author Markdown imitates provenance (D4) | an author can type generated-looking text | labeled fences keep author source inert in the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on v1 tag spellings in text; review reads the viewer, not the Markdown |
 | Author Markdown breaks layout (an unclosed fence, a heading in a claim) | later facts swallowed or split in the Markdown view | the checker's containment check fails it, naming the fact, and the publish step checks again (D22); each field is rendered separately in the viewer |
 | Raw HTML reaches a page | script or markup injected into the published site | the checker rejects what CommonMark parses as raw HTML (D20); the viewer renders with HTML disabled; image and link URL rules (D21) |
 | YAML authoring errors by agents (indentation, quoting long claims) | failed checks, retries | block scalars for long text; every error carries a line and column; templates per kind; `spec.py check` run before any review |

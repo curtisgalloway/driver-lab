@@ -522,7 +522,7 @@
       "$comment": "For anything that carries support: a fact, an instance row, a variant row.",
       "anyOf": [
         {"required": ["support"]},
-        {"required": ["data"], "properties": {"data": {"required": ["pair"]}}},
+        {"required": ["section", "data"], "properties": {"section": {"const": "correspondence"}, "data": {"type": "object", "required": ["pair"], "properties": {"pair": {"type": "object", "required": ["impl", "ref"]}}}}, "$comment": "a correspondence fact's pair anchors are its support; instance and variant rows have no section and never match"},
         {"required": ["todo"], "$comment": "message: a gap (no support) must carry a todo"}
       ],
       "allOf": [

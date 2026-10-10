@@ -670,3 +670,33 @@ class ReviewPins(GitFixture):
         self.assertEqual(data['resources']['repos'][1]['commit'], self.commit)
         self.assertEqual(run('validate', self.path)[0], 0)
         self.assertEqual(run('resolve', self.path, '--repo', f'impl={self.repo}', '--repo', f'ref={self.repo}')[0], 0)
+
+
+class PairExemptionScope(unittest.TestCase):
+    """The pair-as-support exemption applies to correspondence facts only (round-1 confirmation)."""
+
+    def test_instance_rows_cannot_use_a_pair_as_support(self):
+        import json
+        import jsonschema
+        import yaml
+        here = Path(__file__).resolve().parent
+        source = here / "fixtures/check/good_root/widgetsoc.spec.yaml"
+        base = yaml.safe_load(source.read_text())
+        schema_dir = here.parent / "schema"
+        store = {}
+        for path in schema_dir.glob("*.schema.json"):
+            doc = json.loads(path.read_text())
+            store[doc["$id"]] = doc
+        spec_schema = json.loads((schema_dir / "spec.schema.json").read_text())
+        from referencing import Registry, Resource
+        registry = Registry().with_resources((k, Resource.from_contents(v)) for k, v in store.items())
+        validator = jsonschema.Draft202012Validator(spec_schema, registry=registry)
+        self.assertEqual(list(validator.iter_errors(base)), [])
+        for data in ({"pair": {}}, None, {"pair": {"impl": [], "ref": []}}):
+            with self.subTest(data=data):
+                doc = copy.deepcopy(base)
+                row = doc["instances"][0]
+                row.pop("support", None)
+                row.pop("todo", None)
+                row["data"] = data
+                self.assertNotEqual(list(validator.iter_errors(doc)), [])

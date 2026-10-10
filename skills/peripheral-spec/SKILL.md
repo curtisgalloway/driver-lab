@@ -4,8 +4,8 @@ description: >-
   Produce a format 2 peripheral implementation spec from driver source whose license fits the
   target spec repository. Every fact carries structured support at an immutable commit or a
   named document locator. Use for documenting, specifying or porting a peripheral from citable
-  source or public datasheets; not for NDA source. Uses spec.py check, resolve, show, drift and
-  inventory, with independent verification through spec-verifier.
+  source or public datasheets; not for NDA source. Uses spec.py validate, check, resolve, show,
+  drift and inventory, with independent verification through spec-verifier.
 ---
 
 <!--
@@ -45,6 +45,9 @@ references. It may cite less restrictive repositories, never more restrictive on
 | `hardware-specs-permissive` | Apache-2.0, plus required source notices | Public documents and accepted BSD, ISC, 0BSD, MIT, Apache or permissively dual-licensed source |
 | `hardware-specs-gpl` | GPL-2.0-only | The above plus accepted GPL-2.0-only or GPL-2.0-or-later source |
 
+The format 2 root marker requires `format: 2`, `layer`, `name`, `license` and `accepts`.
+`layer` is its merge position (`public`, `ip-vendor`, `soc-vendor`, `product` or `local`);
+`name` is the stable root identifier used in cross-root fact references.
 Read the actual destination marker's `license` and `accepts`; fixture roots are not a promise
 that published roots accept the same identifiers. Each accepted identifier is an SPDX license
 name. `A OR B` passes if either alternative is accepted; `A AND B` requires both. GPL-3.0,
@@ -83,10 +86,14 @@ Every source citation uses `class: src` with `anchors: [{repo, path, lines, symb
 Paths are repository-relative; lines are inclusive and 1-based. Cite the actual definition,
 performing statement or call site, not its enclosing function or guard. Negative/global
 claims use `search` instead of lines/symbol; state the scope and repeatable search in words.
+Every search scope must also be listed as a path in that repo entry's `files`, including a
+directory scope spelled with its trailing slash (`dir/`).
 The resolver checks scope existence, not the truth of an absence. Use `comment: true` for a
 comment and attribute the claim to it. Never invent an anchor for unread lines.
 Target integration uses the same `src` class, with a repo entry whose `role` is `target`.
 If source and target are one tree, use a distinct target entry for target-section citations.
+The peripheral checker enforces `role: target` only on facts in `section: target`; it does
+not enforce a source/target role for citations in other sections.
 There are no citation aliases or table-wide evidence: each fact/row carries its support.
 
 ## Record types and requirements
@@ -94,8 +101,9 @@ There are no citation aliases or table-wide evidence: each fact/row carries its 
 Start `<device>.spec.yaml` with SPDX comments matching the destination, `format: 2`,
 `kind: peripheral`, `id`, `name`, `resources` and `facts`. Repository entries have HTTPS URLs,
 full lowercase immutable `commit` values, file licenses and `role: source` or `target`.
-Quote all hex values in canonical form (`"0x0"`, never `"0x00"`); omit unknown width, access
-or reset rather than guessing them. No Markdown frontmatter or body surrounds the YAML.
+Quote structured hex values in lowercase canonical form (`"0x0"`, never `"0x00"` or `"0xA"`);
+omit unknown width, access or reset rather than guessing them. No Markdown frontmatter or
+body surrounds the YAML.
 
 - **Register map**: `section: registers`, `data.register: {name, offset, width, access, reset}`
   (last three optional), and optional `data.fields`. Each field has `id`, `name`, inclusive
@@ -153,19 +161,28 @@ repeat `--repo NAME=CHECKOUT` for every cited source/target entry. These command
 on SF2-7's widget peripheral fixture (whose register header is its synthetic C file).
 
 ```bash
+<python> <spec.py> validate <spec> --root <root>
 <python> <spec.py> check <root> --require-license
 <python> <spec.py> resolve <spec> --root <root> --repo linux=<source-checkout>
 <python> <spec.py> inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
 <python> <spec.py> show <spec> --root <root> --repo linux=<source-checkout>
 ```
 
-`check` takes spec roots; `resolve`, `show` and `inventory` take files. Add context roots to
-`check` when references require them. For document hashes, supply `--docs-dir DIR`; bytes
-must be named `DIR/NAME`. Inspect resolution counts: zero errors with skipped anchors is
-not complete evidence resolution. Inventory compares structured register offsets and field
-masks, not prose; cover omissions or explicitly record scope limitations. Unsupported,
-conditional or ambiguous header expressions are unknown and fail even when covered. Do
-not claim they passed; resolve them by reading and record the limitation. `--strict` also
+`validate` takes files and checks strict YAML and schema shape; `check` takes spec roots and
+checks semantic rules, dependencies and license policy. `resolve`, `show` and `inventory`
+take files. Add context roots to `check` when references require them. For document hashes,
+supply `--docs-dir DIR`; bytes must be named `DIR/NAME`. Inspect resolution counts:
+zero errors with skipped anchors is not complete evidence resolution.
+
+Without a `--repo NAME=CHECKOUT` binding for a repo entry, `resolve` fetches its URL at the
+recorded commit. Only size or time limits produce skipped anchors; fetch or content errors
+fail resolution. Inspect the `claim hex values absent from cited lines` warning: it flags
+hex values in a claim that do not appear in its cited source lines and need review.
+
+Inventory compares structured register offsets and field masks, not prose; cover omissions
+or explicitly record scope limitations. Unsupported, conditional or ambiguous header
+expressions are unknown and fail even when covered. Do not claim they passed; resolve them
+by reading and record the limitation. `--strict` also
 fails omissions, so a deliberately partial map cannot claim a strict pass.
 
 A fresh verifier uses [the verifier prompt](templates/verifier-prompt.md) and

@@ -70,7 +70,8 @@ confidence. Do not create a placeholder verification record.
 
 Every finding needs category (`differs`, `missing`, `extra`), assessment (`bug`, `suspect`,
 `benign`, `ref-issue`), consequence, resolution and both-side evidence. Use implementation
-search evidence for `missing`, reference search evidence for `extra`; the verifier repeats it.
+search evidence for `missing`. For `extra`, the checker requires some ref-side anchor,
+without requiring a search anchor; the verifier must establish the claimed reference absence.
 A bug needs document-class `settled_by` or `self_evident: true` with `reason`, never the
 reference's difference alone. Benign needs a justification; suspect needs a hardware probe.
 Separate `requirement` (why behavior is needed) from assessment. Attribute comments and
@@ -78,7 +79,8 @@ separate source observation from hardware inference. Findings remain stable ids 
 record full fixing commit, then inspect/rewrite the impl pin through spec.py drift.
 
 Use tight inclusive lines with symbols or scoped search anchors, all `class: src` regardless
-of repo role. Documents are named resources with matching support class and string locators,
+of repo role. List every search scope in that repo entry's `files`, including `dir/` scopes.
+Documents are named resources with matching support class and string locators,
 canonical citation versus retrieval URL, revision, hashes/page counts. Public roots exclude
 confidential and NDA material; applicable public proxies state their limits.
 

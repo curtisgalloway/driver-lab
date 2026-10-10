@@ -1,4 +1,5 @@
-> **Format 1 procedure, retained until SF2-12.** The original skill text below is unchanged.
+> **Format 1 procedure, retained until SF2-12.** The original procedure below is retained;
+> its retired worked-example pointer is corrected at the end.
 > New authoring follows [SKILL.md](SKILL.md) and [spec-format](../spec-format/SKILL.md).
 > References below to peripheral, review or investigator procedures select their
 > `FORMAT-1.md` files; template references select the unchanged templates appended here.
@@ -168,6 +169,7 @@ be returned as a partial answer, marked as such.
 
 ## Worked example
 
-`WORKED-EXAMPLE.md` (beside this file) runs the method on `board-expert`'s `widgetuart` fixture
-against three target roots, one accepting, one refusing and stopping, one refusing a source and
-carrying on with another. Its source trees, roots and expected facts are under `examples/`.
+The format 1 worked example was retired. `WORKED-EXAMPLE.md` and the expected facts and
+roots under `examples/` now use format 2 and are not examples of the procedure above.
+Follow [SKILL.md](SKILL.md) for that current example; do not use its YAML answers as
+format 1 facts files.

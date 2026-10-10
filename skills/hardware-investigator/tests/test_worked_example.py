@@ -100,13 +100,13 @@ class WorkedExample(unittest.TestCase):
         self.assertEqual(linux.splitlines()[0], "// SPDX-License-Identifier: GPL-2.0-only")
         self.assertEqual(fw.splitlines()[0], "/* SPDX-License-Identifier: MIT */")
 
-    def test_converted_answers_preserve_exact_format_one_claims(self):
+    def test_answers_preserve_claims_except_explicit_comment_attribution(self):
         for source in ("linux", "fw"):
             data = yaml.safe_load((EX / "expected" / ("answer-" + source + ".facts.yaml")).read_text())
             expected = [
                 "CTRL is at offset 0x00, and bit 0 enables the block.",
                 "BAUD, the baud divisor, is at offset 0x04.",
-                "LCR is at offset 0x08, and a write to it latches BAUD.",
+                "LCR is at offset 0x08; the source comment says a write to it latches BAUD.",
                 ("The driver initializes the block by clearing CTRL, writing BAUD, writing LCR, then setting the enable bit."
                  if source == "linux" else
                  "The firmware disables the block before reprogramming it, writes BAUD, writes LCR, then enables the block."),
@@ -115,12 +115,59 @@ class WorkedExample(unittest.TestCase):
             for fact in data["facts"][:3]:
                 self.assertEqual(set(fact["data"]), {"register"})
                 self.assertEqual(set(fact["data"]["register"]), {"name", "offset"})
-            self.assertNotIn("data", data["facts"][3])
+            self.assertEqual(set(data["facts"][3]["data"]), {"sequence"})
             self.assertEqual(data["facts"][3]["requirement"],
                              "as-implemented" if source == "linux" else "comment-explained")
             self.assertEqual([f["support"][0]["anchors"][0]["lines"] for f in data["facts"]],
                              [[4, 5], [6, 6], [7, 7], [12, 15]] if source == "linux" else
                              [[4, 4], [5, 5], [6, 6], [10, 13]])
+
+    def test_lcr_claims_attribute_the_comment_anchors(self):
+        for source in ("linux", "fw"):
+            with self.subTest(source=source):
+                data = yaml.safe_load((EX / "expected" / f"answer-{source}.facts.yaml").read_text())
+                lcr = next(f for f in data["facts"] if f["id"] == "reg-lcr")
+                self.assertTrue(lcr["support"][0]["anchors"][0]["comment"])
+                self.assertIn("the source comment says", lcr["claim"])
+
+    def test_facts_spdx_headers_match_the_destination_root(self):
+        for source, root in (("linux", "gpl"), ("fw", "permissive")):
+            with self.subTest(source=source):
+                marker = yaml.safe_load((EX / "roots" / root / "board-specs.yaml").read_text())
+                header = (EX / "expected" / f"answer-{source}.facts.yaml").read_text().splitlines()[:2]
+                self.assertEqual(header, ["# SPDX-FileCopyrightText: 2026 contributors",
+                                          "# SPDX-License-Identifier: " + marker["license"]])
+
+    def test_expected_answers_assemble_into_peripheral_specs(self):
+        for source, tree, root_name in (("linux", "widget-linux", "gpl"),
+                                        ("fw", "widget-fw", "permissive")):
+            with self.subTest(source=source):
+                facts = self.facts(f"answer-{source}.facts.yaml", tree)
+                original = yaml.safe_load(facts.read_text())
+                assembled = yaml.safe_load(facts.read_text())
+                assembled.update(kind="peripheral", id=f"widget-{source}",
+                                 name=f"Widget {source} UART")
+                for fact in assembled["facts"]:
+                    fact["section"] = "registers" if "register" in fact.get("data", {}) else "sequences"
+                root = self.tmp / f"assembled-{source}"
+                root.mkdir()
+                shutil.copy(EX / "roots" / root_name / "board-specs.yaml", root)
+                path = root / "widget.spec.yaml"
+                header = "\n".join(facts.read_text().splitlines()[:2]) + "\n"
+                path.write_text(header + yaml.safe_dump(assembled, sort_keys=False))
+                for args in (("validate", path, "--root", root),
+                             ("check", root, "--require-license"),
+                             ("resolve", path, "--root", root, "--repo", f"{source}={self.tmp / tree}")):
+                    rc, out = py(SPEC, *args)
+                    self.assertEqual(rc, 0, out)
+                    if args[0] == "resolve":
+                        self.assertIn("4 anchor(s) resolved, 0 skipped", out)
+                restored = yaml.safe_load(path.read_text())
+                for fact in restored["facts"]:
+                    fact["section"] = "facts"
+                restored["kind"] = "facts"
+                del restored["id"], restored["name"]
+                self.assertEqual(restored, original)
 
 
 if __name__ == "__main__":

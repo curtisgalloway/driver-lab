@@ -53,8 +53,10 @@ the file for evidence:
 Expected: exit 0 and `accepted: GPL-2.0-only`. Now read the accepted source at its pin and
 write facts. Every record uses `section: facts`; the control, BAUD and LCR records carry
 `data.register` with canonical quoted offsets and source support. The init record states
-what the driver does with `requirement: as-implemented`. It is not a claim that silicon
-requires the driver's order. The LCR explanation is attributed to source, not measured hardware.
+what the driver does with `data.sequence` steps and order constraints, labeled
+`requirement: as-implemented`. It is not a claim that silicon requires the driver's order.
+The LCR explanation is attributed to the source comment with a `comment: true` anchor,
+not measured hardware. The answer's SPDX header matches the GPL-2.0-only destination root.
 
 ```bash
 <python> <spec.py> check <facts> --root <root> --require-license
@@ -66,6 +68,10 @@ Expected: exit 0 for each, zero check errors/warnings, four resolved anchors and
 Show puts claims beside source bytes. That makes them reviewable; it is not independent
 verification. Return facts and resources unchanged to the drafter, which retains ids and
 support and assigns destination sections explicitly.
+Both expected answers assemble into peripheral specs: keep resources, ids, claims, payloads
+and support, set `kind: peripheral`, add `id` and `name`, and change the register records to
+`section: registers` and `seq-init` to `section: sequences`. No payload needs to be invented
+during assembly; the tests validate, check and resolve both assembled specs.
 
 ## B: only refused source available
 
@@ -105,7 +111,8 @@ before reading further:
 Expected: exit 0 and `accepted: MIT`. Now read firmware at its pin and produce the second
 answer; use `fw` support only. Its initialization claim is `comment-explained`, because the
 firmware comment explains disabling before programming. This is still a code comment, not
-an independently established hardware requirement.
+an independently established hardware requirement. Its `data.sequence` carries steps and
+order constraints too, and its SPDX header matches the Apache-2.0 permissive destination.
 
 ```bash
 <python> <spec.py> check <facts-fw> --root <permissive-root> --require-license
@@ -120,8 +127,9 @@ verification use the same records and per-fact bases; unknown width/access/reset
 
 ## Repeatability
 
-The existing investigator worked-example suite checks the three license outcomes and exact
-preserved claims/support. `skills/spec-format/tests/test_sf2_9_docs.py` also extracts and
+The investigator worked-example suite checks the three license outcomes, source attribution,
+destination SPDX headers and assembly without changing returned payloads/support.
+`skills/spec-format/tests/test_sf2_9_docs.py` also extracts and
 executes every shell block above after these substitutions, as it does for the skills and
 prompts. Stand-in sources for the review fixture are explicitly synthetic; no command result
 here claims a differential driver or physical hardware test.

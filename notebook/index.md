@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Updated: 2026-10-09T23:45:02-07:00
+Updated: 2026-10-10T00:06:38-07:00
 
 A row is stale when its chapter has an entry newer than "indexed through". The notebook
 starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
@@ -22,8 +22,8 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-9 — Peripheral, review and investigator skills in format 2](SF2-9.md)
-Entries: 2026-10-09T23:41:35-07:00 through 2026-10-09T23:45:02-07:00; indexed through that entry
-Outcome: implementation prepared for orchestrator review. Command tests use SF2-7 fixtures;
+Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:06:38-07:00; indexed through that entry
+Outcome: round 1 fixes prepared for orchestrator review. Command tests use SF2-7 fixtures;
 format 1 procedures and prompts remain labeled. Review inventory needs companion register
 records because findings prose does not count as register coverage.
 

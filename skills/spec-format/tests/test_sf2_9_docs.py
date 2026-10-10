@@ -126,7 +126,8 @@ class SkillDocumentation(unittest.TestCase):
             'new-commit': self.new_impl if review else self.new_source,
             'source-commit': self.commits['linux'], 'ref-commit': self.commits['linux'],
             'impl-commit': self.commits['impl'], 'source-license': 'GPL-2.0-only',
-            'file-license': 'Apache-2.0', 'copyright-year': '2026',
+            'file-license': yaml.safe_load((root / 'board-specs.yaml').read_text())['license'],
+            'copyright-year': '2026',
             'copyright-holder': 'Fixture authors', 'device-id': 'template-widget',
             'device-name': 'Template Widget UART', 'review-id': 'template-review',
             'review-name': 'Template Widget review',
@@ -163,7 +164,7 @@ class SkillDocumentation(unittest.TestCase):
         return count
 
     def test_peripheral_skill_commands(self):
-        self.assertEqual(self.commands(DOCUMENTS[0]), 6)
+        self.assertEqual(self.commands(DOCUMENTS[0]), 7)
 
     def test_peripheral_prompt_commands(self):
         self.assertEqual(self.commands(DOCUMENTS[1]), 4)
@@ -204,7 +205,18 @@ class SkillDocumentation(unittest.TestCase):
                     self.assertTrue(result['ok'], result)
                 header = path.read_text().splitlines()[:2]
                 self.assertEqual(header, ['# SPDX-FileCopyrightText: 2026 Fixture authors',
-                                          '# SPDX-License-Identifier: Apache-2.0'])
+                                          '# SPDX-License-Identifier: ' + values['file-license']])
+
+    def test_gpl_citing_fixture_roots_and_file_headers_match(self):
+        for name in ('peripheral', 'review'):
+            with self.subTest(root=name):
+                root = FIX / name
+                marker = yaml.safe_load((root / 'board-specs.yaml').read_text())
+                self.assertIn('GPL-2.0-only', marker['accepts'])
+                self.assertEqual(marker['license'], 'GPL-2.0-only')
+                for path in [root / 'board-specs.yaml', *root.glob('*.spec.yaml')]:
+                    self.assertIn('# SPDX-License-Identifier: ' + marker['license'],
+                                  path.read_text().splitlines()[:2], path)
 
     def test_overlay_uses_the_documented_resolve_show_commands(self):
         text = (SKILLS / DOCUMENTS[3]).read_text()

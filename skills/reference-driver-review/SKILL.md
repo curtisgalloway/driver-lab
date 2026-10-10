@@ -76,7 +76,9 @@ There are no implementation/reference citation classes or line-based pin declara
 Read [peripheral-spec's support rules](../peripheral-spec/SKILL.md#documents-first-structured-support-always):
 repo-relative paths, inclusive lines, nearby symbols and tight performing statements; negative
 claims use a scoped `search` anchor. Resolver search checks only scope existence; a verifier
-must repeat the search. Attribute code comments with `comment: true`. Documents live in
+must repeat the search. Every search scope must be listed as a path in the repo entry's
+`files`, including a directory scope with its trailing slash (`dir/`).
+Attribute code comments with `comment: true`. Documents live in
 `resources.documents`; support names their class, name and precise `at` locators. Use canonical
 citation URLs and separate retrieval URLs, hashes and page counts. Never fabricate citations.
 
@@ -100,8 +102,9 @@ the assessment and evidence are earned; it is not the finding's assessment.
 
 Cite both sides for every finding. For `missing`, the implementation side **must** include a
 `search` anchor over the absence's scope, while the reference cites the performing lines.
-For `extra`, establish the reference absence by search too. `requirement` describes behavior
-as in peripheral-spec; it never substitutes for `assessment`.
+For `extra`, the checker requires some ref-side anchor, without requiring it to be a search
+anchor; the verifier must still establish the claimed absence on the reference side.
+`requirement` describes behavior as in peripheral-spec; it never substitutes for `assessment`.
 
 ## Required review content
 

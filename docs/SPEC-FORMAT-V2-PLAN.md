@@ -121,7 +121,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](../evidence/SF2-9.md)) |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
-| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
+| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](../evidence/SF2-11.md)) |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
 
@@ -675,9 +675,9 @@ the gate fit/misfit and the D19 modes in published CI (as LS5 and LS-G did).
 4. Scratch pull requests proving the gate and D19 behavior; close them unmerged.
 
 ### Acceptance criteria
-- [ ] All three merged in order in one session; each `main` CI green after the last merge.
-- [ ] Each Pages site serves the single and merged views; a pull request shows the artifact.
-- [ ] Scratch pull requests: misfit fails, fit passes, upstream-stale fails the pull request and
+- [x] All three merged in order in one session; each `main` CI green after the last merge.
+- [x] Each Pages site serves the single and merged views; a pull request shows the artifact.
+- [x] Scratch pull requests: misfit fails, fit passes, upstream-stale fails the pull request and
   only warns on `main`.
 
 ### Testing and review
@@ -690,7 +690,7 @@ Three similar changes plus CI waits. Split point: none by design (D11); if a mer
 stop with the earlier repositories merged and their `main` warning, and ask.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-11.md`. Notebook: `notebook/SF2-11.md`.
+Status: complete. Evidence: `evidence/SF2-11.md`. Notebook: `notebook/SF2-11.md`.
 
 ---
 

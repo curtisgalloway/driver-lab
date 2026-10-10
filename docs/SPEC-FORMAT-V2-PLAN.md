@@ -115,12 +115,12 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
 | SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
 | SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
-| SF2-5 | The viewer and publishing | SF2-4 | pending |
+| SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](../evidence/SF2-5.md)) |
 | SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
 | SF2-7 | Peripheral specs, reviews and facts files in format 2 | SF2-4, SF2-6 | pending |
 | SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | pending |
-| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | pending |
+| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | pending |
 | SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
 | SF2-G | Whole-outcome gate | all | pending |
@@ -425,7 +425,10 @@ Needs the design's viewer section and SF2-4's renderer. Split point: the workflo
 (step 3) moves to SF2-11 if the viewer takes the session.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-5.md`. Notebook: `notebook/SF2-5.md`.
+Status: complete. Evidence: [SF2-5](../evidence/SF2-5.md) (acceptance table, one review round
+with two reviewers and a clean confirmation, mutation results). Notebook: [SF2-5](../notebook/SF2-5.md).
+**Open limitations:** deploy concurrency serializes but does not order deployments when builds
+finish out of order; enabling Pages and installing the template in the spec repositories is SF2-11.
 
 ---
 
@@ -643,7 +646,7 @@ Conversion plus verification of three specs. Split point: after step 4 (conversi
 done, records carried), with delta verification as SF2-10b.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-10.md`. Notebook: `notebook/SF2-10.md`.
+Status: complete. The draft branches `format-v2/sf2-10` are not merged; SF2-11 cuts over. Evidence: `evidence/SF2-10.md`. Notebook: `notebook/SF2-10.md`.
 
 ---
 

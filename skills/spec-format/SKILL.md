@@ -23,7 +23,7 @@ SPDX-License-Identifier: Apache-2.0
   a **locator** names a place in a document.
 - **Verification record**: a separate file of verdicts. A **basis hash** fingerprints a fact's
   declared dependencies; **freshness** compares the recorded hash with the current one.
-- **Rendered view**: generated Markdown for reading. The **viewer** is the later HTML view with
+- **Rendered view**: generated Markdown for reading. The **viewer** is the HTML view with
   provenance labels (**badges**) drawn only from fields.
 
 See the [glossary](../../GLOSSARY.md) for these and the hardware terms. This is the shared
@@ -288,7 +288,7 @@ evidence. Read merged Markdown with status for orientation; YAML for exact field
 author text verbatim in labeled top-level blocks without an info string, keeping it inert;
 generated titles, citations and status remain literal. This supersedes the original design
 sketch's inline author Markdown. Evidence still comes only from structured fields. HTML
-rendering (`render --format html`) and the badge viewer arrive later in SF2-5; Pages and
+rendering (`render --format html`) and the badge viewer are available with SF2-5; Pages and
 pull-request publishing arrive with the SF2-11 cutover.
 
 The strict UTF-8/NFC loader resolves only `true`, `false`, `null` and decimal 64-bit integers
@@ -301,8 +301,11 @@ SF2-4's CommonMark check rejects raw HTML, disallowed links/images, reference de
 footnotes, nesting deeper than 16, headings and unclosed fences in author fields, including
 record notes. HTML-like text in code is allowed. Link schemes are HTTP, HTTPS, mailto and
 in-page anchors. Format 1 tag spellings in prose are warnings, never evidence. Rendering
-repeats containment checks and emits no partial view on errors. The later HTML viewer renders
-images as links and separates generated badges from author containers (SF2-5).
+repeats containment checks and emits no partial view on errors. The HTML viewer renders
+images as links and separates generated badges from author containers (SF2-5). Its fixed
+token renderer emits no author classes, ids, titles or fence-language attributes; only checked
+link destinations become hrefs. An image inside a link retains the enclosing link's destination;
+image labels cannot create nested anchors. Notices are escaped literal text.
 
 ## Command line
 
@@ -320,15 +323,16 @@ spec.py status <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stale] [--json]
 spec.py render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
-    [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md [--json]
+    [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html [--json]
 spec.py resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
     [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
 spec.py show <file>... [same resolver options]
 spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 ```
 
-Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; resolve/show/drift
-are SF2-6. SF2-4 and SF2-6 are on main. Inventory is SF2-7a; migration arrives later.
+Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; HTML render and the
+publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a;
+migrate is SF2-10a. All are on main.
 
 `validate` checks shape only; `--root` loads extensions. `check` adds names, composition,
 references, license/trust and records. `--context-root` supplies dependencies without enforcing

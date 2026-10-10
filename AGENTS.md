@@ -85,12 +85,16 @@ uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals
   for read-only runs and `git-delegate` for git writes. Launch a fresh runner each time.
   - **Patch gate, after each Codex run** (a script, not a runner, user approved 2026-10-09).
     - The orchestrator applies the patch itself: one `git apply` in the milestone worktree.
-    - Then it runs `python3 utilities/patch-gate.py PATCH WORKTREE --refused REFUSED`
-      itself, adding `--suite NAME=COMMAND` for any other surface the patch touches. The
-      script fails on any refused file, failing suite, or home path in a new untracked file;
-      it rebuilds `.venv-sf2` with `--require-hashes` and prints every risky-pattern hit in
-      the patch's added lines (shell or eval calls, network calls, subprocess use, home or
-      absolute user paths, dotfiles, agent configuration) verbatim.
+    - Then it runs the main checkout's `utilities/patch-gate.py PATCH WORKTREE --refused
+      REFUSED` itself, adding `--suite NAME=COMMAND` for any other surface the patch touches.
+      The script refuses to run from inside WORKTREE, because the patch may have changed the
+      checks there. It runs its own copies of the privacy and open-side checks over the
+      tracked files and the new untracked files. It fails on any refused file, failing
+      suite, home path, unreadable new file, or change to a gate input (the check scripts,
+      the gate, the pinned requirements, CI workflows); it rebuilds `.venv-sf2` with
+      `--require-hashes` and prints every risky-pattern hit in the patch's added lines (shell
+      or eval calls, network calls, subprocess use, home or absolute user paths, dotfiles,
+      agent configuration) verbatim.
     - The orchestrator reads any hits; they never pass or fail the gate on their own.
     - The gate's exit status is the orchestrator's own check before committing. A Haiku runner
       cost about 71k tokens per patch for these same commands, and the orchestrator had to

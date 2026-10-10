@@ -33,6 +33,7 @@ class PatchGateTest(unittest.TestCase):
     os.mkdir(self.tree)
     subprocess.run(["git", "init", "-q", self.tree], check=True)
     self.patch = self.write("p.patch", "+++ b/x.py\n+print('hi')\n")
+    self.refused = self.write("none.txt", "refused: 0\n")
 
   def write(self, name, text):
     path = os.path.join(self.tmp, name)
@@ -43,7 +44,8 @@ class PatchGateTest(unittest.TestCase):
   def gate(self, *extra):
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-      code = self.mod.main([self.patch, self.tree, "--no-default-suites", *extra])
+      code = self.mod.main([self.patch, self.tree, "--refused", self.refused,
+                            "--no-default-suites", *extra])
     return code, out.getvalue()
 
   def test_risky_hits_only_added_lines(self):
@@ -76,8 +78,8 @@ class PatchGateTest(unittest.TestCase):
     self.assertTrue(out.endswith("gate: FAIL\n"), out)
 
   def test_refused_path_fails(self):
-    refused = self.write("r.txt", ".claude/settings.json\n")
-    code, out = self.gate("--refused", refused)
+    self.refused = self.write("r.txt", ".claude/settings.json\n")
+    code, out = self.gate()
     self.assertEqual(code, 1)
     self.assertIn("refused: 1", out)
 
@@ -94,11 +96,51 @@ class PatchGateTest(unittest.TestCase):
     code, out = self.gate()
     self.assertEqual(code, 1)
     self.assertIn("untracked: 1 new file(s), home paths in: new.txt", out)
+    self.assertIn("FAIL privacy (trusted copy): 1 files, 1 home path(s)", out)
+
+  def test_untracked_file_reaches_trusted_privacy_check(self):
+    # The trusted check scans new untracked files that `git ls-files` alone would miss.
+    count, home, terms = self.mod.trusted_checks(self.tree, [])
+    self.assertEqual((count, home, terms), (0, [], []))
+    with open(os.path.join(self.tree, "n.md"), "w", encoding="utf-8") as f:
+      f.write("see /" + "Users/someone/notes\n")
+    count, home, _ = self.mod.trusted_checks(self.tree, ["n.md"])
+    self.assertEqual(count, 1)
+    self.assertEqual(len(home), 1)
+
+  def test_unreadable_untracked_file_fails(self):
+    os.symlink("/nonexistent", os.path.join(self.tree, "link"))
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn("NOT scanned: link", out)
+
+  def test_patch_touching_gate_inputs_fails(self):
+    for path in ("utilities/check-open-side.py", "utilities/patch-gate.py",
+                 "skills/spec-format/requirements.txt", ".github/workflows/checks.yml"):
+      with self.subTest(path=path):
+        self.patch = self.write("p.patch", f"--- a/{path}\n+++ b/{path}\n+x\n")
+        code, out = self.gate()
+        self.assertEqual(code, 1)
+        self.assertIn(f"gate inputs touched: {path}", out)
+    self.assertEqual(self.mod.touched_gate_inputs("+++ b/utilities/run-store.py\n"), [])
+
+  def test_refuses_to_run_from_inside_worktree(self):
+    repo = os.path.dirname(self.mod.HERE)
+    with self.assertRaises(SystemExit) as raised, \
+         contextlib.redirect_stderr(io.StringIO()):
+      self.mod.main([self.patch, repo, "--refused", self.refused, "--no-default-suites"])
+    self.assertEqual(raised.exception.code, 2)
+
+  def test_refused_list_is_required(self):
+    with self.assertRaises(SystemExit) as raised, \
+         contextlib.redirect_stderr(io.StringIO()):
+      self.mod.main([self.patch, self.tree, "--no-default-suites"])
+    self.assertEqual(raised.exception.code, 2)
 
   def test_bad_suite_argument_is_usage_error(self):
     with self.assertRaises(SystemExit) as raised, \
          contextlib.redirect_stderr(io.StringIO()):
-      self.mod.main([self.patch, self.tree, "--suite", "nocommand"])
+      self.mod.main([self.patch, self.tree, "--refused", self.refused, "--suite", "nocommand"])
     self.assertEqual(raised.exception.code, 2)
 
 

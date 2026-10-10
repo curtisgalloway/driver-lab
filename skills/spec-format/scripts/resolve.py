@@ -190,7 +190,7 @@ class Repository:
 
 
 def fetch(entry, directory, timeout=300, limit=50 << 20):
-    """Port of fetch_src_pins' shallow/blob-less rules, with no local URL escape."""
+    """Fetch the pinned commit with shallow/blob-less rules and HTTPS-only URLs."""
     check_url(entry.get("url"))
     check_commit(entry.get("commit"))
     directory.mkdir(parents=True, exist_ok=True)

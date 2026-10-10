@@ -7,7 +7,7 @@ Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; v
 records and freshness from SF2-3, in records.py), `status` (SF2-3), Markdown `render`
 (SF2-4, in render_md.py), HTML `render` (SF2-5, in render_html.py), `resolve`, `show`
 and `drift` (SF2-6, in resolve.py and drift.py), typed peripheral `inventory` (SF2-7a,
-in inventory.py) and mechanical `migrate` (SF2-10a, in migrate.py).
+in inventory.py).
 
 Exit status (the house contract): 0 every file valid, or every root checked with no error
 (warnings allowed); 1 a file failed to load or validate, or a check found an error; 2 usage
@@ -70,22 +70,6 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
         [--rewrite] [resolver options]
     python3 skills/spec-format/scripts/spec.py inventory <file> --headers <path>...
         [--pin NAME] [--strict] [resolver options]
-    python3 skills/spec-format/scripts/spec.py migrate <v1.spec.md> [--output <new.spec.yaml>]
-        [--report <new.md>] [--marker <v1 board-specs.yaml>] [--verdicts <v1.verify.md>]
-        [--license-from REPO:PATH=spdx-line|notice|license-file]... [--json]
-
-`migrate` creates one fact per format 1 bullet, with an id from its bold lead-in, and a report
-mapping every old verdict key. Explicit src anchors and unambiguous DT file/line parentheticals
-become support. Document and inference prose stays in the report and is marked citation-pass
-in the fact's TODO. Mixed bullets are marked split-mixed and kept whole. Inference-nested anchors
-are report candidates only. Document registry classes are provisional doc until the citation
-pass. Each v1 repository file needs an explicit --license-from declaration; the tool does not
-read sources. Document hashes, commits, page counts and retrieval URLs are extracted when
-explicit in resource metadata. A sibling marker, when present, is copied with format: 2 to the
-output directory. A sibling resources verification record, when present (or supplied with
---verdicts), supplies the exact old keys; otherwise keys are derived from section/ordinal/title.
-Outputs must be new files; no overwrites. No verdicts carry, and critical
-fact selection, citation judgments, splits and fidelity checking belong to later readers.
 
 Run it in a venv made with
 `python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
@@ -897,7 +881,6 @@ def build_parser() -> argparse.ArgumentParser:
     import drift
     import resolve
     import inventory
-    import migrate
 
     parser = _Parser(
         prog="spec.py", description=__doc__.splitlines()[0], allow_abbrev=False,
@@ -955,7 +938,6 @@ def build_parser() -> argparse.ArgumentParser:
     resolve.register(sub)
     drift.register(sub)
     inventory.register(sub)
-    migrate.register(sub)
     return parser
 
 
@@ -1014,7 +996,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command is None:
         return fail("usage", EXIT_USAGE,
-                    ["name a subcommand: validate, check, status, render, resolve, show, drift, migrate"])
+                    ["name a subcommand: validate, check, status, render, resolve, show, drift, inventory"])
 
     try:
         problems = check_dependencies()

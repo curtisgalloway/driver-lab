@@ -54,5 +54,4 @@ contrary_evidence, citation_precision, all five summary counts and required verd
 Do not manufacture a PASS from a mechanically valid anchor; retain GAP, UNVERIFIABLE and
 ADJUDICATE as appropriate. The orchestrator coordinates a fresh second reader for critical facts
 and installs the record, then runs the verification gate. Do not edit the spec. Report blockers
-by fact/sub-key, cited path/lines and reason, with corrections for FAILs. Format 1 work uses
-only the unchanged verifier template in [FORMAT-1.md](../FORMAT-1.md).
+by fact/sub-key, cited path/lines and reason, with corrections for FAILs.

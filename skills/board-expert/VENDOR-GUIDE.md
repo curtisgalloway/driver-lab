@@ -141,5 +141,5 @@ edit yours. When both overlay the same id, the higher layer wins on scalars, and
 appear in the generated view under their own layer headings. An overlay never edits a base
 fact; it adds a relationship or conflict. Each file has its own YAML verification record.
 
-Existing format 1 vendor roots remain readable by board-expert until SF2-12; do not mix them
-with a format 2 composition or use their Markdown rules for new authoring.
+Vendor roots must declare `format: 2` and contain YAML specs. Convert an older root before
+reading or composing it; board-expert no longer reads Markdown specs.

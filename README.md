@@ -89,104 +89,63 @@ paths for each harness.
 
 ## Peripheral specs and reviews
 
-- **`peripheral-spec`**: a per-peripheral spec for driver source you may cite. Its
-  placement rule and "which repo does my spec go in?" table say which spec repository's license
-  fits the sources a spec anchors to.
-  - Every source-derived fact carries a `[src: path:L1-L2 (symbol)]` anchor at a pinned
-    commit. A reviewer can check the spec against the code, and the checker can tell which
-    claims need re-reading when the tree moves.
-  - Ships `scripts/anchor_check.py` (stdlib plus markdown-it-py 4.2.0, through `mdtokens.py`): resolves anchors against one or several
-    named, licensed pins, renders a claim-vs-source review sheet with `--show`, detects and
-    rewrites drift with `--drift REV --rewrite`, gates pin licenses against a spec root's
-    accepts list with `--root DIR`, and checks named document anchors against the spec's
-    `docs:` registry (with file hashes under `--docs-dir`). Also ships `scripts/inventory_check.py`, which finds omissions
-    and value mismatches against the register headers.
-  - Not a way to write a driver under a license the source's terms do not permit, and not for
-    NDA source: a peripheral spec is a derivative of its source by design.
-- **`reference-driver-review`**: reviews a driver implementation against a reference
-  implementation of the same hardware (the upstream kernel driver, the vendor BSP, or the
-  original a port was made from). Produces an anchored findings report.
-  - Findings cover missing init steps, wrong constants, absent errata workarounds, and
-    ordering and timing divergences. Each is cited to the file:line on *both* sides at pinned
-    commits (`[impl:]`/`[ref:]`).
-  - Defaults to the driver in the current directory, and finds the reference through a
-    matching board-expert skill or by asking.
-  - The reference is evidence, not truth: the databook breaks ties.
-  - Reuses `peripheral-spec`'s checkers, so implementation-side anchors get drift
-    tracking as fixes land. Output is a review, never driver code.
-- **`hardware-investigator`**: answers one board or peripheral question as anchored facts, ready
-  for `peripheral-spec`.
-  - Reads the target root's accepts list first, gets the map from `board-expert`, and checks each
-    source's license against the list **before** reading it for evidence. A source the root does
-    not accept is refused with the reason, and the investigator stops rather than cite it.
-  - Ships `scripts/license_gate.py` (stdlib-only), which prints a root's accepts list and
-    accepts or refuses SPDX expressions with the rule `anchor_check.py --root` applies later, and
-    a worked example (`WORKED-EXAMPLE.md`) on `board-expert`'s fixture: one run on an accepting
-    root, one that refuses and stops, one that refuses a source and goes on with another.
-  - Facts only: generating a whole spec is `peripheral-spec`'s job.
+- **`peripheral-spec`** writes a format 2 YAML spec for one peripheral from sources the
+  target may cite. Facts have stable ids, structured support and requirements; register,
+  sequence and layout payloads hold the programming data. Repository resources declare each
+  pin's full commit, license and per-file license evidence. The placement rule chooses a
+  spec repository that accepts every cited source's license.
+  `spec.py check/resolve/show/drift/inventory` check structure and licenses, resolve citations,
+  show claims beside evidence, compare pins and compare register payloads with headers.
+- **`reference-driver-review`** compares an implementation with a pinned reference for the
+  same hardware. It produces a `kind: review` YAML spec: repositories have `role: impl` or
+  `ref`, findings carry both sides' structured anchors and an `assessment` (bug, suspect,
+  benign or reference issue). The databook can settle disagreements. A verifier checks the
+  findings; a finding's assessment is separate from its verification verdict. Output is a
+  review, never driver code.
+- **`hardware-investigator`** answers one board or peripheral question as `kind: facts` YAML
+  ready for peripheral authoring. It gets the map from `board-expert` and checks source
+  licenses against the target root before reading source evidence. Its `license_gate.py`
+  uses format 2's strict marker validation and shared SPDX acceptance rules; `--facts` runs
+  the complete citation gate. It needs spec-format's hash-pinned dependencies. The
+  [worked example](skills/hardware-investigator/WORKED-EXAMPLE.md) exercises accepting,
+  refusing and alternate-source cases with synthetic sources.
+
+Peripheral specs are derivatives of the sources they cite. These skills do not permit a
+license the source's terms refuse and are not for NDA source.
 
 ## Board experts
 
-Board experts supply the per-board map and the sources and datasheets to cite. `board-expert`
-carries its own investigation method: pin every tree, device trees first, cite documents, record
-where each fact came from.
+Board experts supply the per-board map and sources to cite. The map lives in format 2 YAML:
+board, SoC, chip and IP specs compose through `parts` and `instances`; overlays add material
+from other roots in a fixed layer order. Reference source stays in an out-of-tree cache.
 
-The map lives in **board specs**: one Markdown-with-frontmatter file per board, SoC, or
-companion chip.
+The shared contract is [spec-format](skills/spec-format/SKILL.md), with a pointer at
+[board-expert/SPEC-FORMAT.md](skills/board-expert/SPEC-FORMAT.md). `spec.py check` enforces
+schemas, references, composition, license policy, public-root restrictions, stub resolution
+and verification records. Generated Markdown and HTML views present the YAML with provenance
+and per-fact status; edit the YAML, then regenerate the views.
 
-- Specs are *composed*: a board names its SoC and chips as `parts`.
-- Specs are *overlaid*: vendor and bench-local material sits in separate roots and merges in
-  a fixed layer order.
-- A spec carries cited facts, not source, so it may live in the target OS tree next to the
-  board code it describes, or in a spec repository whose license fits the sources it cites. The reference source stays in the expert's out-of-tree cache.
-
-`board-expert/SPEC-FORMAT.md` is the contract. `scripts/spec_check.py` (stdlib plus markdown-it-py 4.2.0, tests
-under `tests/`) enforces it: required keys per kind, every reference resolving, instance
-shapes, the tag clause at the end of every fact, nothing internal under a public root, and
-every stub's id resolving (`--stubs-from` finds the stubs by their "stub over" sentence).
-
-- **`board-expert`**: the reader.
-  - Resolves a spec by id, or by the board/SoC names in the question, across every spec root
-    it can see: its own `specs/`, roots declared by project or vendor skills, a root at the
-    checkout, and the user's local root.
-  - Composes and overlays the spec, clones the sources it names into the cache, and answers
-    with its own method.
-  - Best-effort when no spec exists, with a suggestion to scaffold one.
-  - An IP block (`dwc3`, `pl011`) resolves *anchored* through a board's `instances:` table
-    and kernel tree, or *generic* from mainline at head plus the public standards.
-  - Ships `specs/`, the public root. It is empty for now: the earlier board, SoC, chip, and IP
-    specs and their per-board stubs were removed, to be regenerated with the current skills.
-  - Also ships `QUESTIONS.md`, the structured question catalog and the `Needs decision`
-    protocol every skill here follows instead of guessing; and `VENDOR-GUIDE.md`, how a
-    vendor adds overlay roots, wraps internal tools as skills, and keeps internal material
-    out of public roots.
-- **`board-spec-scaffold`**: writes a new board spec (board, SoC, chip, or IP block) in the
-  format `board-expert` reads.
-  - Optionally adds a thin `<board>-expert` stub, a vendor overlay, a `<vendor>-board-tools`
-    skill for a vendor's internal resources, or a new spec root in a source tree.
-  - Runs an interview for the hardware's identity, root, sources, citations, cache name, and
-    quick-facts, then an optional research-fill by a subagent that loads `board-expert`. Every
-    artifact has a template under `templates/`.
-  - Its last step is the verification phase. Authoring only: it reads no source and answers
-    no hardware questions itself.
-- **`spec-verifier`**: re-derives a spec's claims from the sources it cites, in a fresh
-  verifier context, and writes a verification record outside the spec
-  (`<root>/resources/<name>.verify.md` for a board spec, named for its file; a `resources/` sibling or the
-  project's `docs/provenance/` for the others). One procedure, with a section per kind:
-  - *Board specs*: every tagged fact against its device tree, databook, or document; two
-    independent verifiers for the addressing model, entry state, and debug UART.
-  - *Peripheral specs and reviews*: `anchor_check.py` resolves every anchor at the pin, then the
-    creating skill's own verifier judges whether the cited lines support each claim; one
-    verdict per anchor.
-
-  It never edits a spec. A `FAIL` carries the proposed correction, and re-running is the
-  loop. The checker reads the record's frontmatter: unverified and stale are warnings, a
-  recorded `FAIL` is an error, and `--require-verified` makes the warnings errors too.
-
-- **`spec-format`** (reference, being built): spec format 2, facts as YAML records validated
-  by JSON Schemas ([design](docs/SPEC-FORMAT-V2.md), [plan](docs/SPEC-FORMAT-V2-PLAN.md)). So far
-  its strict loader, schemas, `spec.py validate` and `spec.py check` (composition, references
-  and the license gate); the skills above still read format 1.
+- **`board-expert`** reads format 2 only. It resolves ids or board/SoC names across declared
+  roots, composes and overlays the specs, consults pinned sources and reports full fact
+  references with freshness and limitations. An IP question can be tied to a board instance
+  or answered generically. Without a spec it investigates and suggests scaffolding.
+  Its shipped `specs/` root is empty, marked format 2; published specs live in the separate
+  spec repositories. It also ships the structured question catalog and vendor guide.
+- **`board-spec-scaffold`** creates board, SoC, chip or IP YAML from templates, with optional
+  expert stubs, overlays, vendor tool skills and root markers. Its interview settles identity,
+  placement and sources; optional research-fill returns fact records. Its verification phase
+  hands the files to `spec-verifier`.
+- **`spec-verifier`** re-derives each fact from its evidence in fresh reader contexts and writes
+  `<root>/resources/<name>.verify.yaml`, one record per spec file, including overlays.
+  Verdicts use fact ids, or sub-keys for independently supported register fields and sequence
+  steps. Critical facts need a second independent reader. `spec.py status` computes per-fact
+  freshness from basis and dependency hashes; whole-file `spec_sha256` is informational.
+  `--require-verified pr|main` selects the checking policy. The verifier proposes corrections
+  and never edits the spec.
+- **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and CLI:
+  `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift` and `inventory`.
+  Format 1 authoring, reading and migration tools are retired. Frozen campaigns and historical
+  records keep their original formats; carried verdict provenance remains readable in format 2.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
@@ -217,17 +176,17 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 
 ## Tests
 
+Install the hash-pinned dependencies and run the format 2 suites and shipped-root check:
+
 ```bash
+uv venv /tmp/driver-lab-sf2
+uv pip install --python /tmp/driver-lab-sf2/bin/python --require-hashes -r skills/spec-format/requirements.txt
 python3 -m unittest discover -s skills/board-expert/tests -v
-uv run --with markdown-it-py==4.2.0 python3 skills/board-expert/scripts/spec_check.py \
-  skills/board-expert/specs \
-  --stubs-from skills
+/tmp/driver-lab-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+/tmp/driver-lab-sf2/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
+/tmp/driver-lab-sf2/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
 ```
 
-Add `--require-verified` to make a missing or stale verification record an error rather than
-a warning (CI keeps the default). The checker's last line names the parser it ran.
-
-CI has no PyYAML, so CI and the plain `python3` commands above exercise the checker's own
-subset parser. To exercise the PyYAML path as well, run the tests and the checker once under
-a Python that has it, for example
-`uv run --with pyyaml python -m unittest discover -s skills/board-expert/tests`.
+Add `--require-verified pr` to reject missing or stale verdicts; `main` allows upstream-stale
+warnings while enforcing the other verdict requirements. These checks do not re-read evidence.
+The full checks list, including the frozen archive, is in `AGENTS.md`.

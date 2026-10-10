@@ -1,9 +1,0 @@
-# SPDX-FileCopyrightText: 2026 contributors
-# SPDX-License-Identifier: Apache-2.0
-#
-# Synthetic root shaped like hardware-specs-docs (license-split design, The repos).
-# No source tree: [doc:] anchors only.
-layer: public
-name: hardware-specs-docs
-license: CC-BY-4.0
-accepts: []

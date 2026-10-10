@@ -243,12 +243,7 @@ class SkillDocumentation(unittest.TestCase):
                 self.assertNotRegex(text, r'Source pin:|\[(?:src|impl|ref|doc):')
                 self.assertNotIn('anchor_check.py', text)
                 self.assertNotIn('inventory_check.py', text)
-                if document != DOCUMENTS[7]:
-                    self.assertIn('FORMAT-1.md', text)
-        for name in ('peripheral-spec', 'reference-driver-review', 'hardware-investigator'):
-            archive = (SKILLS / name / 'FORMAT-1.md').read_text()
-            self.assertIn('retained until SF2-12', archive)
-            self.assertIn('Source pin:' if name != 'reference-driver-review' else 'Impl pin:', archive)
+                self.assertNotIn('FORMAT-1.md', text)
 
 
 if __name__ == '__main__':

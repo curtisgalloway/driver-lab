@@ -49,10 +49,9 @@ or permissions; follow the caller's authorized scope.
    file or absolute. Skill pointer paths are relative to the checkout or absolute.
    Never search the checkout for markers.
    CLI tools take the resulting root directories explicitly, not a config marker's roots list.
-2. **Identify format.** `format: 2` selects YAML and spec.py. Missing `format` or `format: 1`
-   selects the legacy path below. Do not compose mixed formats; report a migration/precondition
-   issue if the requested composition spans both. Invalid/unsupported markers are errors, not
-   permission to reinterpret them as format 1.
+2. **Require format 2.** The marker must declare `format: 2`; read YAML with spec.py.
+   Missing, invalid or unsupported format markers are errors. Report the unsupported root
+   and request its conversion before reading or composing its specs.
 3. **Match id first**, otherwise match triggers/aliases case-insensitively as whole-word
    substrings. Check `not_triggers` first, longest first: `pi 5` must not select `pi 500`.
    Several matching boards or a variant choice that changes the answer produce Needs decision.
@@ -165,27 +164,6 @@ Return Needs decision per QUESTIONS before provenance when a fork remains. End w
 **Suggested spec change** when evidence adds/corrects something: originating file, existing
 fact id to edit (or proposed new id/record), structured support, scope/dependencies and TODO.
 Do not edit a spec or use `drift --rewrite` without an authoring request.
-
-## Format 1 reading (until SF2-12)
-
-This section applies only to existing Markdown roots, not new authoring. Read `*.spec.md`
-frontmatter and fixed body sections under the [retained format 1 contract](FORMAT-1.md).
-Match the same triggers, compose parts/instances, overlay
-body sections by layer/pointer order. In format 1 instance `reg` is an integer/null, resources
-use `docs` and cited source commits use `ref`. Read provenance tag clauses at bullet ends,
-including document/DT parentheticals and `[src:<repo>: path:L1-L2 (symbol)]` anchors.
-
-Use unchanged `board-expert/scripts/spec_check.py <root>... --stubs-from <skills dir>` and
-`peripheral-spec/scripts/anchor_check.py` for format 1 checks, under markdown-it-py 4.2.0.
-Neither tool is a format 2 reader. For each file read only
-`<root>/resources/<name>.verify.md` frontmatter: `verified`, `summary`, and `spec_sha256`.
-Missing record means unverified; whole-file hash mismatch means stale; current nonzero fail
-count is a failure. This legacy hash rule does not apply to YAML records.
-
-Answers cite file/root/layer and section/lead-in, with the original tags; format 1 has no
-stable fact ids, so do not invent full references. Suggested changes propose format 2 records
-for the planned migration. No mixed-format composition is supported; format 1 retires in
-SF2-12. Frozen test fixtures and historical campaigns keep their old terms.
 
 ## Without a spec
 

@@ -63,6 +63,19 @@ class ExitCodes(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn(f"{bad}:1:4: an anchor", out)
 
+    def test_retired_migration_command_is_usage_error(self):
+        for argv in (["migrate", "old.spec.md"], ["migrate", "old.spec.md", "--json"]):
+            with self.subTest(argv=argv):
+                code, out, err = run(argv)
+                self.assertEqual(code, 2)
+                if "--json" in argv:
+                    self.assert_failure_object(out, "usage")
+                else:
+                    self.assertIn("usage error", err)
+        code, out, _ = run(["--skill"])
+        self.assertEqual(code, 0)
+        self.assertNotIn("migrate", out)
+
     def test_usage_is_2(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = pathlib.Path(tmp)

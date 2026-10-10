@@ -226,11 +226,11 @@ is a records finding. Outward reports remain user decisions.
 
 ## Checker boundary
 
-From the repository root:
+From the repository root, with `.venv-sf2` built as in the checks list in `AGENTS.md`:
 
 ```bash
-uv run --with pyyaml python3 skills/campaign-review/scripts/index_check.py evals/e1000
-uv run --with pyyaml python3 -m unittest discover -s skills/campaign-review/tests
+.venv-sf2/bin/python skills/campaign-review/scripts/index_check.py evals/e1000
+.venv-sf2/bin/python -m unittest discover -s skills/campaign-review/tests
 ```
 
 `--root` explicitly selects the evidence root (default: working directory).
@@ -565,8 +565,8 @@ loader, scheduler, source-refresh executor or universal invocation wrapper is ad
 
 Producer classes come from the support class enum in
 `skills/spec-format/schema/spec.schema.json`, the format 2 contract's authoritative
-list. `--target-spec PATH` retains the format 1 extension path: it additionally
-reads the explicitly supplied spec's tag-table
+list. For compatibility with frozen campaigns only, `--target-spec PATH` additionally
+reads the explicitly supplied archived spec's tag-table
 rows (`| \`[class]\` | ... |`); prose mentions do not define a class. Thus
 `kernel` passes with the e1000 spec's table, but is not globally promoted.
 No filesystem search discovers private specs or plugins.

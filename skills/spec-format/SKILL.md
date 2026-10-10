@@ -207,8 +207,8 @@ top-level marker; the user's board-specs configuration marker. Skill pointer pat
 to the checkout or user-supplied absolute paths; machine paths never go into specs. Entries in
 a marker's `roots` are relative to that marker file, or absolute, as the root schema defines.
 The reader expands marker `roots` in order; CLI arguments are explicit (`spec.py` does not expand them).
-Deduplicate roots and separate format 1/2 compositions. No symlinks within or on the route to
-a root, no nested markers.
+Deduplicate roots and require format 2 throughout the composition. No symlinks within or on
+the route to a root, no nested markers.
 
 Order by layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then pointer order;
 for the spec repositories use docs, permissive, GPL order. Resolve `parts` recursively, then
@@ -335,8 +335,8 @@ spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resol
 ```
 
 Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; HTML render and the
-publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a;
-migrate is SF2-10a. All are on main.
+publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a.
+All are on main.
 
 `validate` checks shape only; `--root` loads extensions. `check` adds names, composition,
 references, license/trust and records. `--context-root` supplies dependencies without enforcing
@@ -368,11 +368,3 @@ may remain), 1 invalid/check failure, 2 usage, 3 missing precondition/pinned dep
 internal tool error. Validity does not prove a claim: verification re-reads evidence using
 [spec-verifier](../spec-verifier/SKILL.md).
 
-## Format 1 transition
-
-A marker without `format` (or with `format: 1`) is format 1: `*.spec.md`, provenance clauses,
-`resources.docs`, `ref` pins, `*.verify.md` and whole-file hash freshness. Existing
-`board-expert/scripts/spec_check.py` and peripheral `anchor_check.py` stay read-only until SF2-12.
-The [board-expert transition path](../board-expert/SKILL.md#format-1-reading-until-sf2-12) labels
-this legacy behavior. Never pass format 1 roots to the format 2 checker, compose formats together,
-or write a new format 1 spec. The frozen archive remains history.

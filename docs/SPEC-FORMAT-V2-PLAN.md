@@ -122,7 +122,7 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 | SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](../evidence/SF2-9.md)) |
 | SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
 | SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](../evidence/SF2-11.md)) |
-| SF2-12 | Format 1 retired | SF2-9, SF2-11 | pending |
+| SF2-12 | Format 1 retired | SF2-9, SF2-11 | complete ([evidence](../evidence/SF2-12.md)) |
 | SF2-G | Whole-outcome gate | all | pending |
 
 Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives format 2): the board-spec
@@ -708,10 +708,10 @@ the AGENTS.md list run the format 2 checks; markdown-it-py stays as the pinned C
 **Out of scope:** the frozen archive (unchanged).
 
 ### Acceptance criteria
-- [ ] No tracked file outside the archive and the history records imports or names a removed
+- [x] No tracked file outside the archive and the history records imports or names a removed
   module as current (grep in evidence).
-- [ ] The full AGENTS.md list passes, archive checks included.
-- [ ] `bringup-kit`'s result recorded.
+- [x] The full AGENTS.md list passes, archive checks included.
+- [x] `bringup-kit`'s result recorded.
 
 ### Testing and review
 - Review method: code unit.
@@ -720,7 +720,7 @@ the AGENTS.md list run the format 2 checks; markdown-it-py stays as the pinned C
 Mostly deletions and CI edits. Split point: none expected.
 
 ### Evidence and findings
-Status: pending. Evidence: `evidence/SF2-12.md`. Notebook: `notebook/SF2-12.md`.
+Status: complete. Evidence: `evidence/SF2-12.md`. Notebook: `notebook/SF2-12.md`.
 
 Carried from SF2-9: `README.md`, `DESIGN.md` and `GLOSSARY.md` still describe `peripheral-spec`,
 `reference-driver-review` and `hardware-investigator` in format 1 terms; retire that wording here.

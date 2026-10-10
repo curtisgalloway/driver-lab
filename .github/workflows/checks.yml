@@ -30,19 +30,8 @@ jobs:
       - name: utilities tests
         run: python3 -m unittest discover -s utilities/tests -v
 
-      # The spec checkers read Markdown through peripheral-spec's mdtokens.py, pinned to
-      # markdown-it-py 4.2.0; without it they exit 3 rather than fall back to another scanner.
-      - name: Markdown parser dependency
-        run: |
-          python3 -m venv "$RUNNER_TEMP/md"
-          "$RUNNER_TEMP/md/bin/python" -m pip install markdown-it-py==4.2.0
-
       - name: board-expert tests
-        run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/board-expert/tests -v'
-
-      - name: peripheral-spec tests
-        run: '"$RUNNER_TEMP/md/bin/python" -m unittest discover -s skills/peripheral-spec/tests -v'
-
+        run: python3 -m unittest discover -s skills/board-expert/tests -v
 
       # Spec format 2 (SF2-1 onward): PyYAML, jsonschema and markdown-it-py, installed by hash.
       # spec.py exits 3 without them at the pinned versions; there is no fallback parser.
@@ -61,25 +50,20 @@ jobs:
 
       - name: board specs
         run: |
-          "$RUNNER_TEMP/md/bin/python" skills/board-expert/scripts/spec_check.py \
+          "$RUNNER_TEMP/sf2/bin/python" skills/spec-format/scripts/spec.py check \
             skills/board-expert/specs \
-            --stubs-from skills
-
-      - name: ENC28J60 YAML dependency
-        run: |
-          python3 -m venv "$RUNNER_TEMP/enc28j60-tests"
-          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m pip install PyYAML markdown-it-py==4.2.0
+            --stubs-from skills --require-license
 
       - name: enc28j60 corpus tests
         run: >-
-          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m unittest discover
+          "$RUNNER_TEMP/sf2/bin/python" -m unittest discover
           -s evals/enc28j60/tests -v
 
       # The author's manifest is what a candidate run is given. Regenerating it on every push is
       # how a corpus edit that would change what an author sees becomes visible in review.
       - name: enc28j60 author manifest
         run: >-
-          "$RUNNER_TEMP/enc28j60-tests/bin/python"
+          "$RUNNER_TEMP/sf2/bin/python"
           evals/enc28j60/author_manifest.py
           --check evals/enc28j60/author-manifest.yaml
 
@@ -89,10 +73,10 @@ jobs:
 
       - name: campaign-review tests
         run: >-
-          "$RUNNER_TEMP/enc28j60-tests/bin/python" -m unittest discover
+          "$RUNNER_TEMP/sf2/bin/python" -m unittest discover
           -s skills/campaign-review/tests -v
 
       - name: e1000 status index
         run: >-
-          "$RUNNER_TEMP/enc28j60-tests/bin/python"
+          "$RUNNER_TEMP/sf2/bin/python"
           skills/campaign-review/scripts/index_check.py evals/e1000

@@ -63,10 +63,10 @@ What that work teaches about the skills comes back here as changes to them.
 - **Frontmatter:** the YAML metadata between `---` lines at the beginning of a Markdown file.
 - **Composition:** resolving a board's component specs and the IP specs its instances name.
 - **Provenance:** the recorded origin of a fact or artifact and the evidence behind it.
-- **Provenance tag:** a marker identifying a fact's support, such as a datasheet or observed code.
+- **Support class:** a structured label identifying evidence, such as a datasheet or observed code.
 - **Anchor:** a citation to a repository-relative file, line range, and usually symbol at a pin.
 - **Pin:** an exact source revision or document edition and hash used to make a reading repeatable.
-- **RTL:** the hardware design in a description language such as Verilog; the `[rtl]` class.
+- **RTL:** the hardware design in a description language such as Verilog; the `rtl` class.
 - **Conflict entry:** a recorded disagreement between sources, kept beside the claim with its resolution.
 - **Cache:** an out-of-tree store of reference sources and documents managed by the investigator.
 - **Investigator:** the source-reading worker that extracts facts, evidence, and mechanism prose.
@@ -147,10 +147,10 @@ addresses with interrupts, clocks, and quirks. The IP spec describes the block's
 without assuming any particular SoC address. Several boards can share one SoC description, and
 several SoCs can place the same IP description.
 
-For example, the test fixture [`widgetboard`](skills/board-expert/tests/fixtures/good_root/widgetboard.spec.md)
-names `widgetsoc` in `parts`, and [`widgetsoc`](skills/board-expert/tests/fixtures/good_root/widgetsoc.spec.md)
+For example, the test fixture [`widgetboard`](skills/spec-format/tests/fixtures/check/good_root/widgetboard.spec.yaml)
+names `widgetsoc` in `parts`, and [`widgetsoc`](skills/spec-format/tests/fixtures/check/good_root/widgetsoc.spec.yaml)
 places the `widgetuart` IP in its `instances`. A per-board stub such as the fixture
-[`widget-expert`](skills/board-expert/tests/fixtures/stubs/widget-expert/SKILL.md) has one job: select
+[`widget-expert`](skills/spec-format/tests/fixtures/check/stubs/widget-expert/SKILL.md) has one job: select
 a spec id and hand the question to `board-expert`. Its description helps the
 harness match a user's hardware name. Keeping facts out of stubs avoids maintaining another copy of
 the hardware map and another copy of the investigation procedure. The published board specs and
@@ -160,22 +160,22 @@ stubs that used to illustrate this were removed, to be regenerated with the curr
 
 `board-expert` collects roots from its own `specs/`, root pointers in loaded skills, the checkout's
 `board-specs.yaml`, and the user's `~/.config/board-specs/board-specs.yaml`. Markers can point to
-further roots. It does not search the filesystem for markers. Within known roots, `*.spec.md` files
+further roots. It does not search the filesystem for markers. Within known roots, `*.spec.yaml` files
 supply the identifiers that resolve `parts`, `instances[].ip`, and overlay targets.
 
 Resolution prefers an explicit spec identifier, then matches names through triggers and aliases.
 Exclusion triggers prevent accidental matches to similarly named hardware. An IP question tied to a
 board resolves through the matching instance and that board's kernel tree. A generic IP question
 uses the IP spec and its sources and explicitly carries no instance facts. The word "anchored" in
-this board-resolution mode means attached to a board, not necessarily a driver spec with `[src:]`
+this board-resolution mode means attached to a board, not necessarily a driver spec with structured source
 anchors.
 
 Composition happens before overlays. Every component receives its own applicable overlays in the
 order `public`, `ip-vendor`, `soc-vendor`, `product`, `local`. Later scalar values win, resource
-lists combine with replacement by matching identity, and body sections append under headings that
-name the contributing layer and root. Identity, kind, and component membership cannot be overridden.
+lists combine with replacement by matching identity, and facts retain their ids and originating
+roots. Generated views name the contributing layer and root. Identity, kind, and component membership cannot be overridden.
 The exact rules belong in [the format
-contract](skills/board-expert/SPEC-FORMAT.md#roots-and-layers).
+contract](skills/spec-format/SKILL.md#resources-roots-and-composition).
 
 This is configuration precedence, not a way to prove a later factual claim correct. Appending a
 vendor statement beside a public statement preserves their origins; it does not resolve a factual
@@ -190,28 +190,25 @@ itself, a confidentiality control or permission to publish.
 
 ### Make the kind of evidence visible
 
-The investigation tags distinguish `[databook]`, `[standard]`, `[DT]`, `[source-observed]`, and
-`[inference]`. Board specs add `[rtl]`, `[doc]`, `[hardware]`, and `[press]`. These mean,
-respectively, hardware documentation, a standard, device-tree values, observed software, a
-reasoned conclusion, the hardware design itself, project or vendor documentation, a measurement,
-and third-party reporting. Board specs also add `[src]`: what source code at a pinned commit
-defines or does, cited with line anchors into a repository whose license the spec's root accepts
-(adopted 2026-10-07, RG-T1). Testing against a device model adds `[emulated]`: a result observed on
-an emulator rather than on silicon (proposed in the [QEMU differential
-design](QEMU-DIFFERENTIAL.md), adopted 2026-09-25 after L02 showed how it is used; follow-on
-SF-1). The format specifies where tags go and what accompanying citations and cautions they
-require.
+Structured support classes distinguish `databook`, `standard`, `DT`, `source-observed`,
+`inference`, `rtl`, `doc`, `hardware`, `press`, `src` and `emulated`. They identify hardware
+manuals, standards, device-tree values, observed software, reasoned conclusions, hardware
+logic, project documentation, measurements, reporting, pinned code and emulator observations.
+The contract defines each class's structured citations and cautions. `source-observed` requires
+an extension schema. `src` establishes what code does; a hardware requirement inferred from
+it needs explicit premises, a derivation and a TODO. `emulated` is weaker than silicon evidence
+and never the sole authority for a fact.
 
 The important distinction is between seeing a driver do something and establishing that hardware
 requires it. Source-only ordering carries "order not known to be required"; source-only tuning
 constants carry "re-derive on hardware". An inference states its premises, derivation, confidence,
-and how to test it. Board facts tagged as source-observed, press, or inference also retain an
-explicit hardware-verification TODO. A tag makes limited support visible; it does not strengthen it.
+and how to test it. Board facts supported by source-observed, press or inference also retain an
+explicit hardware-verification TODO. A support class makes limited support visible; it does not strengthen it.
 What each class is trusted for, and what that trust assumes, is the next section.
 
 ## Evidence model: what we trust and why
 
-A tag says what kind of evidence supports a fact. It does not say why that kind deserves belief
+A support class says what kind of evidence supports a fact. It does not say why that kind deserves belief
 or how it goes wrong. Leaving that implicit makes two mistakes easy: treating a working driver's
 behavior as a hardware requirement, and letting whichever source was read last win a
 disagreement. This section states the assumptions so they can be checked and argued with.
@@ -220,35 +217,35 @@ disagreement. This section states the assumptions so they can be checked and arg
 
 | Evidence | Trusted for | Assumes | Known failure modes |
 | --- | --- | --- | --- |
-| `[rtl]` | Digital register behavior: field layout, reset values, side effects, access types | The design matches the silicon revision and configuration parameters in use | Analog, electrical, and PHY behavior, firmware, and board wiring are not in it; the wrong revision's RTL misleads with full confidence |
-| `[hardware]` | What this board did under stated conditions | The measurement method observes what it claims to | One board, revision, temperature, and firmware image; absence of an effect is weak evidence |
-| `[databook]`, `[standard]` | Documented programming model and required behavior | The edition applies to the silicon revision | Errata, stale editions, silicon that does not follow its own document |
-| `[DT]` | Placement: addresses, interrupts, clocks, and wiring for the image it came from | It is the description the bootloader actually selects | Overlays and bootloader changes; binding examples that are not production values |
-| `[source-observed]` | What a working driver does | The driver works on this revision | Workarounds for other revisions, delays nobody measured, bugs the driver happens to survive |
-| Independent drivers agreeing (Linux and a BSD, for example) | Raises confidence in a `[source-observed]` fact | They were written independently | One copied from the other, or both from the same vendor code: agreement then adds nothing |
-| `[src]` | What the cited code defines or does at the pinned commit (a constant, a register write, an order of operations) | The anchored lines are the code that runs in the case the claim names (the right build, configuration, and file) | Code for another build or revision; a fact about the code read as a hardware requirement (that is an `[inference]` with the anchors as premises) |
-| `[doc]` | What a vendor or project says about its own work | The author knew and the text is current | Marketing pages, docs for a different part or revision |
-| `[press]`, forums, other low-confidence reports | A lead worth checking | None | Allowed only with `TODO (verify on hardware)`, as today |
-| `[inference]` | A conclusion from tagged premises | The derivation is sound | Carries its own confidence; never stronger than its weakest premise |
-| `[emulated]` | How a driver behaves against a named device model under stated scenarios, and where that model departs from the manual | The model implements the behavior under test as the manual describes | Models are lenient (accept programming the silicon would not), omit errata and timing, and may share a misreading with the reference driver. A pass is weaker than `[hardware]`; a failure the manual explains is strong evidence. Never a hardware requirement and never the sole authority for a fact: it stands beside another class or is a premise of an `[inference]` |
-| Model recall | Nothing | n/a | Not evidence and never tagged; a fact with no source is a gap |
+| `rtl` | Digital register behavior: field layout, reset values, side effects, access types | The design matches the silicon revision and configuration parameters in use | Analog, electrical, and PHY behavior, firmware, and board wiring are not in it; the wrong revision's RTL misleads with full confidence |
+| `hardware` | What this board did under stated conditions | The measurement method observes what it claims to | One board, revision, temperature, and firmware image; absence of an effect is weak evidence |
+| `databook`, `standard` | Documented programming model and required behavior | The edition applies to the silicon revision | Errata, stale editions, silicon that does not follow its own document |
+| `DT` | Placement: addresses, interrupts, clocks, and wiring for the image it came from | It is the description the bootloader actually selects | Overlays and bootloader changes; binding examples that are not production values |
+| `source-observed` | What a working driver does | The driver works on this revision | Workarounds for other revisions, delays nobody measured, bugs the driver happens to survive |
+| Independent drivers agreeing (Linux and a BSD, for example) | Raises confidence in a `source-observed` fact | They were written independently | One copied from the other, or both from the same vendor code: agreement then adds nothing |
+| `src` | What the cited code defines or does at the pinned commit (a constant, a register write, an order of operations) | The anchored lines are the code that runs in the case the claim names (the right build, configuration, and file) | Code for another build or revision; a fact about the code read as a hardware requirement (that is an `inference` with the anchors as premises) |
+| `doc` | What a vendor or project says about its own work | The author knew and the text is current | Marketing pages, docs for a different part or revision |
+| `press`, forums, other low-confidence reports | A lead worth checking | None | Requires a structured hardware-verification TODO |
+| `inference` | A conclusion from explicit premises | The derivation is sound | Carries its own confidence; never stronger than its weakest premise |
+| `emulated` | How a driver behaves against a named device model under stated scenarios, and where that model departs from the manual | The model implements the behavior under test as the manual describes | Models are lenient (accept programming the silicon would not), omit errata and timing, and may share a misreading with the reference driver. A pass is weaker than `hardware`; a failure the manual explains is strong evidence. Never a hardware requirement and never the sole authority for a fact: it stands beside another class or is a premise of an `inference` |
+| Model recall | Nothing | n/a | Not evidence and never assigned a support class; a fact with no source is a gap |
 
 Three rules follow from the table:
 
-- **Confidence is scoped.** `[rtl]` for revision A says nothing certain about revision B0, and a
-  `[hardware]` result on one board is a result for that board. The citation must carry the scope:
+- **Confidence is scoped.** `rtl` for revision A says nothing certain about revision B0, and a
+  `hardware` result on one board is a result for that board. The citation must carry the scope:
   the revision, board, image, or conditions.
 - **Low-confidence evidence is allowed, labeled.** A forum post that names a register quirk is
-  worth recording as a lead. The tag and its TODO keep it from reading as settled fact.
-- **A model observation is a citation, not a mechanism.** An `[emulated]` fact cites the model,
-  its version and the runs the way `[hardware]` cites the board, and states what was observed
+  worth recording as a lead. The support class and its TODO keep it from reading as settled fact.
+- **A model observation is a citation, not a mechanism.** An `emulated` fact cites the model,
+  its version and the runs the way `hardware` cites the board, and states what was observed
   from outside the model (a value read back, a gap in a trace, frames in a capture), never how
   the model produces it.
 
 ### Conflicts are recorded, never overwritten
 
-The table is not a strict ranking. `[rtl]` outranks a databook for digital behavior, and a
-`[hardware]` observation outranks a databook when an erratum exists, but a databook outranks a
+The table is not a strict ranking. `rtl` outranks a databook for digital behavior, and a
+`hardware` observation outranks a databook when an erratum exists, but a databook outranks a
 single board's measurement taken under unusual conditions. So a conflict between classes is not
 settled by editing the losing claim. It becomes a conflict entry beside the claim: both readings,
 their evidence and scope, the resolution, and which assumption from the table justified it. The
@@ -264,10 +261,10 @@ from `implementation_observed` workarounds. The general conflict entry is propos
 A spec is not finished when it is accepted. Implementation, debugging, and testing produce
 evidence, and that evidence belongs in the spec rather than in a test log nobody rereads:
 
-1. A test or debugging result becomes a `[hardware]` fact, citing the test, board, revision,
-   image, and conditions; a result from a device model becomes an `[emulated]` fact, citing the
+1. A test or debugging result becomes a `hardware` fact, citing the test, board, revision,
+   image, and conditions; a result from a device model becomes an `emulated` fact, citing the
    model, its version and the runs, and it narrows or confirms a claim without closing it.
-2. It confirms, contradicts, or narrows an existing claim. A `[source-observed]` ordering marked
+2. It confirms, contradicts, or narrows an existing claim. A `source-observed` ordering marked
    "order not known to be required" can become required, or shown not to be. A source-only
    constant can be re-derived.
 3. A contradiction produces a conflict entry, as above, not a silent edit.
@@ -280,9 +277,9 @@ evidence, and that evidence belongs in the spec rather than in a test log nobody
 
 The first place this loop runs is the ENC28J60 Linux rebuild (L01 in
 [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md)): its differential tests against the original
-driver produce exactly these results. A settled `[hardware]` result closes a claim without a person
+driver produce exactly these results. A settled `hardware` result closes a claim without a person
 reviewing it, which is the scalable path. Humans are needed for conflicts the table's assumptions do
-not resolve. The L02 differential campaign ran the same loop on an emulator: its `[emulated]`
+not resolve. The L02 differential campaign ran the same loop on an emulator: its `emulated`
 results and spec gaps became spec revisions 6 to 8 (L02f3, SR-7, SR-8), and two of those revisions
 reached the candidate (CF-1, CF-2). Dependency-scoped re-verification was the deferred M16 work;
 the [continuous review](#continuous-review-keeping-specs-right-as-evidence-changes) section
@@ -293,9 +290,9 @@ re-verified by changed sections and their dependencies, chosen by the operator, 
 
 Everything above is easier while a working driver exists: it supplies the facts, it is the
 reference for differential tests, and it breaks ties. For new hardware with no driver anywhere,
-`[source-observed]` disappears and all three jobs move elsewhere:
+`source-observed` disappears and all three jobs move elsewhere:
 
-- **Facts** come from `[rtl]`, the databook, and the hardware designers.
+- **Facts** come from `rtl`, the databook, and the hardware designers.
 - **The reference** becomes a simulation or emulation of the design (RTL simulation, an FPGA
   build, a behavioral model) and published conformance suites where they exist.
 - **Ties** are broken by independent implementations from the same spec, whose disagreements
@@ -341,26 +338,28 @@ Its target-OS half identifies existing drivers to reuse or model, interfaces, bi
 and implementation milestones. Confidence, unresolved details, and the usage notice tell the
 implementer which statements are established and which still need investigation or hardware work.
 
-[`peripheral-spec`](skills/peripheral-spec/SKILL.md) takes source the target may
-derive from, source and target pins, and a peripheral scope. It produces a driver spec of the same
-broad shape, but every source-derived claim points to performing statements or definitions. `[src:]`
-addresses the reference tree, `[tgt:]` the target tree, and `[doc:]` a document section.
-Implementers can read the code. The skill refuses fabricated anchors, and it is not a way to
-write a driver under a license the source's terms do not permit.
+[`hardware-investigator`](skills/hardware-investigator/SKILL.md) answers one question as
+`kind: facts` YAML. It preflights a source's license before reading it, then returns facts with
+stable ids and structured support for authoring. The completed file passes the format 2
+citation and license gate; a refusal names the source, policy and reason without importing facts.
 
-Its hardware statements distinguish documented requirements, comment explanations, driver choices,
-and behavior that is merely implemented. It normally delegates slices of larger drivers before
-drafting and independently derives register tables twice. Anchor and inventory checkers precede a
-fresh accuracy reader. `spec-verifier` can later rerun that process and preserve per-anchor verdicts
-outside the document.
+[`peripheral-spec`](skills/peripheral-spec/SKILL.md) takes sources the target may derive from,
+source and target pins, and a peripheral scope. It produces a `kind: peripheral` YAML spec.
+Repository resources declare licenses and file-level confirmation methods; source anchors
+name a repository, path, inclusive lines and symbol or search scope. A target tree uses
+`role: target`; documents use named resources and structured locators. Register, sequence and
+layout payloads carry exact programming data and independently supported sub-keys. The
+`requirement` field distinguishes documented requirements, comments, driver choices and
+implemented behavior. The skill refuses fabricated evidence and unsuitable license placement.
+`spec.py check`, `resolve` and `inventory` precede a fresh reader's accuracy judgment.
 
-[`reference-driver-review`](skills/reference-driver-review/SKILL.md) is a person-invoked comparison
-workflow for an existing implementation. It takes two pinned trees, locating the reference through a
-board expert or the user, and produces `docs/<driver>-review.md`. Findings have `[impl:]` and
-`[ref:]` anchors, a consequence, and a verdict: bug, suspect, benign, or reference issue. The
-databook can settle a divergence in either implementation's favor. This skill produces neither a new
-implementation spec nor driver code. Its checkers and later verification reuse the anchored
-route.
+[`reference-driver-review`](skills/reference-driver-review/SKILL.md) compares two pinned trees
+for the same hardware. It produces a `kind: review` YAML spec; resources have `role: impl` or
+`ref`, and finding records have both sides' anchors, consequences and an `assessment` (bug,
+suspect, benign or reference issue). The databook can settle a divergence in either side's
+favor. Verification verdicts judge the reported finding independently of its assessment.
+The skill produces neither a new implementation spec nor driver code. It uses the same
+format 2 citation, drift and verification machinery.
 
 ### Verification
 
@@ -398,13 +397,13 @@ walkthrough describes how to reach a measurement, not a completed ENC28J60 compa
 
 The person identifies the board revision, SPI attachment, peripheral revision, vendor tree, and
 target OS. The authoring skill resolves any material forks using the question catalog. If the board
-lacks a map, `board-spec-scaffold` writes `<root>/<board>.spec.md`, references an existing SoC or
-writes `<root>/<soc>.spec.md`, and adds any missing host-controller IP spec and instance row. A new
+lacks a map, `board-spec-scaffold` writes `<root>/<board>.spec.yaml`, references an existing SoC or
+writes `<root>/<soc>.spec.yaml`, and adds any missing host-controller IP spec and instance row. A new
 root receives `board-specs.yaml`. An optional `<board>-expert/SKILL.md` makes the entry point
 discoverable.
 
-`spec_check.py` checks the board files and cross-root references. The scaffold's verification phase
-produces `<root>/resources/<name>.verify.md` for each file, named for the file (`<name>.spec.md`),
+`spec.py check` checks the board files and cross-root references. The scaffold's verification phase
+produces `<root>/resources/<name>.verify.yaml` for each file, named for the file (`<name>.spec.yaml`),
 including overlays under their own roots.
 Board mapping and peripheral authoring are separate products: fixing a board-console fact belongs in
 the board map; the Ethernet controller's programming sequence belongs in the driver spec.
@@ -418,16 +417,15 @@ ordinary spec work but do not call it a blind test.
 
 ### 2. Establish accuracy
 
-Invoke `spec-verifier` for the landed spec. It checks tagged facts against their documents,
+Invoke `spec-verifier` for the landed spec. It checks fact records against their documents,
 device trees, or pinned source. An inference is checked as an argument: true premises do not
 excuse an unsupported conclusion.
 
-The external record lands at `docs/resources/<spec-basename>.verify.md`, or in the project's
-existing `docs/provenance/` location as the verifier documents. It includes the spec hash, date,
-verifier identity, sources actually consulted, and verdict totals. The body keys individual facts by
-section and ordinal, table row, or sequence step. A board record instead lives beside the root
-marker in `resources/`; the test fixtures under `skills/board-expert/tests/fixtures/verify_root/`
-show the shape.
+The external record lands at `<root>/resources/<spec-basename>.verify.yaml`, one per spec
+file, including overlays. It includes identities, sources actually consulted, verdict totals
+and a verdict keyed by each fact id (or independently supported field/step sub-key). Basis
+hashes and upstream dependencies determine freshness; the whole-file spec hash is informational.
+The [record fixtures](skills/spec-format/tests/fixtures/records/verify_root/) show the shape.
 
 A wrong value, an unsupported derivation, or a citation that cannot be located is `FAIL`, with a
 proposed correction. A source that cannot be reached, for example a blocked document, is
@@ -450,9 +448,9 @@ must name its frozen inputs and policy and preserve separate counts. The pilot a
 `ledger.lock`. The scored comparison is unfinished, and the opened procedures specify no universal
 score-output filename. A verified spec alone cannot supply this measurement.
 
-Later spec edits make record hashes stale. Later source revisions require a new reading at the new
-pin. On the peripheral-spec route, `anchor_check.py --drift` identifies unchanged, moved, and changed
-citations; `--rewrite` moves safe anchors and marks changed ones stale. Removing a stale marker
+Later semantic edits change fact bases; dependency edits can make dependent verdicts
+upstream-stale. Source revisions require a new reading at the new pin. `spec.py drift` identifies
+unchanged, moved and changed citations; `--rewrite` moves safe anchors and marks changed ones stale. Removing a stale marker
 requires re-verifying the claim. None of those operations establishes behavior on the actual board.
 
 Revisiting is not a one-time step at the end of this walkthrough. Field evidence, updated sources
@@ -526,7 +524,7 @@ L02 follow-ons ran every part of that loop by hand:
 - **Scoped invalidation by reasoning:** after L02f2b changed one scenario and requalified Q15,
   [L02f3](evidence/L02f3.md) carried the other 21 qualifications to the final harness because
   the diff touched only that scenario.
-- **Field evidence into the format:** [SF-1](evidence/SF-1.md) turned `[emulated]` from a
+- **Field evidence into the format:** [SF-1](evidence/SF-1.md) turned `emulated` from a
   proposal into a class with checker rules after it had been used.
 
 What is missing is the bookkeeping that would let this happen without an operator rereading
@@ -543,7 +541,7 @@ to the second.
 
 | Source | Examples here | What it can make stale | What it triggers (tier) | What a person decides | How it reaches a spec revision |
 | --- | --- | --- | --- | --- | --- |
-| **1. Field evidence**: findings from writing drivers and testing them on hardware or an emulator | L01-hw's reference driver failing C6 and C7 in all three runs; CF-2's review findings (A-RR-1 to A-RR-7); QF-1's F2 (the model delivers runts), which became EM8; a hardware result that contradicts an `[emulated]` observation (HF-1's list) | The facts it contradicts become *contested*, with a conflict entry; the claims that use them as a premise become *stale*. A candidate or reference defect makes nothing in the spec stale unless attribution finds a spec gap or error | Attribution inside the unit that found it; re-verification of the contested fact's dependents (tier 1) | A conflict that the evidence model's assumptions do not settle; whether a requirement changes (SR-8: the user chose the attribution rule); any hardware run | An item of class R, E or W, recorded where it was found and listed in the index |
+| **1. Field evidence**: findings from writing drivers and testing them on hardware or an emulator | L01-hw's reference driver failing C6 and C7 in all three runs; CF-2's review findings (A-RR-1 to A-RR-7); QF-1's F2 (the model delivers runts), which became EM8; a hardware result that contradicts an `emulated` observation (HF-1's list) | The facts it contradicts become *contested*, with a conflict entry; the claims that use them as a premise become *stale*. A candidate or reference defect makes nothing in the spec stale unless attribution finds a spec gap or error | Attribution inside the unit that found it; re-verification of the contested fact's dependents (tier 1) | A conflict that the evidence model's assumptions do not settle; whether a requirement changes (SR-8: the user chose the attribution rule); any hardware run | An item of class R, E or W, recorded where it was found and listed in the index |
 | **2. Updated sources**: new document editions and errata, new reference-driver or kernel releases, new tools and data sources (an emulator version, a trace tool, a register database) | A new edition of the 8254x manual; a Linux release changing `e1000`; a QEMU package upgrade on the test host; a tool that could time a reset below 1 µs (Q18) | Verdicts citing the changed sections; if the change cannot be mapped to sections, every verdict citing that document. Emulator or harness changes: see C2. A new tool invalidates nothing; it can reopen a shortfall | Detection at tier 0 (identity comparison); re-verification, requalification or the acceptance-set rerun at tier 1 | Whether to adopt the new edition or release as the pin; whether a new tool is worth qualifying (C6) | An E or R item; the new pin recorded in the revision header |
 | **3. Better models and tools**: the same inputs re-read or re-implemented by a stronger model | A newer reading model re-reading revision 8; a newer implementer model writing a fresh candidate from revision 8 | Nothing. A new model is not evidence that old verdicts are wrong | A comparison reading (tier 1); a fresh independent implementation (tier 2) | Adjudications the cited authority does not settle; launching an implementer | Only disagreements that survive adjudication become items (C4) |
 
@@ -570,7 +568,7 @@ tables into data: claim ID, the harness checks by name, and the qualifying defec
 harness itself stays unchanged. And a **status index** per campaign (for the public e1000 campaign,
 `evals/e1000/status.yaml`), with one entry per tracked verdict: the spec revision's
 verification by section, each claim's qualification, the candidate's result per claim, each
-`[emulated]` observation, and each open item. An entry holds the verdict, its basis (the
+`emulated` observation, and each open item. An entry holds the verdict, its basis (the
 identities above; for a reading, the sections it read and the dependencies its brief declared,
 as the SR-7 and SR-8 operators chose them by hand; plus the toolchain, which today is recorded
 only as a name such as `gcc-14`),
@@ -598,11 +596,11 @@ private content.
 | --- | --- | --- |
 | New spec revision | Verification of the changed sections and of every entry whose recorded dependencies include them (the review default in [AGENTS.md](AGENTS.md): "the changed claims and their dependencies"); an entry with no recorded dependencies, the whole revision's verification; the candidate's conformance only if the revision header says a driver requirement changed (SR-8 did, SR-7 did not); the qualification of claims whose expected outcome cites a changed section | Verification of unchanged sections with recorded dependencies outside the change; other qualifications |
 | New document edition or erratum | Verdicts citing the changed sections; every verdict citing that document when the change cannot be mapped | Verdicts citing other sources |
-| Reference driver or kernel release | `[source-observed]` and `[kernel]` verdicts at the old pin; the reference control runs if its module changes | Verdicts on the manual |
+| Reference driver or kernel release | `source-observed` and `[kernel]` verdicts at the old pin; the reference control runs if its module changes | Verdicts on the manual |
 | Harness change | Qualification of the claims whose check code changed, found from the diff and confirmed by the reviewer (L02f3's reasoning); all qualifications when that cannot be established | Qualifications of untouched checks |
-| Emulator, guest kernel or guest image change | Every `[emulated]` observation, every qualification and every candidate result on that emulator | Spec verdicts that do not cite `[emulated]` observations |
+| Emulator, guest kernel or guest image change | Every `emulated` observation, every qualification and every candidate result on that emulator | Spec verdicts that do not cite `emulated` observations |
 | Candidate build change | The candidate's results | Qualifications, which rest on the reference and the defects |
-| Hardware result contradicting an `[emulated]` observation | The observation becomes contested, with a conflict entry (the general conflict entry is still proposed; for e1000 it goes in the spec's §12 tables beside EM1–EM8); claims that use it as a premise become stale | The candidate's emulated results, which stay true of the emulator |
+| Hardware result contradicting an `emulated` observation | The observation becomes contested, with a conflict entry (the general conflict entry is still proposed; for e1000 it goes in the spec's §12 tables beside EM1–EM8); claims that use it as a premise become stale | The candidate's emulated results, which stay true of the emulator |
 | New fixture | Nothing: a result on a new board is a new scope, not a replacement | Earlier fixture results, within their scope |
 | New reading or implementing model | Nothing (see C4) | Everything |
 
@@ -621,7 +619,7 @@ diff touching one check stales only that check's claims; an unmappable change wi
 
 | Tier | Runs | Work | Cost |
 | --- | --- | --- | --- |
-| 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec_check.py`, a deployment's source-overlap scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
+| 0 | Existing checks on every change, in CI and at each checkpoint, plus a schema and link check of the index; the sweep locally, wherever the run store is configured, at the start of each orchestrator session and whenever a known input changes (a host package upgrade, a new manual edition). Public CI cannot run the sweep: the spec, the ledgers and the emulator identities are in the private run store and on the test host | Existing checks (`spec.py check`, a deployment's source-overlap scans, harness tests, `corpus_check.py`, the privacy check), the index check, and the sweep | Seconds; no model |
 | 1 | From the sweep's queue, as a standing queue (decided by the user, 2026-09-26), at most three units per batch | Re-verification of stale sections and their dependents (one `spec-verifier` reading: 8.7 minutes in AF-1, 7.7 in SR-7); requalification of claims whose checks changed; the acceptance set rerun after an emulator or candidate change (40 isolated runs); a comparison reading by a new reading model (C4) | Bounded agent time, recorded per unit |
 | 2 | Only on a person's decision | Requirement changes; implementer rounds (launched by the user, as in CF-1 and CF-2); a fresh implementation by a new implementer model; hardware runs (HF-1); a new blind list or recall re-measurement; adopting a new source edition as the pin; accepting a shortfall on a mandatory claim | Model, equipment and review time |
 
@@ -724,7 +722,7 @@ After that, only a trigger creates work, and not every trigger does:
 claims, all mandatory). S2 holds, with Q18 a shortfall (`unobservable`; reopened by hardware or
 a timing-capable tool) that L02f3's acceptance, closed under the user-approved plan revision,
 already accepted; HF-1's hardware-only behaviors are `out of scope` for the emulated scope and
-reopen when hardware arrives. S3 holds: SR-8's items 1–3 and CF-2's `[emulated]` note are W or
+reopen when hardware arrives. S3 holds: SR-8's items 1–3 and CF-2's `emulated` note are W or
 E, item 4 concerns the records; CF-2's A-RR-1 ("at least" at the poll) is W: it permits extra
 readings without changing the minimum (an orchestrator decision, made in the user's place on
 2026-09-26). S4 does not hold:
@@ -783,7 +781,7 @@ entry the sweep or a harness calls without a model also names a `command` that p
 | Extension point | Called by | Input | Output | Provenance it must record | Reference plugins |
 | --- | --- | --- | --- | --- | --- |
 | **Source adapter**: identifies a document or data source (a data-sheet store, a register database) | The sweep (tier 0); readers, through the skill | A local source ID | `id`, `version`, `sha256`, `status` (`ok`, `blocked` or `unknown`), date checked; never content | The adapter's name and version; how the version was determined | A pinned-file adapter over `corpus.yaml`-style entries (as `corpus_check.py` does for ENC28J60, and L02a's manual pin for e1000) |
-| **Evidence producer**: emits tagged observations (a simulator, a trace tool, a register dumper) | Tier-1 units | Target identity, what to observe, run ID, run directory | Observations, each with one evidence class and its citation (tool, version, run ID), phrased as what was observed from outside the tool | Tool name, version and hash; target identity; conditions | The QEMU harness's register trace and captures, class `[emulated]` |
+| **Evidence producer**: emits tagged observations (a simulator, a trace tool, a register dumper) | Tier-1 units | Target identity, what to observe, run ID, run directory | Observations, each with one evidence class and its citation (tool, version, run ID), phrased as what was observed from outside the tool | Tool name, version and hash; target identity; conditions | The QEMU harness's register trace and captures, class `emulated` |
 | **Implementer or reviewer**: a model or agent CLI in a role | Tier-1 and tier-2 units | A brief, the allowed inputs, a workspace | The artifact and a session record; for an isolated implementer, its access audit | Agent or CLI, model and version, date, sandbox profile, audit verdict, transcript path (in the private ledger) | Codex in a bubblewrap sandbox with an strace access audit (L02); Claude subagents as `spec-verifier` readers and reviewers |
 | **Fixture or harness backend**: runs scenarios against a driver (an emulator, a board with SPI, a proprietary bench) | Tier-1 units | Modules (reference, candidate, planted defects), scenarios, repetition count, run ID | One run directory per isolated run: per-check verdicts (PASS, FAIL, ERROR) by check name, raw artifacts, and `identities.json`; the claim map (C1) links check names to claims | Fixture or emulator identity, harness hash, kernel and image hashes, conditions | `evals/e1000/harness/l02harness.py` (QEMU, tested in CI); L01's Pi fixture harness, which today lives only in its private run and would have to be published to serve as a public reference |
 
@@ -791,10 +789,10 @@ entry the sweep or a harness calls without a model also names a `command` that p
 (`source`, `producer`, `role` or `fixture`), `via`, `command` where needed, and for a producer
 its `class`. Its path is a `deployment` key in the same user config file that already holds
 `run_store`, so it lives outside the repository. With no key set, the public reference
-manifest for the public campaigns applies. A producer that declares a class not in
-`SPEC-FORMAT.md` or in the target spec's own tag table (the e1000 spec defines `[kernel]` there) is
-rejected; a new general class goes through the format, the evidence model and the checker as
-`[emulated]` did in SF-1.
+manifest for the public campaigns applies. Producer classes come from the format 2 schema
+enum. The explicit target-spec tag-table adapter remains for frozen campaigns such as e1000,
+whose archived spec defines `[kernel]`; it is not a current spec reader. A new general class
+goes through the format, evidence model and checker as `emulated` did in SF-1.
 
 **Testing without the private plugins.** Only the two points called without a model, the source
 adapter and the fixture backend, get a mechanical contract check now: the public repository runs
@@ -994,13 +992,11 @@ constitute the entire proposed validation architecture.
 
 The main mechanical tools each have a narrower purpose than "prove this spec":
 
-- [`spec_check.py`](skills/board-expert/scripts/spec_check.py) checks format, references, tag
-  placement, selected public-root restrictions, stub resolution, and verification metadata.
-- [`anchor_check.py`](skills/peripheral-spec/scripts/anchor_check.py) resolves citations,
-  flags suspect literals and missing support, renders source beside claims, and detects drift.
-- [`inventory_check.py`](skills/peripheral-spec/scripts/inventory_check.py) uses C-oriented
-  patterns and device-tree inventory to find omissions and value conflicts, not
-  semantic completeness.
+- [`spec.py`](skills/spec-format/scripts/spec.py) provides `validate` (strict loading and
+  schemas), `check` (composition, references, license/trust and records), `status` (per-fact
+  freshness), `render` (generated Markdown and HTML), `resolve`/`show` (citations and evidence),
+  `drift` (pin comparisons and safe rewrites) and `inventory` (register payload/header
+  comparisons). These checks do not prove semantic completeness or hardware correctness.
 - [`ledger_check.py`](evals/enc28j60/ledger_check.py) checks answer-key structure and freeze inputs;
   it is not the scored with-skill/without-skill comparison.
 
@@ -1026,7 +1022,7 @@ The [continuous review](#continuous-review-keeping-specs-right-as-evidence-chang
 (C1–C8) was approved by the user on 2026-09-26; none of it is built yet. What exists is the
 loop run by hand in the L02 follow-ons: second independent readings with key-by-key comparison
 (AF-1, SR-7), qualified checks (L02d3, QF-1, FC-1, CS-1), versioned spec revisions reaching the
-candidate (CF-1, CF-2), and `[emulated]` adopted into the format from use (SF-1). The status
+candidate (CF-1, CF-2), and `emulated` adopted into the format from use (SF-1). The status
 index, the sweep, the deployment manifest, the plugin contract check and the stopping rule are
 designed, not built. The layer absorbs decision D6 and pulls forward the record and invalidation half of
 M16; replay with archived tools stays deferred.
@@ -1037,11 +1033,10 @@ Some discrepancies are historical text lag; others affect interpretation today:
 
 - `EVAL-PLAN.md` and parts of the proposal/review say no ledger exists. The pilot now has
   `ledger.yaml`; existence does not establish freeze completion or a score.
-- `SPEC-FORMAT.md` says a stale record cannot merge under default CI, but its own warning rules,
-  the plugin README, and `spec_check.py` allow staleness unless `--require-verified` is used.
-  A nonzero failure count is an error even when the record is stale.
-- `VALIDATION-REVIEW.md` describes the stale-hash check hiding recorded failures. The proposal
-  marks that bug fixed, and the current checker checks failures despite a stale hash.
+- Historical format 1 documents describe whole-file hash freshness and checker warning rules.
+  Current format 2 records use per-fact bases and upstream dependencies; `spec.py check`
+  enforces the `pr` or `main` policy selected by `--require-verified`. Historical findings
+  about the retired checker are not instructions for the current one.
 - The scaffold's "always verify" wording also differs from `QUESTIONS.md`, which offers verification later.
   Treat deferred verification as explicitly unverified, not as completion of its quality bar.
 - The vendor guide calls same-layer overlay order undefined; the format specifies pointer order.
@@ -1088,10 +1083,12 @@ every revision. Spec hashes detect edits only when checked. Source hashes cannot
 document or establish access rights. A maintained branch name is not an immutable source identity,
 and moved line numbers are not the only way a claim becomes obsolete.
 
-The current board checker reads verification frontmatter rather than independently redoing the
-body's reasoning. `--require-verified` rejects missing or stale records but is not the proposal's
-strict acceptance policy for every critical unresolved claim. Some anchor findings are warnings;
-inventory omission checking is pattern-based. Passing these programs does not prove completeness.
+The current checker validates YAML verdict records and computes per-fact freshness; it does
+not re-read evidence. `--require-verified pr|main` enforces the selected verdict policy,
+including critical facts' second readers, but cannot establish that their reasoning is correct.
+Resolution may skip anchors on size or time limits; inspect skip counts. Inventory compares
+structured register payloads against header expressions and reports unknowns explicitly.
+Passing these programs does not prove completeness.
 
 The files do not establish a scored skill comparison, a working driver produced by this pilot, or a
 qualified physical fixture for all proposed validation. They also leave general board/SoC claim

@@ -107,4 +107,3 @@ sources and target entries. Supply document bytes as `--docs-dir DIR` with `DIR/
 Inspect skipped counts. Inventory unknowns, mismatches and strict omissions are failures;
 resolve or report them, never claim a pass. Return check results, omissions/scope limits and
 open questions. Independent verification uses `templates/verifier-prompt.md` and `spec-verifier`.
-For existing format 1 work use only [FORMAT-1.md](../FORMAT-1.md).

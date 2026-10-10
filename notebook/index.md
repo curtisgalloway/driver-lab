@@ -22,9 +22,11 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 ## Chapters
 
 ### [SF2-7a — Peripheral specs and facts files in format 2](SF2-7a.md)
-Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T20:41:25-07:00; indexed through the last entry.
-Outcome: implementation and review round 1 fixes in an exported tree; orchestrator review and
-checkpoint pending. Reviews and HTML generation are outside this unit.
+Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T21:46:57-07:00
+Outcome: complete ([evidence](../evidence/SF2-7a.md)); reviews (SF2-7b) and the HTML generated
+sections are pending. The stop rule fired twice on inventory; refusing what is not fully understood,
+checked against a C compiler, ended the wrong-value blockers. When a fix loop keeps finding the
+same kind of blocker, change the contract instead of patching cases.
 
 ### [SF2-10 — bcm2711 converted and verified on draft branches](SF2-10.md)
 Entries: 2026-10-09 through 2026-10-09T21:31:15-07:00

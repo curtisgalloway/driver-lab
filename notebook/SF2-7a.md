@@ -119,3 +119,17 @@ Run: `sf2-7a-20261009-01`. Reviews and HTML generation belong to separate units.
   binary literal reach the parser's internal literal lookup and fail with an error.
   The mutation now removes only the preprocessor-operator refusals, producing an
   assertion failure for the token-pasting regression without unrelated parser errors.
+
+## 2026-10-09T21:46:57-07:00 — Close-out
+
+- Round 1 (Codex and an executing Opus review) found inventory blockers, fidelity losses and
+  untested guards. Confirmations 2 and 3 found more inventory blockers of the same kind, so the
+  stop rule fired twice; the answer was refusal of anything not fully understood, backed by a
+  compiler differential test (388 inputs, no wrong value). The final confirmation's one blocker,
+  an unclosed enum dropping members, was fixed directly to fail closed. Acceptance, reviews and
+  limitations are in the [evidence file](../evidence/SF2-7a.md).
+- Lesson: when confirmation keeps finding wrong values on valid input, stop patching cases and
+  change the contract to refuse what is not fully understood; then test it against the real
+  implementation (a compiler) rather than against hand-picked cases.
+- Lesson: restoring a converted example's original wording and citations is a review item in
+  itself; the first conversion invented values and dropped citations.

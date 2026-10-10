@@ -28,9 +28,14 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
   - a change to a gate input (the check scripts, this script, the pinned requirements, CI
     workflows) fails the gate, so the orchestrator reads that change first, and so does a
     binary change, which no scan here can read;
-  - every scan runs before any patched code. The suites run last, and the gate fails if
-    WORKTREE's changes differ afterwards, so patched code cannot hide or alter what was
-    scanned.
+  - every scan runs before any patched code. The suites run last, each in its own process
+    group that is killed when it returns, and the gate fails if WORKTREE's changes differ
+    afterwards, so patched code cannot hide or alter what was scanned;
+  - `.gitignore`, `.gitattributes` and `.gitmodules` are gate inputs too: they decide what git
+    reports as changed and how it diffs it. A changed path holding a control character fails.
+Limits. A process that leaves its group (a second setsid) can still outlive the gate, and
+files under paths the base tree already ignores are not scanned; git never commits those.
+This gate is a check on the patch, not a sandbox: Codex's own containment is codex-implement.
 The test suites necessarily run the patched code; whether its tests still mean anything is a
 review question, not one this gate can answer.
 
@@ -45,8 +50,10 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
+import tempfile
 
 RISKY = re.compile(
     r"subprocess|os\.system|eval\(|exec\(|shell=True|socket|urllib|requests\.|http://|"
@@ -55,9 +62,13 @@ RISKY = re.compile(
 HOME_PATH = re.compile(r"/(?:Users|home)/[A-Za-z0-9_]")
 ERROR_LINE = re.compile(r"^(FAIL|ERROR):|Error\b|error:")
 HERE = os.path.dirname(os.path.realpath(__file__))
+# Paths whose change can weaken the gate itself: the checks, the pinned requirements, CI,
+# and the files that decide what git reports as changed or how it diffs it.
 GATE_INPUTS = re.compile(
-    r"^(utilities/(check-[^/]*|patch-gate)\.py|skills/spec-format/requirements\.txt|"
-    r"\.github/.*)$")
+    r"utilities/(check-[^/]*|patch-gate)\.py|skills/spec-format/requirements\.txt|"
+    r"\.github/.*|(.*/)?\.git(ignore|attributes|modules)", re.DOTALL)
+# A changed path holding a control character is refused outright rather than matched.
+ODD_PATH = re.compile(r"[\x00-\x1f\x7f]")
 MAX_ERROR_LINES = 3
 MAX_UNTRACKED_BYTES = 1 << 20
 
@@ -128,7 +139,7 @@ def worktree_digest(worktree):
 
 def touched_gate_inputs(paths):
   """The gate inputs among PATHS."""
-  return sorted(p for p in set(paths) if GATE_INPUTS.match(p))
+  return sorted(p for p in set(paths) if GATE_INPUTS.fullmatch(p) or ODD_PATH.search(p))
 
 
 def load_check(name):
@@ -171,11 +182,27 @@ def summary(output):
 
 
 def run(command, cwd):
-  try:
-    proc = subprocess.run(command, cwd=cwd, capture_output=True, text=True, check=False)
-  except OSError as exc:
-    return 127, str(exc)
-  return proc.returncode, proc.stdout + proc.stderr
+  """Run COMMAND in its own process group; kill whatever of the group outlives it.
+
+  Output goes to a temporary file, not a pipe, so a background child that inherits it cannot
+  hold the gate open until it finishes.
+  """
+  with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as out:
+    try:
+      proc = subprocess.Popen(command, cwd=cwd, stdin=subprocess.DEVNULL, stdout=out,
+                              stderr=subprocess.STDOUT, start_new_session=True)
+    except OSError as exc:
+      return 127, str(exc)
+    try:
+      proc.wait()
+    finally:
+      try:
+        os.killpg(proc.pid, signal.SIGKILL)
+      except (ProcessLookupError, PermissionError):
+        pass
+      proc.wait()
+    out.seek(0)
+    return proc.returncode, out.read()
 
 
 def build_venv(worktree):

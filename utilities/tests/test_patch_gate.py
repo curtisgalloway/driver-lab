@@ -154,6 +154,29 @@ class PatchGateTest(unittest.TestCase):
     self.assertEqual(code, 1)
     self.assertIn("FAIL worktree changed while the suites ran", out)
 
+  def test_git_metadata_files_and_odd_paths_are_gate_inputs(self):
+    for path in (".gitignore", "docs/.gitignore", ".gitattributes", ".gitmodules",
+                 "utilities/patch-gate.py\n", "a\nb.md"):
+      with self.subTest(path=path):
+        self.assertEqual(self.mod.touched_gate_inputs([path]), [path])
+
+  def test_new_gitignore_hiding_a_file_fails(self):
+    self.put(".gitignore", "hidden.txt\n")
+    self.put("hidden.txt", "/" + "home/someone/x\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertIn("gate inputs touched: .gitignore", out)
+
+  def test_background_child_is_killed_with_its_suite(self):
+    marker = os.path.join(self.tmp, "late")
+    child = self.write("child.py", f"import time\ntime.sleep(1)\nopen({marker!r}, 'w').write('x')\n")
+    script = self.write("bg.py", f"import subprocess, sys\nsubprocess.Popen([sys.executable, {child!r}])\n")
+    code, out = self.gate("--suite", f"bg={sys.executable} {script}")
+    self.assertEqual(code, 0, out)
+    import time  # pylint: disable=import-outside-toplevel
+    time.sleep(1.5)
+    self.assertFalse(os.path.exists(marker))
+
   def test_other_paths_are_not_gate_inputs(self):
     self.assertEqual(self.mod.touched_gate_inputs(["utilities/run-store.py", "a.md"]), [])
 

@@ -344,6 +344,17 @@ def resources(file):
     return ''.join(out)
 
 
+def refuse_unsafe_fields(file):
+    """Repeat every field check on a spec and its record, independently of a prior check."""
+    values = list(textcheck.fields(file.data))
+    if file.record_loaded:
+        values.extend(textcheck.fields(file.record_loaded.data))
+    for path, value, _ in values:
+        bad = [f for f in specmd.findings(value) if f.level == 'error']
+        if bad:
+            raise ValueError(file.spec_id + ': ' + speccheck._where(path) + ': ' + bad[0].message)
+
+
 def render(checker, *, spec_id=None, merged=False, with_status=False,
            source_commit=None, tool_commit=None):
     """Repeat containment independently of a prior check; return one complete HTML document."""
@@ -373,13 +384,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         for file in group:
             if file.root.context and file.root.untrusted:
                 raise ValueError('cannot render merged input: context root does not check clean')
-            values = list(textcheck.fields(file.data))
-            if file.record_loaded:
-                values.extend(textcheck.fields(file.record_loaded.data))
-            for path, value, _ in values:
-                bad = [f for f in specmd.findings(value) if f.level == 'error']
-                if bad:
-                    raise ValueError(file.spec_id + ': ' + speccheck._where(path) + ': ' + bad[0].message)
+            refuse_unsafe_fields(file)
     status = {entry['file']: {r['key']: r for r in entry['rows']} for entry in checker.status}
     out = ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
            '<meta name="viewport" content="width=device-width, initial-scale=1">',

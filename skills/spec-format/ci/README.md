@@ -38,6 +38,21 @@ python skills/spec-format/ci/publish.py verify ROOT --out SITE --source-commit R
 ```
 
 `SITE` must be empty and outside every supplied root; neither command follows output symlinks.
+
+The site's `index.html` is the **explorer**: one page that searches and filters every fact in the
+published specs and links each to its full viewer page and Markdown copy. Its author text is the
+viewer renderer's output, embedded as JSON that cannot close its script element.
+
+`build --fetch-anchors` makes the explorer's heading citations open the document at that
+heading. It fetches each cited GitHub page once (a `blob` URL pinned to a full commit, through the
+API, or a wiki page), records each heading's anchor in the site's `anchors.json`, and prints the
+headings it could not find, which usually means a locator does not match the document. A fetch
+failure leaves those headings unresolved and never fails the build. Set `GITHUB_TOKEN` for the
+API rate limit. `verify` and the deploy job do not fetch: they validate the stored `anchors.json`
+(format, well-formed anchors, only headings the specs cite) and re-render from it, so the byte
+comparison still holds. An edited `anchors.json` can at most change a heading fragment on a
+declared document URL. Without the flag, `anchors.json` is empty and citations link to the
+document.
 The helper returns 0 for a complete build/verification and 1 for a refused site. The workflow
 adds `--require-verified pr|main`; omit that only for synthetic fixtures without records. The
 local tests exercise both policies. Real deployment and repository README links belong to

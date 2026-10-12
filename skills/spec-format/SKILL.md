@@ -308,7 +308,9 @@ repeats containment checks and emits no partial view on errors. The HTML viewer 
 images as links and separates generated badges from author containers (SF2-5). Its fixed
 token renderer emits no author classes, ids, titles or fence-language attributes; only checked
 link destinations become hrefs. An image inside a link retains the enclosing link's destination;
-image labels cannot create nested anchors. Notices are escaped literal text.
+image labels cannot create nested anchors. Notices are escaped literal text. The published
+site's front page is the explorer (`ci/README.md`): its author text is this same renderer's
+output, and its jump links only add a heading anchor to a document URL the spec declares.
 
 ## Command line
 

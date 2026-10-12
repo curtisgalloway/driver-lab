@@ -40,8 +40,9 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ github.sha }}
           VERIFY_POLICY: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py build specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
+          "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py build specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY" --fetch-anchors
           "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

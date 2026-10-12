@@ -63,7 +63,7 @@ kbd { border: 1px solid var(--rule); border-radius: 4px; padding: 0 .35rem; colo
 .stat span { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
 details > summary { cursor: pointer; }
 .doclist, .cites { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .35rem; }
-.doclist li, .cites li { font-size: .86rem; display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .5rem; }
+.doclist > li, .cites > li { font-size: .86rem; display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .5rem; }
 .group h3 { font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 1.6rem 0 .5rem; }
 .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
 .fact { scroll-margin-top: 9rem; background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--pass); border-radius: 8px; }
@@ -104,5 +104,5 @@ details > summary { cursor: pointer; }
   .main { padding: 1rem 1rem 3rem; }
   .tags { grid-row: auto; grid-column: 1; justify-content: flex-start; max-width: none; }
   .fact > button { grid-template-columns: minmax(0, 1fr); }
-  .doclist li, .cites li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .doclist > li, .cites > li { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

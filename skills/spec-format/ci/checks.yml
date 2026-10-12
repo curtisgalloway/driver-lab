@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+name: checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only token: nothing here writes to the repo.
+permissions:
+  contents: read
+
+env:
+  TOOL_COMMIT: '0000000000000000000000000000000000000000'
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      # The verification policy (driver-lab design D19): pull requests must re-verify every
+      # fact, including one staled through a reference into another repository; main and manual
+      # runs only warn on such upstream-stale facts.
+      CHECKS_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
+    steps:
+      - name: Require an installed tool revision
+        run: test "$TOOL_COMMIT" != 0000000000000000000000000000000000000000
+
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # spec.py (spec format 2) and the self-test's fixtures live in driver-lab. Pinned to a
+      # commit on its main branch so an upstream edit cannot change what runs here unreviewed;
+      # bump the ref (and publish.yml's TOOL_COMMIT) to take a new one.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: curtisgalloway/driver-lab
+          ref: ${{ env.TOOL_COMMIT }}
+          path: .driver-lab
+          persist-credentials: false
+
+      # Add context-root checkouts here, and append their specs/ paths to every
+      # checks.sh invocation below. See ci/README.md for the profile table.
+
+      # spec.py's pinned dependencies (PyYAML, jsonschema, markdown-it-py and theirs), installed
+      # only from the hashes in driver-lab's requirements.txt; checks.sh runs spec.py with this
+      # interpreter (CHECKS_PYTHON).
+      - name: Pinned spec-format dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/spec"
+          "$RUNNER_TEMP/spec/bin/python" -m pip install --require-hashes \
+            -r .driver-lab/skills/spec-format/requirements.txt
+          echo "CHECKS_PYTHON=$RUNNER_TEMP/spec/bin/python" >> "$GITHUB_ENV"
+
+      - name: Root marker, specs and verification records (spec.py check --require-license --require-verified)
+        run: scripts/checks.sh --mode "$CHECKS_MODE" check .driver-lab
+
+      - name: Source anchors at their pins (spec.py resolve)
+        run: scripts/checks.sh resolve .driver-lab
+        # Fetch the pinned repositories the specs cite (below a size limit) and resolve them.
+        env:
+          RESOLVE_SRC: 1
+
+      - name: Markdown view and viewer (spec.py render --format md and html)
+        run: scripts/checks.sh render .driver-lab
+
+      # Proves the license gate with this repository's own root marker: fixture specs that do
+      # not fit must fail with the gate's message, and those that fit must pass.
+      - name: License-gate self-test
+        run: scripts/checks.sh self-test .driver-lab
+        # Also proves resolution: a real pinned repository is fetched; a good anchor must
+        # resolve and a bad one fail.
+        env:
+          RESOLVE_SRC: 1

@@ -49,7 +49,7 @@ or permissions; follow the caller's authorized scope.
    file or absolute. Skill pointer paths are relative to the checkout or absolute.
    Never search the checkout for markers.
    CLI tools take the resulting root directories explicitly, not a config marker's roots list.
-2. **Require format 2.** The marker must declare `format: 2`; read YAML with spec.py.
+2. **Validate the spec format.** The marker must declare `format: 2`; read YAML with spec.py.
    Missing, invalid or unsupported format markers are errors. Report the unsupported root
    and request its conversion before reading or composing its specs.
 3. **Match id first**, otherwise match triggers/aliases case-insensitively as whole-word
@@ -61,7 +61,7 @@ or permissions; follow the caller's authorized scope.
    several indistinguishable rows require a decision. Generic IP uses its own pin and document
    authorities and has no instance facts. Branch-only map entries must be resolved to the
    commit actually read and reported; never silently treat a branch as a cited immutable pin.
-5. **Check and render format 2.** With the contract's pinned environment, run
+5. **Check and render specs.** With the contract's pinned environment, run
    `spec.py check <checked root>... --context-root <dependency root>... --require-license`.
    Keep root order by layer, then pointer order; docs, permissive, GPL among spec repositories.
    Check every root whose own facts you will report as a checked root; use context for other
@@ -124,7 +124,7 @@ possible (device-tree arithmetic plus a documented early console, firmware obser
 datasheet). Mark critical spec changes for two independent verifier readings. Cite documents
 by exact section/page whenever they exist.
 
-For each new fact return structured support suitable for format 2, not prose anchor syntax.
+For each new fact return structured support suitable for YAML specs, not prose anchor syntax.
 Code behavior is `src`; a hardware requirement concluded from code is a separate inference
 with premises, derivation, confidence and TODO. Code-only evidence cannot go into a root
 that refuses its license, even through an inference. Trace actual control flow, not just

@@ -2,7 +2,7 @@
 name: hardware-investigator
 description: >-
   Answer one board or peripheral question from sources accepted by the target spec root.
-  Check each cited file's license before reading it for evidence and return format 2 kind:
+  Check each cited file's license before reading it for evidence and return kind:
   facts YAML with immutable repos entries and structured support, ready for peripheral-spec.
   Refuse unaccepted sources. Use board-expert for the map, license_gate.py before source
   reading, and spec.py check, resolve and show for the finished records. Not for a whole spec
@@ -62,14 +62,14 @@ its sibling script, and `<gate.py>` for this skill's `scripts/license_gate.py`.
 Use actual repo names and repeat bindings for every cited entry. The example gate expression
 is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the confirmed license.
 
-1. Read the target marker; require a valid format 2 root and its policy. Print its accepts list:
+1. Read the target marker; require a valid spec root and its policy. Print its accepts list:
 
    ```bash
    <python> <gate.py> --root <root>
    ```
 
 2. Ask `board-expert` for composition, resources and file/license leads **without reading
-   source for evidence yet**. Follow its format 2 procedure; a listed license is a lead, not proof.
+   source for evidence yet**. Follow its procedure; a listed license is a lead, not proof.
 3. Confirm every candidate file's license at the intended commit: SPDX line, else notice or
    applicable license file. Fetching a tree to inspect licenses is allowed. If bytes are
    unavailable, do not cite a license merely claimed by a spec. Different licenses in one tree
@@ -82,7 +82,7 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
    ```
 
    Exit 0 accepts; 1 refuses (`A OR B` needs either, `A AND B` both); 2 is a usage error (not a
-   spec root); 3 means the pinned format 2 dependencies or schema are missing. A missing/invalid marker
+   spec root); 3 means the pinned spec-format dependencies or schema are missing. A missing/invalid marker
    is an error; absence of a usable policy is no permission to cite. Stop when the only usable
    source is refused, or continue with an independently accepted source and list the refusal.
 5. Read accepted bytes at the immutable commit. Obtain its full hash from the source checkout;

@@ -340,7 +340,7 @@ implementer which statements are established and which still need investigation 
 
 [`hardware-investigator`](skills/hardware-investigator/SKILL.md) answers one question as
 `kind: facts` YAML. It preflights a source's license before reading it, then returns facts with
-stable ids and structured support for authoring. The completed file passes the format 2
+stable ids and structured support for authoring. The completed file passes the spec-format
 citation and license gate; a refusal names the source, policy and reason without importing facts.
 
 [`peripheral-spec`](skills/peripheral-spec/SKILL.md) takes sources the target may derive from,
@@ -359,7 +359,7 @@ for the same hardware. It produces a `kind: review` YAML spec; resources have `r
 suspect, benign or reference issue). The databook can settle a divergence in either side's
 favor. Verification verdicts judge the reported finding independently of its assessment.
 The skill produces neither a new implementation spec nor driver code. It uses the same
-format 2 citation, drift and verification machinery.
+structured citation, drift and verification machinery.
 
 ### Verification
 
@@ -789,7 +789,7 @@ entry the sweep or a harness calls without a model also names a `command` that p
 (`source`, `producer`, `role` or `fixture`), `via`, `command` where needed, and for a producer
 its `class`. Its path is a `deployment` key in the same user config file that already holds
 `run_store`, so it lives outside the repository. With no key set, the public reference
-manifest for the public campaigns applies. Producer classes come from the format 2 schema
+manifest for the public campaigns applies. Producer classes come from the spec schema
 enum. The explicit target-spec tag-table adapter remains for frozen campaigns such as e1000,
 whose archived spec defines `[kernel]`; it is not a current spec reader. A new general class
 goes through the format, evidence model and checker as `emulated` did in SF-1.
@@ -1034,7 +1034,7 @@ Some discrepancies are historical text lag; others affect interpretation today:
 - `EVAL-PLAN.md` and parts of the proposal/review say no ledger exists. The pilot now has
   `ledger.yaml`; existence does not establish freeze completion or a score.
 - Historical format 1 documents describe whole-file hash freshness and checker warning rules.
-  Current format 2 records use per-fact bases and upstream dependencies; `spec.py check`
+  Current verification records use per-fact bases and upstream dependencies; `spec.py check`
   enforces the `pr` or `main` policy selected by `--require-verified`. Historical findings
   about the retired checker are not instructions for the current one.
 - The scaffold's "always verify" wording also differs from `QUESTIONS.md`, which offers verification later.

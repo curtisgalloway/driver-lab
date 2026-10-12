@@ -4,13 +4,13 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-# Format 2 peripheral verification prompt
+# Peripheral verification prompt
 
 **Terms:** verdicts judge evidence records; sub-keys identify independently supported fields or
 steps; a basis hash tracks semantic dependencies. See [the glossary](../../../GLOSSARY.md).
 
 Independently verify <spec> in <root>. You did not author it. Load `peripheral-spec`,
-`spec-format` and `spec-verifier`; use their format 2 procedure. Read source bytes at each
+`spec-format` and `spec-verifier`; use their verification procedure. Read source bytes at each
 `resources.repos[].commit`, not checkout HEAD. The `linux` binding is <source-checkout>;
 additional source/target bindings: <additional bindings>. Resolve license lines, and read
 notices/license files for every `license_from` confirmation the resolver cannot prove.

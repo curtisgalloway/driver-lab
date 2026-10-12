@@ -3,7 +3,7 @@ name: spec-verifier
 description: >-
   Verify hardware specs against their cited evidence in fresh reader contexts and write
   separate verification records. Use to verify, re-verify or audit a spec, after a spec or
-  source changes, or when its checker reports stale or missing verdicts. Format 2 uses
+  source changes, or when its checker reports stale or missing verdicts. Uses
   fact-keyed YAML records and delta verification.
   Orchestrator only: readers compare evidence; the orchestrator coordinates and checks.
 ---
@@ -32,19 +32,19 @@ SPDX-License-Identifier: Apache-2.0
 See the [glossary](../../GLOSSARY.md), sibling [format contract](../spec-format/SKILL.md)
 and [record schema](../spec-format/schema/verify.schema.json).
 
-## Require format 2
+## Validate the spec format
 
 The root marker must declare `format: 2`; specs and records are YAML. A missing, invalid or
 unsupported format marker is a finding. Convert the root before verifying its specs.
 
 ### Board specs
 
-Board, SoC, chip, IP and overlay files use the same format 2 procedure. Each file gets its
+Board, SoC, chip, IP and overlay files use the same verification procedure. Each file gets its
 own record, overlays included. The record's `spec` is the file's `id`, or its `overlays` id.
 
 ### Peripheral specs and reviews
 
-Format 2 peripheral specs and reviews use this same procedure. Verdicts cover facts,
+Peripheral specs and reviews use this same procedure. Verdicts cover facts,
 not individual anchors. Register fields and sequence steps with their own support get
 `fact-id.sub-id` keys (D16); otherwise the parent verdict covers them. Their bases include
 the effective requirement and parent identifying data. Finding assessments are separate from
@@ -52,7 +52,7 @@ verifier verdicts. Correspondence pair anchors count as support. Read the author
 in [peripheral-spec](../peripheral-spec/SKILL.md) and
 [reference-driver-review](../reference-driver-review/SKILL.md).
 
-## Coordinate a format 2 reading
+## Coordinate a verification reading
 
 The orchestrator selects work, spawns fresh readers, assembles their YAML and runs the gate.
 It never reads sources or edits the spec in this role. Readers may write proposed records
@@ -220,7 +220,7 @@ Current UNVERIFIABLE and GAP may pass the mechanical gate too: report those limi
 
 Write `<root>/resources/<name>.verify.yaml`, with `<name>` the spec file's basename without
 `.spec.yaml`, even for a nested spec or overlay. Never put it in a nested `resources/`,
-share it between files, or leave format 1 records in a format 2 root.
+share it between files, or leave format 1 records in a spec root.
 
 - `format: 2`; `spec`: spec id (overlay target id); `spec_file`: root-relative path;
   `canonical: fact-v1`; `spec_sha256`: SHA-256 of the exact spec bytes at assembly, for
@@ -238,7 +238,7 @@ share it between files, or leave format 1 records in a format 2 root.
   `recorded` as today's basis, or update hashes without a reading.
 - Each verdict has `verdict`, ISO `date`, `verifier` (agent, model, harness, reader identity),
   `note`, `contrary_evidence`, `citation_precision` and any required `readers`, `correction`,
-  `readings` or `adjudication`. No top-level `verified` or `verifier` exists in format 2.
+  `readings` or `adjudication`. No top-level `verified` or `verifier` exists in the verification record.
   Cite evidence in notes; do not paste source code into records.
 - `summary` has exactly `pass`, `fail`, `unverifiable`, `gap`, `adjudicate`, all present,
   even when zero. Count every stored verdict, preserved verdicts outside the delta included.

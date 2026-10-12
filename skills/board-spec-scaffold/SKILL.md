@@ -1,7 +1,7 @@
 ---
 name: board-spec-scaffold
 description: >-
-  Author format 2 YAML board, SoC, companion-chip, IP or overlay specs and root markers,
+  Author YAML board, SoC, companion-chip, IP or overlay specs and root markers,
   optionally with a thin board-expert stub or vendor-tools skill. Use when asked to scaffold,
   create or generate a board spec or bring-up reference, or when board-expert finds no spec.
   Research returns fact records; templates include documents-only roots and overlays.
@@ -24,7 +24,7 @@ SPDX-License-Identifier: Apache-2.0
 
 See the [glossary](../../GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) before writing;
 its schemas define shapes and its text is the shared contract. QUESTIONS in board-expert is
-the interview checklist. Authoring and reading use format 2 only.
+the interview checklist. Author and read specs as YAML.
 
 ## Outputs and templates
 
@@ -75,7 +75,7 @@ those too. An internal overlay uses the same YAML shapes in a vendor/local root,
    license and may require a more restrictive root. Cite DT source (`.dts`/`.dtsi`) at a pinned
    commit; a claim whose only source is a binary blob is a gap until decompiled text is
    published at a pin. Mark critical facts for two readers.
-4. **Write the marker/stub/vendor skill** if requested. All format 2 marker policy fields are
+4. **Write the marker/stub/vendor skill** if requested. All root marker policy fields are
    required, even outside a published repository. Expand any root pointers explicitly for
    commands: skill pointers are relative to the checkout or absolute; marker `roots` entries
    are relative to that marker file or absolute. YAML files start with SPDX comments;
@@ -97,7 +97,7 @@ those too. An internal overlay uses the same YAML shapes in a vendor/local root,
    `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md` and inspect it, then the same with `--format html` (the viewer,
    which repeats the containment checks); both are on main.
-7. **Verify** by following [spec-verifier's format 2 procedure](../spec-verifier/SKILL.md).
+7. **Verify** by following [spec-verifier's procedure](../spec-verifier/SKILL.md).
    If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.
 8. **Report** files produced, resolved composition, record status from `spec.py status`, gaps

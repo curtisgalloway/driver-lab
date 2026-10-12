@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-# Format 2 review verification prompt
+# Review verification prompt
 
 **Terms:** assessments judge differences; verdicts judge support; bases track semantic evidence
 freshness. See [the glossary](../../../GLOSSARY.md).

@@ -1,7 +1,7 @@
 ---
 name: spec-format
 description: >-
-  Reference skill: the format 2 contract for YAML hardware specs and verification records.
+  Reference skill: the spec format contract for YAML hardware specs and verification records.
   Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving spec.py.
   Defines evidence classes, references, roots, rendering and freshness; schemas define shapes.
 ---
@@ -11,7 +11,7 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Spec format 2 (contract)
+# Spec format (contract)
 
 ## Terms
 
@@ -45,10 +45,10 @@ The schemas are authoritative for required fields, enums, patterns and closed re
 Every `*.spec.yaml` below a root is a spec, regardless of subdirectory. The filename chooses the
 schema; identity comes from `id`, or `overlays`. Conventionally name base files for the id and
 use distinct filenames for overlays. Put SPDX copyright and license comments at the top,
-matching the target repository's license. No frontmatter or Markdown body surrounds format 2.
+matching the target repository's license. No frontmatter or Markdown body surrounds the YAML data.
 
 Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `peripheral`, `review` and
-`facts`. SF2-7 implements peripheral/review `data` payloads, `requirement` and verdict sub-keys.
+`facts`. Peripheral and review specs include `data` payloads, `requirement` and verdict sub-keys.
 Use [peripheral-spec](../peripheral-spec/SKILL.md),
 [reference-driver-review](../reference-driver-review/SKILL.md) and
 [hardware-investigator](../hardware-investigator/SKILL.md) for their authoring procedures.
@@ -177,7 +177,7 @@ conflicts/observations and evidence in premises do not bypass the gate.
 `https://developer.arm.com/documentation/<id>/latest` as the citation and record the actual
 documentation-service static PDF URL in retrieval, with revision, SHA-256 and page count when
 bytes are available. Documents in git record the commit read. `cite: false` means map-only
-and cannot be cited; otherwise omit `cite` (no `cite: true` in format 2). Fetch status
+and cannot be cited; otherwise omit `cite` (`cite: true` is not allowed). Fetch status
 (`ok`, `blocked`, `truncated`, `partial`) records availability, never validity.
 
 Cited repos need full lowercase 40- or 64-hex `commit`, not a branch in `ref`. Quote digit-only
@@ -207,7 +207,7 @@ top-level marker; the user's board-specs configuration marker. Skill pointer pat
 to the checkout or user-supplied absolute paths; machine paths never go into specs. Entries in
 a marker's `roots` are relative to that marker file, or absolute, as the root schema defines.
 The reader expands marker `roots` in order; CLI arguments are explicit (`spec.py` does not expand them).
-Deduplicate roots and require format 2 throughout the composition. No symlinks within or on
+Deduplicate roots and require `format: 2` throughout the composition. No symlinks within or on
 the route to a root, no nested markers.
 
 Order by layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then pointer order;

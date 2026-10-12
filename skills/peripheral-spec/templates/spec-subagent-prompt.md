@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-# Format 2 peripheral drafting prompt
+# Peripheral drafting prompt
 
 **Terms:** a fact is an identified evidence record; a payload holds typed register/sequence/layout
 values; a root declares license policy. See [the glossary](../../../GLOSSARY.md).

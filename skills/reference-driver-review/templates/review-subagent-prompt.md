@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 -->
 
-# Format 2 review drafting prompt
+# Review drafting prompt
 
 **Terms:** roles identify the two trees; an assessment judges a difference; a verifier verdict
 judges the finding's evidence. See [the glossary](../../../GLOSSARY.md).

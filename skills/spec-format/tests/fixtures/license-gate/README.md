@@ -3,12 +3,12 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# License-gate fixtures, format 2
+# License-gate fixtures
 
 The license-gate matrix for `spec.py check`, converted from the retired format 1 fixtures. Everything is synthetic and self-contained: the gate reads only the repos
 entries' licenses and the root marker, so no repository is fetched.
 
-- `roots/gpl`, `roots/docs`, `roots/permissive`: format 2 markers shaped like the three spec
+- `roots/gpl`, `roots/docs`, `roots/permissive`: root markers shaped like the three spec
   repositories (`hardware-specs-gpl`, `hardware-specs-docs`, `hardware-specs-permissive`). The
   GPL and permissive fixture roots also accept `X11` and `Zlib`, which the published markers do
   not, so a spec citing either passes the fixture check and fails the published one (LS-G F1;

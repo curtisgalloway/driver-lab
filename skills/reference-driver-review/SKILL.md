@@ -1,7 +1,7 @@
 ---
 name: reference-driver-review
 description: >-
-  Review a driver against a reference implementation of the same hardware. Produce format 2
+  Review a driver against a reference implementation of the same hardware. Produce YAML
   findings with structured evidence on both sides at immutable commits, correspondence and
   coverage records, and assessments distinct from verification verdicts. Defaults to the
   current driver; finds the reference through board-expert or a structured user decision.

@@ -14,7 +14,7 @@ SPDX-License-Identifier: <file-license>
 # <board-name> expert (stub)
 
 Terms: a stub is a skill pointer; a spec records hardware facts. See the target repo's glossary.
-The `<board-id>` format 2 board spec composes the `<soc-id>` SoC and `<chip-id>` companion.
+The `<board-id>` board spec composes the `<soc-id>` SoC and `<chip-id>` companion.
 
 `spec: <board-id>`
 

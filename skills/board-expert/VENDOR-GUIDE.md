@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 For an engineer inside an organization that holds material the public specs cannot: NDA databooks,
 internal BSP trees, lab rigs, errata trackers. Nothing here assumes you have read the rest of this
-repository; [spec-format](../spec-format/SKILL.md) is the format 2 contract, and the
+repository; [spec-format](../spec-format/SKILL.md) is the spec format contract, and the
 [glossary](../../GLOSSARY.md) defines shared terms.
 
 ## Terms

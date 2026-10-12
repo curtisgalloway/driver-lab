@@ -12,6 +12,6 @@ See the [glossary](../../../GLOSSARY.md).
 python3 -m unittest discover -s skills/board-expert/tests -v
 ```
 
-`test_spdx.py` tests the shared SPDX expression parser and acceptance rules. Format 2
+`test_spdx.py` tests the shared SPDX expression parser and acceptance rules. Spec
 structure, references, license gates, records and stub resolution are tested under
 `skills/spec-format/tests`; its fixtures include the board and peripheral license matrices.

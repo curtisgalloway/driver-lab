@@ -9,6 +9,6 @@ SPDX-License-Identifier: Apache-2.0
 an overlay adds facts to another spec. See the [glossary](../../GLOSSARY.md).
 
 The shared contract is [spec-format](../spec-format/SKILL.md). Read it before authoring or
-consuming format 2 YAML. Its schemas define shapes; its text defines classes, references,
+consuming YAML. Its schemas define shapes; its text defines classes, references,
 roots, records, rendering and commands. Start from
 [board-spec-scaffold's YAML templates](../board-spec-scaffold/templates/).

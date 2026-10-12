@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Worked example: format 2 Widget UART facts
+# Worked example: Widget UART facts
 
 **Terms:** facts files contain identified records and structured support, without a spec identity;
 a pin identifies immutable source bytes; a root declares acceptable licenses. See the

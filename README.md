@@ -92,7 +92,7 @@ paths for each harness.
 
 ## Peripheral specs and reviews
 
-- **`peripheral-spec`** writes a format 2 YAML spec for one peripheral from sources the
+- **`peripheral-spec`** writes a YAML spec for one peripheral from sources the
   target may cite. Facts have stable ids, structured support and requirements; register,
   sequence and layout payloads hold the programming data. Repository resources declare each
   pin's full commit, license and per-file license evidence. The placement rule chooses a
@@ -108,7 +108,7 @@ paths for each harness.
 - **`hardware-investigator`** answers one board or peripheral question as `kind: facts` YAML
   ready for peripheral authoring. It gets the map from `board-expert` and checks source
   licenses against the target root before reading source evidence. Its `license_gate.py`
-  uses format 2's strict marker validation and shared SPDX acceptance rules; `--facts` runs
+  uses the spec format’s strict marker validation and shared SPDX acceptance rules; `--facts` runs
   the complete citation gate. It needs spec-format's hash-pinned dependencies. The
   [worked example](skills/hardware-investigator/WORKED-EXAMPLE.md) exercises accepting,
   refusing and alternate-source cases with synthetic sources.
@@ -118,7 +118,7 @@ license the source's terms refuse and are not for NDA source.
 
 ## Board experts
 
-Board experts supply the per-board map and sources to cite. The map lives in format 2 YAML:
+Board experts supply the per-board map and sources to cite. The map lives in YAML:
 board, SoC, chip and IP specs compose through `parts` and `instances`; overlays add material
 from other roots in a fixed layer order. Reference source stays in an out-of-tree cache.
 
@@ -128,11 +128,11 @@ schemas, references, composition, license policy, public-root restrictions, stub
 and verification records. Generated Markdown and HTML views present the YAML with provenance
 and per-fact status; edit the YAML, then regenerate the views.
 
-- **`board-expert`** reads format 2 only. It resolves ids or board/SoC names across declared
+- **`board-expert`** reads YAML specs. It resolves ids or board/SoC names across declared
   roots, composes and overlays the specs, consults pinned sources and reports full fact
   references with freshness and limitations. An IP question can be tied to a board instance
   or answered generically. Without a spec it investigates and suggests scaffolding.
-  Its shipped `specs/` root is empty, marked format 2; published specs live in the separate
+  Its shipped `specs/` root is empty; published specs live in the separate
   spec repositories. It also ships the structured question catalog and vendor guide.
 - **`board-spec-scaffold`** creates board, SoC, chip or IP YAML from templates, with optional
   expert stubs, overlays, vendor tool skills and root markers. Its interview settles identity,
@@ -147,8 +147,6 @@ and per-fact status; edit the YAML, then regenerate the views.
   and never edits the spec.
 - **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and CLI:
   `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift` and `inventory`.
-  Format 1 authoring, reading and migration tools are retired. Frozen campaigns and historical
-  records keep their original formats; carried verdict provenance remains readable in format 2.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
@@ -179,7 +177,7 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 
 ## Tests
 
-Install the hash-pinned dependencies and run the format 2 suites and shipped-root check:
+Install the hash-pinned dependencies and run the spec-format suites and shipped-root check:
 
 ```bash
 uv venv /tmp/driver-lab-sf2

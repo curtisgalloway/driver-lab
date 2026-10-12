@@ -1,7 +1,7 @@
 ---
 name: peripheral-spec
 description: >-
-  Produce a format 2 peripheral implementation spec from driver source whose license fits the
+  Produce a YAML peripheral implementation spec from driver source whose license fits the
   target spec repository. Every fact carries structured support at an immutable commit or a
   named document locator. Use for documenting, specifying or porting a peripheral from citable
   source or public datasheets; not for NDA source. Uses spec.py validate, check, resolve, show,
@@ -45,7 +45,7 @@ references. It may cite less restrictive repositories, never more restrictive on
 | `hardware-specs-permissive` | Apache-2.0, plus required source notices | Public documents and accepted BSD, ISC, 0BSD, MIT, Apache or permissively dual-licensed source |
 | `hardware-specs-gpl` | GPL-2.0-only | The above plus accepted GPL-2.0-only or GPL-2.0-or-later source |
 
-The format 2 root marker requires `format: 2`, `layer`, `name`, `license` and `accepts`.
+The spec root marker requires `format: 2`, `layer`, `name`, `license` and `accepts`.
 `layer` is its merge position (`public`, `ip-vendor`, `soc-vendor`, `product` or `local`);
 `name` is the stable root identifier used in cross-root fact references.
 Read the actual destination marker's `license` and `accepts`; fixture roots are not a promise

@@ -6,13 +6,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-from html import escape
 import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import explorer
 import render_html
 import render_md
 import spec
@@ -53,8 +53,12 @@ def checked(args):
     return checker
 
 
-def payloads(checker, args):
-    """Both renderers repeat field checks; nothing is written until every page succeeds."""
+def payloads(checker, args, anchors=None):
+    """Both renderers repeat field checks; nothing is written until every page succeeds.
+
+    `anchors` is the anchors.json content: fetched by build, read back from the site by verify.
+    It is validated against the checked sources either way and only adds heading fragments.
+    """
     result, entries = {}, []
     for stem, source, file, merged in catalog(checker):
         selected = checker
@@ -74,14 +78,11 @@ def payloads(checker, args):
                        source_commit=commits, tool_commit=args.tool_commit)
         result[stem + '.html'] = render_html.render(selected, **options)
         result[stem + '.md'] = render_md.render(selected, **options)
-        entries.append({'source': source, 'html': stem + '.html', 'markdown': stem + '.md'})
-    index = ['<!doctype html><html lang="en"><head><meta charset="utf-8">',
-             '<title>Spec views</title></head><body><h1>Spec views</h1><ul>']
-    for entry in entries:
-        index.append('<li>' + escape(entry['source']) + ' <a href="' + entry['html'] +
-                     '">Viewer</a> · <a href="' + entry['markdown'] + '">Markdown</a></li>')
-    index.append('</ul></body></html>')
-    result['index.html'] = '\n'.join(index) + '\n'
+        entries.append({'source': source, 'spec': file.spec_id, 'html': stem + '.html',
+                        'markdown': stem + '.md'})
+    result['anchors.json'] = explorer.dump_anchors(anchors or explorer.empty_anchors())
+    result['index.html'] = explorer.page(checker, explorer.load_anchors(result['anchors.json'], checker),
+                                         entries, tool_commit=args.tool_commit)
     manifest = {'pages': entries, 'sha256': {
         name: hashlib.sha256(text.encode('utf-8')).hexdigest() for name, text in result.items()}}
     result['manifest.json'] = json.dumps(manifest, sort_keys=True, indent=2) + '\n'
@@ -103,7 +104,10 @@ def build(checker, args):
     safe_output(args.out, checker)
     if args.out.exists() and any(args.out.iterdir()):
         raise ValueError('site output must be empty')
-    expected = payloads(checker, args)
+    anchors = explorer.resolve_anchors(checker) if getattr(args, 'fetch_anchors', False) else explorer.empty_anchors()
+    for line in explorer.unresolved_report(anchors):
+        print(line, file=sys.stderr)
+    expected = payloads(checker, args, anchors)
     args.out.mkdir(parents=True, exist_ok=True)
     for name, text in expected.items():
         (args.out / name).write_text(text, encoding='utf-8')
@@ -117,7 +121,12 @@ def verify(checker, args):
     stale page, missing Markdown view, link, directory or unexpected file also refuses deploy.
     """
     safe_output(args.out, checker)
-    expected = payloads(checker, args)
+    stored = args.out / 'anchors.json'
+    if stored.is_symlink() or not stored.is_file():
+        raise ValueError('site is missing anchors.json')
+    explorer.load_anchors(stored.read_text(encoding='utf-8'), checker)
+    anchors = json.loads(stored.read_text(encoding='utf-8'))
+    expected = payloads(checker, args, anchors)
     if not args.out.is_dir() or {p.name for p in args.out.iterdir()} != set(expected):
         raise ValueError('site is missing a spec page or has unexpected files')
     for name, text in expected.items():
@@ -138,6 +147,8 @@ def main(argv=None):
     parser.add_argument('--tool-commit', required=True, type=spec.commit_arg)
     parser.add_argument('--require-verified', choices=('pr', 'main'))
     parser.add_argument('--out', required=True, type=Path)
+    parser.add_argument('--fetch-anchors', action='store_true',
+                        help='build only: resolve cited GitHub headings to link anchors over the network')
     args = parser.parse_args(argv)
     try:
         checker = checked(args)

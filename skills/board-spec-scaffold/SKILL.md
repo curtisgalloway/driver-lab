@@ -41,6 +41,7 @@ the interview checklist. Author and read specs as YAML.
 | `<board>-expert/SKILL.md` | [stub-SKILL.md](templates/stub-SKILL.md) |
 | `<vendor>-board-tools/SKILL.md` | [vendor-board-tools-SKILL.md](templates/vendor-board-tools-SKILL.md) |
 | `<root>/resources/<name>.verify.yaml`, one per spec file, overlays included | spec-verifier writes it |
+| New spec repository: `scripts/checks.sh`, `.github/workflows/checks.yml` | [Check templates and setup](../spec-format/ci/README.md#repository-checks) |
 
 The four base templates use documents and gaps and contain no repos; use them unchanged in
 shape for a documents-only root. Source-derived additions use the source overlay in a root
@@ -49,6 +50,8 @@ Do not add even map-only repos to documents-only templates: `check --require-lic
 those too. An internal overlay uses the same YAML shapes in a vendor/local root, with
 `access: internal` on documents and a tool's `via` naming its loaded vendor skill. Do not add
 `access`/`via` to repo entries or invocation `via` to documents; those fields do not exist.
+
+When creating a spec repository, install and configure the [repository checks](../spec-format/ci/README.md#repository-checks), including both Linux and macOS jobs. Existing repositories keep their own configured copies; template updates do not propagate automatically.
 
 ## Steps
 

@@ -20,6 +20,7 @@ import tempfile
 import unicodedata
 
 import speccheck
+import docresolve
 
 COMMIT = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
 SAFE = [
@@ -523,7 +524,7 @@ def display_line(line):
     return "".join(output)
 
 
-def result_object(files, findings, anchors, facts):
+def result_object(files, findings, anchors, facts, documents=()):
     errors = [f for f in findings if f.get("level", "error") == "error"]
     result = {
         "ok": not errors,
@@ -534,6 +535,9 @@ def result_object(files, findings, anchors, facts):
         "findings": findings,
         "anchors": anchors,
         "facts": facts,
+        "document_citations": list(documents),
+        "documents_resolved": sum(a["status"] == "resolved" for a in documents),
+        "documents_skipped": sum(a["status"] == "skipped" for a in documents),
         "resolved": sum(a["status"] == "resolved" for a in anchors),
         "skipped": sum(a["status"] == "skipped" for a in anchors),
     }
@@ -541,6 +545,13 @@ def result_object(files, findings, anchors, facts):
     for fact in facts:
         text.append(f"{fact['id']}: {fact['claim']}")
         for citation in fact["citations"]:
+            if "doc" in citation:
+                text.append(
+                    f"  {citation['doc']} {citation['locator']} [{citation['status']}]"
+                )
+                for page, number, line in citation["source"]:
+                    text.append(f"  PDF page {page}, {number}: {display_line(line)}")
+                continue
             text.append(
                 f"  {citation['repo']}:{citation['path']} [{citation['status']}]"
             )
@@ -556,6 +567,11 @@ def result_object(files, findings, anchors, facts):
         for f in findings
     )
     text.append(f"{result['resolved']} anchor(s) resolved, {result['skipped']} skipped")
+    if documents:
+        text.append(
+            f"{result['documents_resolved']} document citation(s) resolved, "
+            f"{result['documents_skipped']} skipped"
+        )
     result["_text"] = [display_line(line) for line in text]
     return (1 if errors else 0), result
 
@@ -564,7 +580,7 @@ def run(args):
     """Shared resolve/show command; strict validation precedes all source work."""
     files, validation, local = prepare(args)
     findings = validation_findings(validation)
-    anchors, facts = [], []
+    anchors, facts, document_citations = [], [], []
     if validation:
         return result_object(args.files, findings, anchors, facts)
     with tempfile.TemporaryDirectory(prefix="spec-resolve-") as scratch:
@@ -585,6 +601,38 @@ def run(args):
                 )
 
             entries = data.get("resources", {}).get("repos", [])
+            documents = {}
+            if args.docs_dir is not None:
+                for i, doc in enumerate(data.get("resources", {}).get("documents", [])):
+                    reader = "document has no sha256 pin"
+                    if "sha256" in doc:
+                        document = args.docs_dir / doc["name"]
+                        try:
+                            if document.is_symlink() or not document.is_file():
+                                raise ResolutionError(
+                                    f"document {doc['name']}: missing regular file"
+                                )
+                            with document.open("rb") as stream:
+                                magic = stream.read(5)
+                                stream.seek(0)
+                                digest = hashlib.file_digest(
+                                    stream, "sha256"
+                                ).hexdigest()
+                            if digest != doc["sha256"]:
+                                raise ResolutionError(
+                                    f"document {doc['name']}: sha256 mismatch"
+                                )
+                            reader = (
+                                docresolve.PdfPages(
+                                    document, args.timeout, args.limit_mb << 20
+                                )
+                                if magic == b"%PDF-"
+                                else "document is not a PDF"
+                            )
+                        except (ResolutionError, OSError) as exc:
+                            reader = ResolutionError(str(exc))
+                            add(("resources", "documents", i, "sha256"), str(exc))
+                    documents[doc["name"]] = doc, reader
             by_name = {}
             for entry in entries:
                 by_name.setdefault(entry["name"], []).append(entry)
@@ -653,7 +701,9 @@ def run(args):
                             source=[
                                 (number, line.removesuffix("\r"))
                                 for number, line in enumerate(lines, span[0])
-                            ] if span else [],
+                            ]
+                            if span
+                            else [],
                         )
                         if "search" in anchor:
                             item["search"] = anchor["search"]
@@ -667,6 +717,14 @@ def run(args):
                         add(at, f"{record['id']}: resolution skipped: {exc}", "warning")
                     except ResolutionError as exc:
                         add(at, f"{record['id']}: {exc}")
+                pdf_lines = []
+                if args.docs_dir is not None:
+                    items, pdf_lines = docresolve.citations(
+                        record, base, documents, add
+                    )
+                    document_citations.extend(items)
+                    display["citations"].extend(items)
+                    own_lines.extend(pdf_lines)
                 missing = hex_values(record.get("claim", "")) - hex_values(
                     "\n".join(own_lines)
                 )
@@ -677,28 +735,20 @@ def run(args):
                         + ", ".join(hex(v) for v in sorted(missing)),
                         "warning",
                     )
+                offset = record.get("data", {}).get("register", {}).get("offset")
+                if (
+                    pdf_lines
+                    and offset
+                    and hex_values(offset) - hex_values("\n".join(pdf_lines))
+                ):
+                    add(
+                        base + ("data", "register", "offset"),
+                        f"register offset absent from cited PDF pages: {offset}",
+                        "warning",
+                    )
                 if args.command == "show":
                     facts.append(display)
-            if args.docs_dir is not None:
-                for i, doc in enumerate(data.get("resources", {}).get("documents", [])):
-                    if "sha256" not in doc:
-                        continue
-                    at = ("resources", "documents", i, "sha256")
-                    document = args.docs_dir / doc["name"]
-                    try:
-                        if document.is_symlink() or not document.is_file():
-                            raise ResolutionError(
-                                f"document {doc['name']}: missing regular file"
-                            )
-                        with document.open("rb") as stream:
-                            digest = hashlib.file_digest(stream, "sha256").hexdigest()
-                        if digest != doc["sha256"]:
-                            raise ResolutionError(
-                                f"document {doc['name']}: sha256 mismatch"
-                            )
-                    except (ResolutionError, OSError) as exc:
-                        add(at, str(exc))
-    return result_object(args.files, findings, anchors, facts)
+    return result_object(args.files, findings, anchors, facts, document_citations)
 
 
 def register(subparsers):
@@ -725,7 +775,10 @@ def add_arguments(parser):
         "--docs-dir", type=Path, help="document files named exactly by document name"
     )
     parser.add_argument(
-        "--timeout", type=int, default=300, help="seconds per Git operation"
+        "--timeout",
+        type=int,
+        default=300,
+        help="seconds per Git or PDF extraction operation",
     )
     parser.add_argument(
         "--limit-mb",

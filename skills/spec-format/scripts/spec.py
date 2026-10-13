@@ -130,6 +130,19 @@ the summary counts skips explicitly, and a fully skipped run exits 0. `show` als
 facts beside cited source lines, escaping terminal control characters. Search anchors check
 scope existence only; their prose is never executed.
 
+With `--docs-dir`, hash-pinned PDFs declaring `page_numbering: pdf` also get optional
+page-text checks through `pdftotext` (from Poppler). Numeric `page` and inclusive `pages`
+ranges are extracted and cached. Missing section/table/figure tokens warn, with adjacent
+page matches reported separately; those pages never count as cited evidence. Claim hex
+values and `data.register.offset` are compared to directly cited text. These are presence
+checks, not verification of a claim's meaning or of a caption rather than a cross-reference.
+`show` displays the document name, locator and cited page text. JSON adds
+`document_citations`, `documents_resolved` and `documents_skipped`; source-anchor counts
+retain their meaning. Missing `pdftotext`, textless PDFs, unpinned/non-PDF documents,
+printed numbering and locators without numeric pages produce explicit warning skips.
+Extraction errors fail; time/text-size limits skip. Hash mismatches fail before extraction.
+`--timeout` bounds each extraction; `--limit-mb` bounds cached text per document.
+
 `drift` compares one cited entry with a full lowercase commit id (40 or 64 hex digits).
 `--pin` is required when several entries are cited. `--rewrite` moves the pin, updates unique
 moved ranges and marks changed anchors stale while preserving comments and layout. Changed

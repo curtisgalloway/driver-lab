@@ -207,6 +207,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Coverage | A review's record of which areas were compared, what was read and why, stored in `data.coverage`. A zero-finding area still needs this account; coverage is separate from register inventory. |
 | Role | A repository entry's declared use: `source` or `target` for peripheral specs, `impl` (the reviewed driver) or `ref` (the reference) for reviews. Citations on all sides use `class: src`; the role selects the side, not a different evidence class. Peripheral role enforcement applies only to target-section facts. |
 | Document class | A support entry of class `databook`, `standard` or `doc`, naming a document and structured locators. Source code alone does not establish where hardware is or what it requires. |
+| Document locator | The section, table, figure, heading or page identifying a cited passage. A `pages` locator is an inclusive first-to-last range. |
+| PDF / physical versus printed pages | Portable Document Format, a file format preserving page layout. Physical PDF pages count from one; printed page labels inside the file can differ. |
+| Poppler / pdftotext | A PDF processing toolkit / its command-line text extractor, used optionally to read cited PDF pages without adding a Python package. |
 | TODO method | A proposed way to settle a fact's remaining question, stored in `todo.method` or described in `todo.text`; the verifier checks whether it can observe that question under the stated conditions. |
 | D16 sub-key | A verdict key of the form `fact-id.sub-id` for a register field or sequence step with its own support. SF2-7a checks these records and their freshness; fields and steps without separate support share their parent's verdict. |
 | Register payload | A fact's structured `data.register` (name, byte offset, width in bits, access and optional reset) and optional `data.fields`; each field's `bits` is an inclusive `[low, high]` pair. |

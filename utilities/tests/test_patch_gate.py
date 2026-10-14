@@ -36,8 +36,13 @@ class PatchGateTest(unittest.TestCase):
     self.put("README.md", "readme\n")
     self.git("add", ".")
     self.git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "i")
-    self.patch = self.write("p.patch", "+++ b/x.py\n+print('hi')\n")
+    self.patch = self.write("p.patch", self.new_file_patch("x.py", "print('hi')"))
     self.refused = self.write("none.txt", "refused: 0\n")
+
+  @staticmethod
+  def new_file_patch(name, line):
+    return (f"diff --git a/{name} b/{name}\nnew file mode 100644\n--- /dev/null\n"
+            f"+++ b/{name}\n@@ -0,0 +1 @@\n+{line}\n")
 
   def git(self, *args):
     subprocess.run(["git", "-C", self.tree, *args], check=True, capture_output=True)
@@ -97,10 +102,10 @@ class PatchGateTest(unittest.TestCase):
     self.assertIn("refused: 1", out)
 
   def test_pattern_hits_reported_but_do_not_fail(self):
-    self.patch = self.write("p.patch", "+++ b/x.py\n+import subprocess\n")
+    self.patch = self.write("p.patch", self.new_file_patch("x.py", "import subprocess"))
     code, out = self.gate()
     self.assertEqual(code, 0, out)
-    self.assertIn("patch:2: +import subprocess", out)
+    self.assertIn("patch:6: +import subprocess", out)
 
   def test_untracked_home_path_fails(self):
     home = "/" + "home" + "/someone/x"
@@ -153,6 +158,144 @@ class PatchGateTest(unittest.TestCase):
     code, out = self.gate("--suite", f"edit={sys.executable} {script}")
     self.assertEqual(code, 1)
     self.assertIn("FAIL worktree changed while the suites ran", out)
+
+  def git_suite(self, name, *commands):
+    """A --suite that runs each git COMMAND (an argument list) in the worktree."""
+    script = self.write(name + ".py", "import subprocess\n" + "".join(
+        f"subprocess.run({['git', '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', *c]!r}"
+        ", check=True)\n" for c in commands))
+    return f"{name}={sys.executable} {script}"
+
+  def test_suite_that_stages_then_restores_fails(self):
+    # Issue 79: a staged change with the file restored on disk left `git diff HEAD` unchanged,
+    # and the orchestrator's next commit would have carried the staged content.
+    self.put("README.md", "readme\nstaged\n")
+    self.git("add", "README.md")
+    self.git("restore", "--staged", "README.md")
+    self.put("README.md", "readme\n")
+    script = self.write("stage.py",
+                        "import subprocess\nopen('README.md', 'a').write('leak\\n')\n"
+                        "subprocess.run(['git', 'add', 'README.md'], check=True)\n"
+                        "open('README.md', 'w').write('readme\\n')\n")
+    code, out = self.gate("--suite", f"stage={sys.executable} {script}")
+    self.assertEqual(code, 1, out)
+    self.assertIn("FAIL worktree changed while the suites ran", out)
+
+  def test_suite_that_changes_git_state_fails(self):
+    hook = os.path.join(self.tree, ".git", "hooks", "pre-commit")
+    cases = {
+        "commit": self.git_suite("commit", ["commit", "-q", "--allow-empty", "-m", "x"]),
+        "flag": self.git_suite("flag", ["update-index", "--assume-unchanged", "README.md"]),
+        "hook": f"hook={sys.executable} " + self.write("hook.py", f"open({hook!r}, 'w').close()\n"),
+        "config": self.git_suite("config", ["config", "user.email", "x@example.invalid"]),
+        "hooks-path": self.git_suite("hooks-path", ["config", "core.hooksPath", "elsewhere"]),
+        "exclude": f"exclude={sys.executable} " + self.write(
+            "exclude.py", f"open({os.path.join(self.tree, '.git', 'info', 'exclude')!r}, 'a')"
+            ".write('*.md\\n')\n"),
+        "merge-head": f"merge={sys.executable} " + self.write(
+            "merge.py", "import subprocess\nhead = subprocess.run(['git', 'rev-parse', 'HEAD'], "
+            "capture_output=True, text=True).stdout\n"
+            f"open({os.path.join(self.tree, '.git', 'MERGE_HEAD')!r}, 'w').write(head)\n"),
+        "branch": self.git_suite("branch", ["branch", "other"], ["symbolic-ref", "HEAD", "refs/heads/other"]),
+    }
+    for name, suite in cases.items():
+      with self.subTest(case=name):
+        code, out = self.gate("--suite", suite)
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL worktree changed while the suites ran", out)
+
+  def test_non_utf8_or_symlinked_tracked_file_fails(self):
+    # Issue 79: git calls a file text unless it holds a NUL; the scans skipped non-UTF-8 files.
+    home = "/" + "home/someone/x\n"
+    self.put("README.md", home.encode() + b"\xff\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1, out)
+    self.assertIn("binary: none", out)
+    self.assertIn("unscannable (link, directory, not UTF-8 or skipped suffix): README.md;", out)
+    os.remove(os.path.join(self.tree, "README.md"))
+    target = self.write("target.txt", home)  # an existing target: the scan would follow it
+    os.symlink(target, os.path.join(self.tree, "README.md"))
+    code, out = self.gate()
+    self.assertEqual(code, 1, out)
+    self.assertIn("unscannable (link, directory, not UTF-8 or skipped suffix): README.md;", out)
+
+  def test_text_file_with_a_skipped_suffix_fails(self):
+    self.put("notes.pdf", "/" + "home/someone/x\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1, out)
+    self.assertIn("unscannable (link, directory, not UTF-8 or skipped suffix): notes.pdf;", out)
+
+  def test_suite_that_forges_the_index_tree_cache_fails(self):
+    # Issue 79 review: `git commit` reuses the index's cached tree for a directory the next
+    # `git add` does not touch, so a forged cache entry commits files `ls-files` never lists.
+    forge = self.write("forge.py", """import hashlib, os, shutil, subprocess
+def g(*a, env=None, inp=None):
+  return subprocess.run(["git", *a], check=True, capture_output=True, env=env,
+                        input=inp).stdout.decode().strip()
+gitdir = g("rev-parse", "--absolute-git-dir")
+idx = os.path.join(gitdir, "index")
+g("write-tree")
+old = bytes.fromhex(g("rev-parse", "HEAD:utilities"))
+tmp = os.path.join(gitdir, "tmp-idx")
+shutil.copy(idx, tmp)
+env = dict(os.environ, GIT_INDEX_FILE=tmp)
+blob = g("hash-object", "-w", "--stdin", inp=b"leak\\n")
+g("update-index", "--add", "--cacheinfo", "100644," + blob + ",utilities/leak.md", env=env)
+new = bytes.fromhex(g("rev-parse", g("write-tree", env=env) + ":utilities"))
+os.remove(tmp)
+data = open(idx, "rb").read()[:-20]
+i = data.index(b"utilities\\0", data.index(b"TREE", 12))
+j = data.index(b"\\n", i) + 1
+assert data[j:j + 20] == old
+data = data[:j] + new + data[j + 20:]
+open(idx, "wb").write(data + hashlib.sha1(data).digest())
+""")
+    code, out = self.gate("--suite", f"forge={sys.executable} {forge}")
+    self.assertEqual(code, 1, out)
+    self.assertIn("FAIL worktree changed while the suites ran", out)
+    listed = subprocess.run(["git", "-C", self.tree, "ls-files"], capture_output=True,
+                            text=True, check=True).stdout
+    self.assertNotIn("leak.md", listed)  # the forgery is invisible to ls-files
+
+  def test_deleted_file_is_not_unscannable(self):
+    os.remove(os.path.join(self.tree, "README.md"))
+    code, out = self.gate()
+    self.assertEqual(code, 0, out)
+    self.assertIn("unscannable (link, directory, not UTF-8 or skipped suffix): none;", out)
+
+  def test_patch_path_hidden_by_ignore_rules_fails(self):
+    # Issue 80: a file under a path the base tree already ignores never reached the scans.
+    self.put(".gitignore", "*.swp\n")
+    self.put("kept.swp", "tracked\n")
+    self.git("add", "-f", ".gitignore", "kept.swp")
+    self.git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "ig")
+    self.put("notes.swp", "/" + "home/someone/x\n")
+    self.put("tab\tname.swp", "x\n")  # a tab in the path must survive numstat parsing
+    self.patch = self.write("p.patch", self.new_file_patch("notes.swp", "x")
+                            + 'diff --git "a/tab\\tname.swp" "b/tab\\tname.swp"\nnew file mode 100644\n'
+                            '--- /dev/null\n+++ "b/tab\\tname.swp"\n@@ -0,0 +1 @@\n+x\n'
+                            + "diff --git a/kept.swp b/kept.swp\n--- a/kept.swp\n+++ b/kept.swp\n"
+                            "@@ -1 +1 @@\n-tracked\n+changed\n")
+    self.put("kept.swp", "changed\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1, out)
+    self.assertIn("changed: 1 tracked, 0 new", out)
+    self.assertIn("ignored by the worktree: notes.swp, tab\tname.swp\n", out)
+
+  def test_suite_that_only_touches_a_tracked_file_passes(self):
+    # Review round 2: a stat-only change made the gate's own `git diff` rewrite the index.
+    self.put("README.md", "readme\nchanged\n")
+    # An unchanged tracked file whose timestamp moves is what makes `git diff` refresh.
+    script = self.write("touch.py", "import os, time\nt = time.time() + 5\n"
+                        "os.utime('utilities/check-open-side.py', (t, t))\n")
+    code, out = self.gate("--suite", f"touch={sys.executable} {script}")
+    self.assertEqual(code, 0, out)
+
+  def test_patch_git_cannot_parse_fails(self):
+    self.patch = self.write("p.patch", "+++ b/x.py\n+print('hi')\n")
+    code, out = self.gate()
+    self.assertEqual(code, 1, out)
+    self.assertIn("FAIL worktree state: git apply failed", out)
 
   def test_git_metadata_files_and_odd_paths_are_gate_inputs(self):
     for path in (".gitignore", "docs/.gitignore", ".gitattributes", ".gitmodules",

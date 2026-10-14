@@ -24,7 +24,8 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
     tracked files plus the new untracked ones the patch added (git apply leaves them
     untracked, and `git ls-files` alone would never see them);
   - which paths changed comes from WORKTREE itself (`git diff HEAD` and the untracked files),
-    never from parsing PATCH, so renames, quoted names, binary and mode-only changes count;
+    never from parsing PATCH, so renames, quoted names, binary and mode-only changes count
+    (PATCH's own paths, read with git's parser, are used only to find ignored ones, below);
   - a change to a gate input (the check scripts, this script, the Codex wrappers
     codex-implement.py and codex-review.py, the pinned requirements, CI workflows) fails the gate, so the orchestrator reads that change first, and so does a
     binary change, which no scan here can read;
@@ -32,9 +33,21 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
     group that is killed when it returns, and the gate fails if WORKTREE's changes differ
     afterwards, so patched code cannot hide or alter what was scanned;
   - `.gitignore`, `.gitattributes` and `.gitmodules` are gate inputs too: they decide what git
-    reports as changed and how it diffs it. A changed path holding a control character fails.
-Limits. A process that leaves its group (a second setsid) can still outlive the gate, and
-files under paths the base tree already ignores are not scanned; git never commits those.
+    reports as changed and how it diffs it. A changed path holding a control character fails;
+  - the after-suite digest also covers HEAD and its branch, the raw index, the git hooks,
+    config and info/ files, and any merge, cherry-pick, revert or rebase state, so that a
+    suite's staging, committing, hooks or pending merges change the digest. The gate's own
+    diffs read a copy of the index, so only a suite can change it; one that runs `git status`
+    or `git add` in WORKTREE refreshes the index and fails the gate too;
+  - a changed or new path that is a symlink, a directory, not valid UTF-8, or has a suffix the
+    scans skip fails: the scans would pass over it, while git may still commit it as text;
+  - a path the patch adds or changes that the worktree's ignore rules hide (so the untracked
+    scan never sees it) fails; its paths come from `git apply --numstat`, git's own parser.
+Limits. A process that leaves its group (a second setsid) can still outlive the gate; the
+orchestrator should recheck the worktree just before committing. The hooks and config are
+shared by every worktree of the checkout, so another session changing them during a run (a
+`git worktree add`, a `push -u`) fails that run. State outside the repository (global git
+config, the home directory) is not covered.
 This gate is a check on the patch, not a sandbox: Codex's own containment is codex-implement.
 The test suites necessarily run the patched code; whether its tests still mean anything is a
 review question, not one this gate can answer. Every interpreter the gate starts runs with
@@ -99,9 +112,25 @@ def risky_hits(patch_text):
 GIT = ["git", "-c", "core.fsmonitor=false", "--no-pager"]
 
 
-def git(worktree, *args):
-  """Run git in WORKTREE without external diff drivers or text conversion."""
-  proc = subprocess.run([*GIT, "-C", worktree, *args], capture_output=True, check=False)
+def git(worktree, *args, private_index=False):
+  """Run git in WORKTREE without external diff drivers or text conversion.
+
+  With PRIVATE_INDEX the command reads a copy of WORKTREE's index, so a `git diff` that
+  refreshes stat data writes the copy, never the real index the digest hashes (#79).
+  """
+  if not private_index:
+    return run_git([*GIT, "-C", worktree, *args], args, None)
+  index = run_git([*GIT, "-C", worktree, "rev-parse", "--git-path", "index"], ("rev-parse",),
+                  None).decode("utf-8", "surrogateescape").rstrip("\n")
+  with tempfile.TemporaryDirectory(prefix="patch-gate-") as tmp:
+    copy = os.path.join(tmp, "index")
+    if os.path.exists(os.path.join(worktree, index)):
+      shutil.copyfile(os.path.join(worktree, index), copy)
+    return run_git([*GIT, "-C", worktree, *args], args, {**os.environ, "GIT_INDEX_FILE": copy})
+
+
+def run_git(command, args, env):
+  proc = subprocess.run(command, capture_output=True, check=False, env=env)
   if proc.returncode != 0:
     raise RuntimeError(f"git {args[0]} failed: "
                        f"{summary(proc.stderr.decode('utf-8', 'replace'))}")
@@ -110,10 +139,12 @@ def git(worktree, *args):
 
 def worktree_changes(worktree):
   """(changed tracked paths, binary paths, untracked paths) as WORKTREE holds them."""
-  changed = [p for p in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--name-only", "-z", "HEAD")
+  changed = [p for p in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--name-only", "-z",
+                           "HEAD", private_index=True)
              .decode("utf-8", "surrogateescape").split("\0") if p]
   binary = []
-  for row in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--numstat", "-z", "HEAD")\
+  for row in git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--numstat", "-z",
+                 "HEAD", private_index=True)\
       .decode("utf-8", "surrogateescape").split("\0"):
     added, _, rest = row.partition("\t")
     if added == "-":
@@ -123,23 +154,108 @@ def worktree_changes(worktree):
   return changed, binary, untracked
 
 
+# Git state outside the working files that a suite could change to alter what gets committed:
+# the index, hashed raw because `git commit` reuses its cache of directory trees, which
+# `ls-files` does not show (a forged entry commits files nothing lists); the hooks; the
+# repository and per-worktree config; info/ (exclude, attributes); and the merge,
+# cherry-pick, revert and rebase state a plain `git commit` would pick up (a written
+# MERGE_HEAD turns the next commit into a merge with an unscanned parent).
+GIT_STATE_PATHS = ("index", "config", "config.worktree", "hooks", "info", "MERGE_HEAD",
+                   "MERGE_MSG", "MERGE_MODE", "AUTO_MERGE", "CHERRY_PICK_HEAD", "REVERT_HEAD",
+                   "SQUASH_MSG", "sequencer", "rebase-merge", "rebase-apply")
+
+
+def git_state_files(worktree):
+  """(label, path) for each file under WORKTREE's GIT_STATE_PATHS, in a stable order."""
+  files = []
+  for name in GIT_STATE_PATHS:
+    top = git(worktree, "rev-parse", "--git-path", name).decode("utf-8", "surrogateescape")
+    top = os.path.join(worktree, top.rstrip("\n"))
+    if not os.path.isdir(top) or os.path.islink(top):
+      files.append((name, top))
+      continue
+    for root, dirs, names in os.walk(top):
+      dirs.sort()
+      for leaf in sorted(names):
+        path = os.path.join(root, leaf)
+        files.append((name + "/" + os.path.relpath(path, top), path))
+  return files
+
+
+def hash_file(digest, name, path):
+  digest.update(name.encode("utf-8", "surrogateescape") + b"\0")
+  try:
+    if os.path.islink(path):
+      digest.update(b"link:" + os.readlink(path).encode("utf-8", "surrogateescape"))
+    elif not os.path.lexists(path):
+      digest.update(b"absent")
+    else:
+      with open(path, "rb") as f:
+        digest.update(f.read())
+  except OSError as exc:
+    digest.update(f"unreadable:{exc.errno}".encode())
+  digest.update(b"\0")
+
+
 def worktree_digest(worktree):
-  """A digest of WORKTREE's tracked changes and untracked files, bytes included."""
-  digest = hashlib.sha256(git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--binary",
-                              "HEAD"))
+  """A digest of what WORKTREE would commit: HEAD and its branch, the tracked changes and
+  untracked files, bytes included, and the git state in GIT_STATE_PATHS (#79)."""
+  digest = hashlib.sha256(git(worktree, "rev-parse", "--verify", "HEAD"))
+  digest.update(b"branch:" + git(worktree, "rev-parse", "--symbolic-full-name", "HEAD"))
+  digest.update(git(worktree, "diff", "--no-ext-diff", "--no-renames", "--no-textconv", "--binary",
+                    "HEAD", private_index=True))
+  for name, path in git_state_files(worktree):
+    hash_file(digest, "git:" + name, path)
   for name in sorted(worktree_changes(worktree)[2]):
-    path = os.path.join(worktree, name)
-    digest.update(name.encode("utf-8", "surrogateescape") + b"\0")
-    try:
-      if os.path.islink(path):
-        digest.update(b"link:" + os.readlink(path).encode("utf-8", "surrogateescape"))
-      else:
-        with open(path, "rb") as f:
-          digest.update(f.read())
-    except OSError as exc:
-      digest.update(f"unreadable:{exc.errno}".encode())
-    digest.update(b"\0")
+    hash_file(digest, name, os.path.join(worktree, name))
   return digest.hexdigest()
+
+
+def unscannable(worktree, paths):
+  """PATHS the text scans would skip: symlinks, directories, files that are not UTF-8, and
+  files with a suffix the scans pass over as binary (`.pdf`, `.zip` and the like).
+
+  The privacy and open-side scans read files as UTF-8 and pass over any that fail to decode,
+  while git calls a file text unless it holds a NUL byte, so one stray byte would carry a file
+  past both scans as text (#79). A path no longer present (a deletion) is not reported.
+  """
+  skipped = tuple(load_check("check-no-private-paths").SKIP_SUFFIXES
+                  + load_check("check-open-side").SKIP_SUFFIXES)
+  found = []
+  for name in sorted(set(paths)):
+    path = os.path.join(worktree, name)
+    if not os.path.lexists(path):
+      continue
+    if os.path.islink(path) or not os.path.isfile(path) or name.endswith(skipped):
+      found.append(name)
+      continue
+    try:
+      with open(path, "rb") as f:
+        f.read().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+      found.append(name)
+  return found
+
+
+def ignored_patch_paths(worktree, patch):
+  """Paths PATCH adds or changes that WORKTREE's ignore rules hide from the untracked scan.
+
+  Paths come from git's own patch parser (`git apply --numstat`); `git check-ignore` reports
+  only untracked paths, so a tracked file matching an ignore pattern is not counted (#80).
+  """
+  rows = git(worktree, "apply", "--numstat", "-z", patch).decode("utf-8", "surrogateescape")
+  # Each row is "added<TAB>deleted<TAB>path"; for a rename git apply prints the new path only.
+  paths = [row.split("\t", 2)[2] for row in rows.split("\0") if row.count("\t") >= 2]
+  paths = [p for p in paths if p]
+  if not paths:
+    return []
+  proc = subprocess.run([*GIT, "-C", worktree, "check-ignore", "-z", "--stdin"],
+                        input="\0".join(paths).encode("utf-8", "surrogateescape"),
+                        capture_output=True, check=False)
+  if proc.returncode not in (0, 1):
+    raise RuntimeError(f"git check-ignore failed: "
+                       f"{summary(proc.stderr.decode('utf-8', 'replace'))}")
+  return sorted(p for p in proc.stdout.decode("utf-8", "surrogateescape").split("\0") if p)
 
 
 def touched_gate_inputs(paths):
@@ -281,6 +397,8 @@ def main(argv):
   # Every scan runs before any patched code does.
   try:
     changed, binary, names = worktree_changes(worktree)
+    odd = unscannable(worktree, changed + names)
+    ignored = ignored_patch_paths(worktree, os.path.abspath(args.patch))
     before = worktree_digest(worktree)
   except RuntimeError as exc:
     print(f"FAIL worktree state: {exc}")
@@ -290,6 +408,9 @@ def main(argv):
   failed |= bool(inputs or binary)
   print(f"changed: {len(changed)} tracked, {len(names)} new; gate inputs touched: "
         f"{', '.join(inputs) or 'none'}; binary: {', '.join(binary) or 'none'}")
+  failed |= bool(odd or ignored)
+  print(f"unscannable (link, directory, not UTF-8 or skipped suffix): {', '.join(odd) or 'none'}; "
+        f"ignored by the worktree: {', '.join(ignored) or 'none'}")
   flagged, unscanned = untracked_home_paths(worktree, names)
   failed |= bool(flagged or unscanned)
   print(f"new files with home paths: {', '.join(flagged) or 'none'}"

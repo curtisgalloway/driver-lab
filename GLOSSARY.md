@@ -176,6 +176,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Anchored IP / generic IP | An IP spec resolved through a board and instance, with placement / the IP programming model alone, with no instance facts. Distinct from an evidence anchor. |
 | Layer / origin | A root's position in merge order (`public`, `ip-vendor`, `soc-vendor`, `product`, `local`) / the root and layer a fact comes from. |
 | Context root | A root supplied to resolve dependencies; its findings print as warnings, but its underlying errors still make references into it fail. Its own freshness policy is not enforced in that run. |
+| Input root / rendered root | Any root directory given to `spec.py render`, checked or context / one that contributes files to the selected view: a checked root holding a selected spec, plus a context root only under `--merged` when it holds files for a selected id. `--source-commit` names rendered roots only. |
 | Documents-only root | A spec root with `accepts: []`; source/DT/RTL anchors and, under `--require-license`, even map-only repos are refused. |
 | Support class / provenance class / read class | The kind of evidence a support entry supplies / any class other than inference; read support states an observation rather than a conclusion. |
 | Anchor | A structured source citation naming repo, relative path and lines/symbol, a search scope, or a node in pinned UTF-8 device-tree source, depending on class. Not prose syntax. |

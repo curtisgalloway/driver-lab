@@ -314,6 +314,42 @@ def _generated(out, file):
     _table(out, "Area confidence", file.data.get("areas", []))
 
 
+def source_commits(groups, source_commit) -> dict:
+    """Map each rendered root directory (absolute) to the commit its --source-commit names.
+
+    A root is rendered when it contributes a file to the selected groups: a checked root that
+    holds a selected spec, or a context root under --merged that holds files for a selected id. Any other ROOT is a usage
+    error (an input root that contributes nothing is still rejected, so typos are not hidden).
+    The error lists the rendered roots as the caller gave them, never resolved paths. Shared
+    by the Markdown and HTML renderers so both reject identically.
+    """
+    given = {}
+    for group in groups:
+        for f in group:
+            given.setdefault(f.root.given.absolute(), (f.root.order, str(f.root.given)))
+    roots = set(given)
+    shown = ", ".join(label for _, label in sorted(given.values()))
+    commits = {}
+    values = [source_commit] if isinstance(source_commit, str) else (source_commit or [])
+    for value in values:
+        if "=" in value:
+            name, sha = value.rsplit("=", 1)
+            root = Path(name).absolute()
+            if not name or root not in roots:
+                raise speccheck.UsageError("--source-commit ROOT must name a rendered root "
+                                           f"directory (rendered: {shown})")
+        else:
+            if len(roots) != 1:
+                raise speccheck.UsageError("bare --source-commit requires exactly one rendered root")
+            root, sha = next(iter(roots)), value
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise speccheck.UsageError("commit must be 40 lowercase hex characters")
+        if root in commits:
+            raise speccheck.UsageError("--source-commit given twice for a root")
+        commits[root] = sha
+    return commits
+
+
 def render(checker, *, spec_id=None, merged=False, with_status=False,
            source_commit=None, tool_commit=None) -> str:
     """Build selected checked-root views; repeat author-field containment before any output.
@@ -330,24 +366,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         groups = [[f for f in checker.files if f.spec_id == sid] for sid in ids]
     else:
         groups = [[f] for f in selected]
-    roots = {f.root.given.absolute() for group in groups for f in group}
-    commits = {}
-    values = [source_commit] if isinstance(source_commit, str) else (source_commit or [])
-    for value in values:
-        if "=" in value:
-            name, sha = value.rsplit("=", 1)
-            root = Path(name).absolute()
-            if not name or root not in roots:
-                raise speccheck.UsageError("--source-commit ROOT must name a rendered root directory")
-        else:
-            if len(roots) != 1:
-                raise speccheck.UsageError("bare --source-commit requires exactly one rendered root")
-            root, sha = next(iter(roots)), value
-        if not re.fullmatch(r"[0-9a-f]{40}", sha):
-            raise speccheck.UsageError("commit must be 40 lowercase hex characters")
-        if root in commits:
-            raise speccheck.UsageError("--source-commit given twice for a root")
-        commits[root] = sha
+    commits = source_commits(groups, source_commit)
     for group in groups:
         group.sort(key=lambda f: (f.is_overlay, f.root.rank, f.root.order, str(f.path)))
         for file in group:

@@ -187,7 +187,10 @@ Generated syntax and values that GFM might autolink use code spans. Without
 explicit `--source-commit` and `--tool-commit` values the banner states that commits are
 unavailable and includes each checked YAML's SHA256. Both arguments require 40 lowercase hex
 characters; no Git subprocess runs. Repeat `--source-commit ROOT=SHA` once per rendered root
-directory; a bare SHA is accepted only when one root is rendered. Each omitted root is
+directory; a bare SHA is accepted only when one root is rendered. Rendered roots are the
+checked roots that hold a selected spec, plus context roots only under `--merged` when they
+hold files for a selected id; a ROOT naming any other input root is a usage error that lists the rendered roots (see
+the contract's "Source commits name rendered roots" example). Each omitted root is
 unavailable. `--tool-commit` identifies the rendering tool separately.
 `--merged` includes context files for the selected ids, ordered by layer; without it each
 checked file gets its own view. Errors print diagnostics instead of a partial view; `--json`
@@ -962,7 +965,8 @@ def build_parser() -> argparse.ArgumentParser:
     rd.add_argument("--merged", action="store_true", help="include context bases and overlays")
     rd.add_argument("--with-status", action="store_true", help="include verdict and freshness")
     rd.add_argument("--source-commit", type=source_commit_arg, action="append",
-                    help="ROOT=SHA, once per rendered root; bare SHA only with one root")
+                    help="ROOT=SHA, once per rendered root (roots holding a selected spec; "
+                         "context roots only under --merged); bare SHA only with one root")
     rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
     rd.add_argument("--format", required=True, choices=("md", "html"))
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")

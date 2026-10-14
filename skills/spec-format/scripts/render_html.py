@@ -7,7 +7,6 @@ from __future__ import annotations
 import hashlib
 from html import escape
 from pathlib import Path
-import re
 from urllib.parse import quote
 
 import records
@@ -364,21 +363,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         raise speccheck.UsageError('no specs to render')
     ids = list(dict.fromkeys(f.spec_id for f in selected))
     groups = [[f for f in checker.files if f.spec_id == sid] for sid in ids] if merged else [[f] for f in selected]
-    roots = {f.root.given.absolute() for group in groups for f in group}
-    commits = {}
-    for value in ([source_commit] if isinstance(source_commit, str) else source_commit or []):
-        if '=' in value:
-            name, sha = value.rsplit('=', 1)
-            root = Path(name).absolute()
-            if not name or root not in roots:
-                raise speccheck.UsageError('--source-commit ROOT must name a rendered root directory')
-        else:
-            if len(roots) != 1:
-                raise speccheck.UsageError('bare --source-commit requires exactly one rendered root')
-            root, sha = next(iter(roots)), value
-        if not re.fullmatch(r'[0-9a-f]{40}', sha) or root in commits:
-            raise speccheck.UsageError('source commit must be unique per root and 40 lowercase hex characters')
-        commits[root] = sha
+    commits = render_md.source_commits(groups, source_commit)
     for group in groups:
         group.sort(key=lambda f: (f.is_overlay, f.root.rank, f.root.order, str(f.path)))
         for file in group:

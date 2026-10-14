@@ -164,6 +164,28 @@ guessing at an unchecked result.
   the pin, confirm it applies to the cited source file, and compare it with the declared
   license. Record the comparison; a mismatch is FAIL, and inaccessible evidence is
   UNVERIFIABLE rather than an assumed match.
+- **Reuse pinned inputs across rounds.** Keep one input cache for the session or campaign,
+  outside the repository, and bind it explicitly on every round: `--repo <name>=<checkout>`
+  for a repository, `--docs-dir` for documents. Acquire an input once, then reuse it.
+  - *Key.* A repository input is keyed by repository identity, full commit and path; a
+    document by its `sha256`. A matching basename, timestamp or directory name is never
+    identity.
+  - *Check before reuse.* Confirm the checkout's `HEAD` or the pinned object is the full
+    cited commit and the cited path exists there, and hash each document against its
+    `sha256`. Matching bytes may be reused with no new fetch.
+  - *Fetch only what is missing.* Fetch an input that is absent, fails its identity check,
+    or is newly pinned by a changed commit or document. A corrupt or unavailable entry is
+    never a successful resolution or verification: refetch it, or report the fetch failure
+    and mark the evidence UNVERIFIABLE. Never substitute an unpinned copy.
+  - *Policy still applies.* Reuse does not widen source or license access; keep source under
+    other licenses in the private run store, and keep source contents out of tracked reports.
+    A persistent resolver cache, if one is added, takes a user-selected location and has no
+    default.
+  - *Two kinds of reuse.* Input reuse saves acquisition only; it grants no verdict. Verdict
+    reuse comes only from the status worklist above: keep `current` verdicts, read `stale`
+    facts and the dependencies named in `changed`, and launch the missing second reader for
+    a current critical fact. In the report, state which inputs were reused (and under which
+    identity check), which were fetched and why, separately from which verdicts were kept.
 - **Compare the whole claim.** Check values, units, address spaces, ordering, scope and
   conditions. `comment: true` attributes a comment, not established behavior. Emulated
   support is judged against the cited model/version/run observations, not model source or

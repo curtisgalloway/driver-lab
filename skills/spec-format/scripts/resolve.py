@@ -3,7 +3,8 @@
 """Resolve format 2 anchors and display their evidence at immutable Git pins.
 
 CLI: spec.py resolve|show FILE... [--repo NAME=CHECKOUT] [--docs-dir DIR].
-Unbound repositories are fetched into disposable shallow, blob-less repositories.
+Unbound repositories are fetched into disposable shallow, blob-less repositories, so
+callers that resolve repeatedly bind an existing checkout with --repo instead.
 Only size/time limits skip. A skipped anchor is counted explicitly, never resolved.
 Document bytes are supplied as DIR/NAME (no extension guessing or network retrieval).
 Search checks scope existence, not the truth of the author's negative/global claim.

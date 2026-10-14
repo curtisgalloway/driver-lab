@@ -161,6 +161,10 @@ The status command checks roots and may return errors with its report: retain th
 A current PASS with a missing second reader is not fully verified. A generated status row is
 not a fresh source reading. Do not publish private paths/endpoints in the report.
 
+`spec.py todo <root>... --context-root <dependency root>... --check hardware` lists the open
+hardware TODOs as the input to a readback plan, and a narrow follow-up question names one fact id
+from that list instead of commissioning another general investigation.
+
 Return Needs decision per QUESTIONS before provenance when a fork remains. End with
 **Suggested spec change** when evidence adds/corrects something: originating file, existing
 fact id to edit (or proposed new id/record), structured support, scope/dependencies and TODO.

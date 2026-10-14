@@ -4,7 +4,8 @@
 """spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
 
 Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
-records and freshness from SF2-3, in records.py), `status` (SF2-3), Markdown `render`
+records and freshness from SF2-3, in records.py), `status` (SF2-3), `todo` (issue 112, in
+worklist.py), Markdown `render`
 (SF2-4, in render_md.py), HTML `render` (SF2-5, in render_html.py), `resolve`, `show`
 and `drift` (SF2-6, in resolve.py and drift.py), typed peripheral `inventory` (SF2-7a,
 in inventory.py).
@@ -60,6 +61,9 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
         [--require-license] [--public-skill <name>]... [--json]
     python3 skills/spec-format/scripts/spec.py status <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--stale] [--json]
+    python3 skills/spec-format/scripts/spec.py todo <root>... [--context-root <dir>]...
+        [--require-license] [--public-skill <name>]... [--check hardware|document|source]
+        [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
         [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
         [--tool-commit <40-hex>] --format md|html [--json]
@@ -133,6 +137,22 @@ summary and each fact's freshness; `--stale` lists only what a re-verification h
 for `check`): `basis` is the fact's basis hash now and
 `upstream` the map a verdict reached now records (null when the basis is unknown). Exit 0 when
 the check found no error, 1 when it did (the report is printed either way).
+
+`todo` runs the same check and lists every TODO of the checked roots as a worklist: gap facts
+(no support, with a `todo`), supported facts that also carry one, and the other places the schema
+allows a `todo` (instance and variant rows, assumptions, and the fields, layout fields, steps and
+order rows of a typed payload). `--check` keeps one `todo.check`. Human output is grouped by spec
+file, then by instance; a `hardware` TODO without a `method` is marked `(no method)`. `--json`
+prints `{"ok", "roots", "errors", "warnings", "todos": [{"fact", "file", "root", "spec", "kind",
+"check", "text", "method", "critical", "scope", "instance"}], "counts", "findings"}`, plus
+`"missing_method": true` on a `hardware` item without a method. `kind` is `gap` or
+`supported-with-todo` for a fact, else `instance`, `variant`, `assumption`, `field`,
+`layout-field`, `step` or `order`; `fact` is the reference `status` uses (a payload row adds
+`.<row id>`, or `.order[<index>]` for an order row, which has no id); `instance` is the instance row's name, else null. `counts` has `total`,
+`by_check`, `by_kind`, `critical` and `missing_method`. A missing method does not change the
+exit status: 0 when the check found no error (with or without TODOs), 1 when it did (the list
+is printed either way). `todo --check hardware` is the input to a readback plan; a narrow
+follow-up question names one `fact` from it. It reads no verdict and changes no verdict rule.
 
 `resolve` checks source anchors and licenses at immutable pins, and document hashes when
 `--docs-dir` supplies bytes as DIR/NAME. `--repo` binds a named entry to the top level of a
@@ -865,6 +885,44 @@ def cmd_status(args) -> tuple[int, dict]:
     }
 
 
+def cmd_todo(args) -> tuple[int, dict]:
+    import records
+    import worklist
+
+    checker = _run_check(args)
+    ordered = _ordered(checker.findings)
+    errors = sum(1 for f in ordered if f.level == "error")
+    warnings = len(ordered) - errors
+    items = worklist.collect(checker)
+    if args.check:
+        items = [i for i in items if i["check"] == args.check]
+    paths = {f.path: f for f in checker.files}
+
+    def heading(item):
+        f = paths[Path(item["file"])]
+        return f"{f.root.label}:{records._rel(f.root, f.path)} ({f.spec_id})"
+
+    counts = worklist.counts(items)
+    text = worklist.lines(items, heading)
+    text += [str(f) for f in ordered if f.level == "error"]  # what the exit status rests on
+    summary = (f"{counts['total']} TODO(s): "
+               + ", ".join(f"{n} {c}" for c, n in counts["by_check"].items())
+               + f"; {counts['missing_method']} hardware without a method"
+               + f"; the check found {errors} error(s), {warnings} warning(s)")
+    text.append(summary)
+    return (EXIT_INVALID if errors else EXIT_OK), {
+        "ok": not errors,
+        "roots": [{"path": str(r.given), "name": r.name, "layer": r.layer, "context": r.context}
+                  for r in checker.roots],
+        "errors": errors,
+        "warnings": warnings,
+        "todos": items,
+        "counts": counts,
+        "findings": [f.as_dict() for f in ordered],
+        "_text": text,
+    }
+
+
 def cmd_validate(args) -> tuple[int, dict]:
     for p in args.files:
         if not p.is_file():
@@ -956,6 +1014,17 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--stale", action="store_true",
                     help="only facts a re-verification has to cover")
     st.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    td = sub.add_parser("todo", help="the TODOs of the roots, as a worklist", allow_abbrev=False)
+    td.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    td.add_argument("--context-root", action="append", default=[], type=Path,
+                    help="a further root read so references and overlays resolve")
+    td.add_argument("--require-license", action="store_true",
+                    help="as for check (it decides which roots are trusted)")
+    td.add_argument("--public-skill", action="append", default=[],
+                    help="as for check")
+    td.add_argument("--check", choices=("hardware", "document", "source"),
+                    help="only TODOs with this todo.check")
+    td.add_argument("--json", action="store_true", help="one JSON object on stdout")
     rd = sub.add_parser("render", help="generate a Markdown view or HTML viewer", allow_abbrev=False)
     rd.add_argument("roots", nargs="+", type=Path, help="spec root directories")
     rd.add_argument("--context-root", action="append", default=[], type=Path)
@@ -986,6 +1055,11 @@ def _failure(kind: str, messages: list[str], command: str | None = None,
     if command == "status":
         return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
                            "warnings": 0, "specs": [],
+                           "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
+                                         "message": m} for m in messages]}, sort_keys=True)
+    if command == "todo":
+        return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
+                           "warnings": 0, "todos": [], "counts": {},
                            "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
                                          "message": m} for m in messages]}, sort_keys=True)
     if command == "check":
@@ -1031,7 +1105,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command is None:
         return fail("usage", EXIT_USAGE,
-                    ["name a subcommand: validate, check, status, render, resolve, show, drift, inventory"])
+                    ["name a subcommand: validate, check, status, todo, render, resolve, show, drift, inventory"])
 
     try:
         problems = check_dependencies()
@@ -1049,7 +1123,7 @@ def main(argv: list[str] | None = None) -> int:
         import render_html
 
         handler = getattr(args, "handler", None) or {
-            "check": cmd_check, "status": cmd_status, "validate": cmd_validate,
+            "check": cmd_check, "status": cmd_status, "todo": cmd_todo, "validate": cmd_validate,
             "render": lambda a: (render_html if a.format == "html" else render_md).command(
                 sys.modules[__name__], a)}[args.command]
         code, result = handler(args)
@@ -1066,7 +1140,7 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command in ("check", "status", "render") or hasattr(args, "handler"):
+    elif args.command in ("check", "status", "todo", "render") or hasattr(args, "handler"):
         for line in text:
             # resolve, show and drift escape their own lines (resolve.display_line).
             if (args.command == "render" and code == EXIT_OK) or hasattr(args, "handler"):

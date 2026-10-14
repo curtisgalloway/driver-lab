@@ -327,6 +327,8 @@ spec.py check <root>... [--context-root <dir>]... [--require-license]
     [--require-verified pr|main] [--json]
 spec.py status <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stale] [--json]
+spec.py todo <root>... [--context-root <dir>]... [--require-license]
+    [--public-skill <name>]... [--check hardware|document|source] [--json]
 spec.py render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
     [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html [--json]
@@ -337,7 +339,7 @@ spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
 ```
 
-Availability: validate/check/status are SF2-1–3; Markdown render is SF2-4; HTML render and the
+Availability: validate/check/status are SF2-1–3; `todo` follows them (issue 112); Markdown render is SF2-4; HTML render and the
 publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a.
 All are on main.
 
@@ -353,6 +355,19 @@ warn at each locator; they do not change the exit status. Complete heading text 
 match (whitespace and case are normalized). Unpinned blobs, other hosts, context roots
 and PDF page locators are not fetched. Structural errors prevent heading requests.
 Without the flag there are no heading requests. Wiki content is current, not immutable.
+
+`todo` lists the TODOs of the checked roots as a readback worklist: gap facts, supported facts
+that also carry a `todo`, and the instance, variant, assumption and payload-row TODOs the schema
+allows (`kind` names which). Each item has the full `fact` reference, `file`, `kind`, `check`,
+`text`, `method`, `critical`, `scope` and `instance`; a payload row's `fact` is its parent's
+reference plus `.<row id>` (`.order[<index>]` for an order row, which has no id). `--check`
+keeps one `todo.check`. Output is
+grouped by spec file, then instance. A `hardware` TODO with no `method` is marked `(no method)`
+(`"missing_method": true` in `--json`, which prints `{"todos", "counts", ...}`): a readback
+phase cannot plan it. Exit codes are `status`'s: a missing method never changes them. `todo
+--check hardware` is the input to a readback plan; a narrow follow-up question names one fact id
+from it. It is read-only: no verdict rule changes, and a TODO stays open until a verifier
+settles it.
 
 `status` prints summaries and freshness even on error. `render --spec` selects one id, not
 its composed parts automatically: render every id needed for the question. `--merged` includes

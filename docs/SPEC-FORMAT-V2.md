@@ -875,6 +875,363 @@ and accepts a supported-fact verdict. Its freshness tracks both sides' anchors. 
 schema and license gate (`spec.py check <file> --root <target root>`), and `peripheral-spec`
 copies its records into the spec unchanged, ids included.
 
+## Precise payloads: standard vocabularies (proposed 2026-10-14)
+
+Status: **proposed, awaiting the user's approval.** The choices in the table at the end
+(D23–D41) were made by the user on 2026-10-14 (D34 proposed from the user's note that
+some register tools hold far more than IP-XACT expresses, then accepted); this section turns them into a design. Nothing
+here is built. It reshapes issues
+[#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
+layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
+resets, sequence timeouts), and it answers the precision goal behind
+[#118](https://github.com/curtisgalloway/driver-lab/issues/118). The survey behind it, with a
+URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md); the second survey, on
+public JSON register formats and on routing between blocks, is
+[STANDARDS-SURVEY-2.md](STANDARDS-SURVEY-2.md). Both are a research agent's reports of
+2026-10-14; "I" in them is that agent.
+
+**Terms** (also in the [glossary](../GLOSSARY.md)):
+
+- **IP-XACT** — IEEE Std 1685-2022, an XML format for describing hardware blocks, including
+  registers and their fields. Accellera publishes its **XSD** (XML Schema Definition, the
+  machine-readable grammar of the XML) under Apache-2.0.
+- **Vendor extension** — IP-XACT's `vendorExtensions` element: a slot where a tool may put
+  elements the standard does not define, without breaking validation.
+- **Reset type** — a named kind of reset (power-on, hot reset, function-level reset). IP-XACT
+  gives a field one reset value per reset type; with no type named, it assumes `HARD`.
+- **UCUM** — the Unified Code for Units of Measure: case-sensitive unit codes such as `us`,
+  `ms`, `min`, `Hz`.
+- **IEC 61360 levels** — `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for
+  the levels of a specified value.
+- **DFDL** — the Open Grid Forum's Data Format Description Language, whose `byteOrder` terms
+  (`bigEndian`, `littleEndian`) this section borrows.
+- **lsb0 / msb0** — SystemRDL's names for bit numbering: bit 0 is the least / the most
+  significant bit.
+- **Register source / adapter** — a tool or file that already holds a block's registers,
+  pinned at a revision / the code that turns a spec's reference into it into a register record.
+
+### What a spec holds (D31)
+
+A spec holds facts for two reasons only:
+
+1. **The source cannot be pointed to.** The reader may not consult it (its license is outside
+   what the reader's root accepts, or it is private), or it is not available to them at all.
+   The spec carries the facts, with their citations, in its place.
+2. **The spec summarizes it accurately and more efficiently.** A 2,000-page standard or a
+   datasheet is canonical but costly to read; a precise fact pointing at the right page saves
+   that cost (#106 marks when a fact summarizes rather than reproduces).
+
+A spec **never duplicates facts that are available, efficiently, in a canonical form**: a
+machine-readable source (a register database, an IP-XACT or SVD file, a device tree binding,
+a header) that is pinned and that the spec's readers may use under their root's license. The
+spec references such a source instead (register sources, below) and adds only what it lacks:
+documentation cross-checks, verdicts, `requirement` labels, `todo`s, sequences and conflicts.
+"May use" depends on the reader: a GPL header is canonical for a reader of a GPL root, and not
+for a reader of a permissive one, whose spec may carry the facts with citations.
+
+**Enforcement** (D32): the checker refuses inline data that a declared register source
+already covers (below), and warns on a `registerRef` fact that adds nothing to its source and
+that no other fact references; the verifier reports any other fact that only restates a
+canonical source its readers could use. **No new field says why a fact is there** (D33): the
+reason follows from its `support`. A fact supported by a document class or by a source the
+readers cannot use is a summary or a stand-in; one whose only support is a canonical source
+those readers can use is a duplicate.
+
+### Why
+
+The PCIe evaluation behind #103 and #105 found that 11 of its 12 out-of-spec misses were
+facts that cited the right page but kept the value in English: a mask named without its bit
+assignments, an opcode field without its encodings, a handshake without its timeout. A
+verifier comparing such a fact with the document has to interpret a sentence, and a reader
+has to guess. The rule this section adds: **a value the document states as a number, a bit
+position, an encoding, an access behavior or a time limit goes in typed `data`**, in a
+recognized standard's vocabulary where one exists. English stays for what has no fixed shape.
+
+| Area | Standard | Use |
+| --- | --- | --- |
+| Register field behavior | IEEE 1685-2022 (IP-XACT) | adopt: property names and values verbatim, plus two extensions; export validated against the official XSD |
+| Value encodings | IP-XACT `enumeratedValues` | adopt, for register fields and layout fields alike |
+| Packet and descriptor layouts | none fits (DFDL, Kaitai, ASN.1 ECN, P4 each fail on tooling, byte order or being code) | own model, DFDL's byte-order terms, SystemRDL's bit numbering |
+| Ordered procedures | none fits (PSS and UVM are code; IEEE 1687 PDL is a language, inactive since 2025) | own operation set, after Linux `reg_sequence` / `read_poll_timeout` and the i.MX boot ROM's DCD commands |
+| Time and other limits | UCUM codes; IEC 61360 level names | adopt the codes and names |
+
+Every property below is optional. Absence means the source does not state it, never a
+default the checker fills in; existing specs stay valid.
+
+### Register fields: IP-XACT properties
+
+Property names and values are IP-XACT's, spelled exactly as the standard spells them (D24),
+so a reader can check them against IEEE 1685 without a mapping table. On a field:
+
+| Property | Values | Example |
+| --- | --- | --- |
+| `access` | `read-only`, `write-only`, `read-write`, `writeOnce`, `read-writeOnce`, `no-access` | |
+| `modifiedWriteValue` | `oneToClear`, `oneToSet`, `oneToToggle`, `zeroToClear`, `zeroToSet`, `zeroToToggle`, `clear`, `set`, `modify` | PCIe RW1C is `read-write` + `oneToClear` |
+| `readAction` | `clear`, `set`, `modify` | read-to-clear is `readAction: clear` |
+| `writeValueConstraint` | one of `{writeAsRead: true}`, `{useEnumeratedValues: true}`, `{minimum, maximum}` | RsvdP is `reserved: true` + `writeAsRead`; RsvdZ is `reserved: true` + `{minimum: "0x0", maximum: "0x0"}` |
+| `reserved` | `true` | |
+| `volatile` | `true` / `false`: hardware can change the value between two accesses | |
+| `resets` | list of `{value, mask?, resetTypeRef?}`, values in canonical hex (D6) | |
+| `enumeratedValues` | list of `{name, value, description?, usage?}`; `usage` is `read`, `write` or `read-write` | |
+| `enumerationDefinitionRef` | the name of a shared table in the spec's `enumerationDefinitions` | one opcode table used by several fields |
+| `fieldAccessPolicyDefinitionRef` | the name of an entry in the spec's `fieldAccessPolicyDefinitions` | `RW1CS`, defined once per spec |
+| `aliasOf` | a field reference (`#reg-ctrl.en`): this field is another view of that one | a status bit mirrored in a second register |
+| `array` | `{dim: [n, …], bitStride?}`: a field repeated inside the register | eight one-bit enables, `EN[7:0]` |
+
+**Two extensions** (D23) fill the gaps the survey found. The exporter writes both into
+`vendorExtensions`:
+
+- `unaffectedBy: [<resetType>, …]` — the reset types that leave the field unchanged. IP-XACT
+  can give a value per reset type but cannot say "this reset does not touch it", and under its
+  reading a missing reset value means "not documented". PCIe RWS is `read-write` with
+  `unaffectedBy: [hot]` and a `resets` entry for the power-on type. The name avoids "sticky",
+  which SystemRDL uses for latch-until-cleared interrupt bits.
+- `initializedBy` — HwInit: set by hardware or firmware before software runs, read-only to it
+  afterwards. Values: `hardware`, `firmware` (D38); straps, nonvolatile memory and the like
+  go in a `note` or a fact of their own.
+- `lockedBy: {field, lockedValue}` — writes to this field have no effect while the referenced
+  field holds `lockedValue` (D35): a write-enable lock such as OpenTitan's `regwen`, which
+  IP-XACT's mode-based access policies do not express as one register gating another.
+
+The extensions are named, not grouped under one key, so an adapter for a source that holds
+them natively can supply them unchanged.
+
+**Spec-level registries**, each entry a mapping with `name`, the properties it defines, and
+`support`:
+
+- `resetTypes` — the reset types the spec names (`{name, description, support}`).
+  `resetTypeRef` and `unaffectedBy` must name one.
+- `fieldAccessPolicyDefinitions` — named bundles such as `RW1CS` (`access`,
+  `modifiedWriteValue`, `readAction`, `writeValueConstraint`, `unaffectedBy`). A field that
+  names one may not also set those properties itself. The document's own abbreviation
+  survives, and its meaning is checked once.
+- `enumerationDefinitions` — shared value tables (`{name, enumeratedValues, support}`).
+
+**Arrays and grouping** (D36), in IP-XACT 2022's terms:
+
+- `register.array: {dim: [n, …], stride}` — a register repeated `n` times (several `dim`
+  values lay out as a C multidimensional array does), `stride` bytes apart, in canonical hex.
+- `registerFiles` — a spec-level registry of named groups (`{name, addressOffset, range,
+  array?, support}`); a register naming `registerFile: <name>` has its `offset` relative to
+  the group. A group repeated per channel or queue is one entry with an `array`.
+- A spec still describes one block. Several blocks are several specs; where they sit in an
+  address map is a board-level fact (instances, and the routing design to come).
+
+**Register level.** `register.access` takes the same IP-XACT values. Today's short values
+(`ro`, `wo`, `rw`, `w1c`, `w1s`, `rc`) stay accepted with a warning naming their IP-XACT form
+(`w1c` → `read-write` + `oneToClear`; `w1s` → `read-write` + `oneToSet`; `rc` → `read-only` +
+`readAction: clear`) until `drift --rewrite` migrates the three spec repositories.
+
+```yaml
+resetTypes:
+  - {name: power-on, description: fundamental reset, support: [...]}
+  - {name: hot, description: hot reset, support: [...]}
+fieldAccessPolicyDefinitions:
+  - {name: RW1CS, access: read-write, modifiedWriteValue: oneToClear,
+     unaffectedBy: [hot], support: [...]}
+facts:
+  - id: reg-status
+    section: registers
+    data:
+      register: {name: STATUS, offset: "0x4", width: 32}
+      fields:
+        - id: err
+          name: ERR
+          bits: [0, 0]
+          meaning: an uncorrectable error was detected
+          fieldAccessPolicyDefinitionRef: RW1CS
+          resets: [{value: "0x0", resetTypeRef: power-on}]
+        - id: mode
+          name: MODE
+          bits: [1, 3]
+          meaning: link mode
+          access: read-write
+          enumeratedValues:
+            - {name: off, value: "0x0"}
+            - {name: x1, value: "0x1"}
+            - {name: x4, value: "0x2"}
+    support: [...]
+```
+
+**Checks:** every enumerated value, reset value, mask and constraint bound fits the field's
+width; names and values are unique within a table; `useEnumeratedValues` needs a table;
+`resetTypeRef`, `unaffectedBy` and every `…Ref` resolve; one reset type is never in both
+`resets` and `unaffectedBy` of a field; `minimum <= maximum`; `aliasOf` and `lockedBy`
+name an existing field, and `lockedValue` fits it; an array's elements stay inside the
+register (fields) or inside the register file and do not overlap (`stride` at least the
+register's width in bytes).
+
+**Authoring rule** (#103), in `peripheral-spec` and its subagent prompt: a field, opcode or mask
+whose source gives a table of values or bit assignments gets `enumeratedValues` (or bit-level
+fields), or a `todo` saying the table was left out. Naming it in `meaning` alone is a defect the
+verifier reports.
+
+### Register sources: reference, don't copy
+
+Where a tool already holds a block's registers (an IP-XACT file, a vendor SVD, a register
+database), a spec points into it instead of copying it (D29), the way a `src` citation names a
+pinned repository and lines instead of pasting code. The spec keeps only what the tool lacks:
+citations into the documentation, verdicts, `requirement` labels, `todo`s, sequences that
+point at fields, and conflicts where the document and the tool disagree.
+
+- **Resource.** `resources.registerSources`: `{name, kind, revision, covers}`. `kind` names the
+  adapter; `revision` is immutable (a commit, a digest, a database snapshot id), as a repos pin
+  is; a branch name or "latest" is refused. `covers` is `block` (every register of the spec's
+  block) or a list of register paths; an inline `data.register` fact for a covered register
+  fails the check (D32).
+- **Reference.** A register fact carries `data.registerRef: {source, path}` in place of
+  `data.register`. A field under `fields` carries `ref: <field name>` in place of `name` and
+  `bits`, plus only what the spec adds. A property the spec states and the source also gives
+  must agree; a disagreement is a `conflicts` entry (D18), never a silent override.
+- **Adapter.** Resolves `(source, path)` to a register record in the model above, and gives a
+  canonical digest of that record. The record is the **subset** the checks and the readers'
+  common questions need (names, bits, values, access, resets); a source richer than this model
+  keeps everything else, readers go to the source for it, and the resolved record is always
+  marked partial, never complete (D34). This model is a floor for what an adapter must supply,
+  not a ceiling on what a source may hold. driver-lab ships `inline` (today's `data.register`, for
+  specs with no tool behind them) and `ipxact`. Any other adapter, including one for an
+  internal tool, comes from the root that needs it, named in its marker, as the
+  `source-observed` schema fragment is (D15); driver-lab never names such a tool or its format.
+- **Provenance** (D30). A new support class, `register-source` (`{source, path}`), is evidence
+  for the revision named, as `rtl` is. It may stand alone in `support`. The verifier's job
+  for such a fact is to compare the cited documentation with the tool's record, and to record
+  a `conflicts` entry where they disagree.
+- **Freshness.** A fact's basis covers the resolved record, not the source's revision, so a new
+  revision stales only facts whose referenced registers changed.
+- **Unreachable sources.** Where an adapter is missing or the source cannot be reached (public
+  CI, a contributor without access), the reference is reported unresolved, and every check
+  that needs the record (widths, value fits, sequence targets) says it was skipped. That is a
+  warning by default and an error under the root marker's `requireRegisterSources: true`.
+  Specs that reference a private source live in a private root.
+
+```yaml
+resources:
+  registerSources:
+    - {name: soc-regs, kind: ipxact, revision: 3f2a…, covers: block}   # full digest in a real spec
+facts:
+  - id: reg-status
+    section: registers
+    data:
+      registerRef: {source: soc-regs, path: uart0.STATUS}
+      fields:
+        - id: err
+          ref: ERR
+          requirement: hw-required
+          support: [{class: databook, doc: uart-trm, at: [{page: 12, table: "3-4"}]}]
+    support: [{class: register-source, source: soc-regs, path: uart0.STATUS}]
+```
+
+### Layouts: bit-packed fields and byte order
+
+A layout field keeps `offset` and `size` in bytes; together they are the **container word**,
+read as one integer. New, all optional:
+
+- on the layout: `byteOrder` (`bigEndian`, `littleEndian`, DFDL's terms), required when any
+  field is wider than one byte and has `bits`; `bitNumbering` (`lsb0`, `msb0`; default `lsb0`),
+  saying how `bits` count inside the container, **as the cited document counts them**, so the
+  verifier compares numbers without converting.
+- on a field: `bits: [a, b]` inside the container; `enumeratedValues` or
+  `enumerationDefinitionRef`, as on register fields.
+
+D25 named DFDL's terms for both orders. DFDL's `bitOrder` describes how a bit stream fills
+bytes, which a container-word model does not need; what the verifier does need is the
+document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (D39).
+
+**Checks:** `bits` inside `size × 8`; values fit; under `byteOrder` absent, a multi-byte
+field with `bits` fails. Overlapping fields in one container are a warning, since unions exist.
+
+### Sequences: an operation per step
+
+A step may carry `op`, one of a fixed set, instead of `action`: a step with `op` may not have
+`action`, the renderer writes its English, and explanations go in `note` (D40).
+Targets are fact references with the field sub-key the verdicts already use (`#reg-ctrl` or
+`#reg-ctrl.en`); a value is canonical hex or an enumerated value's name.
+
+| `op` | Fields | Precedent |
+| --- | --- | --- |
+| `write` | `target`, `value` | `reg_sequence`, DCD write |
+| `setBits` / `clearBits` | `target` (a field, or a register with `mask`) | DCD set and clear bits |
+| `read` | `target` | |
+| `poll` | `target`, `until` (`{equals}`, `{bitsSet}` or `{bitsClear}`), `interval?`, `timeout` | `read_poll_timeout`, DCD check bits |
+| `delay` | `duration` | `reg_sequence.delay_us` |
+| `waitInterrupt` | `target` (an interrupt fact), `timeout` | |
+
+`timeout`, `interval` and `duration` are quantities (below). `onTimeout` names the step to go
+to, or `fail`. A `poll` or `waitInterrupt` without `timeout` fails the check unless the step
+carries a `todo` saying the source gives none (#105).
+
+```yaml
+steps:
+  - {id: s1, op: setBits, target: "#reg-ctrl.en", support: [...]}
+  - {id: s2, op: poll, target: "#reg-status.ready", until: {equals: "0x1"},
+     timeout: {unit: ms, max: 10}, onTimeout: fail, support: [...]}
+```
+
+The renderer writes each step's English from `op`, so text and data cannot disagree.
+
+### Quantities
+
+`$defs.quantity`: `unit` (a UCUM code) and at least one of `min`, `nom`, `typ`, `max` (D27).
+Values are decimal integers (D6 keeps floats out), so the author picks a unit small enough:
+"1 minute (+50%/−0%)" is `{unit: s, nom: 60, min: 60, max: 90}`. The schema accepts a closed
+list of UCUM codes (`s`, `ms`, `us`, `ns`, `min`, `h`, `Hz`, `kHz`, `MHz`, `GHz`, `V`, `mV`,
+`A`, `mA`, `Cel`, `%`, `By`, `bit`); the list selects codes and does not copy UCUM's tables,
+which its license forbids modifying. Checks: `min <= nom`, `nom <= max`, `typ` inside
+`[min, max]`.
+
+Quantities appear in steps, and as `data.quantity` on a fact whose whole claim is one limit
+(the IDE aggregation timer in #105).
+
+### Export: `spec.py export ipxact`
+
+Writes an IP-XACT 2022 `component` for the spec's block (one `memoryMap`, one `addressBlock`
+at base 0, a `registerFile` per `registerFiles` entry, `array` elements for register and field
+arrays) and validates it with `xmlschema` against the official XSD, vendored with its
+`LICENSE` and `NOTICE` (D26). Each exported element carries the fact id in
+`vendorExtensions`, pointing back to the YAML, whose `support` stays the only copy of the
+citations (D41). CI exports every spec in the fixtures and the three spec repositories; a
+validation failure fails the build. `xmlschema` is pinned with hashes after a `dep-quality`
+score, and the requirements and CI changes are gate inputs, so the orchestrator lands those
+two files itself.
+
+### Units of work
+
+Each is one session and one pull request, in this order:
+
+1. Field properties, registries, enumerated values, arrays, register files, aliases, the three
+   extensions and the register-level mapping (#105 part 1, #103 part 1): schema, checker,
+   basis, both renderers, `peripheral-spec` rule.
+2. Layout `bits`, `byteOrder`, `bitNumbering` (#103 part 2).
+3. Quantities and sequence operations (#105 part 2).
+4. The IP-XACT exporter and its CI check.
+5. Register sources: `registerSources`, `registerRef`, the `register-source` class, the
+   `inline` and `ipxact` adapters (the latter reusing unit 4's XSD and parser), and the
+   marker hook for adapters supplied by a root.
+
+### Decisions (2026-10-14)
+
+| # | Question | Decision | Effect |
+| --- | --- | --- | --- |
+| D23 | Sticky bits and HwInit, which IP-XACT cannot express | Two extensions, `unaffectedBy` and `initializedBy`, exported into `vendorExtensions` | explicit and checkable; the export still validates |
+| D24 | Register field vocabulary | IEEE 1685-2022 names and values, verbatim camelCase | checkable against the standard with no mapping table; departs from the format's snake_case for these keys |
+| D25 | Bit-packed layouts | Own model with DFDL's byte-order terms and IP-XACT enumerations | byte and bit order become data, not an assumption |
+| D26 | How strictly to follow IP-XACT | Names in the YAML plus an exporter validated against the official XSD in CI | the export check, not a claim, shows conformance |
+| D27 | Time limits | UCUM unit codes and IEC 61360 level names | tolerances become numbers |
+| D28 | Order of work | This design section first, approved, then the units above | later units build on approved decisions, not on a pull request |
+| D29 | Specs where a register tool already exists | Reference into the tool at a pinned revision through an adapter; the spec holds only what the tool lacks | no duplicated register data; a private tool's adapter stays out of driver-lab |
+| D30 | What makes a tool's value verified | The tool is evidence for its revision (class `register-source`); the verifier cross-checks the documentation against it and records conflicts | catches errors in either the documentation or the tool without re-typing values |
+| D31 | What belongs in a spec | Facts from sources the reader cannot be pointed to, and accurate summaries that save reading cost; never a duplicate of a canonical source the readers can use | the spec is a stand-in or an index, not a second copy to keep in sync |
+| D32 | Enforcing D31 | The checker refuses inline data a declared register source covers and warns on references that add nothing; the verifier reports other duplicates | mechanical where the duplicate is visible in the data, reviewed where it is not |
+| D33 | Recording why a fact is there | Inferred from `support`; no new field | no extra field on every fact; no overlap with #106's completeness signal |
+| D34 | Sources richer than the model | An adapter supplies the model's subset and marks the record partial; the source keeps the rest | IP-XACT's vocabulary is a floor for adapters, not a limit on what a register tool holds |
+| D35 | Write-enable locks (one register gating writes to another) | A third extension, `lockedBy: {field, lockedValue}`, exported into `vendorExtensions` | the lock is data, not a sentence in a note |
+| D36 | Register arrays, groups and aliases | IP-XACT 2022's `array` (`dim`, `stride`, `bitStride`), `registerFile` and `aliasOf`, in this design | the JSON register formats the second survey read all carry these; the exporter can represent them |
+| D37 | Interrupt, clock, reset, power-domain, pin-mux and DMA routing | A separate design and pull request after this one: own records in Devicetree's vocabulary (provider, consumer, named inputs, specifier cells, `IRQ_TYPE_*` triggers), each option a cited fact a board selects, referencing the upstream `.dtsi` where it covers a board (D31) | two focused reviews; the vocabulary is the one Linux and Fuchsia drivers consume |
+| D38 | Values of `initializedBy` | `hardware`, `firmware`; finer detail in a note or its own fact | what a driver needs (it cannot write the field), without values sources rarely state |
+| D39 | Bit numbering in layouts | SystemRDL `lsb0`/`msb0` as the cited document numbers bits, in place of DFDL's `bitOrder` | the verifier compares the document's numbers directly; D25's DFDL term answers a bit-stream question this model does not ask |
+| D40 | Free text on a step with `op` | Forbidden; the renderer writes the step's English, explanations go in `note` | text and data cannot disagree |
+| D41 | What the IP-XACT export carries back | The fact id only, in `vendorExtensions` | one copy of each citation (D31) |
+
 ## Validation: schema and checker
 
 ### What each layer checks

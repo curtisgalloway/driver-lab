@@ -878,7 +878,7 @@ copies its records into the spec unchanged, ids included.
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
 Status: **proposed, awaiting the user's approval.** The choices in the table at the end
-(D23–D37) were made by the user on 2026-10-14 (D34 proposed from the user's note that
+(D23–D41) were made by the user on 2026-10-14 (D34 proposed from the user's note that
 some register tools hold far more than IP-XACT expresses, then accepted); this section turns them into a design. Nothing
 here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
@@ -987,7 +987,8 @@ so a reader can check them against IEEE 1685 without a mapping table. On a field
   `unaffectedBy: [hot]` and a `resets` entry for the power-on type. The name avoids "sticky",
   which SystemRDL uses for latch-until-cleared interrupt bits.
 - `initializedBy` — HwInit: set by hardware or firmware before software runs, read-only to it
-  afterwards. Values: `hardware`, `firmware` (open question 1).
+  afterwards. Values: `hardware`, `firmware` (D38); straps, nonvolatile memory and the like
+  go in a `note` or a fact of their own.
 - `lockedBy: {field, lockedValue}` — writes to this field have no effect while the referenced
   field holds `lockedValue` (D35): a write-enable lock such as OpenTitan's `regwen`, which
   IP-XACT's mode-based access policies do not express as one register gating another.
@@ -1134,14 +1135,15 @@ read as one integer. New, all optional:
 
 D25 named DFDL's terms for both orders. DFDL's `bitOrder` describes how a bit stream fills
 bytes, which a container-word model does not need; what the verifier does need is the
-document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (open question 2).
+document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (D39).
 
 **Checks:** `bits` inside `size × 8`; values fit; under `byteOrder` absent, a multi-byte
 field with `bits` fails. Overlapping fields in one container are a warning, since unions exist.
 
 ### Sequences: an operation per step
 
-A step may carry `op`, one of a fixed set, beside or instead of `action` (open question 3).
+A step may carry `op`, one of a fixed set, instead of `action`: a step with `op` may not have
+`action`, the renderer writes its English, and explanations go in `note` (D40).
 Targets are fact references with the field sub-key the verdicts already use (`#reg-ctrl` or
 `#reg-ctrl.en`); a value is canonical hex or an enumerated value's name.
 
@@ -1186,8 +1188,8 @@ Writes an IP-XACT 2022 `component` for the spec's block (one `memoryMap`, one `a
 at base 0, a `registerFile` per `registerFiles` entry, `array` elements for register and field
 arrays) and validates it with `xmlschema` against the official XSD, vendored with its
 `LICENSE` and `NOTICE` (D26). Each exported element carries the fact id in
-`vendorExtensions`, pointing back to the YAML, whose `support` stays the authority (open
-question 4). CI exports every spec in the fixtures and the three spec repositories; a
+`vendorExtensions`, pointing back to the YAML, whose `support` stays the only copy of the
+citations (D41). CI exports every spec in the fixtures and the three spec repositories; a
 validation failure fails the build. `xmlschema` is pinned with hashes after a `dep-quality`
 score, and the requirements and CI changes are gate inputs, so the orchestrator lands those
 two files itself.
@@ -1205,14 +1207,6 @@ Each is one session and one pull request, in this order:
 5. Register sources: `registerSources`, `registerRef`, the `register-source` class, the
    `inline` and `ipxact` adapters (the latter reusing unit 4's XSD and parser), and the
    marker hook for adapters supplied by a root.
-
-### Open questions
-
-1. `initializedBy`: is `hardware` / `firmware` enough, or should straps and nonvolatile memory
-   be separate values?
-2. `bitNumbering` (SystemRDL `lsb0`/`msb0`) in place of DFDL `bitOrder` — confirm.
-3. When a step has `op`, is `action` forbidden (the renderer writes it) or allowed as a note?
-4. Export `support` into `vendorExtensions` as well, or only the fact id?
 
 ### Decisions (2026-10-14)
 
@@ -1233,6 +1227,10 @@ Each is one session and one pull request, in this order:
 | D35 | Write-enable locks (one register gating writes to another) | A third extension, `lockedBy: {field, lockedValue}`, exported into `vendorExtensions` | the lock is data, not a sentence in a note |
 | D36 | Register arrays, groups and aliases | IP-XACT 2022's `array` (`dim`, `stride`, `bitStride`), `registerFile` and `aliasOf`, in this design | the JSON register formats the second survey read all carry these; the exporter can represent them |
 | D37 | Interrupt, clock, reset, power-domain, pin-mux and DMA routing | A separate design and pull request after this one: own records in Devicetree's vocabulary (provider, consumer, named inputs, specifier cells, `IRQ_TYPE_*` triggers), each option a cited fact a board selects, referencing the upstream `.dtsi` where it covers a board (D31) | two focused reviews; the vocabulary is the one Linux and Fuchsia drivers consume |
+| D38 | Values of `initializedBy` | `hardware`, `firmware`; finer detail in a note or its own fact | what a driver needs (it cannot write the field), without values sources rarely state |
+| D39 | Bit numbering in layouts | SystemRDL `lsb0`/`msb0` as the cited document numbers bits, in place of DFDL's `bitOrder` | the verifier compares the document's numbers directly; D25's DFDL term answers a bit-stream question this model does not ask |
+| D40 | Free text on a step with `op` | Forbidden; the renderer writes the step's English, explanations go in `note` | text and data cannot disagree |
+| D41 | What the IP-XACT export carries back | The fact id only, in `vendorExtensions` | one copy of each citation (D31) |
 
 ## Validation: schema and checker
 

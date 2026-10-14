@@ -878,15 +878,17 @@ copies its records into the spec unchanged, ids included.
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
 Status: **proposed, awaiting the user's approval.** The choices in the table at the end
-(D23–D33) were made by the user on 2026-10-14, and D34 is proposed from the user's
-note the same day that some register tools hold far more than IP-XACT expresses; this section turns them into a design. Nothing
+(D23–D37) were made by the user on 2026-10-14 (D34 proposed from the user's note that
+some register tools hold far more than IP-XACT expresses, then accepted); this section turns them into a design. Nothing
 here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
 layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
 resets, sequence timeouts), and it answers the precision goal behind
 [#118](https://github.com/curtisgalloway/driver-lab/issues/118). The survey behind it, with a
-URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md) (a research agent's report,
-2026-10-14; "I" in it is that agent).
+URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md); the second survey, on
+public JSON register formats and on routing between blocks, is
+[STANDARDS-SURVEY-2.md](STANDARDS-SURVEY-2.md). Both are a research agent's reports of
+2026-10-14; "I" in them is that agent.
 
 **Terms** (also in the [glossary](../GLOSSARY.md)):
 
@@ -973,6 +975,8 @@ so a reader can check them against IEEE 1685 without a mapping table. On a field
 | `enumeratedValues` | list of `{name, value, description?, usage?}`; `usage` is `read`, `write` or `read-write` | |
 | `enumerationDefinitionRef` | the name of a shared table in the spec's `enumerationDefinitions` | one opcode table used by several fields |
 | `fieldAccessPolicyDefinitionRef` | the name of an entry in the spec's `fieldAccessPolicyDefinitions` | `RW1CS`, defined once per spec |
+| `aliasOf` | a field reference (`#reg-ctrl.en`): this field is another view of that one | a status bit mirrored in a second register |
+| `array` | `{dim: [n, …], bitStride?}`: a field repeated inside the register | eight one-bit enables, `EN[7:0]` |
 
 **Two extensions** (D23) fill the gaps the survey found. The exporter writes both into
 `vendorExtensions`:
@@ -984,6 +988,12 @@ so a reader can check them against IEEE 1685 without a mapping table. On a field
   which SystemRDL uses for latch-until-cleared interrupt bits.
 - `initializedBy` — HwInit: set by hardware or firmware before software runs, read-only to it
   afterwards. Values: `hardware`, `firmware` (open question 1).
+- `lockedBy: {field, lockedValue}` — writes to this field have no effect while the referenced
+  field holds `lockedValue` (D35): a write-enable lock such as OpenTitan's `regwen`, which
+  IP-XACT's mode-based access policies do not express as one register gating another.
+
+The extensions are named, not grouped under one key, so an adapter for a source that holds
+them natively can supply them unchanged.
 
 **Spec-level registries**, each entry a mapping with `name`, the properties it defines, and
 `support`:
@@ -995,6 +1005,16 @@ so a reader can check them against IEEE 1685 without a mapping table. On a field
   names one may not also set those properties itself. The document's own abbreviation
   survives, and its meaning is checked once.
 - `enumerationDefinitions` — shared value tables (`{name, enumeratedValues, support}`).
+
+**Arrays and grouping** (D36), in IP-XACT 2022's terms:
+
+- `register.array: {dim: [n, …], stride}` — a register repeated `n` times (several `dim`
+  values lay out as a C multidimensional array does), `stride` bytes apart, in canonical hex.
+- `registerFiles` — a spec-level registry of named groups (`{name, addressOffset, range,
+  array?, support}`); a register naming `registerFile: <name>` has its `offset` relative to
+  the group. A group repeated per channel or queue is one entry with an `array`.
+- A spec still describes one block. Several blocks are several specs; where they sit in an
+  address map is a board-level fact (instances, and the routing design to come).
 
 **Register level.** `register.access` takes the same IP-XACT values. Today's short values
 (`ro`, `wo`, `rw`, `w1c`, `w1s`, `rc`) stay accepted with a warning naming their IP-XACT form
@@ -1035,7 +1055,10 @@ facts:
 **Checks:** every enumerated value, reset value, mask and constraint bound fits the field's
 width; names and values are unique within a table; `useEnumeratedValues` needs a table;
 `resetTypeRef`, `unaffectedBy` and every `…Ref` resolve; one reset type is never in both
-`resets` and `unaffectedBy` of a field; `minimum <= maximum`.
+`resets` and `unaffectedBy` of a field; `minimum <= maximum`; `aliasOf` and `lockedBy`
+name an existing field, and `lockedValue` fits it; an array's elements stay inside the
+register (fields) or inside the register file and do not overlap (`stride` at least the
+register's width in bytes).
 
 **Authoring rule** (#103), in `peripheral-spec` and its subagent prompt: a field, opcode or mask
 whose source gives a table of values or bit assignments gets `enumeratedValues` (or bit-level
@@ -1159,8 +1182,9 @@ Quantities appear in steps, and as `data.quantity` on a fact whose whole claim i
 
 ### Export: `spec.py export ipxact`
 
-Writes an IP-XACT 2022 `component` (one `memoryMap` and `addressBlock` at base 0, registers at
-their offsets) and validates it with `xmlschema` against the official XSD, vendored with its
+Writes an IP-XACT 2022 `component` for the spec's block (one `memoryMap`, one `addressBlock`
+at base 0, a `registerFile` per `registerFiles` entry, `array` elements for register and field
+arrays) and validates it with `xmlschema` against the official XSD, vendored with its
 `LICENSE` and `NOTICE` (D26). Each exported element carries the fact id in
 `vendorExtensions`, pointing back to the YAML, whose `support` stays the authority (open
 question 4). CI exports every spec in the fixtures and the three spec repositories; a
@@ -1172,8 +1196,9 @@ two files itself.
 
 Each is one session and one pull request, in this order:
 
-1. Field properties, registries, enumerated values and the register-level mapping (#105 part
-   1, #103 part 1): schema, checker, basis, both renderers, `peripheral-spec` rule.
+1. Field properties, registries, enumerated values, arrays, register files, aliases, the three
+   extensions and the register-level mapping (#105 part 1, #103 part 1): schema, checker,
+   basis, both renderers, `peripheral-spec` rule.
 2. Layout `bits`, `byteOrder`, `bitNumbering` (#103 part 2).
 3. Quantities and sequence operations (#105 part 2).
 4. The IP-XACT exporter and its CI check.
@@ -1205,6 +1230,9 @@ Each is one session and one pull request, in this order:
 | D32 | Enforcing D31 | The checker refuses inline data a declared register source covers and warns on references that add nothing; the verifier reports other duplicates | mechanical where the duplicate is visible in the data, reviewed where it is not |
 | D33 | Recording why a fact is there | Inferred from `support`; no new field | no extra field on every fact; no overlap with #106's completeness signal |
 | D34 | Sources richer than the model | An adapter supplies the model's subset and marks the record partial; the source keeps the rest | IP-XACT's vocabulary is a floor for adapters, not a limit on what a register tool holds |
+| D35 | Write-enable locks (one register gating writes to another) | A third extension, `lockedBy: {field, lockedValue}`, exported into `vendorExtensions` | the lock is data, not a sentence in a note |
+| D36 | Register arrays, groups and aliases | IP-XACT 2022's `array` (`dim`, `stride`, `bitStride`), `registerFile` and `aliasOf`, in this design | the JSON register formats the second survey read all carry these; the exporter can represent them |
+| D37 | Interrupt, clock, reset, power-domain, pin-mux and DMA routing | A separate design and pull request after this one: own records in Devicetree's vocabulary (provider, consumer, named inputs, specifier cells, `IRQ_TYPE_*` triggers), each option a cited fact a board selects, referencing the upstream `.dtsi` where it covers a board (D31) | two focused reviews; the vocabulary is the one Linux and Fuchsia drivers consume |
 
 ## Validation: schema and checker
 

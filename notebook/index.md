@@ -521,6 +521,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
   but not test the crediting, which goes to HF-1.
 
-Active bug-fix chapter: [Issue 95](ISSUE-95.md), indexed through 2026-10-14.
+Active bug-fix chapters: [Issue 95](ISSUE-95.md) and [Issue 112](ISSUE-112.md), indexed
+through 2026-10-14.
 Earlier bug-fix chapters: [Issue 96](ISSUE-96.md), [Issue 107](ISSUE-107.md).
 This open-method chapter is outside the frozen archive described above.

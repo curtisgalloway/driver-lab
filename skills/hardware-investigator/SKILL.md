@@ -101,6 +101,8 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
    code does without hardware justification. Source alone cannot prove a silicon requirement.
    Separate inference into its own supported derivation with premises and TODO. Preserve
    unknowns as gap records with observable TODOs; do not invent width, access or reset values.
+   `spec.py todo <root>... --check hardware` lists those TODOs as the input to a readback plan,
+   and a narrow follow-up question to an investigator names one fact id from that list.
 8. Check the output before returning:
 
    ```bash

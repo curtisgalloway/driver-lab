@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Standards survey for Format 2 fact precision (issues #103, #105, #118)
+# Standards survey for spec fact precision (issues #103, #105, #118)
 
 Date: 2026-10-14. Read-only research; nothing in any repository was changed.
 
@@ -553,7 +553,7 @@ A spec needs per-layout `byteOrder` and a bit-numbering value, or a field like
    - Reasoning: UCUM is the recognized unit-code standard and its license permits use as codes;
      no free standard represents spec tolerances, and the IEC 61360 level names are the
      recognized ones.
-5. **Device-level container: no fit; keep Format 2 facts as the container.**
+5. **Device-level container: no fit; keep the spec format's facts as the container.**
    - Export registers to IP-XACT, and optionally layouts to Kaitai.
    - Treat dt-schema and ACPI as consumer targets.
    - Reasoning: no candidate spans registers, sequences, layouts, and timing, and the

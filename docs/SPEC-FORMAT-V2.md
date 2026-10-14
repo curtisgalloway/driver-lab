@@ -878,7 +878,8 @@ copies its records into the spec unchanged, ids included.
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
 Status: **proposed, awaiting the user's approval.** The choices in the table at the end
-(D23–D30) were made by the user on 2026-10-14; this section turns them into a design. Nothing
+(D23–D33) were made by the user on 2026-10-14, and D34 is proposed from the user's
+note the same day that some register tools hold far more than IP-XACT expresses; this section turns them into a design. Nothing
 here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
 layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
@@ -906,6 +907,33 @@ URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md) (a research ag
   significant bit.
 - **Register source / adapter** — a tool or file that already holds a block's registers,
   pinned at a revision / the code that turns a spec's reference into it into a register record.
+
+### What a spec holds (D31)
+
+A spec holds facts for two reasons only:
+
+1. **The source cannot be pointed to.** The reader may not consult it (its license is outside
+   what the reader's root accepts, or it is private), or it is not available to them at all.
+   The spec carries the facts, with their citations, in its place.
+2. **The spec summarizes it accurately and more efficiently.** A 2,000-page standard or a
+   datasheet is canonical but costly to read; a precise fact pointing at the right page saves
+   that cost (#106 marks when a fact summarizes rather than reproduces).
+
+A spec **never duplicates facts that are available, efficiently, in a canonical form**: a
+machine-readable source (a register database, an IP-XACT or SVD file, a device tree binding,
+a header) that is pinned and that the spec's readers may use under their root's license. The
+spec references such a source instead (register sources, below) and adds only what it lacks:
+documentation cross-checks, verdicts, `requirement` labels, `todo`s, sequences and conflicts.
+"May use" depends on the reader: a GPL header is canonical for a reader of a GPL root, and not
+for a reader of a permissive one, whose spec may carry the facts with citations.
+
+**Enforcement** (D32): the checker refuses inline data that a declared register source
+already covers (below), and warns on a `registerRef` fact that adds nothing to its source and
+that no other fact references; the verifier reports any other fact that only restates a
+canonical source its readers could use. **No new field says why a fact is there** (D33): the
+reason follows from its `support`. A fact supported by a document class or by a source the
+readers cannot use is a summary or a stand-in; one whose only support is a canonical source
+those readers can use is a duplicate.
 
 ### Why
 
@@ -1022,15 +1050,21 @@ pinned repository and lines instead of pasting code. The spec keeps only what th
 citations into the documentation, verdicts, `requirement` labels, `todo`s, sequences that
 point at fields, and conflicts where the document and the tool disagree.
 
-- **Resource.** `resources.registerSources`: `{name, kind, revision}`. `kind` names the
+- **Resource.** `resources.registerSources`: `{name, kind, revision, covers}`. `kind` names the
   adapter; `revision` is immutable (a commit, a digest, a database snapshot id), as a repos pin
-  is; a branch name or "latest" is refused.
+  is; a branch name or "latest" is refused. `covers` is `block` (every register of the spec's
+  block) or a list of register paths; an inline `data.register` fact for a covered register
+  fails the check (D32).
 - **Reference.** A register fact carries `data.registerRef: {source, path}` in place of
   `data.register`. A field under `fields` carries `ref: <field name>` in place of `name` and
   `bits`, plus only what the spec adds. A property the spec states and the source also gives
   must agree; a disagreement is a `conflicts` entry (D18), never a silent override.
 - **Adapter.** Resolves `(source, path)` to a register record in the model above, and gives a
-  canonical digest of that record. driver-lab ships `inline` (today's `data.register`, for
+  canonical digest of that record. The record is the **subset** the checks and the readers'
+  common questions need (names, bits, values, access, resets); a source richer than this model
+  keeps everything else, readers go to the source for it, and the resolved record is always
+  marked partial, never complete (D34). This model is a floor for what an adapter must supply,
+  not a ceiling on what a source may hold. driver-lab ships `inline` (today's `data.register`, for
   specs with no tool behind them) and `ipxact`. Any other adapter, including one for an
   internal tool, comes from the root that needs it, named in its marker, as the
   `source-observed` schema fragment is (D15); driver-lab never names such a tool or its format.
@@ -1049,7 +1083,7 @@ point at fields, and conflicts where the document and the tool disagree.
 ```yaml
 resources:
   registerSources:
-    - {name: soc-regs, kind: ipxact, revision: 3f2a…}   # full digest in a real spec
+    - {name: soc-regs, kind: ipxact, revision: 3f2a…, covers: block}   # full digest in a real spec
 facts:
   - id: reg-status
     section: registers
@@ -1167,6 +1201,10 @@ Each is one session and one pull request, in this order:
 | D28 | Order of work | This design section first, approved, then the units above | later units build on approved decisions, not on a pull request |
 | D29 | Specs where a register tool already exists | Reference into the tool at a pinned revision through an adapter; the spec holds only what the tool lacks | no duplicated register data; a private tool's adapter stays out of driver-lab |
 | D30 | What makes a tool's value verified | The tool is evidence for its revision (class `register-source`); the verifier cross-checks the documentation against it and records conflicts | catches errors in either the documentation or the tool without re-typing values |
+| D31 | What belongs in a spec | Facts from sources the reader cannot be pointed to, and accurate summaries that save reading cost; never a duplicate of a canonical source the readers can use | the spec is a stand-in or an index, not a second copy to keep in sync |
+| D32 | Enforcing D31 | The checker refuses inline data a declared register source covers and warns on references that add nothing; the verifier reports other duplicates | mechanical where the duplicate is visible in the data, reviewed where it is not |
+| D33 | Recording why a fact is there | Inferred from `support`; no new field | no extra field on every fact; no overlap with #106's completeness signal |
+| D34 | Sources richer than the model | An adapter supplies the model's subset and marks the record partial; the source keeps the rest | IP-XACT's vocabulary is a floor for adapters, not a limit on what a register tool holds |
 
 ## Validation: schema and checker
 

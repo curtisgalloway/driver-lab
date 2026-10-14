@@ -37,7 +37,10 @@ Limits. A process that leaves its group (a second setsid) can still outlive the 
 files under paths the base tree already ignores are not scanned; git never commits those.
 This gate is a check on the patch, not a sandbox: Codex's own containment is codex-implement.
 The test suites necessarily run the patched code; whether its tests still mean anything is a
-review question, not one this gate can answer.
+review question, not one this gate can answer. Every interpreter the gate starts runs with
+`-I`, so a module the patch adds at WORKTREE's top level (a `venv.py` or `unittest.py`) cannot
+stand in for the standard library's and fake the venv build or a suite's runner (#78). Extra
+--suite commands that start Python should pass `-I` too.
 
 Exit status: 0 every check passed and nothing was refused; 1 a check failed, a file was refused,
 or a new untracked file holds a home directory path; 2 usage error.
@@ -78,9 +81,9 @@ MAX_UNTRACKED_BYTES = 1 << 20
 def default_suites():
   python = sys.executable
   return [
-      ("spec-format", [os.path.join(".venv-sf2", "bin", "python"), "-m", "unittest",
+      ("spec-format", [os.path.join(".venv-sf2", "bin", "python"), "-I", "-m", "unittest",
                        "discover", "-s", "skills/spec-format/tests"]),
-      ("utilities", [python, "-m", "unittest", "discover", "-s", "utilities/tests"]),
+      ("utilities", [python, "-I", "-m", "unittest", "discover", "-s", "utilities/tests"]),
   ]
 
 
@@ -210,7 +213,7 @@ def run(command, cwd):
 def build_venv(worktree):
   venv = os.path.join(worktree, ".venv-sf2")
   shutil.rmtree(venv, ignore_errors=True)
-  code, output = run([sys.executable, "-m", "venv", ".venv-sf2"], worktree)
+  code, output = run([sys.executable, "-I", "-m", "venv", ".venv-sf2"], worktree)
   if code == 0:
     code, output = run([os.path.join(".venv-sf2", "bin", "pip"), "install", "-q",
                         "--require-hashes", "-r", "skills/spec-format/requirements.txt"],

@@ -875,6 +875,243 @@ and accepts a supported-fact verdict. Its freshness tracks both sides' anchors. 
 schema and license gate (`spec.py check <file> --root <target root>`), and `peripheral-spec`
 copies its records into the spec unchanged, ids included.
 
+## Precise payloads: standard vocabularies (proposed 2026-10-14)
+
+Status: **proposed, awaiting the user's approval.** The choices in the table at the end
+(D23–D28) were made by the user on 2026-10-14; this section turns them into a design. Nothing
+here is built. It reshapes issues
+[#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
+layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
+resets, sequence timeouts), and it answers the precision goal behind
+[#118](https://github.com/curtisgalloway/driver-lab/issues/118). The survey behind it, with a
+URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md) (a research agent's report,
+2026-10-14; "I" in it is that agent).
+
+**Terms** (also in the [glossary](../GLOSSARY.md)):
+
+- **IP-XACT** — IEEE Std 1685-2022, an XML format for describing hardware blocks, including
+  registers and their fields. Accellera publishes its **XSD** (XML Schema Definition, the
+  machine-readable grammar of the XML) under Apache-2.0.
+- **Vendor extension** — IP-XACT's `vendorExtensions` element: a slot where a tool may put
+  elements the standard does not define, without breaking validation.
+- **Reset type** — a named kind of reset (power-on, hot reset, function-level reset). IP-XACT
+  gives a field one reset value per reset type; with no type named, it assumes `HARD`.
+- **UCUM** — the Unified Code for Units of Measure: case-sensitive unit codes such as `us`,
+  `ms`, `min`, `Hz`.
+- **IEC 61360 levels** — `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for
+  the levels of a specified value.
+- **DFDL** — the Open Grid Forum's Data Format Description Language, whose `byteOrder` terms
+  (`bigEndian`, `littleEndian`) this section borrows.
+- **lsb0 / msb0** — SystemRDL's names for bit numbering: bit 0 is the least / the most
+  significant bit.
+
+### Why
+
+The PCIe evaluation behind #103 and #105 found that 11 of its 12 out-of-spec misses were
+facts that cited the right page but kept the value in English: a mask named without its bit
+assignments, an opcode field without its encodings, a handshake without its timeout. A
+verifier comparing such a fact with the document has to interpret a sentence, and a reader
+has to guess. The rule this section adds: **a value the document states as a number, a bit
+position, an encoding, an access behavior or a time limit goes in typed `data`**, in a
+recognized standard's vocabulary where one exists. English stays for what has no fixed shape.
+
+| Area | Standard | Use |
+| --- | --- | --- |
+| Register field behavior | IEEE 1685-2022 (IP-XACT) | adopt: property names and values verbatim, plus two extensions; export validated against the official XSD |
+| Value encodings | IP-XACT `enumeratedValues` | adopt, for register fields and layout fields alike |
+| Packet and descriptor layouts | none fits (DFDL, Kaitai, ASN.1 ECN, P4 each fail on tooling, byte order or being code) | own model, DFDL's byte-order terms, SystemRDL's bit numbering |
+| Ordered procedures | none fits (PSS and UVM are code; IEEE 1687 PDL is a language, inactive since 2025) | own operation set, after Linux `reg_sequence` / `read_poll_timeout` and the i.MX boot ROM's DCD commands |
+| Time and other limits | UCUM codes; IEC 61360 level names | adopt the codes and names |
+
+Every property below is optional. Absence means the source does not state it, never a
+default the checker fills in; existing specs stay valid.
+
+### Register fields: IP-XACT properties
+
+Property names and values are IP-XACT's, spelled exactly as the standard spells them (D24),
+so a reader can check them against IEEE 1685 without a mapping table. On a field:
+
+| Property | Values | Example |
+| --- | --- | --- |
+| `access` | `read-only`, `write-only`, `read-write`, `writeOnce`, `read-writeOnce`, `no-access` | |
+| `modifiedWriteValue` | `oneToClear`, `oneToSet`, `oneToToggle`, `zeroToClear`, `zeroToSet`, `zeroToToggle`, `clear`, `set`, `modify` | PCIe RW1C is `read-write` + `oneToClear` |
+| `readAction` | `clear`, `set`, `modify` | read-to-clear is `readAction: clear` |
+| `writeValueConstraint` | one of `{writeAsRead: true}`, `{useEnumeratedValues: true}`, `{minimum, maximum}` | RsvdP is `reserved: true` + `writeAsRead`; RsvdZ is `reserved: true` + `{minimum: "0x0", maximum: "0x0"}` |
+| `reserved` | `true` | |
+| `volatile` | `true` / `false`: hardware can change the value between two accesses | |
+| `resets` | list of `{value, mask?, resetTypeRef?}`, values in canonical hex (D6) | |
+| `enumeratedValues` | list of `{name, value, description?, usage?}`; `usage` is `read`, `write` or `read-write` | |
+| `enumerationDefinitionRef` | the name of a shared table in the spec's `enumerationDefinitions` | one opcode table used by several fields |
+| `fieldAccessPolicyDefinitionRef` | the name of an entry in the spec's `fieldAccessPolicyDefinitions` | `RW1CS`, defined once per spec |
+
+**Two extensions** (D23) fill the gaps the survey found. The exporter writes both into
+`vendorExtensions`:
+
+- `unaffectedBy: [<resetType>, …]` — the reset types that leave the field unchanged. IP-XACT
+  can give a value per reset type but cannot say "this reset does not touch it", and under its
+  reading a missing reset value means "not documented". PCIe RWS is `read-write` with
+  `unaffectedBy: [hot]` and a `resets` entry for the power-on type. The name avoids "sticky",
+  which SystemRDL uses for latch-until-cleared interrupt bits.
+- `initializedBy` — HwInit: set by hardware or firmware before software runs, read-only to it
+  afterwards. Values: `hardware`, `firmware` (open question 1).
+
+**Spec-level registries**, each entry a mapping with `name`, the properties it defines, and
+`support`:
+
+- `resetTypes` — the reset types the spec names (`{name, description, support}`).
+  `resetTypeRef` and `unaffectedBy` must name one.
+- `fieldAccessPolicyDefinitions` — named bundles such as `RW1CS` (`access`,
+  `modifiedWriteValue`, `readAction`, `writeValueConstraint`, `unaffectedBy`). A field that
+  names one may not also set those properties itself. The document's own abbreviation
+  survives, and its meaning is checked once.
+- `enumerationDefinitions` — shared value tables (`{name, enumeratedValues, support}`).
+
+**Register level.** `register.access` takes the same IP-XACT values. Today's short values
+(`ro`, `wo`, `rw`, `w1c`, `w1s`, `rc`) stay accepted with a warning naming their IP-XACT form
+(`w1c` → `read-write` + `oneToClear`; `w1s` → `read-write` + `oneToSet`; `rc` → `read-only` +
+`readAction: clear`) until `drift --rewrite` migrates the three spec repositories.
+
+```yaml
+resetTypes:
+  - {name: power-on, description: fundamental reset, support: [...]}
+  - {name: hot, description: hot reset, support: [...]}
+fieldAccessPolicyDefinitions:
+  - {name: RW1CS, access: read-write, modifiedWriteValue: oneToClear,
+     unaffectedBy: [hot], support: [...]}
+facts:
+  - id: reg-status
+    section: registers
+    data:
+      register: {name: STATUS, offset: "0x4", width: 32}
+      fields:
+        - id: err
+          name: ERR
+          bits: [0, 0]
+          meaning: an uncorrectable error was detected
+          fieldAccessPolicyDefinitionRef: RW1CS
+          resets: [{value: "0x0", resetTypeRef: power-on}]
+        - id: mode
+          name: MODE
+          bits: [1, 3]
+          meaning: link mode
+          access: read-write
+          enumeratedValues:
+            - {name: off, value: "0x0"}
+            - {name: x1, value: "0x1"}
+            - {name: x4, value: "0x2"}
+    support: [...]
+```
+
+**Checks:** every enumerated value, reset value, mask and constraint bound fits the field's
+width; names and values are unique within a table; `useEnumeratedValues` needs a table;
+`resetTypeRef`, `unaffectedBy` and every `…Ref` resolve; one reset type is never in both
+`resets` and `unaffectedBy` of a field; `minimum <= maximum`.
+
+**Authoring rule** (#103), in `peripheral-spec` and its subagent prompt: a field, opcode or mask
+whose source gives a table of values or bit assignments gets `enumeratedValues` (or bit-level
+fields), or a `todo` saying the table was left out. Naming it in `meaning` alone is a defect the
+verifier reports.
+
+### Layouts: bit-packed fields and byte order
+
+A layout field keeps `offset` and `size` in bytes; together they are the **container word**,
+read as one integer. New, all optional:
+
+- on the layout: `byteOrder` (`bigEndian`, `littleEndian`, DFDL's terms), required when any
+  field is wider than one byte and has `bits`; `bitNumbering` (`lsb0`, `msb0`; default `lsb0`),
+  saying how `bits` count inside the container, **as the cited document counts them**, so the
+  verifier compares numbers without converting.
+- on a field: `bits: [a, b]` inside the container; `enumeratedValues` or
+  `enumerationDefinitionRef`, as on register fields.
+
+D25 named DFDL's terms for both orders. DFDL's `bitOrder` describes how a bit stream fills
+bytes, which a container-word model does not need; what the verifier does need is the
+document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (open question 2).
+
+**Checks:** `bits` inside `size × 8`; values fit; under `byteOrder` absent, a multi-byte
+field with `bits` fails. Overlapping fields in one container are a warning, since unions exist.
+
+### Sequences: an operation per step
+
+A step may carry `op`, one of a fixed set, beside or instead of `action` (open question 3).
+Targets are fact references with the field sub-key the verdicts already use (`#reg-ctrl` or
+`#reg-ctrl.en`); a value is canonical hex or an enumerated value's name.
+
+| `op` | Fields | Precedent |
+| --- | --- | --- |
+| `write` | `target`, `value` | `reg_sequence`, DCD write |
+| `setBits` / `clearBits` | `target` (a field, or a register with `mask`) | DCD set and clear bits |
+| `read` | `target` | |
+| `poll` | `target`, `until` (`{equals}`, `{bitsSet}` or `{bitsClear}`), `interval?`, `timeout` | `read_poll_timeout`, DCD check bits |
+| `delay` | `duration` | `reg_sequence.delay_us` |
+| `waitInterrupt` | `target` (an interrupt fact), `timeout` | |
+
+`timeout`, `interval` and `duration` are quantities (below). `onTimeout` names the step to go
+to, or `fail`. A `poll` or `waitInterrupt` without `timeout` fails the check unless the step
+carries a `todo` saying the source gives none (#105).
+
+```yaml
+steps:
+  - {id: s1, op: setBits, target: "#reg-ctrl.en", support: [...]}
+  - {id: s2, op: poll, target: "#reg-status.ready", until: {equals: "0x1"},
+     timeout: {unit: ms, max: 10}, onTimeout: fail, support: [...]}
+```
+
+The renderer writes each step's English from `op`, so text and data cannot disagree.
+
+### Quantities
+
+`$defs.quantity`: `unit` (a UCUM code) and at least one of `min`, `nom`, `typ`, `max` (D27).
+Values are decimal integers (D6 keeps floats out), so the author picks a unit small enough:
+"1 minute (+50%/−0%)" is `{unit: s, nom: 60, min: 60, max: 90}`. The schema accepts a closed
+list of UCUM codes (`s`, `ms`, `us`, `ns`, `min`, `h`, `Hz`, `kHz`, `MHz`, `GHz`, `V`, `mV`,
+`A`, `mA`, `Cel`, `%`, `By`, `bit`); the list selects codes and does not copy UCUM's tables,
+which its license forbids modifying. Checks: `min <= nom`, `nom <= max`, `typ` inside
+`[min, max]`.
+
+Quantities appear in steps, and as `data.quantity` on a fact whose whole claim is one limit
+(the IDE aggregation timer in #105).
+
+### Export: `spec.py export ipxact`
+
+Writes an IP-XACT 2022 `component` (one `memoryMap` and `addressBlock` at base 0, registers at
+their offsets) and validates it with `xmlschema` against the official XSD, vendored with its
+`LICENSE` and `NOTICE` (D26). Each exported element carries the fact id in
+`vendorExtensions`, pointing back to the YAML, whose `support` stays the authority (open
+question 4). CI exports every spec in the fixtures and the three spec repositories; a
+validation failure fails the build. `xmlschema` is pinned with hashes after a `dep-quality`
+score, and the requirements and CI changes are gate inputs, so the orchestrator lands those
+two files itself.
+
+### Units of work
+
+Each is one session and one pull request, in this order:
+
+1. Field properties, registries, enumerated values and the register-level mapping (#105 part
+   1, #103 part 1): schema, checker, basis, both renderers, `peripheral-spec` rule.
+2. Layout `bits`, `byteOrder`, `bitNumbering` (#103 part 2).
+3. Quantities and sequence operations (#105 part 2).
+4. The IP-XACT exporter and its CI check.
+
+### Open questions
+
+1. `initializedBy`: is `hardware` / `firmware` enough, or should straps and nonvolatile memory
+   be separate values?
+2. `bitNumbering` (SystemRDL `lsb0`/`msb0`) in place of DFDL `bitOrder` — confirm.
+3. When a step has `op`, is `action` forbidden (the renderer writes it) or allowed as a note?
+4. Export `support` into `vendorExtensions` as well, or only the fact id?
+
+### Decisions (2026-10-14)
+
+| # | Question | Decision | Effect |
+| --- | --- | --- | --- |
+| D23 | Sticky bits and HwInit, which IP-XACT cannot express | Two extensions, `unaffectedBy` and `initializedBy`, exported into `vendorExtensions` | explicit and checkable; the export still validates |
+| D24 | Register field vocabulary | IEEE 1685-2022 names and values, verbatim camelCase | checkable against the standard with no mapping table; departs from the format's snake_case for these keys |
+| D25 | Bit-packed layouts | Own model with DFDL's byte-order terms and IP-XACT enumerations | byte and bit order become data, not an assumption |
+| D26 | How strictly to follow IP-XACT | Names in the YAML plus an exporter validated against the official XSD in CI | the export check, not a claim, shows conformance |
+| D27 | Time limits | UCUM unit codes and IEC 61360 level names | tolerances become numbers |
+| D28 | Order of work | This design section first, approved, then the units above | later units build on approved decisions, not on a pull request |
+
 ## Validation: schema and checker
 
 ### What each layer checks

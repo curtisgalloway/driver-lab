@@ -219,4 +219,13 @@ evaluation; add other terms as the documents that use them are updated.
 | Inventory | `spec.py inventory` compares register names and offsets, and field names and masks, with C constants in listed source files at an immutable commit. It reports omitted names, mismatched values, conflicting records and unsupported expressions; it reads no prose for coverage. |
 | Premise / derivation | Evidence or an explicit assumption an inference rests on / the reasoning that connects those premises to its conclusion. |
 | Unicode NFC / case folding | A standard way to represent equivalent characters identically / comparing letters without case differences. The verifier identity comparison also collapses whitespace; it is not proof that two named readers are independent. |
+| IP-XACT | IEEE Std 1685-2022: an XML format for describing hardware blocks, including registers and fields. Format 2 uses its field property names verbatim (`access`, `modifiedWriteValue`, `readAction`, `enumeratedValues`, …) and can export to it. |
+| XSD | XML Schema Definition: the machine-readable grammar an XML file is validated against. Accellera publishes IP-XACT's under Apache-2.0. |
+| Vendor extension | IP-XACT's `vendorExtensions` slot, where a tool puts elements the standard does not define without breaking validation. Format 2's `unaffectedBy` and `initializedBy` are exported there. |
+| Reset type | A named kind of reset (power-on, hot reset, …). A field can have a different reset value per reset type, or be unaffected by one (`unaffectedBy`). |
+| UCUM | Unified Code for Units of Measure: case-sensitive unit codes such as `us`, `ms`, `min`, `Hz`, used for quantities in specs. |
+| IEC 61360 levels | `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for the levels of a specified value, used in a spec's quantities. |
+| DFDL | Data Format Description Language (Open Grid Forum): a standard for describing data formats; specs borrow its byte-order terms `bigEndian` and `littleEndian`. |
+| lsb0 / msb0 | Bit numbering where bit 0 is the least / the most significant bit (SystemRDL's terms); a layout states which one its cited document uses. |
+| Container word | In a layout, the bytes at a field's `offset` and `size`, read as one integer in the layout's byte order; `bits` select a range inside it. |
 | SHA-256 / ISO date | The digest algorithm used for file identities and fact bases / a date written `YYYY-MM-DD`, such as `2026-10-09`. A file digest identifies bytes, while a basis also fingerprints declared dependencies. |

@@ -85,7 +85,9 @@ python3 -m unittest discover -s evals/e1000/harness/tests
   - **Patch gate, after each Codex run** (a script, not a runner, user approved 2026-10-09).
     - The orchestrator applies the patch itself: one `git apply` in the milestone worktree.
     - Then it runs the main checkout's `utilities/patch-gate.py PATCH WORKTREE --refused
-      REFUSED` itself, adding `--suite NAME=COMMAND` for any other surface the patch touches.
+      REFUSED` itself, adding `--suite NAME=COMMAND` for any other surface the patch touches
+      (start Python there with `-I`, as the gate's own suites do, so a module the patch adds at
+      the worktree's top level cannot stand in for the standard library's).
       The script refuses to run from inside WORKTREE, because the patch may have changed the
       checks there. It takes the changed paths from WORKTREE itself, not from the patch text,
       and runs its own copies of the privacy and open-side checks over the tracked files and

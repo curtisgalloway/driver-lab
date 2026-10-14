@@ -182,10 +182,14 @@ guessing at an unchecked result.
     A persistent resolver cache, if one is added, takes a user-selected location and has no
     default.
   - *Two kinds of reuse.* Input reuse saves acquisition only; it grants no verdict. Verdict
-    reuse comes only from the status worklist above: keep `current` verdicts, read `stale`
-    facts and the dependencies named in `changed`, and launch the missing second reader for
-    a current critical fact. In the report, state which inputs were reused (and under which
-    identity check), which were fetched and why, separately from which verdicts were kept.
+    reuse comes only from the status worklist above: keep `current` verdicts; read `stale`
+    and `unverified` facts in full; for an `upstream-stale` fact whose previous verdict was
+    PASS, read the changes to the upstream facts named in `changed` and check that the
+    claim still follows, and give any other `upstream-stale` fact a full fresh reading; fix
+    an `unknown` fact's `reason` before any reading can count; and launch the missing second
+    reader for a current critical fact. In the report, state which inputs were reused (and
+    under which identity check), which were fetched and why, separately from which verdicts
+    were kept.
 - **Compare the whole claim.** Check values, units, address spaces, ordering, scope and
   conditions. `comment: true` attributes a comment, not established behavior. Emulated
   support is judged against the cited model/version/run observations, not model source or

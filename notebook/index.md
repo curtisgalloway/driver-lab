@@ -5,9 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Active bug-fix chapter: [Issue 79](ISSUE-79.md), indexed through 2026-10-14.
-Active bug-fix chapter: [Issue 107](ISSUE-107.md), indexed through 2026-10-13.
-This open-method chapter is outside the frozen archive described below.
+Active bug-fix chapters: [Issue 79](ISSUE-79.md), [Issue 95](ISSUE-95.md) and
+[Issue 78](ISSUE-78.md), indexed through 2026-10-14; [Issue 107](ISSUE-107.md), indexed
+through 2026-10-13.
+These open-method chapters are outside the frozen archive described below.
 
 Updated: 2026-10-10T11:32:28-07:00
 
@@ -520,5 +521,6 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
   but not test the crediting, which goes to HF-1.
 
-Active bug-fix chapter: [Issue 96](ISSUE-96.md), indexed through 2026-10-13.
+Active bug-fix chapter: [Issue 95](ISSUE-95.md), indexed through 2026-10-14.
+Earlier bug-fix chapters: [Issue 96](ISSUE-96.md), [Issue 107](ISSUE-107.md).
 This open-method chapter is outside the frozen archive described above.

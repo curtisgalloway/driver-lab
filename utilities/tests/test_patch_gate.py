@@ -330,6 +330,40 @@ open(idx, "wb").write(data + hashlib.sha1(data).digest())
     time.sleep(1.5)
     self.assertFalse(os.path.exists(marker))
 
+  def plant(self, module):
+    """A top-level MODULE.py in the worktree that leaves a marker outside it if imported."""
+    marker = os.path.join(self.tmp, module + ".ran")
+    self.put(module + ".py", f"open({marker!r}, 'w').close()\n")
+    return marker
+
+  def test_planted_venv_module_cannot_replace_the_venv_build(self):
+    # Issue 78: `python -m venv` run from WORKTREE imported a patch's own venv.py, so a stub
+    # could skip the --require-hashes install and the gate still passed.
+    marker = self.plant("venv")
+    real_run, commands = self.mod.run, []
+    def record(command, cwd):
+      commands.append(command)
+      return real_run(command, cwd) if "venv" in command else (0, "")
+    self.mod.run = record
+    code, output = self.mod.build_venv(self.tree)
+    self.assertEqual(code, 0, output)
+    self.assertFalse(os.path.exists(marker), "the planted venv.py ran")
+    self.assertTrue(os.path.exists(os.path.join(self.tree, ".venv-sf2", "pyvenv.cfg")))
+    self.assertEqual(commands[0][1:4], ["-I", "-m", "venv"])
+
+  def test_planted_unittest_module_cannot_replace_a_default_suite(self):
+    marker = self.plant("unittest")
+    self.put("utilities/tests/test_ok.py",
+             "import unittest\nclass T(unittest.TestCase):\n  def test_ok(self):\n    pass\n")
+    suites = dict(self.mod.default_suites())
+    for name, command in suites.items():
+      with self.subTest(suite=name):
+        self.assertEqual(command[1:3], ["-I", "-m"])
+    code, output = self.mod.run(suites["utilities"], self.tree)
+    self.assertEqual(code, 0, output)
+    self.assertIn("Ran 1 test", output)
+    self.assertFalse(os.path.exists(marker), "the planted unittest.py ran")
+
   def test_other_paths_are_not_gate_inputs(self):
     self.assertEqual(self.mod.touched_gate_inputs(["utilities/run-store.py", "a.md"]), [])
 

@@ -71,6 +71,8 @@ or permissions; follow the caller's authorized scope.
    `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md`. The selector does not recursively render parts. Read those
    views and consult originating YAML for exact fields. Track all contributing files and layers.
+   Give `--source-commit` only for roots that contribute to the view
+   ([contract example](../spec-format/SKILL.md#source-commits-name-rendered-roots)).
 
 The Markdown render, the HTML viewer (`render --format html`) and resolve/show/drift are all
 on main; read the Markdown view, or the viewer for badges. An absent command is an unavailable precondition, never a completed

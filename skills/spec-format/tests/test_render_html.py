@@ -7,7 +7,9 @@ import copy
 from html.parser import HTMLParser
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -22,6 +24,8 @@ sys.path.insert(0, str(HERE.parent / 'scripts'))
 sys.path.insert(0, str(HERE.parent / 'ci'))
 import publish
 import render_html
+import render_md
+import speccheck
 import specmd
 import spec
 from test_check import chip, fact, marker, inference, repo
@@ -732,6 +736,59 @@ class Publishing(Fixture):
         self.assertIn('publish.py build', text)
         self.assertIn('publish.py verify', text)
         self.assertIn("'pr' || 'main'", text)
+
+
+class SourceCommitRoots(unittest.TestCase):
+    """Issue 95: --source-commit names rendered roots; both renderers reject identically."""
+
+    A, B = 'a' * 40, 'b' * 40
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.work = Path(temp.name).resolve() / 'w'
+        shutil.copytree(HERE / 'fixtures/worked-example', self.work)
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(self.work)
+
+    def render(self, fmt, *flags):
+        out, err = io.StringIO(), io.StringIO()
+        argv = ['render', 'docs', '--context-root', 'permissive', '--spec', 'bcm2711',
+                '--format', fmt, '--json', *flags]
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = spec.main(argv)
+        return code, json.loads(out.getvalue())
+
+    def test_noncontributing_input_root_lists_given_rendered_roots(self):
+        flags = ('--source-commit', 'docs=' + self.A, '--source-commit', 'permissive=' + self.B)
+        results = {}
+        for fmt, view in (('md', 'markdown'), ('html', 'html')):
+            code, result = self.render(fmt, *flags)
+            self.assertEqual((code, result['error'], result[view]), (2, 'usage', None))
+            results[fmt] = result['findings']
+        self.assertEqual(results['md'], results['html'])
+        message = results['md'][0]['message']
+        self.assertEqual(message, '--source-commit ROOT must name a rendered root directory '
+                                  '(rendered: docs)')
+        self.assertNotIn(str(self.work), message)
+        self.assertNotIn('permissive', message)
+
+    def test_contributing_root_only_is_accepted(self):
+        for fmt, view in (('md', 'markdown'), ('html', 'html')):
+            code, result = self.render(fmt, '--source-commit', 'docs=' + self.A)
+            self.assertEqual(code, 0)
+            self.assertIn(self.A, result[view])
+
+    def test_renderers_share_duplicate_and_hex_messages(self):
+        checker = checked(Path('docs'), context=[Path('permissive')])
+        cases = ((['docs=' + self.A, 'docs=' + self.B], '--source-commit given twice for a root'),
+                 (['docs=' + 'A' * 40], 'commit must be 40 lowercase hex characters'),
+                 (['missing=' + self.A], r'rendered root directory \(rendered: docs\)$'))
+        for values, message in cases:
+            for renderer in (render_md, render_html):
+                with self.subTest(values=values, renderer=renderer.__name__):
+                    with self.assertRaisesRegex(speccheck.UsageError, message):
+                        renderer.render(checker, spec_id='bcm2711', source_commit=values)
 
 
 if __name__ == '__main__':

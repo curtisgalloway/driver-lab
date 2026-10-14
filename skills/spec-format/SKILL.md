@@ -357,7 +357,8 @@ Without the flag there are no heading requests. Wiki content is current, not imm
 `status` prints summaries and freshness even on error. `render --spec` selects one id, not
 its composed parts automatically: render every id needed for the question. `--merged` includes
 context bases/overlays of selected ids; `--with-status` adds verdicts. Supply one
-`--source-commit ROOT=SHA` per rendered root directory and `--tool-commit SHA` for the tool
+`--source-commit ROOT=SHA` per rendered root directory, not per input root
+([example](#source-commits-name-rendered-roots)), and `--tool-commit SHA` for the tool
 (40 lowercase hex); without them commits are explicitly unavailable and YAML hashes identify
 inputs. A bare source SHA works with one root.
 
@@ -379,3 +380,26 @@ may remain), 1 invalid/check failure, 2 usage, 3 missing precondition/pinned dep
 internal tool error. Validity does not prove a claim: verification re-reads evidence using
 [spec-verifier](../spec-verifier/SKILL.md).
 
+### Source commits name rendered roots
+
+A root is rendered when it contributes files to the selected view: a checked root that holds
+a selected spec (with `--spec`, only roots holding that id), and a context root only under
+`--merged` when it holds files for a selected id. Supply
+`--source-commit` only for those roots. Any other ROOT, including an input root that
+contributes nothing, is a usage error (exit 2) that lists the rendered roots as given; it is
+never ignored, so a typo cannot pass. Markdown and HTML apply the same rule. (The publishing
+template filters its commits to each page's roots; the CLI does not.)
+
+Two input roots, one contributing root (the roots of `tests/fixtures/worked-example`):
+`permissive` is a context root and the view is not merged, so only `docs` is rendered.
+
+```text
+$ spec.py render docs --context-root permissive --spec bcm2711 --format md \
+    --source-commit docs=<40-hex> --source-commit permissive=<40-hex>
+usage error: --source-commit ROOT must name a rendered root directory (rendered: docs)
+$ spec.py render docs --context-root permissive --spec bcm2711 --format md \
+    --source-commit docs=<40-hex>
+```
+
+The second invocation succeeds with both roots still in the input set. Under `--merged`, a
+context root that holds files for the selected id is rendered and takes its own commit.

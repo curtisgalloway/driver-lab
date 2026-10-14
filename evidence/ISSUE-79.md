@@ -40,10 +40,10 @@ second:
 | A deletion is not flagged | `test_deleted_file_is_not_unscannable` |
 | An ignored new file fails; a tracked file matching an ignore rule does not | `test_patch_path_hidden_by_ignore_rules_fails` |
 | An unparsable patch fails | `test_patch_git_cannot_parse_fails` |
-| The tests fail without the fix | Reverting `patch-gate.py` alone: 15 failures of 31; the private-index and tab parsing changes each fail their own test when undone |
+| The tests fail without the fix | Reverting `patch-gate.py` alone: 15 failures of 31 (before merging #78's two tests); the private-index and tab parsing changes each fail their own test when undone |
 | No false positive end to end | Gate with default suites on a fresh clone, once with a new-file patch and once with a tracked-file patch: digest unchanged, spec-format 673 tests OK |
 
-The gate's 31 tests pass. The first review round blocked on the merge state and the tree
+The gate's 33 tests pass (31 here plus #78's two). The first review round blocked on the merge state and the tree
 cache; hashing a `write-tree` of a copy of the index was tried for the cache and missed it,
 because the root's cached tree stays honest and only a later `git add` exposes the forged
 subdirectory. The raw index is hashed instead. The second round found that the gate's own

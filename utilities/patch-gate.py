@@ -36,8 +36,9 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
     reports as changed and how it diffs it. A changed path holding a control character fails;
   - the after-suite digest also covers HEAD and its branch, the raw index, the git hooks,
     config and info/ files, and any merge, cherry-pick, revert or rebase state, so that a
-    suite's staging, committing, hooks or pending merges change the digest. A suite that
-    runs `git status` or `git add` in WORKTREE refreshes the index and fails the gate too;
+    suite's staging, committing, hooks or pending merges change the digest. The gate's own
+    diffs read a copy of the index, so only a suite can change it; one that runs `git status`
+    or `git add` in WORKTREE refreshes the index and fails the gate too;
   - a changed or new path that is a symlink, a directory, not valid UTF-8, or has a suffix the
     scans skip fails: the scans would pass over it, while git may still commit it as text;
   - a path the patch adds or changes that the worktree's ignore rules hide (so the untracked
@@ -46,7 +47,7 @@ Limits. A process that leaves its group (a second setsid) can still outlive the 
 orchestrator should recheck the worktree just before committing. The hooks and config are
 shared by every worktree of the checkout, so another session changing them during a run (a
 `git worktree add`, a `push -u`) fails that run. State outside the repository (global git
-config, the home directory) is not covered; the gate is not a sandbox.
+config, the home directory) is not covered.
 This gate is a check on the patch, not a sandbox: Codex's own containment is codex-implement.
 The test suites necessarily run the patched code; whether its tests still mean anything is a
 review question, not one this gate can answer. Every interpreter the gate starts runs with

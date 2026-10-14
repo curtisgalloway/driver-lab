@@ -227,5 +227,6 @@ evaluation; add other terms as the documents that use them are updated.
 | IEC 61360 levels | `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for the levels of a specified value, used in a spec's quantities. |
 | DFDL | Data Format Description Language (Open Grid Forum): a standard for describing data formats; specs borrow its byte-order terms `bigEndian` and `littleEndian`. |
 | lsb0 / msb0 | Bit numbering where bit 0 is the least / the most significant bit (SystemRDL's terms); a layout states which one its cited document uses. |
+| Register source / adapter | A tool or file that already holds a block's registers (an IP-XACT file, an SVD, a register database), pinned at a revision in `resources.registerSources` / the code that turns a reference into it (`registerRef`) into a register record. Specs reference a register source instead of copying it. |
 | Container word | In a layout, the bytes at a field's `offset` and `size`, read as one integer in the layout's byte order; `bits` select a range inside it. |
 | SHA-256 / ISO date | The digest algorithm used for file identities and fact bases / a date written `YYYY-MM-DD`, such as `2026-10-09`. A file digest identifies bytes, while a basis also fingerprints declared dependencies. |

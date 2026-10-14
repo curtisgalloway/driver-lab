@@ -878,7 +878,7 @@ copies its records into the spec unchanged, ids included.
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
 Status: **proposed, awaiting the user's approval.** The choices in the table at the end
-(D23–D28) were made by the user on 2026-10-14; this section turns them into a design. Nothing
+(D23–D30) were made by the user on 2026-10-14; this section turns them into a design. Nothing
 here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
 layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
@@ -904,6 +904,8 @@ URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md) (a research ag
   (`bigEndian`, `littleEndian`) this section borrows.
 - **lsb0 / msb0** — SystemRDL's names for bit numbering: bit 0 is the least / the most
   significant bit.
+- **Register source / adapter** — a tool or file that already holds a block's registers,
+  pinned at a revision / the code that turns a spec's reference into it into a register record.
 
 ### Why
 
@@ -1012,6 +1014,55 @@ whose source gives a table of values or bit assignments gets `enumeratedValues` 
 fields), or a `todo` saying the table was left out. Naming it in `meaning` alone is a defect the
 verifier reports.
 
+### Register sources: reference, don't copy
+
+Where a tool already holds a block's registers (an IP-XACT file, a vendor SVD, a register
+database), a spec points into it instead of copying it (D29), the way a `src` citation names a
+pinned repository and lines instead of pasting code. The spec keeps only what the tool lacks:
+citations into the documentation, verdicts, `requirement` labels, `todo`s, sequences that
+point at fields, and conflicts where the document and the tool disagree.
+
+- **Resource.** `resources.registerSources`: `{name, kind, revision}`. `kind` names the
+  adapter; `revision` is immutable (a commit, a digest, a database snapshot id), as a repos pin
+  is; a branch name or "latest" is refused.
+- **Reference.** A register fact carries `data.registerRef: {source, path}` in place of
+  `data.register`. A field under `fields` carries `ref: <field name>` in place of `name` and
+  `bits`, plus only what the spec adds. A property the spec states and the source also gives
+  must agree; a disagreement is a `conflicts` entry (D18), never a silent override.
+- **Adapter.** Resolves `(source, path)` to a register record in the model above, and gives a
+  canonical digest of that record. driver-lab ships `inline` (today's `data.register`, for
+  specs with no tool behind them) and `ipxact`. Any other adapter, including one for an
+  internal tool, comes from the root that needs it, named in its marker, as the
+  `source-observed` schema fragment is (D15); driver-lab never names such a tool or its format.
+- **Provenance** (D30). A new support class, `register-source` (`{source, path}`), is evidence
+  for the revision named, as `rtl` is. It may stand alone in `support`. The verifier's job
+  for such a fact is to compare the cited documentation with the tool's record, and to record
+  a `conflicts` entry where they disagree.
+- **Freshness.** A fact's basis covers the resolved record, not the source's revision, so a new
+  revision stales only facts whose referenced registers changed.
+- **Unreachable sources.** Where an adapter is missing or the source cannot be reached (public
+  CI, a contributor without access), the reference is reported unresolved, and every check
+  that needs the record (widths, value fits, sequence targets) says it was skipped. That is a
+  warning by default and an error under the root marker's `requireRegisterSources: true`.
+  Specs that reference a private source live in a private root.
+
+```yaml
+resources:
+  registerSources:
+    - {name: soc-regs, kind: ipxact, revision: 3f2a…}   # full digest in a real spec
+facts:
+  - id: reg-status
+    section: registers
+    data:
+      registerRef: {source: soc-regs, path: uart0.STATUS}
+      fields:
+        - id: err
+          ref: ERR
+          requirement: hw-required
+          support: [{class: databook, doc: uart-trm, at: [{page: 12, table: "3-4"}]}]
+    support: [{class: register-source, source: soc-regs, path: uart0.STATUS}]
+```
+
 ### Layouts: bit-packed fields and byte order
 
 A layout field keeps `offset` and `size` in bytes; together they are the **container word**,
@@ -1092,6 +1143,9 @@ Each is one session and one pull request, in this order:
 2. Layout `bits`, `byteOrder`, `bitNumbering` (#103 part 2).
 3. Quantities and sequence operations (#105 part 2).
 4. The IP-XACT exporter and its CI check.
+5. Register sources: `registerSources`, `registerRef`, the `register-source` class, the
+   `inline` and `ipxact` adapters (the latter reusing unit 4's XSD and parser), and the
+   marker hook for adapters supplied by a root.
 
 ### Open questions
 
@@ -1111,6 +1165,8 @@ Each is one session and one pull request, in this order:
 | D26 | How strictly to follow IP-XACT | Names in the YAML plus an exporter validated against the official XSD in CI | the export check, not a claim, shows conformance |
 | D27 | Time limits | UCUM unit codes and IEC 61360 level names | tolerances become numbers |
 | D28 | Order of work | This design section first, approved, then the units above | later units build on approved decisions, not on a pull request |
+| D29 | Specs where a register tool already exists | Reference into the tool at a pinned revision through an adapter; the spec holds only what the tool lacks | no duplicated register data; a private tool's adapter stays out of driver-lab |
+| D30 | What makes a tool's value verified | The tool is evidence for its revision (class `register-source`); the verifier cross-checks the documentation against it and records conflicts | catches errors in either the documentation or the tool without re-typing values |
 
 ## Validation: schema and checker
 

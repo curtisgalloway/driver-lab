@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
+Active bug-fix chapter: [Issue 79](ISSUE-79.md), indexed through 2026-10-14.
 Active bug-fix chapter: [Issue 107](ISSUE-107.md), indexed through 2026-10-13.
 This open-method chapter is outside the frozen archive described below.
 

@@ -82,6 +82,15 @@ guessing at an unchecked result.
    reference, citation and license errors before evidence reading; report them to the
    author, never edit the spec here. Repair a bad record that makes a root untrusted first.
 
+   For document `heading:` locators, optionally run the same check with
+   `--resolve-headings` when network access is available. It reuses the explorer's
+   resolver to check complete heading text against GitHub's rendered heading anchors,
+   fetching each full-commit blob or wiki page once. Unresolved headings are warnings
+   at their citation locations. A confirmed nonexistent heading is a citation-precision
+   FAIL; a fetch failure or unsupported host does not prove the heading is missing.
+   Follow up those warnings by reading the cited document. Wiki content is current,
+   not pinned. PDF page locators remain outside this heading check.
+
 2. **Select the delta from status.** JSON `specs[].facts[]` supplies `key`, `ref`, `kind`,
    `status`, `verdict`, `carried`, `basis`, `recorded`, `upstream`, `changed`, `reason` and
    `second_reader`. Use `key` as the verdict key and full `ref` to identify a fact across

@@ -346,6 +346,14 @@ references, license/trust and records. `--context-root` supplies dependencies wi
 their freshness policy; it cannot overlap checked roots. `--public-skill` allows a named public
 tool skill; stub options verify thin expert skills' ids.
 
+`check --resolve-headings` is an opt-in network check for document `heading:` locators.
+It reuses the explorer's heading-anchor resolver, fetching each GitHub blob pinned to
+a full commit or wiki page once. Missing anchors, fetch failures and unsupported URLs
+warn at each locator; they do not change the exit status. Complete heading text must
+match (whitespace and case are normalized). Unpinned blobs, other hosts, context roots
+and PDF page locators are not fetched. Structural errors prevent heading requests.
+Without the flag there are no heading requests. Wiki content is current, not immutable.
+
 `status` prints summaries and freshness even on error. `render --spec` selects one id, not
 its composed parts automatically: render every id needed for the question. `--merged` includes
 context bases/overlays of selected ids; `--with-status` adds verdicts. Supply one

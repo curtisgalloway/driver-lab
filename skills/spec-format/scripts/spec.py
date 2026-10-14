@@ -100,6 +100,17 @@ cites. `--public-skill` names a skill a public root's tools may name in `via:`. 
 "findings": [{"path", "line", "column", "level", "message"}]}`, with `"error"` as for `validate`
 when no check ran; `verification` counts the checked roots' facts by freshness.
 
+`check --resolve-headings` optionally fetches each cited full-commit GitHub blob or
+GitHub wiki page once, using the explorer's heading-anchor resolver. It warns at each
+`heading:` locator that lacks an anchor for that complete heading text. A missing
+heading, an unavailable page and an unsupported URL have distinct warning messages;
+warnings do not change the exit status. Non-GitHub URLs and unpinned GitHub blobs are
+not fetched. Context roots and PDF page locators are excluded. Requests run only after
+the structural check succeeds; without the flag, checks make no heading requests.
+The existing explorer fetch limit, time/response limits and optional `GITHUB_TOKEN`
+or `GH_TOKEN` authentication apply. Wiki pages are checked at their current content;
+they are not immutable Git pins.
+
 Verification records: `<root>/resources/<name>.verify.yaml` belongs to `<name>.spec.yaml` (any
 directory of the root); its `spec` and `spec_file` name that file, every verdict key names one of
 its facts (instances, variants), `summary` counts the verdicts, a GAP verdict belongs to a gap
@@ -735,6 +746,10 @@ def read_root(root: Path, schemas, findings: list[Finding]) -> dict | None:
 def cmd_check(args) -> tuple[int, dict]:
     checker = _run_check(args, stubs=args.stub, stubs_from=args.stubs_from,
                          require_verified=args.require_verified)
+    if args.resolve_headings:
+        import headingcheck
+
+        headingcheck.check(checker)
     ordered = _ordered(checker.findings)
     errors = sum(1 for f in ordered if f.level == "error")
     warnings = len(ordered) - errors
@@ -924,6 +939,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="stale, unverified and unknown verdicts are errors; upstream-stale too "
                         "under pr, a warning under main (D19)")
     c.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    c.add_argument("--resolve-headings", action="store_true",
+                   help="fetch cited GitHub pages and warn about unresolved heading locators")
     st = sub.add_parser("status", help="each verdict's freshness, per spec file",
                         allow_abbrev=False)
     st.add_argument("roots", nargs="+", type=Path, help="spec root directories")

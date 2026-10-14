@@ -518,3 +518,6 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   premises; the first requirement change since revision 6, which the candidate does not yet
   follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
   but not test the crediting, which goes to HF-1.
+
+Active bug-fix chapter: [Issue 96](ISSUE-96.md), indexed through 2026-10-13.
+This open-method chapter is outside the frozen archive described above.

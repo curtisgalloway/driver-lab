@@ -222,7 +222,7 @@ def findings(text: str, *, lint=False) -> list[TextFinding]:
                 visible = _inline_text(token.children)
                 for match in V1_TAG.finditer(visible):
                     add(line + visible.count("\n", 0, match.start()), "v1-tag",
-                        f"format 1 tag {match.group(0)!r} in author text", "warning")
+                        f"retired provenance tag {match.group(0)!r} in author text", "warning")
     return out
 
 

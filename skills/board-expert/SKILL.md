@@ -154,7 +154,7 @@ Include mechanism or tables only when useful. Then a short **Spec provenance** b
 - vendor/local origins and any citations not publicly checkable, respecting classification;
 - per-file record summary and per-fact freshness from
   `spec.py status <root>... --context-root <dependency root>... --json`, including missing
-  records, stale/upstream-stale/unknown/unverified facts, carried verdicts and missing second
+  records, stale/upstream-stale/unknown/unverified facts and missing second
   readers. Do not calculate freshness from `spec_sha256` or load the record body yourself.
 
 The status command checks roots and may return errors with its report: retain those errors.

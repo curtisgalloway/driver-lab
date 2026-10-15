@@ -133,7 +133,7 @@
 
   function verdictTag(f) {
     if (f.gap && !isProblem(f)) return el('span', { class: 'tag t-gap' }, 'gap');
-    if (f.verdict === 'PASS' && !isProblem(f)) return el('span', { class: 'tag t-pass' }, f.carried ? 'verified · carried' : 'verified');
+    if (f.verdict === 'PASS' && !isProblem(f)) return el('span', { class: 'tag t-pass' }, 'verified');
     if (f.contested) return el('span', { class: 'tag t-other' }, 'contested');
     if (f.second_reader_missing) return el('span', { class: 'tag t-other' }, 'second reader missing');
     if (childProblem(f)) return el('span', { class: 'tag t-other' }, 'entry needs attention');

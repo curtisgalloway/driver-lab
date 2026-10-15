@@ -64,7 +64,6 @@ MUTATIONS = [
     ('gap-only-without-support', 'scripts/render_html.py', "if not speccheck.has_support(data):", 'if True:'),
     ('verdict-badge', 'scripts/render_html.py', "out.append(badge(VERDICTS[row['verdict']], text))", 'pass'),
     ('freshness-badge', 'scripts/render_html.py', "out.append(badge(FRESHNESS[row['status']], row['status']))", 'pass'),
-    ('carried-status', 'scripts/render_html.py', "(' · carried' if row['carried'] else '')", "''"),
     ('no-partial-view', 'scripts/render_html.py', "'html': None, 'findings'", "'html': '<html>partial</html>', 'findings'"),
     ('source-inventory', 'ci/publish.py', 'for file in checker.files:', 'for file in checker.files[:1]:'),
     ('merged-pages', 'ci/publish.py', "for sid in overlays:", 'for sid in []:'),

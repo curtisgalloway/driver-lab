@@ -96,7 +96,7 @@ facts:
           - {section: "6.5.1–6.5.2", page: "92"}
           - {section: "11.5", pages: ["146", "147"]}
 
-  # Split from v1 Quick-facts/2 "Peripheral mode selection" (D3): the read part ...
+  # Split from the Markdown spec's Quick-facts/2 "Peripheral mode selection" (D3): the read part ...
   - id: peripheral-mode-selection
     section: quick-facts
     title: Peripheral mode selection

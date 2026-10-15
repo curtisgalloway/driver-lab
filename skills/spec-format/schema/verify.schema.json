@@ -117,32 +117,12 @@
             "rule": {"$ref": "spec.schema.json#/$defs/text"}
           },
           "additionalProperties": false
-        },
-        "carried_from": {
-          "type": "object",
-          "required": ["repo", "commit", "path", "key", "format"],
-          "properties": {
-            "repo": {"$ref": "spec.schema.json#/$defs/name"},
-            "commit": {"$ref": "spec.schema.json#/$defs/commit"},
-            "path": {"$ref": "spec.schema.json#/$defs/path"},
-            "key": {"$ref": "spec.schema.json#/$defs/line"},
-            "format": {"enum": [1, 2]}
-          },
-          "additionalProperties": false
         }
       },
       "allOf": [
         {
-          "if": {"required": ["carried_from"],
-                 "properties": {"carried_from": {"properties": {"format": {"const": 1}}}}},
-          "then": {
-            "not": {"anyOf": [{"required": ["contrary_evidence"]}, {"required": ["citation_precision"]}]},
-            "$comment": "message: a verdict carried from a format 1 record leaves out contrary_evidence and citation_precision, which that record did not state"
-          },
-          "else": {
-            "required": ["contrary_evidence", "citation_precision"],
-            "$comment": "message: a verdict reached under format 2, or carried from a format 2 record, states contrary_evidence and citation_precision"
-          }
+          "required": ["contrary_evidence", "citation_precision"],
+          "$comment": "message: a verdict states contrary_evidence and citation_precision"
         },
         {
           "if": {"required": ["verdict"], "properties": {"verdict": {"const": "FAIL"}}},

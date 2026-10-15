@@ -19,7 +19,7 @@ resources:
       fetch_via: git
       note: "Linux v7.2. bcm283x.dtsi carries no SPDX line and falls under the tree's GPL-2.0 COPYING."
 facts:
-  # Split from v1 Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
+  # Split from the Markdown spec's Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
   - id: address-translation-in-the-tree
     section: quick-facts
     title: Address translation in the tree

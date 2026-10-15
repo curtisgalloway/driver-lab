@@ -75,7 +75,7 @@ when deleted. Board-spec kinds require a plain title. Evidence lives only in `su
 a tag or citation typed into `claim` has no evidentiary meaning.
 
 Read classes can support a claim jointly. A conclusion none of the sources states is a separate
-`inference` fact, even when a format 1 bullet mixed the read claim and conclusion. A gap has no
+`inference` fact. A gap has no
 `support` key and carries `todo`, never `support: []`. `todo.check` is `hardware`, `document`
 or `source`; `text` states the question and check; optional `method` describes how to observe
 it. The method must observe the thing (an EL1-only probe cannot read an EL3-only register).
@@ -238,9 +238,8 @@ are an error. The verifier, not board-expert, writes the body.
 Record shape comes from the verify schema. `verdicts` keys are bare fact/instance/variant ids
 of that file. All five `summary` counts (`pass`, `fail`, `unverifiable`, `gap`, `adjudicate`)
 must match. GAP belongs to gap facts only. FAIL carries `correction`; ADJUDICATE carries
-`readings` until settled to PASS/FAIL, retaining `adjudication` and readings. Fresh verdicts
-state `contrary_evidence` and `citation_precision`; a format 1 carry omits them and records
-`carried_from`. A carry is not a fresh source reading.
+`readings` until settled to PASS/FAIL, retaining `adjudication` and readings. Every verdict
+states `contrary_evidence` and `citation_precision`.
 
 Use `spec.py status --json` to get each current `basis` and `upstream` map to write a verdict;
 omit `upstream` when empty. `canonical: fact-v1` identifies the hash contract: fact except
@@ -303,7 +302,7 @@ characters (CRLF allowed). Optional lists are absent or nonempty; required empty
 SF2-4's CommonMark check rejects raw HTML, disallowed links/images, reference definitions,
 footnotes, nesting deeper than 16, headings and unclosed fences in author fields, including
 record notes. HTML-like text in code is allowed. Link schemes are HTTP, HTTPS, mailto and
-in-page anchors. Format 1 tag spellings in prose are warnings, never evidence. Rendering
+in-page anchors. Retired provenance-tag spellings in prose are warnings, never evidence. Rendering
 repeats containment checks and emits no partial view on errors. The HTML viewer renders
 images as links and separates generated badges from author containers (SF2-5). Its fixed
 token renderer emits no author classes, ids, titles or fence-language attributes; only checked

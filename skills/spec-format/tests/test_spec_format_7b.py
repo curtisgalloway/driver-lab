@@ -571,8 +571,6 @@ class Generated(ReviewFixture):
                          'Record note', 'Record <strong>child</strong> note.', 'badge status-current'):
                 self.assertIn(text, html)
             v['readers'] = [{'verifier': 'reader B', 'verdict': 'PASS'}]
-            v['carried_from'] = {'repo': 'prior', 'commit': 'a' * 40, 'path': 'widget.verify.yaml',
-                                 'key': key, 'format': 2}
             path.write_text(dump(record))
             checker = self.checker()
             self.assertFalse(any(f.level == 'error' for f in checker.findings), checker.findings)
@@ -580,10 +578,9 @@ class Generated(ReviewFixture):
             status = {e['file']: {r['key']: r for r in e['rows']} for e in checker.status}
             html = render_html.payload(checker, file.records[fact_id], status, True)
             self.assertIn('Reader: reader B · PASS', html)
-            self.assertIn('carried from format 2', html)
             self.assertNotIn('second reader missing', html)
             plain = render_html.payload(checker, file.records[fact_id], status, False)
-            for text in ('PASS 2026-10-09', 'reader B', 'carried from', 'Record note'):
+            for text in ('PASS 2026-10-09', 'reader B', 'Record note'):
                 self.assertNotIn(text, plain)
 
     def test_child_record_names_are_literal_text(self):

@@ -32,7 +32,7 @@ MUTATIONS = [
     ("nested-inline", "specmd", 'if child.children:\n                inline', 'if False:\n                inline'),
     ("inline-source-position", "specmd", 'token.meta.setdefault("field_line", state.src.count("\\n", 0, start))', 'token.meta.setdefault("field_line", 0)'),
     ("lint", "specmd", 'if lint:\n                visible', 'if False:\n                visible'),
-    ("lint-warning", "specmd", 'f"format 1 tag {match.group(0)!r} in author text", "warning"', 'f"format 1 tag {match.group(0)!r} in author text", "error"'),
+    ("lint-warning", "specmd", 'f"retired provenance tag {match.group(0)!r} in author text", "warning"', 'f"retired provenance tag {match.group(0)!r} in author text", "error"'),
     ("notice-exemption", "textcheck", 'if key == "notices" and not path:', 'if False:'),
     ("select-claims", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("title", "note", "orientation", "milestones", "notes")'),
     ("select-titles", "textcheck", '("claim", "title", "note", "orientation", "milestones", "notes", "states")', '("claim", "note", "orientation", "milestones", "notes")'),

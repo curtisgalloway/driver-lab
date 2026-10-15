@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# A chip that cites a document only: fits every root (the spec format rewrite of the v1 widgetchip.spec.md).
+# A chip that cites a document only: fits every root.
 format: 2
 kind: chip
 id: widgetchip

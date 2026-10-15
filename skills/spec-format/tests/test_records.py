@@ -5,7 +5,7 @@
 `spec.py check --require-verified pr|main`).
 
 Fixtures:
-- fixtures/records/verify_root: board-expert's format 1 verify_root cases in the spec format (current,
+- fixtures/records/verify_root: board-expert's earlier verify_root cases in the spec format (current,
   stale, current FAIL, stale FAIL, malformed, none), with basis hashes the generator in run
   sf2-3-20261008-01 computed;
 - fixtures/worked-example: the design's slices (its record carries zeros for `<64 hex>`).
@@ -632,45 +632,26 @@ class RecordChecks(Roots):
             b["widgetchip@r#a"], "ADJUDICATE", readers=[{"verifier": "x", "verdict": "FAIL"}])})
         self.assertEqual(errors(result, "disagrees"), [])
 
-    def test_carried_verdicts(self):
-        carried1 = {"repo": "widget-specs", "commit": COMMIT, "path": "specs/resources/w.verify.md",
-                    "key": "Quick-facts/1", "format": 1}
-        carried2 = dict(carried1, path="specs/resources/w.verify.yaml", key="a", format=2)
-
-        def bare(basis, **extra):
-            v = verdict(basis, **extra)
-            del v["contrary_evidence"], v["citation_precision"]
+    def test_a_verdict_states_both_fields(self):
+        def without(basis, *fields):
+            v = verdict(basis)
+            for field in fields:
+                del v[field]
             return v
 
-        good = {
-            "from format 1, without the two fields": lambda b: {
-                "a": bare(b["widgetchip@r#a"], carried_from=carried1)},
-            "from format 2, with them": lambda b: {
-                "a": verdict(b["widgetchip@r#a"], carried_from=carried2)},
-        }
-        for name, make in good.items():
-            with self.subTest(name):
-                r, (code, result) = self.one(make)
-                self.assertEqual(errors(result), [], result)
-                st = rows(status(r)[1])["widgetchip@r#a"]
-                self.assertEqual((st["status"], st["carried"]), ("current", True))
         bad = {
-            "from format 1, with them": (lambda b: {
-                "a": verdict(b["widgetchip@r#a"], carried_from=carried1)},
-                "carried from a format 1 record leaves out"),
-            "from format 2, without them": (lambda b: {
-                "a": bare(b["widgetchip@r#a"], carried_from=carried2)},
-                "or carried from a format 2 record, states"),
-            "not carried, without them": (lambda b: {"a": bare(b["widgetchip@r#a"])},
-                                          "reached under format 2"),
-            "from format 3": (lambda b: {
-                "a": bare(b["widgetchip@r#a"], carried_from=dict(carried1, format=3))},
-                "carried_from.format"),
+            "without either": lambda b: {"a": without(
+                b["widgetchip@r#a"], "contrary_evidence", "citation_precision")},
+            "without contrary_evidence": lambda b: {"a": without(
+                b["widgetchip@r#a"], "contrary_evidence")},
+            "without citation_precision": lambda b: {"a": without(
+                b["widgetchip@r#a"], "citation_precision")},
         }
-        for name, (make, want) in bad.items():
+        for name, make in bad.items():
             with self.subTest(name):
                 r, (code, result) = self.one(make)
                 self.assertEqual(code, 1)
+                want = "a verdict states contrary_evidence and citation_precision"
                 self.assertTrue(any(want in f["message"] for f in need(errors(result))),
                                 result["findings"])
 
@@ -1820,8 +1801,8 @@ class StatusCommand(Roots):
         for s in result["specs"]:
             self.assertEqual(set(s), {"path", "root", "spec", "record", "state", "facts"})
             for r in s["facts"]:
-                self.assertEqual(set(r), {"key", "ref", "kind", "status", "verdict", "carried",
-                                          "basis", "recorded", "upstream", "changed", "reason",
+                self.assertEqual(set(r), {"key", "ref", "kind", "status", "verdict", "basis",
+                                          "recorded", "upstream", "changed", "reason",
                                           "second_reader"})
                 self.assertIn(r["status"], records.STATUSES)
 
@@ -1873,13 +1854,13 @@ class WorkedExample(Roots):
         self.fill(gpl, docs)
         code, result = status(gpl, "--context-root", docs)
         st = rows(result)
-        got = {k.split("#")[1]: (r["status"], r["carried"], r["second_reader"])
+        got = {k.split("#")[1]: (r["status"], r["second_reader"])
                for k, r in st.items()}
         self.assertEqual(got, {
-            "gic-node": ("current", True, "missing"),
-            "reserved-stub-page": ("current", True, "not-needed"),
-            "address-translation-in-the-tree": ("unverified", False, "missing"),
-            "tree-describes-low-peripheral-mode": ("unverified", False, "not-needed"),
+            "gic-node": ("current", "missing"),
+            "reserved-stub-page": ("current", "not-needed"),
+            "address-translation-in-the-tree": ("unverified", "missing"),
+            "tree-describes-low-peripheral-mode": ("unverified", "not-needed"),
         })
         stale = {k.split("#")[1] for k in rows(status(gpl, "--context-root", docs, "--stale")[1])}
         self.assertEqual(stale, {"gic-node", "address-translation-in-the-tree",

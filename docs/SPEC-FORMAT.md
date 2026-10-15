@@ -228,7 +228,7 @@ they cannot disagree with the data.
 | `id` | Stable for the life of the fact: editing the claim, moving the section or reordering never changes it. Unique among the files of one spec id in one root; facts in different roots may share an id, because a reference into another root names the root (D1). A deleted fact's id is not reused. |
 | `title` | The bold lead-in today; plain text, escaped when rendered. Required for board-spec kinds (every bcm2711 bullet has one); optional elsewhere. |
 | `claim` | CommonMark (lists, emphasis, links, tables, code), with no raw HTML (D4). No tool parses it for meaning. Never contains a citation: provenance lives only in `support`, and only the viewer's badges, drawn from `support`, show it. One claim per fact: a sentence concluded rather than read is its own `inference` fact (D3). |
-| `support` | One or more support entries ([Provenance classes](#provenance-classes)). Entries of read classes support the claim jointly, as a v1 tag clause does. An `inference` entry stands alone. `emulated` never stands alone. |
+| `support` | One or more support entries ([Provenance classes](#provenance-classes)). Entries of read classes support the claim jointly. An `inference` entry stands alone. `emulated` never stands alone. |
 | `todo` | `check`: `hardware`, `document` or `source` (what kind of check would settle it); `text`: what to check and how; optional `method` when the method is worth stating apart, so the verifier can judge whether it can observe the thing (RG1 C4). Required for `press`, `inference`, `emulated` and extension classes; allowed on any fact. |
 | `assumes` | Ids from the spec's `assumptions` registry. A fact resting on an unstated assumption was a recurring verifier finding (RG1 A4); here the assumption is named once and every fact that rests on it lists it. |
 | `scope` | Lists of strings naming where the claim holds: `boards`, `revisions`, `modes`, `builds`, `configurations`. Rendered beside the claim. A claim true of one tree and written as true of both was a recurring `FAIL` on definiteness; `scope` gives it a place. |
@@ -299,7 +299,7 @@ rendered as a fenced text block under "Source notices". Nothing in a notice is a
 `class` is a closed enum. Each class has its own required fields; the schema enforces them with
 one `if`/`then` per class (an excerpt is in [Validation](#validation-schema-and-checker)).
 
-| Class | Required fields | Optional | `todo` | Gated by `accepts` | Rules carried from v1 |
+| Class | Required fields | Optional | `todo` | Gated by `accepts` | Rules kept from the Markdown format |
 | --- | --- | --- | --- | --- | --- |
 | `databook` | `doc` (a document of class `databook`), `at` (one or more locators) | `note` | no | no | the IP databook, TRM or datasheet |
 | `standard` | `doc` (class `standard`), `at` | `note` | no | no | standards and architecture specifications; Linux's `booting.rst` |
@@ -531,7 +531,7 @@ the license split carry over. Restated for the spec format:
   `GPL-2.0-only`). A root with `accepts: []` accepts no anchor. A repos entry no anchor cites is
   still gated under `--require-license`, as today. The gate is one function applied to one data
   structure: there is no second scanner, so there is no second reading to disagree with the
-  first. What v1 gated only for `[src:]` anchors now covers `DT` too, which is what kept every
+  first. What the Markdown format gated only for `[src:]` anchors now covers `DT` too, which is what kept every
   BCM2711 device-tree fact out of the docs and permissive roots by hand during RG1.
 - **A reference may only rest on a root that checks clean** (user decision, 2026-10-08, during
   SF2-2's review). The gate fails closed: what it cannot establish is an error on the checked
@@ -1282,14 +1282,14 @@ The parse never derives meaning. Its result is only "this field contains raw HTM
 link scheme, a heading, an unclosed fence, a reference definition, a footnote or excessive
 nesting, at this line"; no provenance, class, citation, id
 or value is ever read from it. Provenance comes only from the structured fields. This is
-deliberately not the v1 arrangement, where the parse *was* the source of provenance and every
+deliberately not the Markdown format's arrangement, where the parse *was* the source of provenance and every
 disagreement between it and the rendered text was a bypass: here a disagreement can at worst let
 a piece of layout through to a view, never change what a fact cites. The viewer also renders with
 HTML disabled, so the check is a guard, not the only defense. `notices` are exempt: they are
 rendered only as fenced text. No claim in the three bcm2711 specs contains raw HTML or a heading
 (checked 2026-10-08 for angle brackets; the parse itself is SF2-2's to run on the migrated files).
 
-A warning (not an error) flags text in claims and prose that spells a v1 tag (`[databook]`,
+A warning (not an error) flags text in claims and prose that spells a retired provenance tag (`[databook]`,
 `[src:`): harmless to tools, misleading in the Markdown view.
 
 ### Schema excerpt
@@ -1596,7 +1596,7 @@ The spec format is now the only supported reading and authoring path.
 | Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | PyYAML, the chosen validator and the CommonMark library (markdown-it-py, subject to `dep-quality`), pinned, for checks, render and publish alike |
 | Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's page on the published site |
 | driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | hash-pinned spec-format requirements in a virtual environment; `spec.py check` on the shipped root and the spec format suites; the shared SPDX suite and frozen archive checks remain |
-| Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as v1 until it migrates |
+| Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as the Markdown format until it migrates |
 
 ## Worked example
 
@@ -1706,7 +1706,7 @@ facts:
           - {section: "6.5.1–6.5.2", page: "92"}
           - {section: "11.5", pages: ["146", "147"]}
 
-  # Split from v1 Quick-facts/2 "Peripheral mode selection" (D3): the read part ...
+  # Split from the Markdown spec's Quick-facts/2 "Peripheral mode selection" (D3): the read part ...
   - id: peripheral-mode-selection
     section: quick-facts
     title: Peripheral mode selection
@@ -1990,7 +1990,7 @@ notices:
 
 The "Which build ships" record shows four things the Markdown bullet held only in prose: the
 assumption is a named entry that other facts can list in `assumes`; the "only AArch64 source"
-premise, which had no citation in v1, is a `search` anchor the verifier repeats; the reference to
+premise, which had no citation in the Markdown spec, is a `search` anchor the verifier repeats; the reference to
 the "Patch words" bullet is a fact reference; the comment premise is an anchor marked `comment`.
 Because its citations gained structure, this fact's verdict does not carry: it is re-verified.
 
@@ -2018,7 +2018,7 @@ resources:
       fetch_via: git
       note: "Linux v7.2. bcm283x.dtsi carries no SPDX line and falls under the tree's GPL-2.0 COPYING."
 facts:
-  # Split from v1 Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
+  # Split from the Markdown spec's Quick-facts/1 "Address translation in the tree" (D3): the DT part ...
   - id: address-translation-in-the-tree
     section: quick-facts
     title: Address translation in the tree
@@ -2273,15 +2273,15 @@ left open, also decided by the user on 2026-10-08.
 | --- | --- | --- | --- |
 | D1 | Fact ids in overlays | **Root-qualified references** (not the recommended root prefix). Ids are free and unique per spec id per root; a reference into another root names it, `bcm2711@hardware-specs-gpl#gic-node`; `#<id>` and `<spec id>#<id>` stay short within a root | no collisions across repositories and no extra marker field; every cross-root reference says which repository it points into ([References](#references)) |
 | D2 | Freshness of verdicts | Per-fact basis hashes; `spec_sha256` kept for information | delta verification becomes mechanical and format-only edits stale nothing |
-| D3 | Facts that mix classes | Read classes support a claim jointly; an `inference` stands alone in its fact | keeps most v1 bullets whole while every conclusion gets its own verifiable record |
+| D3 | Facts that mix classes | Read classes support a claim jointly; an `inference` stands alone in its fact | keeps most Markdown bullets whole while every conclusion gets its own verifiable record |
 | D4 | Markup in claims and prose | **CommonMark allowed, enforced separation in the viewer** (not the recommended plain text). Claims, prose and notes may use lists, emphasis, links, tables and code; **no raw HTML**, rejected by the checker (a decision, confirmed by the user, not an overridable default); no tool parses the Markdown for meaning; the viewer's badges, drawn from fields, carry provenance | authors keep full Markdown for the viewer; the Markdown view displays author fields in labeled top-level fences (user revision 2026-10-09), while the viewer prevents author text from producing a badge ([Rendering and the viewer](#rendering-and-the-viewer)) |
 | D5 | Where rendered views live | **Built and published by CI** (Pages on `main`, an artifact on pull requests), **not committed** (not the recommended committed `rendered/`) | no generated files in the repositories and no freshness check; readers use the published site |
 | D6 | Scalar types | The loader resolves only `true`, `false`, `null` and decimal integers; hex values are strings with patterns | no implicit-typing surprises; values keep their spelling |
 | D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
 | D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
 | D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces spans found by node marks, then strictly loads, validates and compares the result with exactly the intended data changes | user decision 2026-10-09: refuse unintended key, value or type changes with the first differing path; preserve comment/SPDX bytes and the original on refusal |
-| D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry). Superseded: the carried verdicts were later re-read fresh and `carried_from` was removed | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
-| D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no composition mixing v1 and YAML specs, and no second parser left behind |
+| D10 | Carrying Markdown-record verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry). Superseded: the carried verdicts were later re-read fresh and `carried_from` was removed | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
+| D11 | Transition | Read-only Markdown checker; migrate docs, then permissive, then gpl in one unit; then remove the Markdown checker and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no composition mixing Markdown and YAML specs, and no second parser left behind |
 | D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
@@ -2298,7 +2298,7 @@ left open, also decided by the user on 2026-10-08.
 
 | Risk | Consequence | Mitigation |
 | --- | --- | --- |
-| Author Markdown imitates provenance (D4) | an author can type generated-looking text | labeled fences keep author source inert in the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on v1 tag spellings in text; review reads the viewer, not the Markdown |
+| Author Markdown imitates provenance (D4) | an author can type generated-looking text | labeled fences keep author source inert in the Markdown view; the viewer's badges cannot be produced by author text; a lint warns on retired tag spellings in text; review reads the viewer, not the Markdown |
 | Author Markdown breaks layout (an unclosed fence, a heading in a claim) | later facts swallowed or split in the Markdown view | the checker's containment check fails it, naming the fact, and the publish step checks again (D22); each field is rendered separately in the viewer |
 | Raw HTML reaches a page | script or markup injected into the published site | the checker rejects what CommonMark parses as raw HTML (D20); the viewer renders with HTML disabled; image and link URL rules (D21) |
 | YAML authoring errors by agents (indentation, quoting long claims) | failed checks, retries | block scalars for long text; every error carries a line and column; templates per kind; `spec.py check` run before any review |
@@ -2310,7 +2310,7 @@ left open, also decided by the user on 2026-10-08.
 | Reviewers miss the rendered effect of a change, since nothing is committed | a layout or badge regression merges | pull requests upload both views as an artifact; the containment check fails the checker and the build |
 | Conversion error carried as PASS | a wrong citation keeps a verdict | fidelity check (D10); `resolve` runs on every anchor during migration |
 | New dependency risk (validator, compiled `rpds-py`, the CommonMark library) | supply-chain and build breakage in CI | `dep-quality` score before pinning; hash-pinned CI requirements; exit 3 without them |
-| The checker's CommonMark parse is used for more than safety and layout | provenance drifts back into text, the v1 failure | the parse lives in one module whose only outputs are raw-HTML, link-scheme, heading and unclosed-fence findings; review rejects any other use; provenance is read only from structured fields |
+| The checker's CommonMark parse is used for more than safety and layout | provenance drifts back into text, the Markdown format's failure | the parse lives in one module whose only outputs are raw-HTML, link-scheme, heading and unclosed-fence findings; review rejects any other use; provenance is read only from structured fields |
 | The CommonMark library changes what counts as HTML or a heading between versions | a field passes under one version and fails under another | one pinned version shared by checker and publish step; a version bump is its own reviewed change with the fixtures re-run |
 | The schema grows its own equivalent spellings (optional fields that mean the same) | the leak returns at the data level | closed records (`unevaluatedProperties: false`); one field per meaning; review asks "is there a second way to say this?" for every schema change |
 | Consumers outside driver-lab read `*.spec.md` | they break at the cutover | `board-expert` is the only reader of specs; bringup-kit reads through it; transition window (D11) |
@@ -2346,13 +2346,13 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
    of the D22 check through the same module; `status --stale`.
 5. **SF2-5 Skills.** The contract document (D7), `spec-verifier`, `board-expert`,
    `board-spec-scaffold` templates, `hardware-investigator`, `peripheral-spec` and its subagent
-   and verifier templates, `reference-driver-review`; glossary; grep every skill for v1 rules (the
+   and verifier templates, `reference-driver-review`; glossary; grep every skill for Markdown-format rules (the
    RG-T1 T7 lesson).
 6. **SF2-6 Migration of bcm2711.** `spec.py migrate`, citation pass, splits, fidelity check,
    carried records, delta verification of the rest; the three spec repositories' pull requests
    (docs, permissive, gpl) with their `checks.sh` and CI on the spec format, and each repository's
    publish workflow and Pages site.
-7. **SF2-7 Retire the Markdown format.** Remove the v1 checker, `mdtokens.py` and `anchor_check.py`'s
+7. **SF2-7 Retire the Markdown format.** Remove the Markdown checker, `mdtokens.py` and `anchor_check.py`'s
    Markdown mode; markdown-it-py stays as the pinned CommonMark library (D20); update
    driver-lab's `AGENTS.md` check list and CI.
 

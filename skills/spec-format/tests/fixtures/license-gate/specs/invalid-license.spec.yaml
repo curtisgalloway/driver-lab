@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# A repos entry whose license is not SPDX (synthetic license-gate fixture; the spec format rewrite of the v1 invalid-license-spec.md)
+# A repos entry whose license is not SPDX (synthetic license-gate fixture)
 format: 2
 kind: peripheral
 id: gate-invalid-license

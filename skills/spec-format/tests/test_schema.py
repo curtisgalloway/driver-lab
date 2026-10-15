@@ -842,7 +842,7 @@ class Resources(Validator):
             ("page numbering", document(page_numbering="roman"), "is not one of"),
             ("fetch value", document(fetch="maybe"), "is not one of"),
             ("verified not a date", document(verified="last week"), "does not match"),
-            ("v1 cite field", document(cite="yes"), "False was expected"),
+            ("retired cite field", document(cite="yes"), "False was expected"),
             ("unknown key", document(fetch_via="curl"), "unknown key 'fetch_via'"),
         ]
         for label, entry, expected in cases:
@@ -870,7 +870,7 @@ class RootMarker(Validator):
         self.assert_valid(marker(accepts=[]), name="board-specs.yaml")
         cases = [
             ("no format", marker(format=DROP), "'format' is a required"),
-            ("v1 marker", marker(format=1), "2 was expected"),
+            ("unsupported format marker", marker(format=1), "2 was expected"),
             ("no name", marker(name=DROP), "'name' is a required"),
             ("no license", marker(license=DROP), "'license' is a required"),
             ("blank name", marker(name=""), "does not match"),

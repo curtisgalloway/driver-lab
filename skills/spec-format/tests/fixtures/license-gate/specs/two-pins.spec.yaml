@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# Two repos entries: BSD firmware and a GPL-2.0-only kernel (synthetic license-gate fixture; format 2 of the v1 two-pins-spec.md)
+# Two repos entries: BSD firmware and a GPL-2.0-only kernel (synthetic license-gate fixture; the spec format rewrite of the v1 two-pins-spec.md)
 format: 2
 kind: peripheral
 id: gate-two-pins

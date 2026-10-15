@@ -6,7 +6,7 @@
 Run:  python3 -m unittest discover -s skills/hardware-investigator/tests -v
 
 Builds the two fixture source trees as git repositories in a temporary directory, fills the
-expected facts files with the real commits, and checks the format 2 gate and resolver
+expected facts files with the real commits, and checks the spec format gate and resolver
 exit codes the example promises.
 """
 

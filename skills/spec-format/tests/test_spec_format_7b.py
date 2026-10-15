@@ -17,8 +17,8 @@ import render_html
 import render_md
 import speccheck
 import specload
-from test_sf2_7a import Fixture, run
-import test_sf2_7a
+from test_spec_format_7a import Fixture, run
+import test_spec_format_7a
 from test_schema import dump
 from test_resolve import GitFixture, SOURCE
 
@@ -557,7 +557,7 @@ class Generated(ReviewFixture):
         for fact_id, key in (('reg-ctrl', 'reg-ctrl.en'), ('seq-init', 'seq-init.s1')):
             parent = next(f for f in self.data['facts'] if f['id'] == fact_id)
             parent['critical'] = True
-            test_sf2_7a.Peripheral.record(self, self.checker(), key)
+            test_spec_format_7a.Peripheral.record(self, self.checker(), key)
             path = self.root / 'resources/widget.verify.yaml'
             record = specload.load_strict(path)
             v = record['verdicts'][key]

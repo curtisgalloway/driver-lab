@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Exercise every YAML scaffold through the real format 2 CLI.
+"""Exercise every YAML scaffold through the real spec format CLI.
 
 Included in the existing spec-format discovery command, using its hash-pinned environment.
 Substitution is text-based, so quoting and scalar types in the shipped templates are tested.

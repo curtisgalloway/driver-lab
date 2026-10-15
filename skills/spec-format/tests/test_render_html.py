@@ -87,7 +87,7 @@ class Author(unittest.TestCase):
                 self.assertTrue(specmd.allowed_link(attrs['href']))
         return tree
 
-    def test_sf2_4_adversarial_claims_cannot_emit_badges(self):
+    def test_spec_format_4_adversarial_claims_cannot_emit_badges(self):
         cases = json.loads((HERE / 'fixtures/textcheck/cases.json').read_text())
         for case in cases:
             if any(f.kind in ('heading', 'nesting') for f in specmd.findings(case['text'])):
@@ -259,7 +259,7 @@ class Views(Fixture):
                     self.assertTrue(specmd.allowed_link(attrs['href']))
             self.assertFalse(any('verdict-pass' in a.get('class', '') for t, a, p in full.nodes))
 
-    def test_all_sf2_4_fixtures_in_actual_claim_containers_or_refused(self):
+    def test_all_spec_format_4_fixtures_in_actual_claim_containers_or_refused(self):
         checker = checked(self.root)
         claim = checker.files[0].records['a'].data
         cases = json.loads((HERE / 'fixtures/textcheck/cases.json').read_text())
@@ -354,7 +354,7 @@ class Views(Fixture):
                      'requirement', 'assessment', 'verdict-pass', 'status-stale'):
             self.assertIn('badge ' + kind, classes)
         # The badge itself: the record section also prints 'second reader missing' (SF2-G
-        # review: mutate_sf2_5's second-reader mutation survived on that text).
+        # review: mutate_spec_format_5's second-reader mutation survived on that text).
         self.assertIn('badge critical">bring-up critical · second reader missing</span>', html)
         self.assertIn('PASS 2026-10-09 · carried', html)
         self.assertIn('badge origin">public · viewer</span>', html)

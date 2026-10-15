@@ -345,7 +345,7 @@ class WorkedExample(unittest.TestCase):
             self.assertEqual((code, err), (0, ""))
             visible = "\n".join("".join(c.content for c in t.children or [])
                                 for t in PARSER.parse(out) if t.type == "inline")
-            design = (HERE.parents[2] / "docs/SPEC-FORMAT-V2.md").read_text()
+            design = (HERE.parents[2] / "docs/SPEC-FORMAT.md").read_text()
             slice_text = design.split("### Markdown view (merged, with status; slice)")[1].split("~~~markdown")[1].split("~~~")[0]
             slice_visible = "\n".join("".join(c.content for c in t.children or [])
                                       for t in PARSER.parse(slice_text) if t.type == "inline")

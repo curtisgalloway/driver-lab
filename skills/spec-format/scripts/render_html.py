@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Static format 2 viewer. Author tokens cannot emit generated classes or identifiers."""
+"""Static spec format viewer. Author tokens cannot emit generated classes or identifiers."""
 
 from __future__ import annotations
 

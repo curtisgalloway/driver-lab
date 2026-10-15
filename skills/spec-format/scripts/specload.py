@@ -1,11 +1,11 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""The one YAML loader for spec format 2: `load_strict(path)`.
+"""The one YAML loader for the spec format: `load_strict(path)`.
 
 YAML has many spellings for one value; this loader admits one. It reads a file with PyYAML's
 pure-Python parser (which gives a line and column for every node) and builds plain Python data
 itself, so no PyYAML constructor or implicit resolver ever runs. The design's loader table
-(docs/SPEC-FORMAT-V2.md, "The YAML loader") is the contract:
+(docs/SPEC-FORMAT.md, "The YAML loader") is the contract:
 
 - plain scalars resolve only to `true`, `false`, `null` and decimal integers within the
   signed 64-bit range; every other scalar, quoted or not, is a string (D6). An empty plain
@@ -273,7 +273,7 @@ def _decode(path: Path, raw: bytes) -> str:
 
 
 def load_strict_marked(path: Path | str, raw: bytes | None = None) -> Loaded:
-    """Load one YAML file under the format 2 rules, keeping every value's position.
+    """Load one YAML file under the spec format rules, keeping every value's position.
 
     Raises `LoadError` for every refused input, and `OSError` when the file cannot be read.
     When `raw` is supplied, parse those bytes without reading the path.
@@ -316,5 +316,5 @@ def load_strict_marked(path: Path | str, raw: bytes | None = None) -> Loaded:
 
 
 def load_strict(path: Path | str) -> Any:
-    """Load one YAML file under the format 2 rules; raise `LoadError` on any pitfall."""
+    """Load one YAML file under the spec format rules; raise `LoadError` on any pitfall."""
     return load_strict_marked(path).data

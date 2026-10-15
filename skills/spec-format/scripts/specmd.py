@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""The one CommonMark parse of spec format 2 (design: Validation, D4, D20-D22).
+"""The one CommonMark parse of the spec format (design: Validation, D4, D20-D22).
 
-Every format 2 tool that needs to know what a text field looks like as CommonMark asks this
+Every spec format tool that needs to know what a text field looks like as CommonMark asks this
 module, which parses with the pinned markdown-it-py ("commonmark" preset). It never derives
 meaning: no provenance, class, citation, id or value is read from a parse. SF2-2 uses it only to
 find text outside code (for the template-placeholder check). Safety and containment findings

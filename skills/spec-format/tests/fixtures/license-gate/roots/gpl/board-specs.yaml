@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Synthetic root shaped like hardware-specs-gpl (format 2 of the v1 license-gate root).
+# Synthetic root shaped like hardware-specs-gpl (the spec format rewrite of the v1 license-gate root).
 # GPL-2.0-only or -or-later trees, plus everything the permissive root accepts.
 format: 2
 layer: public

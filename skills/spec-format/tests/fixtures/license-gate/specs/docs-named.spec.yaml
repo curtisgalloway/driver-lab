@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# Documents only, a databook cited by section and page (synthetic license-gate fixture; format 2 of the v1 docs-named-spec.md)
+# Documents only, a databook cited by section and page (synthetic license-gate fixture; the spec format rewrite of the v1 docs-named-spec.md)
 format: 2
 kind: peripheral
 id: gate-docs-named

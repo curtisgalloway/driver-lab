@@ -4,9 +4,9 @@
 """Tests for scripts/specload.py: one failing input per row of the design's loader table.
 
 Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
-  python3 -m venv .venv-sf2
-  .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt
-  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+  python3 -m venv .venv-spec
+  .venv-spec/bin/pip install --require-hashes -r skills/spec-format/requirements.txt
+  .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 
 Inputs are bytes written here with escapes, never raw control or invisible characters, so the
 test file itself stays plain text. Each case names the line and column the error must report.

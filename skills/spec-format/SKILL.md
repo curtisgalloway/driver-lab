@@ -27,7 +27,7 @@ SPDX-License-Identifier: Apache-2.0
   provenance labels (**badges**) drawn only from fields.
 
 See the [glossary](../../GLOSSARY.md) for these and the hardware terms. This is the shared
-contract; the [design](../../docs/SPEC-FORMAT-V2.md) records its rationale and decisions D1–D22.
+contract; the [design](../../docs/SPEC-FORMAT.md) records its rationale and decisions D1–D22.
 Read the schema branch for the kind you write and start from
 [board-spec-scaffold's templates](../board-spec-scaffold/templates/).
 

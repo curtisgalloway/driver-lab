@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The checks CI runs (.github/workflows/checks.yml), runnable locally from the top of the
-# repository. specs/ is a spec format 2 root; the contract is driver-lab's
+# repository. specs/ is a spec format root; the contract is driver-lab's
 # skills/spec-format/SKILL.md and the tool is its skills/spec-format/scripts/spec.py.
 #
 #   scripts/checks.sh [--mode pr|main] <step> <driver-lab checkout> [<further root>...]
@@ -18,7 +18,7 @@
 #              view and, when further roots are given, the merged views; a view that cannot be
 #              built fails the step
 #   self-test  prove the license gate with this repository's root marker on driver-lab's
-#              format 2 fixtures (below)
+#              the spec format fixtures (below)
 #   all        the four in order
 #
 # --mode is the verification policy (design D19). pr (the default): every fact must be current,

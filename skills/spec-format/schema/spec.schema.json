@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/spec.schema.json",
-  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. Spec format 2, kinds board, soc, chip, ip, overlay, facts, peripheral and review (SF2-7). Design: docs/SPEC-FORMAT-V2.md. Patterns end with (?![\\s\\S]) (nothing follows), never $: in Python's re, which the validator uses, $ also matches before a final newline, so an id \"w\\n\" would pass. The lookahead means end of string in Python and ECMA-262 alike. Optional lists are absent or non-empty: an empty list would be a second spelling of an absent key.",
-  "title": "Spec format 2: a spec or an investigator's facts file",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format, kinds board, soc, chip, ip, overlay, facts, peripheral and review (SF2-7). Design: docs/SPEC-FORMAT.md. Patterns end with (?![\\s\\S]) (nothing follows), never $: in Python's re, which the validator uses, $ also matches before a final newline, so an id \"w\\n\" would pass. The lookahead means end of string in Python and ECMA-262 alike. Optional lists are absent or non-empty: an empty list would be a second spelling of an absent key.",
+  "title": "Spec format: a spec or an investigator's facts file",
   "type": "object",
   "required": ["format", "kind", "facts"],
   "properties": {

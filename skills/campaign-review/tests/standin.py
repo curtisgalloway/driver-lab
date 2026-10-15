@@ -488,7 +488,7 @@ class Standin:
             "to the spec directory, and verify each claim against its cited section. Report a\n"
             "verdict per fact, including discrepancies and proposed corrections.\n"
             "Do not edit the spec. Return only the complete verification record as\n"
-            "your final answer, as format 2 YAML with fact-keyed verdicts and basis hashes.\n"
+            "your final answer, as spec format YAML with fact-keyed verdicts and basis hashes.\n"
             f"Set spec to {self.ids['spec']}, spec_file to {self.spec.name},\n"
             f"and spec_sha256 to {digest(self.spec)}. Record your actual model,\n"
             "harness and date; list both source IDs, local relative paths, edition\n"

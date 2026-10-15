@@ -307,9 +307,9 @@ stage records only when the project calls for it; do not push without authorizat
 
 ## Complete worked record
 
-The [example root](examples/format-2/board-specs.yaml) describes a **synthetic** Widget,
-not real hardware. Its [spec](examples/format-2/widget.spec.yaml) cites a local
-[synthetic manual](examples/format-2/resources/widget-trm.txt). Copy this record verbatim to
+The [example root](examples/widget/board-specs.yaml) describes a **synthetic** Widget,
+not real hardware. Its [spec](examples/widget/widget.spec.yaml) cites a local
+[synthetic manual](examples/widget/resources/widget-trm.txt). Copy this record verbatim to
 `<example-root>/resources/widget.verify.yaml` in scratch and run
 `check <example-root> --require-license --require-verified pr`. The reset count is marked
 critical only to demonstrate the `readers` field, not because real bring-up depends on it.

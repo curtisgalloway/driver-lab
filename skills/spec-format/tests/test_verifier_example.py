@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Run the exact worked record from spec-verifier through the format 2 gate."""
+"""Run the exact worked record from spec-verifier through the spec format gate."""
 
 import contextlib
 import hashlib
@@ -31,7 +31,7 @@ class VerifierExample(unittest.TestCase):
         scratch = tempfile.TemporaryDirectory()
         self.addCleanup(scratch.cleanup)
         self.root = Path(scratch.name) / "fixture-root"
-        shutil.copytree(VERIFIER / "examples" / "format-2", self.root)
+        shutil.copytree(VERIFIER / "examples" / "widget", self.root)
         text = (VERIFIER / "SKILL.md").read_text(encoding="utf-8")
         example = text.split("## Complete worked record\n", 1)[1]
         record = example.split("```yaml\n", 1)[1].split("```", 1)[0]

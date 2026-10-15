@@ -14,10 +14,10 @@ side is, ``A AND B`` only when both are, ``X WITH <exception>`` when ``X`` is, a
 ``GPL-2.0`` means ``GPL-2.0-only``.  This script runs earlier, so a source can be refused
 before anyone reads it for evidence.
 
-A format 2 marker is required; ``accepts: []`` accepts nothing. Invalid markers fail
+A spec format marker is required; ``accepts: []`` accepts nothing. Invalid markers fail
 before any license expression can be accepted.
 
-``--facts`` delegates to format 2's hash-pinned ``spec.py check FILE --root DIR
+``--facts`` delegates to the spec format's hash-pinned ``spec.py check FILE --root DIR
 --require-license``. It checks the structured citations and every declared repository entry.
 The expression-only preflight remains available before reading source evidence.
 
@@ -25,7 +25,8 @@ Needs sibling spec-format scripts and their hash-pinned requirements, plus board
 shared ``spdx.py`` parser.
 
 Exit status: 0 every license accepted (or none given), 1 a license refused or an invalid
-format 2 marker, 2 usage error (not a spec root), 3 missing format 2 dependency or schema.
+spec format marker, 2 usage error (not a spec root), 3 missing spec format dependency
+or schema.
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from pathlib import Path
 
 
 def load_tools():
-    """Load the format 2 API and its shared SPDX parser, with pinned dependencies."""
+    """Load the spec format API and its shared SPDX parser, with pinned dependencies."""
     path = str(Path(__file__).resolve().parents[2] / "spec-format" / "scripts")
     if path not in sys.path:
         sys.path.insert(0, path)
@@ -79,7 +80,7 @@ def main(argv=None) -> int:
                     help="the target spec root (a directory with board-specs.yaml)")
     ap.add_argument("licenses", nargs="*", metavar="LICENSE",
                     help="an SPDX expression to check (quote it)")
-    ap.add_argument("--facts", type=Path, help="check a format 2 facts file against this target root")
+    ap.add_argument("--facts", type=Path, help="check a spec format facts file against this target root")
     args = ap.parse_args(argv)
 
     if args.facts is not None:
@@ -109,7 +110,7 @@ def main(argv=None) -> int:
     for finding in found:
         print(finding)
     if any(f.level == "error" for f in found) or root.accepts is None:
-        print("refused: invalid format 2 root marker; no source may be cited through it")
+        print("refused: invalid spec format root marker; no source may be cited through it")
         return 1
     accepts = marker["accepts"]
     listed = ", ".join(accepts) or "none"

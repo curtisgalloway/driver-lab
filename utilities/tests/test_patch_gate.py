@@ -348,7 +348,7 @@ open(idx, "wb").write(data + hashlib.sha1(data).digest())
     code, output = self.mod.build_venv(self.tree)
     self.assertEqual(code, 0, output)
     self.assertFalse(os.path.exists(marker), "the planted venv.py ran")
-    self.assertTrue(os.path.exists(os.path.join(self.tree, ".venv-sf2", "pyvenv.cfg")))
+    self.assertTrue(os.path.exists(os.path.join(self.tree, ".venv-spec", "pyvenv.cfg")))
     self.assertEqual(commands[0][1:4], ["-I", "-m", "venv"])
 
   def test_planted_unittest_module_cannot_replace_a_default_suite(self):

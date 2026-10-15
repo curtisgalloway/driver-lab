@@ -41,7 +41,7 @@ def run(*args):
 
 class Fixture(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(prefix="sf2-7a-test-")
+        self.tmp = tempfile.TemporaryDirectory(prefix="spec-format-7a-test-")
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name) / "root"
         self.root.mkdir()

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """`spec.py check`: what a schema cannot check (design: Validation; SF2-2).
 
-Given roots (directories holding a format 2 `board-specs.yaml`), the checker discovers every
+Given roots (directories holding a spec format `board-specs.yaml`), the checker discovers every
 `*.spec.yaml` below each root, validates it against the schema, and then checks, over the
 already-parsed data and never over prose:
 

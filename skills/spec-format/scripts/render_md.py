@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Generate a Markdown reading view from checked format 2 data, never from parsed prose.
+"""Generate a Markdown reading view from checked spec format data, never from parsed prose.
 
 Author Markdown is verbatim, inert fenced text. Generated values cannot become links,
 images or HTML, including under GFM. The HTML viewer renders author Markdown (SF2-5).

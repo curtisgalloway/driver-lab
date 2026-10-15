@@ -5,14 +5,14 @@
 `spec.py check --require-verified pr|main`).
 
 Fixtures:
-- fixtures/records/verify_root: board-expert's format 1 verify_root cases in format 2 (current,
+- fixtures/records/verify_root: board-expert's format 1 verify_root cases in the spec format (current,
   stale, current FAIL, stale FAIL, malformed, none), with basis hashes the generator in run
   sf2-3-20261008-01 computed;
 - fixtures/worked-example: the design's slices (its record carries zeros for `<64 hex>`).
 Everything else is built in temporary roots, one rule each.
 
 Run in the pinned environment:
-  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+  .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 """
 
 import contextlib
@@ -715,7 +715,7 @@ class RecordChecks(Roots):
 # --- freshness and the two CI modes -----------------------------------------------------------
 
 class VerifyRoot(unittest.TestCase):
-    """board-expert's verify_root cases in format 2: every status, in every mode."""
+    """board-expert's verify_root cases in the spec format: every status, in every mode."""
 
     def test_the_fixture_bases_are_current_where_they_should_be(self):
         got = rows(status(VROOT)[1])

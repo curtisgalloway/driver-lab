@@ -38,7 +38,7 @@ Read in `skills/spec-format/schema/spec.schema.json`:
 - `$defs.layoutField` has `offset, size` in whole bytes, with no bit range.
 - `$defs.step` has `id, action, requirement, support, todo, note`, with no timeout or recovery.
 
-`docs/SPEC-FORMAT-V2.md` §"Data formats…" says layouts are "shaped like register fields
+`docs/SPEC-FORMAT.md` §"Data formats…" says layouts are "shaped like register fields
 with byte offsets".
 
 ---

@@ -7,7 +7,7 @@ Every root here is invented and built in a temporary directory. The command is a
 these tests also check that it leaves the exit status to the check, never to a missing method.
 
 Run in the pinned environment:
-  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+  .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 """
 
 import contextlib

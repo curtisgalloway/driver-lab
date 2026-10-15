@@ -9,7 +9,7 @@ Research agent report, 2026-10-14. It extends `docs/STANDARDS-SURVEY.md` (the fi
 does not repeat it: SystemRDL access properties, SVD register fields, OpenTitan `swaccess`,
 UVM, PSS, DFDL and the IP-XACT field vocabulary are covered there. It answers three questions
 about the design section "Precise payloads: standard vocabularies (proposed 2026-10-14)" in
-`docs/SPEC-FORMAT-V2.md`.
+`docs/SPEC-FORMAT.md`.
 
 **Legend.** **[P]** I read the primary source myself (a spec page, a schema file, a source
 file, or `gh api` repository metadata). **[S]** a secondary source (a search-result summary, or
@@ -438,7 +438,7 @@ properties present. It needs the provider nodes in the same tree, a binding for 
 compatible (kernel bindings are dual GPL-2.0-only OR BSD-2-Clause, so a BSD-licensed copy is
 usable), and `dtc`. It cannot check that the values are true. The stronger and cheaper check is
 a **differential one**: compare the exported edges with the upstream `.dtsi` that facts already
-cite through `DT` anchors (SPEC-FORMAT-V2 "Anchors"), and report each disagreement, e.g. our
+cite through `DT` anchors (SPEC-FORMAT "Anchors"), and report each disagreement, e.g. our
 `uart0` interrupt against `bcm2711.dtsi`'s `<GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>`. Recommended
 order: differential comparison first, `dt-validate` second, and only for instances whose
 compatible has a kernel schema.

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# A synthetic format 2 root for the schema tests; every name and URL is made up.
+# A synthetic spec format root for the schema tests; every name and URL is made up.
 format: 2
 layer: public
 name: widget-root

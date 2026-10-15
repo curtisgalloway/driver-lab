@@ -37,33 +37,33 @@ jobs:
       # spec.py exits 3 without them at the pinned versions; there is no fallback parser.
       - name: Spec-format dependencies
         run: |
-          python3 -m venv "$RUNNER_TEMP/sf2"
-          "$RUNNER_TEMP/sf2/bin/python" -m pip install --require-hashes \
+          python3 -m venv "$RUNNER_TEMP/spec"
+          "$RUNNER_TEMP/spec/bin/python" -m pip install --require-hashes \
             -r skills/spec-format/requirements.txt
 
       - name: spec-format tests
-        run: '"$RUNNER_TEMP/sf2/bin/python" -m unittest discover -s skills/spec-format/tests -v'
+        run: '"$RUNNER_TEMP/spec/bin/python" -m unittest discover -s skills/spec-format/tests -v'
 
       # The investigator's worked example runs the spec-format tool, which needs the pinned set.
       - name: hardware-investigator tests
-        run: '"$RUNNER_TEMP/sf2/bin/python" -m unittest discover -s skills/hardware-investigator/tests -v'
+        run: '"$RUNNER_TEMP/spec/bin/python" -m unittest discover -s skills/hardware-investigator/tests -v'
 
       - name: board specs
         run: |
-          "$RUNNER_TEMP/sf2/bin/python" skills/spec-format/scripts/spec.py check \
+          "$RUNNER_TEMP/spec/bin/python" skills/spec-format/scripts/spec.py check \
             skills/board-expert/specs \
             --stubs-from skills --require-license
 
       - name: enc28j60 corpus tests
         run: >-
-          "$RUNNER_TEMP/sf2/bin/python" -m unittest discover
+          "$RUNNER_TEMP/spec/bin/python" -m unittest discover
           -s evals/enc28j60/tests -v
 
       # The author's manifest is what a candidate run is given. Regenerating it on every push is
       # how a corpus edit that would change what an author sees becomes visible in review.
       - name: enc28j60 author manifest
         run: >-
-          "$RUNNER_TEMP/sf2/bin/python"
+          "$RUNNER_TEMP/spec/bin/python"
           evals/enc28j60/author_manifest.py
           --check evals/enc28j60/author-manifest.yaml
 
@@ -73,10 +73,10 @@ jobs:
 
       - name: campaign-review tests
         run: >-
-          "$RUNNER_TEMP/sf2/bin/python" -m unittest discover
+          "$RUNNER_TEMP/spec/bin/python" -m unittest discover
           -s skills/campaign-review/tests -v
 
       - name: e1000 status index
         run: >-
-          "$RUNNER_TEMP/sf2/bin/python"
+          "$RUNNER_TEMP/spec/bin/python"
           skills/campaign-review/scripts/index_check.py evals/e1000

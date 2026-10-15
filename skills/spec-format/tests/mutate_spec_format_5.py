@@ -116,7 +116,7 @@ MUTATIONS = [
 
 
 def main():
-    run = Path(tempfile.mkdtemp(prefix='sf2-5-mutations-', dir=os.environ.get('TMPDIR')))
+    run = Path(tempfile.mkdtemp(prefix='spec-format-5-mutations-', dir=os.environ.get('TMPDIR')))
     tree = run / 'tree'
     destination = tree / 'skills/spec-format'
     shutil.copytree(HERE.parent, destination, ignore=shutil.ignore_patterns('__pycache__', '.*'))

@@ -180,12 +180,12 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 Install the hash-pinned dependencies and run the spec-format suites and shipped-root check:
 
 ```bash
-uv venv /tmp/driver-lab-sf2
-uv pip install --python /tmp/driver-lab-sf2/bin/python --require-hashes -r skills/spec-format/requirements.txt
+uv venv /tmp/driver-lab-spec
+uv pip install --python /tmp/driver-lab-spec/bin/python --require-hashes -r skills/spec-format/requirements.txt
 python3 -m unittest discover -s skills/board-expert/tests -v
-/tmp/driver-lab-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
-/tmp/driver-lab-sf2/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
-/tmp/driver-lab-sf2/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
+/tmp/driver-lab-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
+/tmp/driver-lab-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
+/tmp/driver-lab-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
 ```
 
 Add `--require-verified pr` to reject missing or stale verdicts; `main` allows upstream-stale

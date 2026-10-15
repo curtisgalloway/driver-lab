@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for the format 2 schemas through `spec.py validate`.
+"""Tests for the spec format schemas through `spec.py validate`.
 
 Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
-  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+  .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 
 Valid fixtures: one file per kind under fixtures/valid (plus a root marker with a test
 extension fragment and a verification record), and the design's worked example under
@@ -30,7 +30,7 @@ SCRIPTS = HERE.parent / "scripts"
 FIX = HERE / "fixtures"
 VALID = FIX / "valid"
 WORKED = FIX / "worked-example"
-DESIGN = HERE.parents[2] / "docs" / "SPEC-FORMAT-V2.md"
+DESIGN = HERE.parents[2] / "docs" / "SPEC-FORMAT.md"
 sys.path.insert(0, str(SCRIPTS))
 import spec as spec_cli  # noqa: E402
 

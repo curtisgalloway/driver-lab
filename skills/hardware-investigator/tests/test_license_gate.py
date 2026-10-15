@@ -76,7 +76,7 @@ class LicenseGate(unittest.TestCase):
             pathlib.Path(tmp, "board-specs.yaml").write_text("layer: public\nname: bare\n")
             rc, out, _ = run("--root", tmp, "MIT")
             self.assertEqual(rc, 1)
-            self.assertIn("invalid format 2 root marker", out)
+            self.assertIn("invalid spec format root marker", out)
             rc, out, _ = run("--root", tmp)
             self.assertEqual(rc, 1)
 
@@ -116,7 +116,7 @@ class LicenseGate(unittest.TestCase):
                     marker.write_text(text)
                     rc, out, _ = run("--root", tmp, "MIT")
                     self.assertEqual(rc, 1, out)
-                    self.assertIn("invalid format 2 root marker", out)
+                    self.assertIn("invalid spec format root marker", out)
                     self.assertNotIn("accepted: MIT", out)
 
     def test_missing_pinned_dependencies_is_precondition_error(self):

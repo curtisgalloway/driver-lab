@@ -50,7 +50,7 @@ resources:
   tools:
     - {kind: bench, name: widget-bench-1, via: "skill:widget-board-tools"}
 orientation: >-
-  A synthetic board for the format 2 tests. **Nothing here describes real hardware.**
+  A synthetic board for the spec format tests. **Nothing here describes real hardware.**
 facts:
   - id: debug-console
     section: quick-facts

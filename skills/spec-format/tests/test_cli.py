@@ -4,7 +4,7 @@
 """Tests for spec.py's command line: exit codes 0/1/2/3, --json and --skill.
 
 Run in the pinned environment (pip checks the hashes; `uv run --with-requirements` does not):
-  .venv-sf2/bin/python -m unittest discover -s skills/spec-format/tests -v
+  .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 """
 
 import contextlib

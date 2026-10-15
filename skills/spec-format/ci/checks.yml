@@ -34,7 +34,7 @@ jobs:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # spec.py (spec format 2) and the self-test's fixtures live in driver-lab. Pinned to a
+      # spec.py (spec format) and the self-test's fixtures live in driver-lab. Pinned to a
       # commit on its main branch so an upstream edit cannot change what runs here unreviewed;
       # bump the ref (and publish.yml's TOOL_COMMIT) to take a new one.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

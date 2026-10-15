@@ -16,8 +16,8 @@ entries' licenses and the root marker, so no repository is fetched.
 - `specs/<row>.spec.yaml`: one spec per row of the format 1 matrix (`<row>-spec.md` there). Format
   2 uses `kind: peripheral` (SF2-7a), carrying the same repos entries and anchors.
   Two rows changed shape with the format: `dual-gpl-mit` cites its `.dtsi`
-  as `DT` (format 1 gated only `[src]`; format 2 gates `DT` and `rtl` too), and `docs-only` and
-  `docs-named` both cite named documents, since format 2 has no free-text citation.
+  as `DT` (format 1 gated only `[src]`; the spec format gates `DT` and `rtl` too), and `docs-only` and
+  `docs-named` both cite named documents, since the spec format has no free-text citation.
 - `expected.json`: the exit code of `spec.py check <root> --require-license` for every pair, the
   root holding one marker and one spec; 0 passes, 1 fails. The codes are the format 1 file's,
   row for row. `without_require_license` lists the only codes that differ without the flag: a

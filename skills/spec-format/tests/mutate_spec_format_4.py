@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Reproduce SF2-4 guard mutations in temporary copies, without editing the working tree.
 
-Run with the hash-pinned interpreter: python skills/spec-format/tests/mutate_sf2_4.py.
+Run with the hash-pinned interpreter: python skills/spec-format/tests/mutate_spec_format_4.py.
 Logs and results.json stay under TMPDIR. A kill requires assertion failures, zero unittest
 errors, and no internal-error traceback. Surviving or crashing mutations exit 1.
 """
@@ -331,7 +331,7 @@ EQUIVALENT = {
 
 
 def main():
-    run = Path(tempfile.mkdtemp(prefix="sf2-4-mutations-", dir=os.environ["TMPDIR"]))
+    run = Path(tempfile.mkdtemp(prefix="spec-format-4-mutations-", dir=os.environ["TMPDIR"]))
     tree = run / "tree"
     destination = tree / "skills/spec-format"
     shutil.copytree(HERE.parent, destination, ignore=shutil.ignore_patterns("__pycache__", ".*"))
@@ -339,9 +339,9 @@ def main():
     spdx.mkdir(parents=True)
     shutil.copyfile(REPO / "skills/board-expert/scripts/spdx.py", spdx / "spdx.py")
     (tree / "docs").mkdir()
-    shutil.copyfile(REPO / "docs/SPEC-FORMAT-V2.md", tree / "docs/SPEC-FORMAT-V2.md")
+    shutil.copyfile(REPO / "docs/SPEC-FORMAT.md", tree / "docs/SPEC-FORMAT.md")
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(destination / "tests"))
-    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_sf2_4_r1", "test_sf2_4_r2", "test_sf2_4_r3"]
+    cmd = [sys.executable, "-m", "unittest", "test_textcheck", "test_render_md", "test_spec_format_4_r1", "test_spec_format_4_r2", "test_spec_format_4_r3"]
     baseline = subprocess.run(cmd, cwd=tree, env=env, capture_output=True, text=True, check=False)
     (run / "baseline.log").write_text(baseline.stdout + baseline.stderr)
     if baseline.returncode:

@@ -23,7 +23,7 @@ the list names ``GPL-2.0-only`` (or the reverse). ``X WITH E`` is accepted when
 ``X`` is, since an exception only adds permissions. ``A OR B`` is accepted when
 either side is; ``A AND B`` only when both are.
 
-Stdlib only; shared by format 2's ``speccheck.py`` and the investigator's
+Stdlib only; shared by the spec format's ``speccheck.py`` and the investigator's
 ``license_gate.py``.
 """
 

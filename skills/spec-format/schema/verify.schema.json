@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/verify.schema.json",
-  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The format 2 verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness, upstream maps and second readers are the checker's (records.py, SF2-3).",
-  "title": "Spec format 2: verification record",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness, upstream maps and second readers are the checker's (records.py, SF2-3).",
+  "title": "Spec format: verification record",
   "type": "object",
   "required": ["format", "spec", "spec_file", "spec_sha256", "canonical", "sources", "summary", "verdicts"],
   "properties": {

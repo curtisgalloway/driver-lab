@@ -226,11 +226,11 @@ is a records finding. Outward reports remain user decisions.
 
 ## Checker boundary
 
-From the repository root, with `.venv-sf2` built as in the checks list in `AGENTS.md`:
+From the repository root, with `.venv-spec` built as in the checks list in `AGENTS.md`:
 
 ```bash
-.venv-sf2/bin/python skills/campaign-review/scripts/index_check.py evals/e1000
-.venv-sf2/bin/python -m unittest discover -s skills/campaign-review/tests
+.venv-spec/bin/python skills/campaign-review/scripts/index_check.py evals/e1000
+.venv-spec/bin/python -m unittest discover -s skills/campaign-review/tests
 ```
 
 `--root` explicitly selects the evidence root (default: working directory).

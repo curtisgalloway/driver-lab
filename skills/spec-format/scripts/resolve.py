@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Resolve format 2 anchors and display their evidence at immutable Git pins.
+"""Resolve the spec format anchors and display their evidence at immutable Git pins.
 
 CLI: spec.py resolve|show FILE... [--repo NAME=CHECKOUT] [--docs-dir DIR].
 Unbound repositories are fetched into disposable shallow, blob-less repositories, so

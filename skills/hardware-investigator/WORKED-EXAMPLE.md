@@ -129,7 +129,7 @@ verification use the same records and per-fact bases; unknown width/access/reset
 
 The investigator worked-example suite checks the three license outcomes, source attribution,
 destination SPDX headers and assembly without changing returned payloads/support.
-`skills/spec-format/tests/test_sf2_9_docs.py` also extracts and
+`skills/spec-format/tests/test_spec_format_9_docs.py` also extracts and
 executes every shell block above after these substitutions, as it does for the skills and
 prompts. Stand-in sources for the review fixture are explicitly synthetic; no command result
 here claims a differential driver or physical hardware test.

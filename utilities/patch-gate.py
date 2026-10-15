@@ -13,7 +13,7 @@ commands, which the orchestrator then reran anyway.
 PATCH     The patch codex-implement.py wrote; its added lines are scanned for risky patterns.
 WORKTREE  The milestone worktree the patch was applied in; every command runs there.
 --refused The `.refused.txt` beside the patch; any refused path fails the gate.
---reuse-venv  Keep WORKTREE/.venv-sf2 instead of rebuilding it with --require-hashes.
+--reuse-venv  Keep WORKTREE/.venv-spec instead of rebuilding it with --require-hashes.
 --suite   An extra check, NAME=COMMAND (split like a shell, run without one).
 
 Pattern hits are reported verbatim for the orchestrator to judge; they do not fail the gate.
@@ -94,7 +94,7 @@ MAX_UNTRACKED_BYTES = 1 << 20
 def default_suites():
   python = sys.executable
   return [
-      ("spec-format", [os.path.join(".venv-sf2", "bin", "python"), "-I", "-m", "unittest",
+      ("spec-format", [os.path.join(".venv-spec", "bin", "python"), "-I", "-m", "unittest",
                        "discover", "-s", "skills/spec-format/tests"]),
       ("utilities", [python, "-I", "-m", "unittest", "discover", "-s", "utilities/tests"]),
   ]
@@ -327,11 +327,11 @@ def run(command, cwd):
 
 
 def build_venv(worktree):
-  venv = os.path.join(worktree, ".venv-sf2")
+  venv = os.path.join(worktree, ".venv-spec")
   shutil.rmtree(venv, ignore_errors=True)
-  code, output = run([sys.executable, "-I", "-m", "venv", ".venv-sf2"], worktree)
+  code, output = run([sys.executable, "-I", "-m", "venv", ".venv-spec"], worktree)
   if code == 0:
-    code, output = run([os.path.join(".venv-sf2", "bin", "pip"), "install", "-q",
+    code, output = run([os.path.join(".venv-spec", "bin", "pip"), "install", "-q",
                         "--require-hashes", "-r", "skills/spec-format/requirements.txt"],
                        worktree)
   return code, output

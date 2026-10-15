@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""spec.py: the spec format 2 command line (design: docs/SPEC-FORMAT-V2.md).
+"""spec.py: the spec format command line (design: docs/SPEC-FORMAT.md).
 
 Subcommands built so far: `validate` (SF2-1), `check` (SF2-2, in speccheck.py; verification
 records and freshness from SF2-3, in records.py), `status` (SF2-3), `todo` (issue 112, in
@@ -41,14 +41,14 @@ SCHEMA_BASE = "https://github.com/curtisgalloway/driver-lab/spec-format/2/"
 EXTENSION_URN = "urn:driver-lab:spec-format:2:extension:source-observed"
 MARKER = "board-specs.yaml"
 
-# Distribution name -> import name. The three libraries format 2 is built on (D8, D9, D20);
+# Distribution name -> import name. The three libraries the spec format is built on (D8, D9, D20);
 # every spec.py subcommand runs under the same pinned set.
 DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markdown_it"}
 
 SKILL = """\
 ---
 name: spec-format-cli
-description: Drive spec.py, the spec format 2 tool (validate a file against its schema; check spec roots for composition, references, the license gate and verification records; report each verdict's freshness; resolve anchors, show evidence and compare or rewrite pins with drift).
+description: Drive spec.py, the spec format tool (validate a file against its schema; check spec roots for composition, references, the license gate and verification records; report each verdict's freshness; resolve anchors, show evidence and compare or rewrite pins with drift).
 ---
 
 # spec.py
@@ -76,7 +76,7 @@ description: Drive spec.py, the spec format 2 tool (validate a file against its 
         [--pin NAME] [--strict] [resolver options]
 
 Run it in a venv made with
-`python3 -m venv .venv-sf2 && .venv-sf2/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
+`python3 -m venv .venv-spec && .venv-spec/bin/pip install --require-hashes -r skills/spec-format/requirements.txt`
 (pip checks the hashes; `uv run --with-requirements` was seen installing a file with wrong ones).
 
 The file name chooses the schema: `*.spec.yaml` and `*.facts.yaml` (spec.schema.json; a facts

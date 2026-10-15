@@ -175,7 +175,7 @@ def execute(case, store):
         path.write_text(json.dumps(schema))
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     proc = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s",
-                           "skills/spec-format/tests", "-p", "test_sf2_7a.py", "-q"],
+                           "skills/spec-format/tests", "-p", "test_spec_format_7a.py", "-q"],
                           cwd=dest, env=env, capture_output=True, text=True)
     output = proc.stdout + proc.stderr
     (store / (label + ".log")).write_text(output)
@@ -187,7 +187,7 @@ def execute(case, store):
 
 
 def main():
-    store = Path(tempfile.mkdtemp(prefix="sf2-7a-mutations-"))
+    store = Path(tempfile.mkdtemp(prefix="spec-format-7a-mutations-"))
     cases = CODE + schema_mutations()
     with ThreadPoolExecutor(max_workers=3) as pool:
         results = list(pool.map(lambda case: execute(case, store), cases))

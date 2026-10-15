@@ -345,9 +345,8 @@ class Views(Fixture):
         file.data['assumptions'] = [{'id': 'a1', 'text': 'supply exists'}]
         file.assumptions['a1'] = ('assumptions', 0)
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
-        row.update(second_reader='missing', verdict='PASS', status='stale', carried=True)
-        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
-                               'carried_from': {'format': 1}}, ())
+        row.update(second_reader='missing', verdict='PASS', status='stale')
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A'}, ())
         html = render_html.render(checker, with_status=True)
         classes = {a.get('class') for t, a, _ in Tree(html).nodes if t == 'span'}
         for kind in ('class-databook', 'origin', 'assumes', 'todo', 'critical', 'contested',
@@ -356,7 +355,7 @@ class Views(Fixture):
         # The badge itself: the record section also prints 'second reader missing' (SF2-G
         # review: mutate_spec_format_5's second-reader mutation survived on that text).
         self.assertIn('badge critical">bring-up critical · second reader missing</span>', html)
-        self.assertIn('PASS 2026-10-09 · carried', html)
+        self.assertIn('PASS 2026-10-09</span>', html)
         self.assertIn('badge origin">public · viewer</span>', html)
         self.assertNotIn('badge gap', html)
         rec.data.pop('support')
@@ -375,10 +374,9 @@ class Views(Fixture):
             rec.data['support'] = [entry]
             self.assertIn('badge ' + render_html.CLASSES[cls], render_html.render(checker))
         row = next(r for s in checker.status for r in s['rows'] if r['key'] == 'a')
-        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A',
-                               'carried_from': {'format': 1}}, ())
+        file.verdicts['a'] = ({'date': '2026-10-09', 'verifier': 'reader A'}, ())
         for value, css in render_html.VERDICTS.items():
-            row.update(verdict=value, carried=False)
+            row['verdict'] = value
             self.assertIn('badge ' + css, render_html.render(checker, with_status=True))
         for value, css in render_html.FRESHNESS.items():
             row['status'] = value
@@ -482,18 +480,16 @@ class Views(Fixture):
         self.assertIn('<pre>&lt;script&gt;x&lt;/script&gt;</pre>', html)
         self.assertNotIn('<script>', html)
 
-    def test_real_record_note_carried_and_second_reader(self):
+    def test_real_record_note_and_second_reader(self):
         checker = checked(self.root)
         row = checker.status[0]['rows'][0]
         path = self.root / 'resources'
         path.mkdir()
-        values = {'a': verdict(row['basis'], note='record *note*', contrary_evidence=None,
-                               citation_precision=None, carried_from={'format': 1, 'repo': 'old',
-                                   'commit': 'c' * 40, 'path': 'old.verify.md', 'key': '1'})}
+        values = {'a': verdict(row['basis'], note='record *note*')}
         (path / 'widget.verify.yaml').write_text(record('widgetchip', 'widget.spec.yaml', values))
         code, result, _ = cli(self.root, '--with-status')
         self.assertEqual(code, 0, result)
-        self.assertIn('PASS 2026-10-08 · carried', result['html'])
+        self.assertIn('PASS 2026-10-08</span>', result['html'])
         self.assertIn('record <em>note</em>', result['html'])
 
 

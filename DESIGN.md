@@ -1033,7 +1033,7 @@ Some discrepancies are historical text lag; others affect interpretation today:
 
 - `EVAL-PLAN.md` and parts of the proposal/review say no ledger exists. The pilot now has
   `ledger.yaml`; existence does not establish freeze completion or a score.
-- Historical format 1 documents describe whole-file hash freshness and checker warning rules.
+- Historical documents about the retired Markdown spec format describe whole-file hash freshness and checker warning rules.
   Current verification records use per-fact bases and upstream dependencies; `spec.py check`
   enforces the `pr` or `main` policy selected by `--require-verified`. Historical findings
   about the retired checker are not instructions for the current one.

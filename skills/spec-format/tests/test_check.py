@@ -4,7 +4,7 @@
 """Tests for `spec.py check` (SF2-2): composition, references and the license gate.
 
 Fixtures (all synthetic):
-- fixtures/license-gate: the format 1 license-gate matrix rewritten in the spec format (its README);
+- fixtures/license-gate: the earlier Markdown format's license-gate matrix rewritten in the spec format (its README);
 - fixtures/references/<case>/<root>: one directory of roots per reference case (plan step 4);
 - fixtures/check/good_root, bad_root, vendor_root, stubs: board-expert's fixtures in the spec format,
   each bad file keeping one defect;
@@ -152,7 +152,7 @@ class TempRoots(unittest.TestCase):
 
 
 class LicenseGateMatrix(TempRoots):
-    """The format 1 matrix in the spec format, row for row (fixtures/license-gate/README.md)."""
+    """The earlier Markdown format's matrix in the spec format, row for row (fixtures/license-gate/README.md)."""
 
     def matrix(self, flags):
         expected = json.loads((GATE / "expected.json").read_text(encoding="utf-8"))
@@ -508,7 +508,7 @@ class Untrusted(unittest.TestCase):
     UNTRUSTED_ROOT = {  # case: text from the root's own first error, quoted in the message
         "misnamed-yml": "not read as a spec", "misnamed-upper": "not read as a spec",
         "misnamed-mixed": "not read as a spec", "backup-bak": "not read as a spec",
-        "backup-tilde": "not read as a spec", "format1-md": "a format 1 spec",
+        "backup-tilde": "not read as a spec", "markdown-spec": "a Markdown spec",
         "overlays-newline": "b.spec.yaml", "overlays-case": "b.spec.yaml",
         "id-only": "b.spec.yaml", "no-identity": "b.spec.yaml", "id-list": "b.spec.yaml",
         "id-empty": "b.spec.yaml", "dup-repos": "listed twice",
@@ -737,7 +737,7 @@ class Roots(TempRoots):
         self.assertIn("name it *.spec.yaml", by_file["A.SPEC.YAML"])
         self.assertIn("name it *.spec.yaml", by_file["b.spec.yml"])
         self.assertIn("a facts file does not belong", by_file["c.facts.yaml"])
-        self.assertIn("a format 1 spec", by_file["d.spec.md"])
+        self.assertIn("a Markdown spec (.spec.md) is not read", by_file["d.spec.md"])
         self.assertIn("an empty file", by_file["e.spec.yaml"])
         self.assertNotIn("notes.yaml", by_file)
 
@@ -761,7 +761,7 @@ class BoardFixtures(unittest.TestCase):
         "dup-fact-id.spec.yaml": ["fact id 'reset-time' is used twice in this file"],
         "dup-premise.spec.yaml": ["'dup-premise#reset-time' names dup-premise@bad#reset-time, "
                                   "as '#reset-time' already does"],
-        "format1.spec.md": ["a format 1 spec in a format 2 root"],
+        "markdown.spec.md": ["a Markdown spec (.spec.md) is not read"],
         "instance-dangling.spec.yaml": ["instance 'uart1': ip 'nosuchip' resolves to no spec"],
         "instance-not-ip.spec.yaml": ["instance 'uart1': 'fineboard' is not an ip spec"],
         "internal-doc.spec.yaml": ["documents entry 'secret-trm': access: internal under a "

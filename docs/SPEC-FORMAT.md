@@ -507,8 +507,8 @@ the license split carry over. Restated for the spec format:
 - **Root marker.** `board-specs.yaml` keeps its name and fields (`layer`, `name`, `roots`,
   `license`, `accepts`) and gains `format: 2`. `license` and `accepts` become required (`license`:
   orchestrator decision during SF2-2's review, 2026-10-08), and `accepts: []`
-  means documents only (orchestrator decision, 2026-10-08; format 1 read an absent `accepts` as
-  undeclared, with a warning). `name` becomes required, because root-qualified
+  means documents only (orchestrator decision, 2026-10-08; the earlier Markdown format read an absent
+  `accepts` as undeclared, with a warning). `name` becomes required, because root-qualified
   references name it (D1): the three repositories' markers already declare
   `hardware-specs-docs`, `hardware-specs-permissive` and `hardware-specs-gpl`. Two roots read
   together with the same name are an error.
@@ -538,7 +538,7 @@ the license split carry over. Restated for the spec format:
   citing file. A root whose own check produced any error is *untrusted*, counting errors from
   before a context root's findings are reported as warnings: a file that fails to load or
   validate, a file named like a spec that discovery passes over (`.spec.yml`, a case variant,
-  a backup such as `.bak` or `~`, a format 1 `.spec.md`), a nested marker, a duplicate name, an
+  a backup such as `.bak` or `~`, a Markdown `.spec.md`), a nested marker, a duplicate name, an
   unlistable directory, a failing reference. Every reference into an untrusted root, direct or
   reached through other facts, is an error, and that error makes the citing root untrusted in
   turn. A reference that resolves to nothing, or to more than one fact, is an error too. A
@@ -582,7 +582,6 @@ verdicts:
     contrary_evidence: none-found   # none-found | found | not-checked
     citation_precision: exact       # exact | imprecise
     readers: [...]                  # a second reader's {verifier, verdict, note}; absent until one runs
-    carried_from: {...}             # present when the verdict was carried forward, not re-read
 ```
 
 Rules (all checked by `spec.py check`):
@@ -601,13 +600,9 @@ Rules (all checked by `spec.py check`):
 - **Two readers.** A fact marked `critical` needs a second reader in `readers` with its own
   verdict (D14). A reader whose `verifier` is the verdict's own (compared after NFC, collapsing
   white space and folding case) is not a second reader (review round 1, 2026-10-08). This answers RG1's "add a record field showing whether the second verifier ran".
-- **`carried_from`** names the earlier record (repository, commit, path), the key it had there and
-  its format version. A carried verdict is a carry-forward, not a fresh reading, and the
-  rendered status says so.
 - **Documents in `sources` carry `sha256`** (RG1's re-verification reports: "`sources` has no
   place for a document hash").
-- **`contrary_evidence` and `citation_precision`** are required on a verdict reached under
-  the spec format and absent from a carried one whose earlier record did not state them.
+- **`contrary_evidence` and `citation_precision`** are required on every verdict.
 
 ### Freshness: per-fact basis hashes (D2)
 
@@ -1453,7 +1448,7 @@ are generated; neither is committed or edited (D5). Both carry the same content:
   rendered citations, inference premises naming the facts they reference, derivation, TODO,
   scope) and its full fact reference, so a reader can cite it;
 - in a merged view, overlay facts under "Overlay: <layer> (<root>)" sub-headings;
-- with `--with-status`, each fact's verdict, date, freshness and whether it was carried forward;
+- with `--with-status`, each fact's verdict, date and freshness;
 - for peripheral specs and reviews, the generated provenance notice, canonical-references table,
   register tables, verify-on-hardware list and open-questions list.
 
@@ -1535,7 +1530,7 @@ The viewer renders each fact as an HTML element whose structure comes from the f
   <div class="claim"><!-- the claim, rendered by CommonMark with raw HTML disabled --></div>
   <div class="provenance">
     <span class="badge class-dt">DT</span> <a href="...">linux@8d3ae59 bcm2711.dtsi 56–66</a>
-    <span class="badge verdict-pass">PASS 2026-10-08 · carried</span>
+    <span class="badge verdict-pass">PASS 2026-10-08</span>
     <span class="badge critical">bring-up critical · second reader missing</span>
     <span class="badge origin">public · hardware-specs-gpl</span>
   </div>
@@ -1557,7 +1552,7 @@ Badges, all drawn from fields:
 | Badge | From | Shows |
 | --- | --- | --- |
 | Class | each support entry's `class` | `databook`, `standard`, `doc`, `rtl`, `DT`, `src`, `hardware`, `emulated`, `press`, `inference`, or the extension class, each linked to its citation (the document and locator; the repository at its commit, path and lines) |
-| Verdict | the record | `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, `ADJUDICATE` with date; `stale`, `upstream-stale`, `unverified`; `carried` when carried forward |
+| Verdict | the record | `PASS`, `FAIL`, `UNVERIFIABLE`, `GAP`, `ADJUDICATE` with date; `stale`, `upstream-stale`, `unverified` |
 | TODO | `todo.check` | what would settle the fact (`verify on hardware`, on a document, in source) |
 | Critical | `critical` and the record's `readers` | bring-up critical; "second reader missing" until one is recorded |
 | Origin | the file's root and layer | which repository and layer the fact comes from |
@@ -1571,89 +1566,15 @@ specs build on the same data later; this design covers the first static version 
 
 ## Migration
 
-This section records the completed format 1 conversion. The migration command was a
-one-time tool, retired in SF2-12; current commands are listed in the
-[contract](../skills/spec-format/SKILL.md#command-line). Historical records
-and the `carried_from` provenance of carried verdicts remain.
-
-### What converts
-
-| Item | Count | How |
-| --- | --- | --- |
-| `hardware-specs-docs/specs/bcm2711.spec.md` | 34 facts | `spec.py migrate`, then a citation pass (below) |
-| `hardware-specs-permissive/specs/bcm2711.spec.md` | 13 facts, 31 anchors, one source notice | same |
-| `hardware-specs-gpl/specs/bcm2711.spec.md` | 18 facts | same; every `[DT]` parenthetical becomes `DT` anchors |
-| Their three `resources/bcm2711.verify.md` | 65 verdicts | verdicts carried by id (below) |
-| `skills/peripheral-spec/tests/fixtures/license-gate/` | 15 peripheral specs, 6 board specs, 3 root markers, `expected.json` | rewritten as `*.spec.yaml`; the expected matrix keeps its rows |
-| `skills/board-expert/tests/fixtures/` | good, bad, vendor and verify roots, stubs | rewritten; each bad fixture keeps the one defect it tests, now as a data defect |
-| `skills/hardware-investigator/examples/` | expected facts files | rewritten as `kind: facts` |
-| `skills/board-spec-scaffold/templates/` | 6 spec templates and the root marker | rewritten as YAML templates |
-| `skills/board-expert/specs/board-specs.yaml` | the shipped root (no specs) | `format: 2`; keeps its `name` |
-| The three spec repositories' root markers | `layer`, `name`, `license`, `accepts` | `format: 2`; `name`, `license` and `accepts` (all already present) are now required; references use `name` |
-| The three spec repositories' CI | `scripts/checks.sh`, one workflow | `checks.sh` on the spec format, plus a publish workflow for the Pages site (D5); nothing generated is committed |
-
-### Converting a spec
-
-1. **Mechanical part** (`spec.py migrate <v1 file>`, using today's one Markdown parse for the
-   last time): identity and resources; one fact per bullet, its `id` the slug of the bold
-   lead-in (unique among the spec's files in its root; no prefix), its `section`, its `claim`
-   (the bullet text before the tag clause, byte for byte), its `todo` text; every `[src:]` anchor
-   into `anchors`; every `[DT]` parenthetical of the form "(<file> lines A-B, <repo>)" into `DT`
-   anchors; hashes moved out of `note` into `sha256`; `fetch_via` URLs into `retrieval`.
-2. **Citation part** (a fresh agent with the v1 and the draft YAML file, no sources): turn each
-   free-text document parenthetical into a `doc` name and structured locators, and each inference
-   parenthetical into `premises` and `derivation`, keeping the premise wording. A premise that
-   names a fact of another bullet becomes a fact reference: `#<id>` in the same file, and the
-   root-qualified form for a fact in another repository (the GPL overlay's prose "as the
-   `bcm2711` spec in hardware-specs-docs states, Addressing model" becomes
-   `bcm2711@hardware-specs-docs#addressing-model`).
-3. **Split mixed bullets** (D3): a bullet whose tag clause mixes `[inference]` with read classes
-   becomes a read fact and an inference fact that references it. In bcm2711: docs Quick-facts/2
-   (two facts), permissive Gotchas/3 (three: the `src`+`databook` fact about the two builds' bases,
-   the `doc` fact about the documentation, and the inference), GPL Quick-facts/1 (two). Three
-   bullets become seven facts.
-4. **Conversion-fidelity check** (D10): a fresh agent compares each v1 bullet with its YAML record
-   and the Markdown view: claim text identical, every v1 citation present with the same target
-   and locator, nothing added. It writes a fidelity report; it opens no source.
-
-### Carrying verdicts
-
-A v1 verdict carries to the YAML fact when the claim text is byte-identical and the fidelity check
-passes the fact; it is written with `carried_from: {repo, commit, path, key: 'Quick-facts/2 "GIC
-node"', format: 1}` and the fact's new basis hash. Everything else is unverified and goes to a
-delta verification: the seven facts from split bullets, any fact the fidelity check flags, and any
-fact whose citations gained structure the v1 text did not have (a premise that was prose with no
-citation and now carries a `search` anchor, as in the permissive "Which build ships" inference).
-Of the 65 v1 verdicts, the three split bullets cannot carry and neither can "Which build ships",
-so at most 61 carry; the exact number is what the fidelity check passes.
-
-`DT` anchors become resolvable at the pin for the first time. `spec.py resolve` runs on all 18
-GPL facts during migration; a resolution failure there is a real finding about the v1 spec, not a
-conversion error, and is recorded as one.
-
-### What stays as it is
-
-- **The frozen archive** (`evals/`, `evidence/`, `notebook/`, `history/` and the archive documents
-  listed in `utilities/check-open-side.py`): unchanged, still checked by CI with its own tools. It
-  describes format 1, and its references to `.spec.md` files and anchors stay as history.
-- `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md` and the notebook keep describing the v1 run; the migration gets its own
-  evidence file.
-- The `*.verify.md` records in the spec repositories' history: superseded by the YAML records,
-  which point to them through `carried_from`.
-
-### Transition (D11)
-
-The following transition is the historical migration sequence, completed in SF2-10 and
-SF2-11; SF2-12 retires its format 1 tools and migration command. It is not a current CLI
-procedure. The carried-verdict metadata and frozen archive remain.
-
-During that transition, driver-lab shipped the spec format alongside a read-only v1 checker; each spec repository migrated in one
-pull request that bumps its driver-lab pin, converts the spec and the record, switches
-`scripts/checks.sh` and adds the publish workflow; the three migrate in sequence docs,
-permissive, gpl within one unit, so no composition mixing v1 and YAML specs has to be supported. When all
-three are on the spec format, driver-lab removes the v1 code and `mdtokens.py` in one change.
-markdown-it-py is not removed: it stays, pinned, as the one CommonMark library the spec format
-checker and the publish step share (D20, D22), subject to its `dep-quality` score in SF2-1.
+The specs were first written in an earlier Markdown format. They were converted to the spec
+format and that format was retired: its tools and the one-time migration command are gone,
+and current commands are listed in the [contract](../skills/spec-format/SKILL.md#command-line).
+The verdicts of the earlier records were re-read under the spec format, so every verdict states
+`contrary_evidence` and `citation_precision`. The conversion's history is in
+[SPEC-FORMAT-PLAN.md](SPEC-FORMAT-PLAN.md) and its evidence files. The frozen archive
+(`evals/`, `evidence/`, `notebook/`, `history/` and the archive documents listed in
+`utilities/check-open-side.py`) stays as it is, still checked by CI with its own tools, and its
+references to `.spec.md` files and anchors stay as history.
 
 ## Effects on the skills and the spec repositories
 
@@ -1668,7 +1589,7 @@ The spec format is now the only supported reading and authoring path.
 | `hardware-investigator` | Markdown facts file, `Source pin:` lines, `anchor_check.py --root` | `kind: facts` YAML; `license_gate.py` reads the same SPDX logic; per-file license confirmation is a field (`license_from`) checked by `resolve` |
 | `peripheral-spec` | anchor grammar, pins, block anchors, labels in prose; `anchor_check.py`, `inventory_check.py` | the grammar section is replaced by the record types above; `requirement` field; `spec.py check/resolve/show/drift/inventory`; templates for the spec subagent and verifier rewritten around records |
 | `reference-driver-review` | `[impl:]`/`[ref:]` aliases, Markdown findings | `role: impl`/`ref` repos, `findings` with `data.finding`, `assessment` in place of the finding verdict |
-| `spec-verifier` | keys by section and ordinal or anchor text; whole-file hash; `summary` without `adjudicate` in board specs | keys by fact id; basis hashes; `readers`, `contrary_evidence`, `citation_precision`, `carried_from`; delta verification from `spec.py status --stale`; the verifier writes YAML and `spec.py check` validates it |
+| `spec-verifier` | keys by section and ordinal or anchor text; whole-file hash; `summary` without `adjudicate` in board specs | keys by fact id; basis hashes; `readers`, `contrary_evidence`, `citation_precision`; delta verification from `spec.py status --stale`; the verifier writes YAML and `spec.py check` validates it |
 | `campaign-review` | `claims.yaml` `cites` spec section ids of the frozen e1000 spec | unchanged for the frozen campaign; a new campaign cites full fact references, and its sweep can use fact basis hashes as the basis identities of verdicts (DESIGN, continuous review C1 and C2) |
 | Spec repository `scripts/checks.sh` | `specs` (spec_check), `anchors` (anchor_check, fetch, resolve), `self-test` | `check` (`spec.py check specs --context-root ... --require-license`, plus `--require-verified` on pull requests), `resolve` (fetch pins, resolve `src` and `DT` anchors, per-file licenses), `render` (builds the Markdown view and the viewer, uploads them as an artifact on pull requests), `self-test` (the spec format fixtures; same fit/misfit pairs). On `main`, upstream-stale facts warn (D19) |
 | Spec repository publish workflow | none | builds both views on merges to `main` and weekly, deploys them to GitHub Pages (D5) |
@@ -2167,7 +2088,7 @@ gated transitively: its premise lives in
 the documents-only root and cites no repository, so nothing it reaches is outside the GPL root's
 accepts list. The same reference written from the docs root to a GPL fact would fail the gate.
 
-### `hardware-specs-gpl/specs/resources/bcm2711.verify.yaml` (slice, right after migration)
+### `hardware-specs-gpl/specs/resources/bcm2711.verify.yaml` (slice)
 
 ```yaml
 # SPDX-FileCopyrightText: 2026 contributors
@@ -2191,12 +2112,8 @@ verdicts:
       0x40042000/0x2000, 0x40044000, 0x40046000; translated through the ARM Local range to
       0xff841000 and 0xff842000; maintenance interrupt GIC_PPI 9 with GIC_CPU_MASK_SIMPLE(4) and
       IRQ_TYPE_LEVEL_HIGH (PPI 9 is ID 25).
-    carried_from:
-      repo: hardware-specs-gpl
-      commit: cd911120663da72f4101161eef5a22dc13d0cc86
-      path: specs/resources/bcm2711.verify.md
-      key: 'Quick-facts/2 "GIC node"'
-      format: 1
+    contrary_evidence: none-found
+    citation_precision: exact
   reserved-stub-page:
     basis: <64 hex>
     verdict: PASS
@@ -2206,23 +2123,16 @@ verdicts:
       bcm283x.dtsi line 11 reserves 0x0 for 0x1000; the comment on lines 8-10 is attributed as a
       comment and matches (firmware startup stubs, secondary CPUs spinning). bcm2711.dtsi
       includes bcm283x.dtsi (line 2).
-    carried_from:
-      repo: hardware-specs-gpl
-      commit: cd911120663da72f4101161eef5a22dc13d0cc86
-      path: specs/resources/bcm2711.verify.md
-      key: 'Quick-facts/6 "Reserved stub page"'
-      format: 1
+    contrary_evidence: none-found
+    citation_precision: exact
 ```
 
-The carried verdicts leave out `contrary_evidence` and `citation_precision`: the format 1 record
-did not state them per bullet, and a carried verdict records only what the earlier record said.
-They also have no `readers`: an optional list is absent rather than empty (SF2-1, 2026-10-08).
+Both verdicts state `contrary_evidence` and `citation_precision`, as every verdict does. They
+have no `readers`: an optional list is absent rather than empty (SF2-1, 2026-10-08).
 What `spec.py status` reports for this slice: `gic-node` and `reserved-stub-page`
-current (carried); `address-translation-in-the-tree` and
-`tree-describes-low-peripheral-mode` unverified, because the split changed the first claim's
-text and created the second. `gic-node` is `critical` and has one reader, so under
-`--require-verified` the check also asks for a second reader (the v1 record ran its second reader
-separately and recorded no verdict of its own, so there is nothing to carry). Delta verification
+current; `address-translation-in-the-tree` and `tree-describes-low-peripheral-mode`
+unverified, because neither has a verdict yet. `gic-node` is `critical` and has one reader, so
+under `--require-verified` the check also asks for a second reader. Delta verification
 covers exactly those items; nothing else is re-read. If the docs spec later edits
 `addressing-model`, only `tree-describes-low-peripheral-mode` goes stale here: it shows as
 upstream-stale, a warning on the GPL repository's `main`, and an error on the next pull request
@@ -2240,7 +2150,7 @@ code spans. Stated premises and notes are top-level author fences; premise citat
 nested list items. Repository citations retain full commits. The banner uses explicit
 `--source-commit` and `--tool-commit` values when supplied, otherwise “unavailable”; SHA256
 is over the checked bytes (hashes below are abbreviated as a label). The docs fixture has
-no verification record, and carried zero basis hashes in the GPL fixture read stale.
+no verification record, and the zero basis hashes in the GPL fixture's record read stale.
 
 ~~~markdown
 Generated by `spec.py render`. Do not edit.
@@ -2341,7 +2251,7 @@ Claim (author text):
 Provenance (generated):
 
 - DT: `linux@8d3ae59288f1e7d58d76558a6ee96d533bc5019f (GPL-2.0-only) arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66`
-- `bcm2711@hardware-specs-gpl#gic-node` · bring-up critical · PASS 2026\-10\-08 · stale (carried from format 1\; second reader missing)
+- `bcm2711@hardware-specs-gpl#gic-node` · bring-up critical · PASS 2026\-10\-08 · stale (second reader missing)
 
 Record note (author text):
 
@@ -2370,7 +2280,7 @@ left open, also decided by the user on 2026-10-08.
 | D7 | Where the format lives | A new reference skill, `skills/spec-format/`; `board-expert/SPEC-FORMAT.md` becomes a pointer | one home for rules every spec skill shares; no skill renamed |
 | D8 | JSON Schema validator | `jsonschema`, subject to a `dep-quality` score before pinning | full 2020-12 support in the most used implementation |
 | D9 | YAML library and rewriting | PyYAML; `drift --rewrite` replaces spans found by node marks, then strictly loads, validates and compares the result with exactly the intended data changes | user decision 2026-10-09: refuse unintended key, value or type changes with the first differing path; preserve comment/SPDX bytes and the original on refusal |
-| D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry) | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
+| D10 | Carrying v1 verdicts | Carry when the claim text is byte-identical and a fresh conversion-fidelity check passes; re-verify the rest (at most 61 of 65 carry). Superseded: the carried verdicts were later re-read fresh and `carried_from` was removed | does not repeat RG1's verification for unchanged facts, and no conversion error carries a PASS |
 | D11 | Transition | Read-only v1 checker; migrate docs, then permissive, then gpl in one unit; then remove v1 and `mdtokens.py` (markdown-it-py stays as the one CommonMark library, D20) | no composition mixing v1 and YAML specs, and no second parser left behind |
 | D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
@@ -2442,7 +2352,7 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
    carried records, delta verification of the rest; the three spec repositories' pull requests
    (docs, permissive, gpl) with their `checks.sh` and CI on the spec format, and each repository's
    publish workflow and Pages site.
-7. **SF2-7 Retire format 1.** Remove the v1 checker, `mdtokens.py` and `anchor_check.py`'s
+7. **SF2-7 Retire the Markdown format.** Remove the v1 checker, `mdtokens.py` and `anchor_check.py`'s
    Markdown mode; markdown-it-py stays as the pinned CommonMark library (D20); update
    driver-lab's `AGENTS.md` check list and CI.
 

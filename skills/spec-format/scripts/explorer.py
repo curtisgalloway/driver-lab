@@ -297,7 +297,6 @@ def _fact(checker, rec, row, children, anchors):
         'verdict': row.get('verdict') or '',
         'date': str(verdict.get('date', '')),
         'status': row.get('status') or '',
-        'carried': bool(row.get('carried')),
         'second_reader_missing': row.get('second_reader') == 'missing',
         'children': children,
         'verifier': str(verdict.get('verifier', '')),

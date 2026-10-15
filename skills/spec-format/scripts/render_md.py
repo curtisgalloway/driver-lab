@@ -235,8 +235,6 @@ def _fact(out, checker, rec, status, with_status):
             text += " · " + escape(row["verdict"] + " " + verdict["date"])
         text += " · " + escape(row["status"])
         status_notes = []
-        if row["carried"]:
-            status_notes.append("carried from format " + str(verdict["carried_from"]["format"]))
         if row["second_reader"] == "missing":
             status_notes.append("second reader missing")
         if status_notes:

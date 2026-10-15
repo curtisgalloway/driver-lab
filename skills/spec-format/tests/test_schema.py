@@ -281,7 +281,7 @@ class Kinds(Validator):
 
     def test_keys_by_kind(self):
         cases = [
-            ("format 1", soc(format=1), "format"),
+            ("unsupported format", soc(format=1), "format"),
             ("format as a string", soc(format="2"), "format"),
             ("unknown top-level key", soc(extra="x"), "unknown key 'extra'"),
             ("soc without instances", soc(instances=DROP), "'instances' is a required"),
@@ -901,10 +901,6 @@ class Records(Validator):
         self.assert_valid(record(), name="resources/w.verify.yaml")
         self.assert_valid(record({"f1": verdict(), "reg-ctrl.en": verdict(verdict="GAP")}),
                           name="w.verify.yaml")
-        carried = verdict(contrary_evidence=DROP, citation_precision=DROP,
-                          carried_from={"repo": "r", "commit": COMMIT, "path": "a.verify.md",
-                                        "key": 'Quick-facts/2 "GIC node"', "format": 1})
-        self.assert_valid(record({"f1": carried}), name="w.verify.yaml")
         readings = [{"verifier": "a", "verdict": "PASS", "reasoning": "r"}]
         cases = [
             ("summary without adjudicate",
@@ -917,7 +913,7 @@ class Records(Validator):
                                                  "gap": 0, "adjudicate": 0}),
              "less than the minimum"),
             ("key is a reference", record({"#f1": verdict()}), "does not match"),
-            ("key is a v1 key", record({"Quick-facts/2": verdict()}), "does not match"),
+            ("key is a section/ordinal key", record({"Quick-facts/2": verdict()}), "does not match"),
             ("key with two dots", record({"a.b.c": verdict()}), "does not match"),
             ("lowercase verdict", record({"f1": verdict(verdict="pass")}), "is not one of"),
             ("FAIL without correction", record({"f1": verdict(verdict="FAIL")}),
@@ -942,15 +938,15 @@ class Records(Validator):
              "keeps its readings"),
             ("readings on a plain PASS", record({"f1": verdict(readings=readings)}),
              "readings belong to"),
-            ("fresh verdict without contrary_evidence",
+            ("verdict without contrary_evidence",
              record({"f1": verdict(contrary_evidence=DROP)}), "states contrary_evidence"),
-            ("fresh verdict without citation_precision",
+            ("verdict without citation_precision",
              record({"f1": verdict(citation_precision=DROP)}), "states contrary_evidence"),
-            ("carried without key", record({"f1": apply(carried, {"carried_from": {
-                "repo": "r", "commit": COMMIT, "path": "a", "format": 1}})}),
-             "'key' is a required"),
-            ("carried format 3", record({"f1": apply(carried, {"carried_from": dict(
-                carried["carried_from"], format=3)})}), "is not one of"),
+            ("verdict without either", record({"f1": verdict(
+                contrary_evidence=DROP, citation_precision=DROP)}), "states contrary_evidence"),
+            ("carried_from is not a field", record({"f1": verdict(carried_from={
+                "repo": "r", "commit": COMMIT, "path": "a", "key": "k", "format": 1})}),
+             "unknown key 'carried_from'"),
             ("short basis", record({"f1": verdict(basis="abc")}), "does not match"),
             ("unknown verdict key", record({"f1": verdict(score=1)}), "unknown key 'score'"),
             ("reader without verdict", record({"f1": verdict(readers=[{"verifier": "v"}])}),
@@ -1209,9 +1205,6 @@ class ClosedRecords(Validator):
                 {"verifier": "a", "verdict": "PASS", "reasoning": "r"}],
                 adjudication={"decision": "d", "by": "u", "date": "2026-10-08", "rule": "r",
                               "zz": 1})})),
-            ("carried_from", record({"f1": verdict(carried_from={
-                "repo": "r", "commit": COMMIT, "path": "a", "key": "k", "format": 1,
-                "zz": 1})})),
         ]
         for label, data in verify_cases:
             with self.subTest(label):

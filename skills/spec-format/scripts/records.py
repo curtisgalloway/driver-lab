@@ -574,7 +574,7 @@ def second_pass(checker, mode):
             reader = ("not-needed" if not critical else "present" if others else "missing")
             rows.append({
                 "key": rec.id, "ref": rec.full, "kind": _what(rec).split()[0], "status": status,
-                "verdict": v["verdict"] if v else None, "carried": bool(v and "carried_from" in v),
+                "verdict": v["verdict"] if v else None,
                 "basis": basis, "recorded": v["basis"] if v else None,
                 "upstream": fresh.upstream_now(rec) if basis is not None else None,
                 "changed": detail if status == "upstream-stale" else [],

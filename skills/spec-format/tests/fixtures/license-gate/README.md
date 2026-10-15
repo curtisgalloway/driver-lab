@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # License-gate fixtures
 
-The license-gate matrix for `spec.py check`, converted from the retired format 1 fixtures. Everything is synthetic and self-contained: the gate reads only the repos
+The license-gate matrix for `spec.py check`, converted from the fixtures of the retired Markdown format. Everything is synthetic and self-contained: the gate reads only the repos
 entries' licenses and the root marker, so no repository is fetched.
 
 - `roots/gpl`, `roots/docs`, `roots/permissive`: root markers shaped like the three spec
@@ -13,17 +13,17 @@ entries' licenses and the root marker, so no repository is fetched.
   GPL and permissive fixture roots also accept `X11` and `Zlib`, which the published markers do
   not, so a spec citing either passes the fixture check and fails the published one (LS-G F1;
   SF2-G G6). No fixture spec cites either.
-- `specs/<row>.spec.yaml`: one spec per row of the format 1 matrix (`<row>-spec.md` there). Format
-  2 uses `kind: peripheral` (SF2-7a), carrying the same repos entries and anchors.
+- `specs/<row>.spec.yaml`: one spec per row of the earlier matrix (`<row>-spec.md` there). The
+  spec format uses `kind: peripheral` (SF2-7a), carrying the same repos entries and anchors.
   Two rows changed shape with the format: `dual-gpl-mit` cites its `.dtsi`
-  as `DT` (format 1 gated only `[src]`; the spec format gates `DT` and `rtl` too), and `docs-only` and
+  as `DT` (the earlier format gated only `[src]`; the spec format gates `DT` and `rtl` too), and `docs-only` and
   `docs-named` both cite named documents, since the spec format has no free-text citation.
 - `expected.json`: the exit code of `spec.py check <root> --require-license` for every pair, the
-  root holding one marker and one spec; 0 passes, 1 fails. The codes are the format 1 file's,
+  root holding one marker and one spec; 0 passes, 1 fails. The codes are the earlier file's,
   row for row. `without_require_license` lists the only codes that differ without the flag: a
   repos entry no anchor or notice names (`uncited-gpl-pin`) is gated only under
   `--require-license` (design, "Roots, layers, overlays and the license gate").
-  `bsd-target` restores the format 1 target binding citation, so its license is gated with or
+  `bsd-target` restores the earlier target binding citation, so its license is gated with or
   without the flag. `docs-only` restores the FIFO depth and both original TRM citations.
 - `board/`: `widgetchip.spec.yaml` cites a document only and fits every root;
   `widgetchip-bsd-overlay` adds a BSD-3-Clause repos entry no anchor cites (fits the GPL and

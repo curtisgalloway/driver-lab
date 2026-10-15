@@ -324,7 +324,7 @@ class Views(unittest.TestCase):
 
 
 class WorkedExample(unittest.TestCase):
-    def test_merged_design_slice_and_current_carried_status(self):
+    def test_merged_design_slice_and_current_status(self):
         with tempfile.TemporaryDirectory() as temp:
             copied = Path(temp) / "worked"
             shutil.copytree(HERE / "fixtures/worked-example", copied)
@@ -366,7 +366,7 @@ class WorkedExample(unittest.TestCase):
             self.assertIn("BCM2711 ARM Peripherals (release 4", html)
             self.assertIn("§1.2.1–1.2.4, pp. 4–6", html)
             self.assertIn("arch/arm/boot/dts/broadcom/bcm2711.dtsi lines 56–66", html)
-            self.assertIn("PASS 2026-10-08 · stale (carried from format 1", visible)
+            self.assertIn("PASS 2026-10-08 · stale (second reader missing)", visible)
             self.assertLess(out.index("#### Addressing model"), out.index("#### GIC node"))
             self.assertEqual(out.count("#### Addressing model"), 1)
             self.assertIn("hardware-specs-docs:bcm2711.spec.yaml", out)
@@ -383,7 +383,7 @@ class WorkedExample(unittest.TestCase):
             self.assertEqual((code, err), (0, ""))
             visible = "\n".join("".join(c.content for c in t.children or [])
                                 for t in PARSER.parse(out) if t.type == "inline")
-            self.assertIn("PASS 2026-10-08 · current (carried from format 1; second reader missing)", visible)
+            self.assertIn("PASS 2026-10-08 · current (second reader missing)", visible)
             self.assertEqual(out.count("#### Addressing model"), 1)
             code, out, err = run(gpl, "--context-root", docs, "--context-root", perm, "--format", "md")
             self.assertEqual((code, err), (0, ""))

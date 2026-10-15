@@ -25,7 +25,7 @@ facts:
   - id: target-binding
     section: target
     claim: The driver binds by compatible string.
-    note: "Format 1 citation: [tgt: drivers/widget/widget.cc:12]. No symbol was recorded; the search is scoped to that file."
+    note: "Earlier citation: [tgt: drivers/widget/widget.cc:12]. No symbol was recorded; the search is scoped to that file."
     support:
       - class: src
         anchors: [{repo: os, path: drivers/widget/widget.cc, search: compatible}]

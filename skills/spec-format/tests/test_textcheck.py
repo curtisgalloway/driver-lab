@@ -103,7 +103,7 @@ class Integration(unittest.TestCase):
             (root / "widgetchip.spec.yaml").write_text(chip().replace("C reset.", '"[src:fake]"'))
             code, result = check(root)
             self.assertEqual(code, 0)
-            tags = [f for f in result["findings"] if "format 1 tag" in f["message"]]
+            tags = [f for f in result["findings"] if "retired provenance tag" in f["message"]]
             self.assertEqual(len(tags), 1)
             self.assertEqual(tags[0]["level"], "warning")
 

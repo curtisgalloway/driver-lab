@@ -132,7 +132,7 @@ roots only.
 summary and each fact's freshness; `--stale` lists only what a re-verification has to cover
 (every fact not current, and current critical facts without a second reader). `--json` prints
 `{"ok", "roots", "errors", "warnings", "specs": [{"path", "root", "spec", "record", "state",
-"facts": [{"key", "ref", "kind", "status", "verdict", "carried", "basis", "recorded",
+"facts": [{"key", "ref", "kind", "status", "verdict", "basis", "recorded",
 "upstream", "changed", "reason", "second_reader"}]}], "findings"}` (the check's findings, as
 for `check`): `basis` is the fact's basis hash now and
 `upstream` the map a verdict reached now records (null when the basis is unknown). Exit 0 when
@@ -200,7 +200,7 @@ board-specs.yaml; 100 an internal error in spec.py (the files were not judged).
 `check` also rejects raw HTML, disallowed links (including images), link reference definitions,
 footnotes, nesting deeper than 16, headings and unclosed fences in CommonMark author fields,
 including verification-record notes.
-Format 1 tag spellings in claims and prose are warnings.
+Retired provenance-tag spellings in claims and prose are warnings.
 `render` runs that check and repeats containment before emitting a view. Generated text is
 literal. In the Markdown view author Markdown is verbatim in labeled top-level fences with no info string.
 Generated syntax and values that GFM might autolink use code spans. Without
@@ -856,8 +856,6 @@ def cmd_status(args) -> tuple[int, dict]:
         text.append(f"{f.root.label}:{rel} ({f.spec_id}): {summary}")
         for r in rows:
             notes = [r["verdict"]] if r["verdict"] else []
-            if r["carried"]:
-                notes.append("carried")
             if r["second_reader"] == "missing":
                 notes.append("needs a second reader")
             if r["changed"]:

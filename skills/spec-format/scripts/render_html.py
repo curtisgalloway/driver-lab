@@ -162,7 +162,7 @@ def verification(file, key, row, notes):
     out = []
     verdict = file.verdicts.get(key, (None, None))[0]
     if row['verdict']:
-        text = row['verdict'] + ' ' + verdict['date'] + (' · carried' if row['carried'] else '')
+        text = row['verdict'] + ' ' + verdict['date']
         out.append(badge(VERDICTS[row['verdict']], text))
         out.append('<p>Verifier: ' + literal(verdict['verifier']) + '</p>')
         for reader in verdict.get('readers', []):
@@ -170,8 +170,6 @@ def verification(file, key, row, notes):
                        literal(reader['verdict']) + '</p>')
     if row['second_reader'] == 'missing':
         out.append('<p>second reader missing</p>')
-    if row['carried']:
-        out.append('<p>carried from format ' + literal(verdict['carried_from']['format']) + '</p>')
     out.append(badge(FRESHNESS[row['status']], row['status']))
     if verdict and 'note' in verdict:
         notes.append(('Record note', verdict['note']))

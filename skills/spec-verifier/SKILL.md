@@ -92,7 +92,7 @@ guessing at an unchecked result.
    not pinned. PDF page locators remain outside this heading check.
 
 2. **Select the delta from status.** JSON `specs[].facts[]` supplies `key`, `ref`, `kind`,
-   `status`, `verdict`, `carried`, `basis`, `recorded`, `upstream`, `changed`, `reason` and
+   `status`, `verdict`, `basis`, `recorded`, `upstream`, `changed`, `reason` and
    `second_reader`. Use `key` as the verdict key and full `ref` to identify a fact across
    roots. `record` names an existing record (null if absent); `state` reports whether it
    loaded. Status exits 1 on a check error but still prints its report; inspect `findings`.
@@ -255,7 +255,7 @@ Current UNVERIFIABLE and GAP may pass the mechanical gate too: report those limi
 
 Write `<root>/resources/<name>.verify.yaml`, with `<name>` the spec file's basename without
 `.spec.yaml`, even for a nested spec or overlay. Never put it in a nested `resources/`,
-share it between files, or leave format 1 records in a spec root.
+share it between files, or keep any record other than a `.verify.yaml` file in a spec root.
 
 - `format: 2`; `spec`: spec id (overlay target id); `spec_file`: root-relative path;
   `canonical: fact-v1`; `spec_sha256`: SHA-256 of the exact spec bytes at assembly, for
@@ -277,18 +277,6 @@ share it between files, or leave format 1 records in a spec root.
   Cite evidence in notes; do not paste source code into records.
 - `summary` has exactly `pass`, `fail`, `unverifiable`, `gap`, `adjudicate`, all present,
   even when zero. Count every stored verdict, preserved verdicts outside the delta included.
-
-### Carrying a format 1 verdict (D10)
-
-Carry only when claim text is byte-identical and a fresh conversion-fidelity check confirms
-the same citations and locators, nothing added. Split claims, added search premises and
-fidelity failures need fresh readings. Copy what the old record said, identify its
-`carried_from: {repo, commit, path, key, format: 1}`, and use the converted fact's basis from
-status. Retain original dates, reader identities and reasoning; do not imply a new reading.
-**Omit `contrary_evidence` and `citation_precision`** for format 1 carries, as the schema
-requires. Never invent readers that the old record did not document; a carried critical
-fact still needs its independent second reader. A later fresh primary reading replaces the
-carry: remove `carried_from` and supply both new fields. Status reports `carried: true`.
 
 ## Gate and report
 

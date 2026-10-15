@@ -423,8 +423,8 @@ class Checker:
                                                          "root's own resources/ directory: move "
                                                          "it there")
                 elif lower.endswith(".spec.md"):
-                    self.add((path, root, None), (), "a format 1 spec in a format 2 root: "
-                                                     "convert it to <name>.spec.yaml")
+                    self.add((path, root, None), (), "a Markdown spec (.spec.md) is not read: "
+                                                     "specs are <name>.spec.yaml files")
                 elif ".spec." in lower or ".facts." in lower:
                     # .spec.yml, a case variant, a backup (.bak, ~, .orig) or a facts file: a
                     # file discovery passes over could hide a candidate, so it is an error
@@ -434,7 +434,7 @@ class Checker:
                     self.add((path, root, None), (), f"not read as a spec: {want}")
                 elif ".verify." in lower or (Path(top) == root.given / "resources"
                                              and "verify" in lower):
-                    # .verify.yml, a case variant, a backup, a format 1 .verify.md, and in
+                    # .verify.yml, a case variant, a backup, a Markdown .verify.md, and in
                     # resources/ any name with "verify" in it (w.verify, wverify.yaml): a record
                     # discovery passes over would leave its verdicts unread without a word
                     self.add((path, root, None), (), "not read as a verification record: name "

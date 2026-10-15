@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Status: **approved by the user on 2026-10-08 (decisions D1–D22 below).** Nothing here is built yet. The
 direction (one YAML format for every spec, validated by a JSON Schema, with Markdown as a rendered
-view) was approved by the user on 2026-10-08 ([RG-regen](../notebook/RG-regen.md), "RG-T1 rounds
+view) was approved by the user on 2026-10-08 ([RG-regen](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md), "RG-T1 rounds
 6–8, merge, and the format decision"). The user settled the design's open choices the same day;
 they are recorded under [Decisions (2026-10-08)](#decisions-2026-10-08), and the body below
 follows them. Where the body depends on one, it names it (D1–D22).
@@ -70,7 +70,7 @@ wrapped bullets; two fence scanners that disagreed and blanked a fact between co
 after the rewrite onto one CommonMark parser, text that renders as provenance while the checker
 reads it otherwise (quoted headings, comments closed early, entities, emphasis inside an anchor,
 invisible characters). The three gaps still open at merge go away only by changing the format
-([RG1 evidence](../evidence/RG1.md), "Known gaps at merge"). A proposed "plain-ASCII tail" rule
+([RG1 evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md), "Known gaps at merge"). A proposed "plain-ASCII tail" rule
 would have failed 94 already verified bullets. The lesson recorded in the notebook: *a schema
 imposed on a format designed for many equivalent spellings will keep leaking; when the data is
 structured, store it structured.*
@@ -1636,7 +1636,7 @@ conversion error, and is recorded as one.
 - **The frozen archive** (`evals/`, `evidence/`, `notebook/`, `history/` and the archive documents
   listed in `utilities/check-open-side.py`): unchanged, still checked by CI with its own tools. It
   describes format 1, and its references to `.spec.md` files and anchors stay as history.
-- `evidence/RG1.md` and the notebook keep describing the v1 run; the migration gets its own
+- `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md` and the notebook keep describing the v1 run; the migration gets its own
   evidence file.
 - The `*.verify.md` records in the spec repositories' history: superseded by the YAML records,
   which point to them through `carried_from`.
@@ -2456,7 +2456,7 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
 
 ## How the learnings map to this design
 
-The format-related rows of [SPEC-REGEN-learnings](../notebook/SPEC-REGEN-learnings.md) and the
+The format-related rows of [SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md) and the
 RG-T1 rounds:
 
 | Learning (source) | Where it lands |

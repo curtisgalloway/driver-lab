@@ -69,11 +69,15 @@ python3 -m unittest discover -s evals/e1000/harness/tests
   `spec-verifier` on the changed claims and their dependencies. `review-swarm` only when
   shared execution machinery, access controls or several scenarios change, or whenever the
   reviewer asks for broader review.
-- **Records, one job each**: the private run ledger holds identities, commands, artifacts,
-  attempts and reviewer references; the public evidence file holds conclusions, the acceptance
-  table, limitations, and consequential findings with their resolutions; the notebook holds
-  short chronological discoveries and dead ends; the plan and the notebook index hold status
-  and links. Do not repeat findings tables or conclusions across them.
+- **Records, one job each** (revised 2026-10-14, user decision): the private run ledger holds
+  identities, commands, artifacts, attempts and reviewer references. A **tooling unit** (a
+  skill, a check, a format change, an issue fix) writes no evidence file or notebook chapter:
+  its pull request body holds the results, the checks run, review findings with their
+  resolutions, and dead ends, and its commit message the summary. An **experiment** (a
+  rebuild-and-compare run, a campaign round, a trial) keeps a public evidence file for
+  conclusions, the acceptance table, limitations and consequential findings, and a notebook
+  chapter for discoveries and dead ends. The plan and the notebook index hold status and
+  links. Do not repeat findings tables or conclusions across them.
 - **Implementers** are fresh subagents whose model the user selects. A Codex implementer runs
   only through `python3 -I utilities/codex-implement.py BASE RUN_DIR BRIEF`. It returns a
   patch and a list of refused files; it never commits.
@@ -118,8 +122,9 @@ python3 -m unittest discover -s evals/e1000/harness/tests
     `review/<name>/report.md` in the run store (with the shell when the harness refuses file
     writes). It returns a summary of at most about fifteen lines: blockers, should-fix titles,
     and whether a blocker repeats an earlier round's kind.
-  - **Milestone close-out (Sonnet):** the evidence file, the plan row, closing the notebook and
-    its index, and the full checks list (the checks list alone may go to Haiku).
+  - **Milestone close-out (Sonnet):** the plan row, the full checks list (the checks list alone
+    may go to Haiku), and for an experiment the evidence file and closing its notebook chapter
+    and index entry.
   - Reviewers, spec verifiers and spec drafting keep the models the plan names.
   - After a runner reports a write, verify it with one cheap command of your own before
     pushing or reporting it.

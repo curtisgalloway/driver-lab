@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Design: [LICENSE-SPLIT.md](LICENSE-SPLIT.md), revision 2026-10-05, approved by the user on
 2026-10-05 (commit `452a4ca`, "License split: settle the design").
-Notebook: [index](../notebook/index.md), design chapter [LS-design](../notebook/LS-design.md);
+Notebook: [index](../notebook/index.md), design chapter [LS-design](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md);
 process log: [PROCESS-NOTES.md](../PROCESS-NOTES.md).
 Project checks: the full list in [AGENTS.md](../AGENTS.md#checks), plus the checks each
 milestone adds (collected under [Checks added by this plan](#checks-added-by-this-plan)).
@@ -53,19 +53,19 @@ milestone adds (collected under [Checks added by this plan](#checks-added-by-thi
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| LS1 | Anchor tools under test; several named pins | — | complete ([evidence](../evidence/LS1.md)) |
-| LS2 | Root license fields and the license gate | LS1 | complete ([evidence](../evidence/LS2.md)) |
-| LS3 | Checkable doc anchors | LS1 | complete ([evidence](../evidence/LS3.md)) |
-| LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](../evidence/LS4.md)) |
-| LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](../evidence/LS5.md)) |
-| LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](../evidence/LS6.md)) |
-| LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](../evidence/LS7.md)) |
+| LS1 | Anchor tools under test; several named pins | — | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS1.md)) |
+| LS2 | Root license fields and the license gate | LS1 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS2.md)) |
+| LS3 | Checkable doc anchors | LS1 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS3.md)) |
+| LS4 | Placement guidance, provenance template, "why this exists", format docs | LS2, LS3 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md)) |
+| LS5 | The three spec repositories, with CI that proves the gate | LS1–LS4 merged; user's go to create repos | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md)) |
+| LS6 | `cleanroom-skills` created with history, its CI green | LS5; user's go to create the repo | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS6.md)) |
+| LS7 | driver-lab's skills neutral; clean-room rules moved; moved skills removed | LS6 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS7.md)) |
 | LS8 | driver-lab's documents split; frozen archive marked; open-side mention check | LS7 | complete ([evidence](../evidence/LS8.md)) |
-| LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](../evidence/LS9.md)) |
-| LS10 | `hardware-investigator` skill | LS9 | complete; merged (driver-lab #54) ([evidence](../evidence/LS10.md)) |
-| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete; merged, with the re-review (driver-lab #55, #58) ([evidence](../evidence/LS11.md)) |
-| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete; merged (driver-lab #57) ([evidence](../evidence/LS12.md)) |
-| LS-G | Whole-outcome acceptance | LS1–LS12 | complete; published CI matched item 2's matrix ([evidence](../evidence/LS-G.md)) |
+| LS9 | `anchored-peripheral-spec` renamed `peripheral-spec`; spec repos repinned | LS8 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS9.md)) |
+| LS10 | `hardware-investigator` skill | LS9 | complete; merged (driver-lab #54) ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS10.md)) |
+| LS11 | Firewall by name in `cleanroom-implementer`'s hook | LS10 | complete; merged, with the re-review (driver-lab #55, #58) ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS11.md)) |
+| LS12 | Consumers updated: names, repos, spec roots, marketplaces | LS11 | complete; merged (driver-lab #57) ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS12.md)) |
+| LS-G | Whole-outcome acceptance | LS1–LS12 | complete; published CI matched item 2's matrix ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md)) |
 
 Ordering: tooling and spec repos first (the user's decision), so LS1–LS4 land under the current
 skill names and LS9 renames them. The split (LS6–LS11) follows. LS12 touches each consumer once,
@@ -75,26 +75,26 @@ after every name is final. LS3 may run in parallel with LS2.
 
 | Requirement | Milestones | Verification | Evidence |
 |---|---|---|---|
-| LS-R1 Root license | LS2 (code), LS4 (docs) | `spec_check.py` tests for both fields, warning and `--require-license` | [LS2](../evidence/LS2.md#acceptance), [LS4](../evidence/LS4.md#acceptance) |
-| LS-R2 Resource license | LS2 | `check_resources` tests | [LS2](../evidence/LS2.md#acceptance), gated in [LS5](../evidence/LS5.md#acceptance) |
-| LS-R3 Several named pins | LS1 | `anchor_check.py` tests: named and legacy pins, overwrite bug | [LS1](../evidence/LS1.md#acceptance) |
-| LS-R4 License gate | LS2, proven in LS5 | gate tests incl. `OR`/`AND`; each repo's CI self-test | [LS2](../evidence/LS2.md#acceptance), [LS5](../evidence/LS5.md#acceptance), [LS-G item 2](../evidence/LS-G.md#item-2-the-scratch-setup) |
-| LS-R5 Checkable doc anchors | LS3 | tests for registry, page range, hash mismatch | [LS3](../evidence/LS3.md#acceptance) (named anchors required where `accepts:` is empty, the docs repository's case) |
-| LS-R6 Anchor-tool tests and CI | LS1 | new test suite runs in `checks.yml` | [LS1](../evidence/LS1.md#acceptance) |
-| LS-R7 Placement guidance | LS4, renamed in LS9 | reviewer traces the table to the design | [LS4](../evidence/LS4.md#acceptance), [LS9](../evidence/LS9.md#acceptance) |
-| LS-R8 Provenance template | LS4, moves in LS6 | template present; `cleanroom-spec` refers to it | [LS4](../evidence/LS4.md#acceptance), [LS6](../evidence/LS6.md#acceptance) |
-| LS-R9 Per-repo pins in verification | LS1 (`inventory_check.py`), LS4 (`spec-verifier` text) | tests; reviewer | [LS1](../evidence/LS1.md#acceptance) (one named pin per `inventory_check.py` run), [LS4](../evidence/LS4.md#acceptance) |
-| LS-R10 Why this exists | LS4 | README section present before LS6's public repo | [LS4](../evidence/LS4.md#acceptance) |
-| LS-R11 Three repos | LS5 | repos exist, CI green on `main` | [LS5](../evidence/LS5.md#acceptance); accepts lists as of 2026-10-07 in [LS-G item 1](../evidence/LS-G.md#item-1-every-requirement-met-with-evidence-linked-from-the-plan) |
-| LS-R12 Gate proven per repo | LS5 | CI self-test fails the misfit fixture, passes the fit one | [LS5](../evidence/LS5.md#acceptance), [LS-G item 2](../evidence/LS-G.md#item-2-the-scratch-setup) |
-| LS-R13 Consumers point at the right repos | LS12 | bringup-kit roots; public-skills README | [LS12](../evidence/LS12.md#acceptance) |
-| LS-R14 `cleanroom-skills` | LS6, LS7 | repo public, history present, its CI green | [LS6](../evidence/LS6.md#acceptance), [LS7](../evidence/LS7.md#acceptance), [LS8](../evidence/LS8.md#acceptance), [LS-G item 3](../evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
-| LS-R15 Neutral board-expert | LS7 | grep of the open skills; `spec_check.py` still accepts `[source-observed]` | [LS7](../evidence/LS7.md#acceptance) |
-| LS-R16 Renames | LS9 | no `anchored-peripheral-spec` outside the archive | [LS9](../evidence/LS9.md#acceptance) |
-| LS-R17 `hardware-investigator` | LS10 | skill review; a worked question on a fixture root | [LS10](../evidence/LS10.md#acceptance) |
-| LS-R18 Firewall by name | LS11 | hook tests for each blocked skill and GPL checkout | [LS11](../evidence/LS11.md#acceptance), [LS-G item 3](../evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
-| LS-R19 Consumers renamed | LS12 | grep of each consumer finds no stale name | [LS12](../evidence/LS12.md#acceptance), [LS-G item 5](../evidence/LS-G.md#item-5-no-stale-skill-names-in-the-consumers) (the public-skills CI pin moved from driver-lab to `cleanroom-skills` in LS6/LS7 and still sits at `d63e3f1`, before LS12's links; the bump is open in `cleanroom-skills`, CI unaffected) |
-| LS-R20 Open side only | LS8 | mention check in CI with the archive allowlist | [LS8](../evidence/LS8.md#acceptance) (the allowlist's additions beyond the design are justified there), [LS-G item 4](../evidence/LS-G.md#item-4-driver-labs-checks) |
+| LS-R1 Root license | LS2 (code), LS4 (docs) | `spec_check.py` tests for both fields, warning and `--require-license` | [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS2.md#acceptance), [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md#acceptance) |
+| LS-R2 Resource license | LS2 | `check_resources` tests | [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS2.md#acceptance), gated in [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md#acceptance) |
+| LS-R3 Several named pins | LS1 | `anchor_check.py` tests: named and legacy pins, overwrite bug | [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS1.md#acceptance) |
+| LS-R4 License gate | LS2, proven in LS5 | gate tests incl. `OR`/`AND`; each repo's CI self-test | [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS2.md#acceptance), [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md#acceptance), [LS-G item 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-2-the-scratch-setup) |
+| LS-R5 Checkable doc anchors | LS3 | tests for registry, page range, hash mismatch | [LS3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS3.md#acceptance) (named anchors required where `accepts:` is empty, the docs repository's case) |
+| LS-R6 Anchor-tool tests and CI | LS1 | new test suite runs in `checks.yml` | [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS1.md#acceptance) |
+| LS-R7 Placement guidance | LS4, renamed in LS9 | reviewer traces the table to the design | [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md#acceptance), [LS9](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS9.md#acceptance) |
+| LS-R8 Provenance template | LS4, moves in LS6 | template present; `cleanroom-spec` refers to it | [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md#acceptance), [LS6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS6.md#acceptance) |
+| LS-R9 Per-repo pins in verification | LS1 (`inventory_check.py`), LS4 (`spec-verifier` text) | tests; reviewer | [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS1.md#acceptance) (one named pin per `inventory_check.py` run), [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md#acceptance) |
+| LS-R10 Why this exists | LS4 | README section present before LS6's public repo | [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md#acceptance) |
+| LS-R11 Three repos | LS5 | repos exist, CI green on `main` | [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md#acceptance); accepts lists as of 2026-10-07 in [LS-G item 1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-1-every-requirement-met-with-evidence-linked-from-the-plan) |
+| LS-R12 Gate proven per repo | LS5 | CI self-test fails the misfit fixture, passes the fit one | [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md#acceptance), [LS-G item 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-2-the-scratch-setup) |
+| LS-R13 Consumers point at the right repos | LS12 | bringup-kit roots; public-skills README | [LS12](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS12.md#acceptance) |
+| LS-R14 `cleanroom-skills` | LS6, LS7 | repo public, history present, its CI green | [LS6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS6.md#acceptance), [LS7](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS7.md#acceptance), [LS8](../evidence/LS8.md#acceptance), [LS-G item 3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
+| LS-R15 Neutral board-expert | LS7 | grep of the open skills; `spec_check.py` still accepts `[source-observed]` | [LS7](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS7.md#acceptance) |
+| LS-R16 Renames | LS9 | no `anchored-peripheral-spec` outside the archive | [LS9](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS9.md#acceptance) |
+| LS-R17 `hardware-investigator` | LS10 | skill review; a worked question on a fixture root | [LS10](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS10.md#acceptance) |
+| LS-R18 Firewall by name | LS11 | hook tests for each blocked skill and GPL checkout | [LS11](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS11.md#acceptance), [LS-G item 3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-3-cleanroom-skills-beside-driver-lab) |
+| LS-R19 Consumers renamed | LS12 | grep of each consumer finds no stale name | [LS12](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS12.md#acceptance), [LS-G item 5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-5-no-stale-skill-names-in-the-consumers) (the public-skills CI pin moved from driver-lab to `cleanroom-skills` in LS6/LS7 and still sits at `d63e3f1`, before LS12's links; the bump is open in `cleanroom-skills`, CI unaffected) |
+| LS-R20 Open side only | LS8 | mention check in CI with the archive allowlist | [LS8](../evidence/LS8.md#acceptance) (the allowlist's additions beyond the design are justified there), [LS-G item 4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md#item-4-driver-labs-checks) |
 
 ## Checks added by this plan
 
@@ -117,7 +117,7 @@ licensed pins per spec (`Source pin: <name>@<rev> [<SPDX>]`, `[src:<name>: path:
 `--repo NAME=PATH`, `--drift-pin`); the single-pin form unchanged.
 **Design coverage:** LS-R3, LS-R6, LS-R9 (script part: `inventory_check.py` takes one named pin
 per run, since it compares one header tree). **Dependencies:** none.
-**Status:** complete. Evidence: [LS1](../evidence/LS1.md). Notebook: [LS1](../notebook/LS1.md).
+**Status:** complete. Evidence: [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS1.md). Notebook: [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS1.md).
 **Open limitations:** licenses are parsed, not validated (LS2); a single non-SPDX token after a
 pin's revision is captured as its license, for LS2's validation to reject.
 
@@ -132,7 +132,7 @@ fixtures with an expected-result matrix in
 `skills/anchored-peripheral-spec/tests/fixtures/license-gate/`, for LS5's CI self-test.
 **Design coverage:** LS-R1 (code; docs in LS4), LS-R2, LS-R4 (proven per repository in LS5).
 **Dependencies:** LS1.
-**Status:** complete. Evidence: [LS2](../evidence/LS2.md). Notebook: [LS2](../notebook/LS2.md).
+**Status:** complete. Evidence: [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS2.md). Notebook: [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS2.md).
 Review: `review-swarm`, five findings fixed.
 **Open limitations:** board specs' resource licenses are validated, not gated; the shipped
 `skills/board-expert/specs` root has no license fields yet (two CI warnings; its accepts list is
@@ -149,7 +149,7 @@ missing file warns); `anchor_check.py --require-license` (with `--root`) require
 `license:` and, in a root whose `accepts:` is empty, named doc anchors. Unnamed `[doc: …]`
 anchors check as before. No network access.
 **Design coverage:** LS-R5. **Dependencies:** LS1.
-**Status:** complete. Evidence: [LS3](../evidence/LS3.md). Notebook: [LS3](../notebook/LS3.md).
+**Status:** complete. Evidence: [LS3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS3.md). Notebook: [LS3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS3.md).
 Review: one independent reviewer subagent; one should-fix (a leading `---` rule taken for
 front matter) and two nits fixed.
 **Open limitations:** hashes compare file bytes only; `pages` is the author's statement; LS2's
@@ -168,7 +168,7 @@ template carries `license:`/`accepts:`; `cleanroom-spec` fills a private `PROVEN
 exists and what it is not for".
 **Design coverage:** LS-R7, LS-R8, LS-R9 (`spec-verifier` text), LS-R10, LS-R1 docs.
 **Dependencies:** LS2, LS3.
-**Status:** complete. Evidence: [LS4](../evidence/LS4.md). Notebook: [LS4](../notebook/LS4.md).
+**Status:** complete. Evidence: [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS4.md). Notebook: [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS4.md).
 Review: one reviewer subagent tracing each changed claim to code or design.
 **Open limitations:** the repositories the docs name do not exist until LS5 (closed in LS5;
 `peripheral-spec`'s text saying so was corrected in LS-G); peripheral specs
@@ -219,7 +219,7 @@ shipped root's license fields (the user's decisions of 2026-10-06); `hardware-sp
 `hardware-specs-docs` and `hardware-specs-permissive` public, CI pinned to driver-lab `5d7eac2`
 and green, each self-test failing its misfit with the gate's message.
 Open limitation: CI checks form, pins and licenses, not `[src:]` resolution (no source checkout).
-Evidence: [LS5](../evidence/LS5.md). Notebook: [LS5](../notebook/LS5.md).
+Evidence: [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS5.md). Notebook: [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md).
 
 ## LS6 — `cleanroom-skills` created with history
 
@@ -229,7 +229,7 @@ history (21 commits kept by `git filter-repo` from driver-lab `5d7eac2`, plus th
 repository's own files), a commit map, plugin manifests, README, CI green.
 **Design coverage:** LS-R14 (repository, history, CI), LS-R8 (the provenance template moved with
 `cleanroom-spec`). **Dependencies:** LS5; the user's go (2026-10-06).
-**Status:** complete. Evidence: [LS6](../evidence/LS6.md). Notebook: [LS6](../notebook/LS6.md).
+**Status:** complete. Evidence: [LS6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS6.md). Notebook: [LS6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS6.md).
 **Open limitations:** until LS7 removes driver-lab's copies, both plugins carry the three skills;
 the `cleanroom-skills` README says to use plugin-qualified names meanwhile, and LS7 deletes that
 paragraph.
@@ -246,7 +246,7 @@ directories, their CI steps and the public-skills checkout are gone. In `cleanro
 `cleanroom-verifier` skill wraps `spec-verifier`; every removed passage is in the evidence's move
 list.
 **Design coverage:** LS-R15, LS-R14 (spec-verifier part). **Dependencies:** LS6.
-**Status:** complete. Evidence: [LS7](../evidence/LS7.md). Notebook: [LS7](../notebook/LS7.md).
+**Status:** complete. Evidence: [LS7](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS7.md). Notebook: [LS7](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS7.md).
 Review: one reviewer subagent; six should-fix items and five nits, all resolved.
 **Open limitations:** the acceptance grep's one recorded exception is
 `skills/campaign-review/tests/fixtures/deployment-cr5.yaml` (a copy of the frozen CR5
@@ -262,7 +262,7 @@ line; frozen-archive headers on the archive documents, `evals/` (a new `evals/RE
 the two campaigns' READMEs), `evidence/` (a new README) and the notebook index;
 `utilities/check-open-side.py` with 13 tests, in CI and the AGENTS.md list.
 **Design coverage:** LS-R20, LS-R14 (design text). **Dependencies:** LS7.
-**Status:** complete. Evidence: [LS8](../evidence/LS8.md). Notebook: [LS8](../notebook/LS8.md).
+**Status:** complete. Evidence: [LS8](../evidence/LS8.md). Notebook: [LS8](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS8.md).
 Review: one docs reviewer subagent; seven should-fix items and 13 nits, all resolved but one
 nit (pinning links to `cleanroom-skills`, after its merge).
 **Open limitations:** the allowlist adds, beyond the design's list, three history records
@@ -292,7 +292,7 @@ path (a PR in each); `cleanroom-skills` references.
 Mechanical rename across four repos. Low uncertainty.
 
 ### Evidence and findings
-Status: complete; the orchestrator confirmed the five pull requests' CI green and merged them on 2026-10-07. Evidence: [LS9](../evidence/LS9.md). Notebook: [LS9](../notebook/LS9.md).
+Status: complete; the orchestrator confirmed the five pull requests' CI green and merged them on 2026-10-07. Evidence: [LS9](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS9.md). Notebook: [LS9](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS9.md).
 
 ## LS10 — `hardware-investigator`
 
@@ -329,7 +329,7 @@ One new skill; uncertainty is in how much method to write. Split point: SKILL.md
 worked example before any helper script.
 
 ### Evidence and findings
-Status: complete and merged (driver-lab #54). Evidence: [LS10](../evidence/LS10.md). Notebook: [LS10](../notebook/LS10.md).
+Status: complete and merged (driver-lab #54). Evidence: [LS10](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS10.md). Notebook: [LS10](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS10.md).
 
 ## LS11 — Firewall by name
 
@@ -357,7 +357,7 @@ investigator and verifier roles stay allowed as today; tests; the prose ban stay
 One script and its tests, an existing pattern. Low to medium uncertainty (install paths).
 
 ### Evidence and findings
-Status: complete and merged: `cleanroom-skills` #4 (`199059a`, `35ff17e`) and driver-lab #55; the second review-swarm over `35ff17e` (2026-10-07) led to `cleanroom-skills` `5310aac` and `89418fd`, merged as `cleanroom-skills` #6 and driver-lab #58. Evidence: [LS11](../evidence/LS11.md). Notebook: [LS11](../notebook/LS11.md).
+Status: complete and merged: `cleanroom-skills` #4 (`199059a`, `35ff17e`) and driver-lab #55; the second review-swarm over `35ff17e` (2026-10-07) led to `cleanroom-skills` `5310aac` and `89418fd`, merged as `cleanroom-skills` #6 and driver-lab #58. Evidence: [LS11](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS11.md). Notebook: [LS11](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS11.md).
 
 ## LS12 — Consumers updated
 
@@ -387,7 +387,7 @@ driver-lab's marketplace entry.
 Three repos, many small edits. Split point: one checkpoint per repo.
 
 ### Evidence and findings
-Status: complete and merged: `fuchsia-skills` #7 (`c09eac4`), `bringup-kit` #17 (`c20d7a3`), `public-skills` #100 (`10ab32b`) and driver-lab #57. Evidence: [LS12](../evidence/LS12.md). Notebook: [LS12](../notebook/LS12.md).
+Status: complete and merged: `fuchsia-skills` #7 (`c09eac4`), `bringup-kit` #17 (`c20d7a3`), `public-skills` #100 (`10ab32b`) and driver-lab #57. Evidence: [LS12](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS12.md). Notebook: [LS12](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS12.md).
 
 ## LS-G — Whole-outcome acceptance
 
@@ -403,7 +403,7 @@ cross-milestone interactions (pins, paths, names).
 Status: complete. Items 1, 3, 4 and 5 met from fresh clones; item 2 met by running each spec
 repository's CI steps locally and by nine scratch pull requests whose published CI matched every
 cell. Evidence:
-[LS-G](../evidence/LS-G.md). Notebook: [LS-G](../notebook/LS-G.md).
+[LS-G](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md). Notebook: [LS-G](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-G.md).
 
 ## Discovered work / backlog
 
@@ -423,8 +423,8 @@ cell. Evidence:
 
 - Current milestone: LS-G complete. LS1–LS12 and the LS11 re-review are merged (driver-lab #57
   and #58), and all five acceptance items are met, item 2 also in published CI
-  ([LS-G's evidence](../evidence/LS-G.md)).
+  ([LS-G's evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md)).
 - Resume action: the two small fixes in other repositories under the backlog close the split; the next workstream is spec regeneration
   (backlog below).
-- Read first: [LS-G's evidence](../evidence/LS-G.md) (its limitations and the findings left for
+- Read first: [LS-G's evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LS-G.md) (its limitations and the findings left for
   other repositories).

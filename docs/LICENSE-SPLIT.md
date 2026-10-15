@@ -198,7 +198,7 @@ permissive repos, never at the GPL repo.
 
 ## Decisions
 
-Settled by the user on 2026-10-05 ([notebook](../notebook/LS-design.md)):
+Settled by the user on 2026-10-05 ([notebook](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md)):
 
 | Question | Decision |
 |---|---|
@@ -211,7 +211,7 @@ Settled by the user on 2026-10-05 ([notebook](../notebook/LS-design.md)):
 | When the permissive repo is created | With the other two |
 | Order | License tooling and spec repos first, then the clean-room split |
 
-Settled by the user on 2026-10-06, during LS5 ([notebook](../notebook/LS5.md)):
+Settled by the user on 2026-10-06, during LS5 ([notebook](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md)):
 
 | Question | Decision |
 |---|---|

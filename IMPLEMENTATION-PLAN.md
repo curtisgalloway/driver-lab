@@ -60,8 +60,8 @@ preparation where useful. Preserve the [evaluation plan](EVAL-PLAN.md),
 any later **spec-only experiment**. Their isolation, scoring, pairing and attribution gates
 remain binding for those experiments; they are not prerequisites for the separately labeled
 Linux engineering pass. Do not relabel its outputs as M05, a paired arm, or a qualified
-spec-only result. The original [plan review](evidence/PLAN-REVIEW.md) records the earlier scope;
-this revision's review is recorded [separately](evidence/LINUX-PRIORITY.md).
+spec-only result. The original [plan review](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/PLAN-REVIEW.md) records the earlier scope;
+this revision's review is recorded [separately](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/LINUX-PRIORITY.md).
 
 The existing board-expert, authoring, implementation and verification skills remain the
 companion-skill deliverable. Exercise the useful parts in the Linux pass and repair concrete
@@ -249,7 +249,7 @@ review, check and record rules for L02f2b onward; completed units keep the revie
 Kept as-is: Q15 requalification with artifact review, source separation, artifact identities
 and preserved failed attempts, manual-backed expectations with model limitations stated
 explicitly, and versioned spec feedback. The consultation record stays in the private run
-store; the review of this amendment is [evidence/PLAN-2026-09-25.md](evidence/PLAN-2026-09-25.md).
+store; the review of this amendment is [evidence/PLAN-2026-09-25.md](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/PLAN-2026-09-25.md).
 
 ### L02a — Pin sources and write the blind requirement list
 
@@ -547,7 +547,7 @@ the user's.
 section, requirements C1–C8, as approved by the user on 2026-09-26 at commit `d9a3d66` (merged
 as pull request #26, `80eb11b`); the decisions taken before approval are in
 [evidence/DESIGN-2026-09-26.md](evidence/DESIGN-2026-09-26.md). The plan's review is
-[evidence/PLAN-CR-2026-09-26.md](evidence/PLAN-CR-2026-09-26.md).
+[evidence/PLAN-CR-2026-09-26.md](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/PLAN-CR-2026-09-26.md).
 
 **Terms** (full definitions in the design's Terms block and the [glossary](GLOSSARY.md)):
 

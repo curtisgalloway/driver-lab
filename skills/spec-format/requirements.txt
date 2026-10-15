@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Spec format dependencies, hash-pinned (SF2-1; dep-quality scores in evidence/SF2-1.md).
+# Spec format dependencies, hash-pinned (SF2-1; dep-quality scores in https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-1.md).
 # Direct: PyYAML (the loader, D9), jsonschema (the validator, D8), markdown-it-py (the one
 # CommonMark library, D20). Everything else is theirs. spec.py exits 3 when a direct pin is
 # missing or at another version; it never falls back to another parser.

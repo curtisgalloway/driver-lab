@@ -5,8 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 # Spec regeneration — implementation plan
 
-Approved by the user on 2026-10-07. Notebook: [RG-regen](../notebook/RG-regen.md); review
-learnings rollup: [SPEC-REGEN-learnings](../notebook/SPEC-REGEN-learnings.md).
+Approved by the user on 2026-10-07. Notebook: [RG-regen](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md); review
+learnings rollup: [SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md).
 
 **Terms.** A *spec* is a board, SoC or IP-block description in the format of
 [`SPEC-FORMAT.md`](../skills/board-expert/SPEC-FORMAT.md). A *root* is a spec directory with a
@@ -62,8 +62,8 @@ proves a change is needed (then it is its own driver-lab pull request).
 
 | # | Unit | Kind | Expected roots | Notes | Status |
 |---|---|---|---|---|---|
-| RG1 | `bcm2711` | SoC | docs + permissive overlay | Audit facts 2, 3, 6 to the overlay at `raspberrypi/tools@439b619`; proves cross-repo overlays | complete ([evidence](../evidence/RG1.md)); also a GPL overlay (all BCM2711 device trees are GPL-2.0-only) |
-| RG-T1 | `[src]` class and checker | tooling | driver-lab + spec-repo CI | Added during RG1 (user decision) | complete; merged as is, Markdown grammar to be retired ([evidence](../evidence/RG1.md#rg-t1-the-checker)) |
+| RG1 | `bcm2711` | SoC | docs + permissive overlay | Audit facts 2, 3, 6 to the overlay at `raspberrypi/tools@439b619`; proves cross-repo overlays | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md)); also a GPL overlay (all BCM2711 device trees are GPL-2.0-only) |
+| RG-T1 | `[src]` class and checker | tooling | driver-lab + spec-repo CI | Added during RG1 (user decision) | complete; merged as is, Markdown grammar to be retired ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md#rg-t1-the-checker)) |
 | RG2 | `rpi4` | board | docs (+ overlay if needed) | Reads RG1 | not started |
 | RG3 | `pl011` | IP block | docs | Arm TRM is the main source | not started |
 | RG4 | `dw-apb-uart` | IP block | docs | Synopsys databook availability decides coverage | not started |
@@ -97,4 +97,4 @@ the boards reference, then Pi 5, Rockchip, and the Google pair last. One unit pe
   later a viewer and search) for reading. Eight review rounds of the Markdown checker showed the
   ambiguity is in Markdown itself. Resume action: write the format design for the user's
   approval; then convert RG1's three specs and continue with RG2 in the new format.
-- Before RG2: apply the verifier and scaffold learnings in the [rollup](../notebook/SPEC-REGEN-learnings.md).
+- Before RG2: apply the verifier and scaffold learnings in the [rollup](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md).

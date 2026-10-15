@@ -5,10 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 
 # Notebook index
 
-Active bug-fix chapters: [Issue 79](ISSUE-79.md), [Issue 95](ISSUE-95.md) and
-[Issue 78](ISSUE-78.md), indexed through 2026-10-14; [Issue 107](ISSUE-107.md), indexed
+Bug-fix chapters (removed 2026-10-14; links go to each file at its last commit): [Issue 79](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-79.md), [Issue 95](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-95.md) and
+[Issue 78](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-78.md), indexed through 2026-10-14; [Issue 107](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-107.md), indexed
 through 2026-10-13.
 These open-method chapters are outside the frozen archive described below.
+
+> **Tooling chapters removed (2026-10-14, user decision).** Tooling units (the spec format's SF2
+> milestones, the license split's LS milestones, issue fixes, RG1) no longer keep a chapter: their
+> dead ends go in the pull request. Their chapters were deleted; links to them go to each file at
+> its last commit on GitHub. Experiments (L01, L02, the campaign rounds) keep their chapters.
 
 Updated: 2026-10-10T11:32:28-07:00
 
@@ -26,170 +31,170 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
-### [SF2-9 — Peripheral, review and investigator skills in format 2](SF2-9.md)
+### [SF2-9 — Peripheral, review and investigator skills in format 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-9.md)
 Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:17:58-07:00
-Outcome: complete ([evidence](../evidence/SF2-9.md)); one review round with no blocker and a clean
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-9.md)); one review round with no blocker and a clean
 confirmation. Command tests use SF2-7 fixtures; format 1 procedures and prompts remain labeled in
 `FORMAT-1.md` files. Review inventory needs companion register records because findings prose does
 not count as register coverage.
 
-### [SF2-7b — Reviews and the HTML generated sections](SF2-7b.md)
+### [SF2-7b — Reviews and the HTML generated sections](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7b.md)
 Entries: 2026-10-09T22:18:09-07:00 through 2026-10-09T23:17:02-07:00
-Outcome: complete ([evidence](../evidence/SF2-7b.md)). Reviews and the HTML generated sections
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7b.md)). Reviews and the HTML generated sections
 shipped with no blocker in round 1; a confirmation regression (the pair exemption leaking into
 instance and variant rows) was fixed directly. Deciding that a pair's anchors are its support
 removed a forced Gap badge.
 
-### [SF2-7a — Peripheral specs and facts files in format 2](SF2-7a.md)
+### [SF2-7a — Peripheral specs and facts files in format 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7a.md)
 Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T21:46:57-07:00
-Outcome: complete ([evidence](../evidence/SF2-7a.md)); reviews (SF2-7b) and the HTML generated
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7a.md)); reviews (SF2-7b) and the HTML generated
 sections are pending. The stop rule fired twice on inventory; refusing what is not fully understood,
 checked against a C compiler, ended the wrong-value blockers. When a fix loop keeps finding the
 same kind of blocker, change the contract instead of patching cases.
 
-### [SF2-10 — bcm2711 converted and verified on draft branches](SF2-10.md)
+### [SF2-10 — bcm2711 converted and verified on draft branches](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-10.md)
 Entries: 2026-10-09 through 2026-10-09T21:31:15-07:00
-Outcome: complete ([evidence](../evidence/SF2-10.md)); the three draft branches are not merged
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-10.md)); the three draft branches are not merged
 (SF2-11 cuts over). 50 of 65 v1 verdicts carried; the rest were read fresh in three correction
 rounds. When a fidelity check is unsure, keep the verdict fresh: all three uncertain carries
 cited headings that did not exist.
 
-### [SF2-11 — The three spec repositories cut over and published](SF2-11.md)
+### [SF2-11 — The three spec repositories cut over and published](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-11.md)
 Entries: 2026-10-09 through 2026-10-10
-Outcome: complete ([evidence](../evidence/SF2-11.md)); docs, permissive and gpl merged in order and
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-11.md)); docs, permissive and gpl merged in order and
 publish three Pages sites. Downstream CI reads the upstream `main`, so it is red until the upstream
 merges, and with no branch protection the re-run after each merge is the only gate.
 
-### [SF2-G — Whole-outcome gate](SF2-G.md)
+### [SF2-G — Whole-outcome gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-G.md)
 Entries: 2026-10-10T10:05-07:00 through 2026-10-10T11:32-07:00
-Outcome: complete ([evidence](../evidence/SF2-G.md)); the gate passed on fresh clones after small
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-G.md)); the gate passed on fresh clones after small
 fixes, and two review rounds closed a second-reader bypass in `main` mode and set ADJUDICATE's
 policy. The spec repositories pin a tool from before SF2-7a (G5). A refusal test must assert its
 own diagnostic, or an earlier check makes it pass.
 
-### [SF2-12 — Format 1 retired](SF2-12.md)
+### [SF2-12 — Format 1 retired](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-12.md)
 Entries: 2026-10-10
-Outcome: complete ([evidence](../evidence/SF2-12.md)); the format 1 checkers, migration tool and
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-12.md)); the format 1 checkers, migration tool and
 fixtures are gone and the full checks list passes. Passing consumer tests prove little when they
 still build the old format: `bringup-kit`'s replay tests never touch the format 2 reader.
 
-### [SF2-5 — The viewer and publishing](SF2-5.md)
+### [SF2-5 — The viewer and publishing](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-5.md)
 Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
-Outcome: complete ([evidence](../evidence/SF2-5.md)); one review round and a clean confirmation
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-5.md)); one review round and a clean confirmation
 round. The chapter records parser option isolation, nested image links and deployment completeness
 from source inventory. A composite action that looks pinned can still run a nested action by a
 movable tag; read what a pinned action calls.
 
-### [SF2-8 — The format 2 contract and the board-spec skills](SF2-8a.md)
-Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](SF2-8b.md))
-Outcome: complete ([evidence](../evidence/SF2-8.md)); one review round and a clean confirmation
+### [SF2-8 — The format 2 contract and the board-spec skills](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8b.md))
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-8.md)); one review round and a clean confirmation
 round. The Opus trace review found one blocker: format 1 contract sections were deleted while
 live format 1 skills still cited them; the old text now lives in a retained FORMAT-1.md. Before a
 contract file becomes a pointer, grep every skill and script docstring for its section names.
-### [SF2-4 — CommonMark checks and the Markdown view](SF2-4.md)
+### [SF2-4 — CommonMark checks and the Markdown view](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md)
 Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
-Outcome: complete ([evidence](../evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-4.md)); four fix rounds and a confirmation review.
 Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
 chose "author text inert in the .md view": every author field is fenced and generated identifiers
 are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
 rely on a proof that text is safe.
-### [SF2-6 — Resolve, show and drift](SF2-6.md)
+### [SF2-6 — Resolve, show and drift](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-6.md)
 Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
-Outcome: complete ([evidence](../evidence/SF2-6.md)); three review rounds and a clean confirmation
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-6.md)); three review rounds and a clean confirmation
 round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
 "verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
 and keeps the original on any other difference. Do not patch a splicer a second time; verify its
 output. Recheck file policy beside the final comparison, not only before staging.
 
-### [SF2-3 — Verification records and per-fact freshness](SF2-3.md)
+### [SF2-3 — Verification records and per-fact freshness](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-3.md)
 Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00
-Outcome: complete ([evidence](../evidence/SF2-3.md)); three review rounds, round 3 clean. Round 2
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-3.md)); three review rounds, round 3 clean. Round 2
 met the stop rule on identity allow-lists; the user chose "hash all but bookkeeping". Anything
 freshness cannot establish reads unknown, never current. Score a mutant that does not compile as
 invalid, and a failure during an internal error as a crash, not a kill.
 
-### [SF2-2 — Checker: composition, references and the license gate](SF2-2.md)
+### [SF2-2 — Checker: composition, references and the license gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-2.md)
 Entries: 2026-10-08T14:58-07:00 through 2026-10-08T17:38-07:00
-Outcome: complete ([evidence](../evidence/SF2-2.md)); three review rounds, merged with tracked
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-2.md)); three review rounds, merged with tracked
 gaps (user). The gate fails closed: a reference rests only on a root that checks clean (user
 decision). The matrix gives format 1's codes under `--require-license`. A mutation pass without a
 clean baseline proved nothing (withdrawn). Untrust propagates to a fixed point, not in one sweep.
 
-### [SF2-1 — Strict loader, pinned dependencies, core schemas](SF2-1.md)
+### [SF2-1 — Strict loader, pinned dependencies, core schemas](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-1.md)
 Entries: 2026-10-08T12:17-07:00 through 2026-10-08T14:49-07:00
-Outcome: complete ([evidence](../evidence/SF2-1.md)); three review rounds. `$` in Python's `re`
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-1.md)); three review rounds. `$` in Python's `re`
 matches before a final newline: patterns end with `(?![\s\S])`. PyYAML rewrites a lone CR and NEL
 first: the loader scans the source. `uv run --with-requirements` ignores hashes. The unknown-key
 filter keeps only keys of the applying branch. Internal errors exit 100 (4 reversed).
 
-### [SF2-design — Spec format 2: design decisions and the plan](SF2-design.md)
+### [SF2-design — Spec format 2: design decisions and the plan](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-design.md)
 Entries: 2026-10-08T12:09-07:00 through 2026-10-08T12:09-07:00 (written after the design session)
 Outcome: design approved with D1–D22 (PR #65); plan SF2-1–SF2-12 and gate SF2-G written. D1, D4,
 D5 differ from the draft's recommendations; D19–D22 added during review. Open: six user decisions
 listed in the plan.
 
-### [RG-regen — Spec regeneration](RG-regen.md)
+### [RG-regen — Spec regeneration](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md)
 Entries: 2026-10-07 through 2026-10-08
 Outcome: RG1 (`bcm2711`) and RG-T1 (the `[src]` checker) complete and merged; Codex as an
 independent reviewer found most substantive issues; the spec format moves to YAML with a schema
-next. Review learnings roll up in [SPEC-REGEN-learnings](SPEC-REGEN-learnings.md).
+next. Review learnings roll up in [SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md).
 
-### [LS-G — Whole-outcome acceptance](LS-G.md)
+### [LS-G — Whole-outcome acceptance](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-G.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; the design's five acceptance items met from fresh clones of all eight
 repositories, item 2 also in published CI (nine scratch pull requests, every cell as expected);
 stale status text in the plan, design and `peripheral-spec` corrected.
 
-### [LS12 — Consumers updated](LS12.md)
+### [LS12 — Consumers updated](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS12.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; `fuchsia-skills`, `bringup-kit`, `public-skills` and this marketplace entry follow
 the new names and repositories; `rpi-expert` had no successor and its handoffs were reworded; a
 reviewer found two low items, both fixed.
 
-### [LS11 — Firewall by name](LS11.md)
+### [LS11 — Firewall by name](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS11.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; the implementer's hook denies four dirty-side names however installed, with the
 investigator and verifier roles still allowed and logged; a seven-arm review found three real
 bypasses (assignments after `export`, a shell comment character, a glob cap), all fixed.
 
-### [LS10 — `hardware-investigator`](LS10.md)
+### [LS10 — `hardware-investigator`](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS10.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; skill, worked example on fixtures, and a thin `license_gate.py`; the license
 check is placed before reading a source, not only before citing it.
 
-### [LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`](LS9.md)
+### [LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS9.md)
 Entries: 2026-10-07 through 2026-10-07
 Outcome: complete; directory, name field, CI and check-list paths renamed in five repositories;
 a first global replace rewrote history files and was reverted; the review found the
 `spec-verifier` heading and its references still using the old term.
 
-### [LS8 — Documents split; frozen archive; open-side check](LS8.md)
+### [LS8 — Documents split; frozen archive; open-side check](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS8.md)
 Entries: 2026-10-06T18:21-07:00 through 2026-10-06T18:31-07:00
 Outcome: complete; `DESIGN.md`'s clean-room passages moved by line range to `cleanroom-skills`, the
 check's term list and allowlist decided (three history records and the whole L01/L02/CR plan
 added, justified), no redirect stubs needed, `RECONSTRUCTION.md`'s links broken by LS7 repointed;
 review found the continuous-review design still requiring moved tools.
 
-### [LS7 — driver-lab's skills neutral; clean-room rules moved](LS7.md)
+### [LS7 — driver-lab's skills neutral; clean-room rules moved](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS7.md)
 Entries: 2026-10-06T17:48-07:00 through 2026-10-06T18:05-07:00
 Outcome: complete; `board-expert` given its own method, 57-row move list into
 `cleanroom-investigator` (wrapping `board-expert`, plus `BOARD-SPECS.md`) and a new
 `cleanroom-verifier`; three skills deleted. Open format's rule for code-only facts added after
 review; the CR5 deployment fixture is the acceptance grep's one exception.
 
-### [LS6 — `cleanroom-skills` created with history](LS6.md)
+### [LS6 — `cleanroom-skills` created with history](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS6.md)
 Entries: 2026-10-06T17:40-07:00 through 2026-10-06T17:42-07:00
 Outcome: complete; public with 21 commits of history kept by filter-repo, the rename and its own
 files; CI green. Both plugins carry the three skills until LS7.
 
-### [LS5 — the three spec repositories](LS5.md)
+### [LS5 — the three spec repositories](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md)
 Entries: 2026-10-06T17:17-07:00 through 2026-10-06T17:31-07:00
 Outcome: complete (published); board-spec license gate in `spec_check.py
 --require-license`, shipped marker's license fields, three local spec repositories with a CI
 self-test. The first self-test pattern matched an informational line, then any gate error
 (review); accepts lists trimmed to the design's names, extras a question for the user.
 
-### [LS4 — placement guidance, provenance template and format docs](LS4.md)
+### [LS4 — placement guidance, provenance template and format docs](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS4.md)
 Entries: 2026-10-06T10:26-07:00 through 2026-10-06T10:39-07:00
 Outcome: complete; placement rule and the design's repo table in `anchored-peripheral-spec`,
 format docs for named pins, the gate and the `docs:` registry, private `PROVENANCE.md`, README
@@ -197,25 +202,25 @@ format docs for named pins, the gate and the `docs:` registry, private `PROVENAN
 named `*.spec.md` (spec_check loads them as board specs). Review: a template self-check that
 failed on multi-pin specs.
 
-### [LS3 — checkable doc anchors](LS3.md)
+### [LS3 — checkable doc anchors](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS3.md)
 Entries: 2026-10-06T10:14-07:00 through 2026-10-06T10:24-07:00
 Outcome: complete; `docs:` registry, named `[doc:<name> p.N]` anchors, `--docs-dir` hashes,
 `anchor_check.py --require-license` (named anchors only where `accepts:` is empty). Named vs
 unnamed is the space after `doc:`. Review found a leading `---` rule taken for front matter,
 hiding the first section from the checker.
 
-### [LS2 — root license fields and the license gate](LS2.md)
+### [LS2 — root license fields and the license gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS2.md)
 Entries: 2026-10-06T09:54-07:00 through 2026-10-06T10:09-07:00
 Outcome: complete; SPDX parser, root `license:`/`accepts:`, `anchor_check.py --root`. Review
 found pin lines the pattern did not read were silently dropped, a false-accept path; a
 guard test that could not fail on the old code was folded into one that can.
 
-### [LS1 — anchor tools under test; several named pins](LS1.md)
+### [LS1 — anchor tools under test; several named pins](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS1.md)
 Entries: 2026-10-06T07:38-07:00 through 2026-10-06T07:48-07:00
 Outcome: complete; 47 tests and CI for the anchor tools; named, licensed pins. Tests that
 asserted only an exit code could not fail; checked by running the suite on the old scripts.
 
-### [LS-design — license split: design and plan](LS-design.md)
+### [LS-design — license split: design and plan](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md)
 Entries: 2026-10-05T16:21-07:00 through 2026-10-06T05:03-07:00
 Outcome: complete; design approved, plan LS1–LS12 + LS-G written; anchor tools found untested
 with one pin per side; see the [plan](../docs/LICENSE-SPLIT-PLAN.md).
@@ -521,7 +526,7 @@ Outcome: complete; driver builds clean, reviewed, repaired once, never run.
   follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
   but not test the crediting, which goes to HF-1.
 
-Active bug-fix chapters: [Issue 95](ISSUE-95.md) and [Issue 112](ISSUE-112.md), indexed
+Bug-fix chapters (removed 2026-10-14; links go to each file at its last commit): [Issue 95](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-95.md) and [Issue 112](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-112.md), indexed
 through 2026-10-14.
-Earlier bug-fix chapters: [Issue 96](ISSUE-96.md), [Issue 107](ISSUE-107.md).
+Earlier bug-fix chapters (removed 2026-10-14, same): [Issue 96](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-96.md), [Issue 107](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-107.md).
 This open-method chapter is outside the frozen archive described above.

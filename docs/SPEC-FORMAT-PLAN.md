@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 Design: [SPEC-FORMAT.md](SPEC-FORMAT.md), approved by the user on 2026-10-08 with decisions
 D1–D22; revision: merge commit `c5d9778` on `main` (pull request #65; the approval commit inside
 it is `6844645`, "docs: spec format 2 design approved").
-Notebook: [index](../notebook/index.md), design chapter [SF2-design](../notebook/SF2-design.md);
+Notebook: [index](../notebook/index.md), design chapter [SF2-design](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-design.md);
 process log: [PROCESS-NOTES.md](../PROCESS-NOTES.md). Review learnings this plan absorbs:
-[SPEC-REGEN-learnings](../notebook/SPEC-REGEN-learnings.md).
+[SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md).
 Project checks: the full list in [AGENTS.md](../AGENTS.md#checks), plus the checks each
 milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 
@@ -111,19 +111,19 @@ milestone adds ([Checks added by this plan](#checks-added-by-this-plan)).
 
 | ID | Outcome | Dependencies | Status |
 |----|---------|--------------|--------|
-| SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](../evidence/SF2-1.md)) |
-| SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](../evidence/SF2-2.md)) |
-| SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](../evidence/SF2-3.md)) |
-| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](../evidence/SF2-4.md)) |
-| SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](../evidence/SF2-5.md)) |
-| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](../evidence/SF2-6.md)) |
-| SF2-7 | Peripheral specs, reviews and facts files | SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)) |
-| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](../evidence/SF2-8.md)) |
-| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](../evidence/SF2-9.md)) |
-| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](../evidence/SF2-10.md)) |
-| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](../evidence/SF2-11.md)) |
-| SF2-12 | Format 1 retired | SF2-9, SF2-11 | complete ([evidence](../evidence/SF2-12.md)) |
-| SF2-G | Whole-outcome gate | all | complete ([evidence](../evidence/SF2-G.md)) |
+| SF2-1 | Strict loader, pinned dependencies, core schemas | — | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-1.md)) |
+| SF2-2 | Checker: composition, references, license gate | SF2-1 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-2.md)) |
+| SF2-3 | Verification records and per-fact freshness | SF2-2 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-3.md)) |
+| SF2-4 | CommonMark checks and the Markdown view | SF2-3 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-4.md)) |
+| SF2-5 | The viewer and publishing | SF2-4 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-5.md)) |
+| SF2-6 | Resolve, show and drift | SF2-2 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-6.md)) |
+| SF2-7 | Peripheral specs, reviews and facts files | SF2-4, SF2-6 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7a.md), [SF2-7b](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7b.md)) |
+| SF2-8 | The contract and the board-spec skills | SF2-3, SF2-4, SF2-6 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-8.md)) |
+| SF2-9 | Peripheral, review and investigator skills | SF2-7, SF2-8 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-9.md)) |
+| SF2-10 | bcm2711 converted and verified on draft branches | SF2-5, SF2-6, SF2-8 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-10.md)) |
+| SF2-11 | The three spec repositories cut over, published | SF2-5, SF2-10 (Pages approved) | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-11.md)) |
+| SF2-12 | Format 1 retired | SF2-9, SF2-11 | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-12.md)) |
+| SF2-G | Whole-outcome gate | all | complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-G.md)) |
 
 Order (revised 2026-10-08, user: the Radxa Rock 5T bring-up drives the spec format): the board-spec
 path first, **SF2-3 → SF2-4 → SF2-8**, with **SF2-6 running in parallel now** in its own
@@ -219,7 +219,7 @@ python3 -m venv .venv-spec && .venv-spec/bin/pip install --require-hashes -r ski
 
 ## Learnings absorbed
 
-Rows of the [learnings rollup](../notebook/SPEC-REGEN-learnings.md), in table order, and where
+Rows of the [learnings rollup](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md), in table order, and where
 this plan takes them. Rows marked *pre-RG2* are verifier and scaffold procedure, not format; the
 rollup already assigns them to a pass before RG2 (see the decision under [Needs a user
 decision](#needs-a-user-decision)).
@@ -262,7 +262,7 @@ decision](#needs-a-user-decision)).
 
 **Outcome:** `skills/spec-format/` with `load_strict`, the spec, root-marker and record schemas,
 `spec.py validate` and hash-pinned dependencies (jsonschema 4.26.0, PyYAML 6.0.3, markdown-it-py
-4.2.0). **Dependencies:** none. **Status:** complete. **Evidence:** [SF2-1](../evidence/SF2-1.md)
+4.2.0). **Dependencies:** none. **Status:** complete. **Evidence:** [SF2-1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-1.md)
 (acceptance table, design coverage, scores, three review rounds). **Open limitations:** `lines`
 order, fact-id uniqueness and the paged-`standard` locator rule are SF2-2's; peripheral and review
 kinds are SF2-7's.
@@ -276,7 +276,7 @@ composition, overlays, names, ids, references, layer order, privacy, placeholder
 license gate, direct and transitive. The gate fails closed: a reference may only rest on a root
 that checks clean (user decision). The format 1 license-gate matrix gives the same codes in format
 2. **Dependencies:** SF2-1. **Status:** complete, merged with tracked gaps by user decision.
-**Evidence:** [SF2-2](../evidence/SF2-2.md) (acceptance table, three review rounds, decisions,
+**Evidence:** [SF2-2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-2.md) (acceptance table, three review rounds, decisions,
 mutation results). **Open limitations:** the five tracked gaps under
 [Discovered work / backlog](#discovered-work--backlog).
 
@@ -325,8 +325,8 @@ Needs the design's Verification records section and SF2-2's composition API. Sma
 exacting tests. Split point: `status` can move to SF2-4 if needed.
 
 ### Evidence and findings
-Status: complete. Evidence: [SF2-3](../evidence/SF2-3.md) (acceptance table, three review rounds,
-decisions, the bookkeeping list, mutation results). Notebook: [SF2-3](../notebook/SF2-3.md).
+Status: complete. Evidence: [SF2-3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-3.md) (acceptance table, three review rounds,
+decisions, the bookkeeping list, mutation results). Notebook: [SF2-3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-3.md).
 Three review rounds: round 2 met the stop rule and the user chose "hash all but bookkeeping";
 round 3 found no blocker. **Open limitations:** the three SF2-3 tracked items under
 [Discovered work / backlog](#discovered-work--backlog).
@@ -377,8 +377,8 @@ Needs the design's Rendering section and the CommonMark library's token API. Spl
 the renderer (steps 3–4) moves to SF2-5 if the text module and its fixtures take the session.
 
 ### Evidence and findings
-Status: complete. Evidence: [SF2-4](../evidence/SF2-4.md) (acceptance table, four fix rounds
-and a confirmation review, mutation results). Notebook: [SF2-4](../notebook/SF2-4.md). Round 2
+Status: complete. Evidence: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-4.md) (acceptance table, four fix rounds
+and a confirmation review, mutation results). Notebook: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Round 2
 met the stop rule (author text escaped its container under GFM a second time) and the user chose
 "author text inert in the .md view"; the confirmation round added a delimiter bound. **Open
 limitations:** the HTML viewer must use the same CommonMark preset (SF2-5); see the evidence.
@@ -425,8 +425,8 @@ Needs the design's viewer section and SF2-4's renderer. Split point: the workflo
 (step 3) moves to SF2-11 if the viewer takes the session.
 
 ### Evidence and findings
-Status: complete. Evidence: [SF2-5](../evidence/SF2-5.md) (acceptance table, one review round
-with two reviewers and a clean confirmation, mutation results). Notebook: [SF2-5](../notebook/SF2-5.md).
+Status: complete. Evidence: [SF2-5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-5.md) (acceptance table, one review round
+with two reviewers and a clean confirmation, mutation results). Notebook: [SF2-5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-5.md).
 **Open limitations:** deploy concurrency serializes but does not order deployments when builds
 finish out of order; enabling Pages and installing the template in the spec repositories is SF2-11.
 
@@ -474,8 +474,8 @@ Needs `fetch_src_pins.py`, the anchor-resolution parts of `anchor_check.py` and 
 anchor section. Split point: `drift` (step 2) becomes SF2-6b.
 
 ### Evidence and findings
-Status: complete. Evidence: [SF2-6](../evidence/SF2-6.md) (acceptance table, three review rounds
-and a confirmation round, decisions, limitations). Notebook: [SF2-6](../notebook/SF2-6.md).
+Status: complete. Evidence: [SF2-6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-6.md) (acceptance table, three review rounds
+and a confirmation round, decisions, limitations). Notebook: [SF2-6](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-6.md).
 
 ---
 
@@ -521,8 +521,8 @@ Several payloads but one pattern. Split point: reviews (`finding`, `pair`, `cove
 fixtures become SF2-7b.
 
 ### Evidence and findings
-Status: complete ([evidence](../evidence/SF2-7a.md), [SF2-7b](../evidence/SF2-7b.md)). Evidence:
-`evidence/SF2-7a.md`, `evidence/SF2-7b.md`. Notebook: `notebook/SF2-7a.md`, `notebook/SF2-7b.md`.
+Status: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7a.md), [SF2-7b](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7b.md)). Evidence:
+`https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7a.md`, `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7b.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7a.md`, `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7b.md`.
 
 ---
 
@@ -567,7 +567,7 @@ pre-RG2 procedure rows (user decision: they stay in the pre-RG2 pass).
 Text-heavy, four skills. Split point: `spec-verifier` (step 4) becomes SF2-8b.
 
 ### Evidence and findings
-Status: complete. Evidence: [evidence/SF2-8.md](../evidence/SF2-8.md). Notebook: [SF2-8a](../notebook/SF2-8a.md) and [SF2-8b](../notebook/SF2-8b.md).
+Status: complete. Evidence: [evidence/SF2-8.md](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-8.md). Notebook: [SF2-8a](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md) and [SF2-8b](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8b.md).
 
 ---
 
@@ -599,7 +599,7 @@ check/resolve/show/drift/inventory`; the anchor-grammar section is replaced.
 Three skills, two with templates. Split point: `reference-driver-review` becomes SF2-9b.
 
 ### Evidence and findings
-Status: complete. Evidence: `evidence/SF2-9.md`. Notebook: `notebook/SF2-9.md`.
+Status: complete. Evidence: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-9.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-9.md`.
 
 ---
 
@@ -647,7 +647,7 @@ Conversion plus verification of three specs. Split point: after step 4 (conversi
 done, records carried), with delta verification as SF2-10b.
 
 ### Evidence and findings
-Status: complete. The draft branches `format-v2/sf2-10` are not merged; SF2-11 cuts over. Evidence: `evidence/SF2-10.md`. Notebook: `notebook/SF2-10.md`.
+Status: complete. The draft branches `format-v2/sf2-10` are not merged; SF2-11 cuts over. Evidence: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-10.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-10.md`.
 
 ---
 
@@ -690,7 +690,7 @@ Three similar changes plus CI waits. Split point: none by design (D11); if a mer
 stop with the earlier repositories merged and their `main` warning, and ask.
 
 ### Evidence and findings
-Status: complete. Evidence: `evidence/SF2-11.md`. Notebook: `notebook/SF2-11.md`.
+Status: complete. Evidence: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-11.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-11.md`.
 
 ---
 
@@ -720,7 +720,7 @@ the AGENTS.md list run the spec format checks; markdown-it-py stays as the pinne
 Mostly deletions and CI edits. Split point: none expected.
 
 ### Evidence and findings
-Status: complete. Evidence: `evidence/SF2-12.md`. Notebook: `notebook/SF2-12.md`.
+Status: complete. Evidence: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-12.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-12.md`.
 
 Carried from SF2-9: `README.md`, `DESIGN.md` and `GLOSSARY.md` still describe `peripheral-spec`,
 `reference-driver-review` and `hardware-investigator` in format 1 terms; retire that wording here.
@@ -741,7 +741,7 @@ the shared CommonMark module), plus a Codex `ro` review of the combined diff. St
 rounds.
 
 ### Evidence and findings
-Status: complete. Evidence: `evidence/SF2-G.md`. Notebook: `notebook/SF2-G.md`. Open: G5
+Status: complete. Evidence: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-G.md`. Notebook: `https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-G.md`. Open: G5
 (bump the three spec repositories' pins, approved for right after this merges) and G6; see the
 backlog.
 
@@ -814,7 +814,7 @@ Orchestrator decisions during SF2-1's round-2 review (2026-10-08):
 - **Requirements markers:** only `python_version` and `python_full_version` comparisons, as
   padded three-part versions; anything else is exit 3.
 
-Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../evidence/SF2-2.md):
+Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-2.md):
 
 - **User: "distrust broken roots".** A reference may only rest on a root that checks clean. A root
   with any error of its own (counted before context downgrading) is untrusted. While any marker
@@ -883,7 +883,7 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
   - **One spec id declared by two files of a root collapses to one full reference** (round 3,
     N2): status rows for the two files' facts of the same id merge into one row. Impact:
     status output only; the check already reports the duplicate id as an error.
-- **SF2-G open findings** ([evidence](../evidence/SF2-G.md#findings-and-resolutions)):
+- **SF2-G open findings** ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-G.md#findings-and-resolutions)):
   - **G5:** the three spec repositories pin driver-lab `b86af093`, from before SF2-7a; their
     published viewers lack the verifier and second-reader lines. Fix: bump both workflows'
     pins in docs, permissive, then gpl (outside driver-lab).
@@ -896,12 +896,12 @@ Decisions during SF2-2's review (2026-10-08); detail in [evidence/SF2-2.md](../e
 
 ## Next session
 
-- Current milestone and status: SF2-3 complete ([evidence](../evidence/SF2-3.md)), on branch
+- Current milestone and status: SF2-3 complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-3.md)), on branch
   `sf2/sf2-3` awaiting the orchestrator's pull request. SF2-6 runs in parallel in its own
   worktree.
 - Resume action: once SF2-3 merges, begin SF2-4 (implementer: Codex, per Conventions); Rock 5T
   spec drafting may start by hand ([Stop point](#stop-point-and-what-follows), item 5).
 - Read first: the design's Verification records and Freshness sections (the `upstream` map,
   cycles, `unknown`, bookkeeping fields), this plan's conventions and SF2-4, and the
-  [SF2-3](../notebook/SF2-3.md) chapter's decision entries. SF2-4 renders the statuses
+  [SF2-3](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-3.md) chapter's decision entries. SF2-4 renders the statuses
   `spec.py status` reports; the three SF2-3 tracked items are in the backlog.

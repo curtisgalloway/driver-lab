@@ -414,7 +414,7 @@ Status: diagnostic corrected in a declared additional run; the C3 cleanup gap re
 recorded limitation of the frozen harness, with the orphan stopped explicitly.
 
 ### 2026-10-05T16:21-07:00 — a plan request run before its open decisions were asked
-Chapter: [LS-design](notebook/LS-design.md)
+Chapter: [LS-design](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md)
 What happened: asked to plan the license split, the session began reading the design to plan
 from it while the note still listed five open decisions; the user stopped it ("ask me the
 questions first, then make the plan"). The first quiz then asked for "the clean-room repo"
@@ -426,7 +426,7 @@ Fix belongs in: the project-plan skill (open decisions before planning), user in
 (quiz wording).
 
 ### 2026-10-06T07:48-07:00 — tests that asserted only an exit code could not fail
-Chapter: [LS1](notebook/LS1.md)
+Chapter: [LS1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS1.md)
 What happened: four new usage-error tests checked only `rc == 2`; the old scripts also exited 2,
 for an unrelated reason (the `NAME=PATH` value read as a missing repository). The independent
 reviewer found it by running the new tests against the old scripts.
@@ -437,7 +437,7 @@ Fix belongs in: the project-plan skill's milestone verification (a "new tests fa
 code" step).
 
 ### 2026-10-06T07:48-07:00 — a pull request's CI never started until the PR was reopened
-Chapter: [LS-design](notebook/LS-design.md)
+Chapter: [LS-design](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md)
 What happened: PR #43 showed no checks for several minutes; `gh run list --branch` returned
 nothing while the API's run list later showed a queued run. Closing and reopening started a
 second run, and branch protection waited on that one too.
@@ -447,7 +447,7 @@ wait a few minutes before reopening.
 Fix belongs in: the orchestrate-milestones skill (CI wait step).
 
 ### 2026-10-06T10:02-07:00 — an exit code read after a command substitution
-Chapter: [LS2](notebook/LS2.md)
+Chapter: [LS2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS2.md)
 What happened: a shell loop printed `printf '%s %s %s\n' "$(basename "$s")" "$r" "$?"` after
 each gate run; the substitution ran first, so every row showed 0 (the substitution's status),
 and the gate looked like it passed everything. A direct run of one pair showed FAIL.
@@ -456,7 +456,7 @@ Prevention: capture `rc=$?` on the line after the command, before anything else 
 Fix belongs in: user instructions (shell command style), beside the pipeline-status rule.
 
 ### 2026-10-06T10:40-07:00 — privacy check run against the main checkout, not the worktree
-Chapter: [LS4](notebook/LS4.md)
+Chapter: [LS4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS4.md)
 What happened: `python3 <worktree>/utilities/check-no-private-paths.py` from the session's
 default directory (the main checkout) reported "278 tracked files"; from the worktree it reports
 302. The script checks the tracked files of the repository it runs in, not the one it lives in,
@@ -468,7 +468,7 @@ Fix belongs in: project instructions (AGENTS.md, Checks) or the script (resolve 
 from its own path).
 
 ### 2026-10-06T17:17-07:00 — a self-test pattern that matched an informational line
-Chapter: [LS5](notebook/LS5.md)
+Chapter: [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md)
 What happened: the spec repositories' self-test first accepted a misfit when its output
 contained `license gate:` and the exit code was 1. `anchor_check.py --root` prints
 `license gate: root … accepts: …` for every spec, so a misfit failing for any other reason
@@ -480,7 +480,7 @@ Fix belongs in: the project-plan skill (testing gate: "shown able to fail" cover
 not only the exit code).
 
 ### 2026-10-06T17:17-07:00 — an EXIT trap on a local variable
-Chapter: [LS5](notebook/LS5.md)
+Chapter: [LS5](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md)
 What happened: `scripts/checks.sh` set `trap 'rm -rf "$tmp"' EXIT` inside a function where
 `tmp` was `local`; under `set -u` the trap fired after the function returned and failed with
 `tmp: unbound variable`, turning a passing run into exit 1.
@@ -489,7 +489,7 @@ Prevention: a variable an `EXIT` trap reads must be global.
 Fix belongs in: user instructions (shell command style), if it recurs.
 
 ### 2026-10-06T18:03-07:00 — a brief whose wording the acceptance grep forbids
-Chapter: [LS7](notebook/LS7.md)
+Chapter: [LS7](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS7.md)
 What happened: the LS7 brief asked SPEC-FORMAT to call `[source-observed]` "defined by an
 extension (cleanroom-skills)" and plan step 4 offered "pointing at `cleanroom-skills`" for
 references in open skills, while the acceptance grep (`clean-?room`) matches the repository's
@@ -501,7 +501,7 @@ the allowed wording against the pattern.
 Fix belongs in: the project-plan skill (acceptance criteria phrased as greps).
 
 ### 2026-10-06T18:21-07:00 — notebook opened after the work, again
-Chapter: [LS8](notebook/LS8.md)
+Chapter: [LS8](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS8.md)
 What happened: the LS8 chapter was first written after `DESIGN.md`'s move had been drafted and
 the check script written, so its opening and decision entries carry the time of writing, not
 of the decisions (the 2026-09-24 entry "notebook opened mid-unit" recorded the same pattern).
@@ -511,7 +511,7 @@ Fix belongs in: the project-plan skill (session start: open the chapter before r
 code to be changed).
 
 ### 2026-10-07T09:26-07:00 — a filtered file list that filtered nothing
-Chapter: [LS9](notebook/LS9.md)
+Chapter: [LS9](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS9.md)
 What happened: the rename's file list came from `grep -rIl … .` and was filtered with `^./`
 patterns, but that grep prints paths without the `./`, so the filter excluded nothing and the
 `sed` rewrote history files (`evidence/`, `notebook/`, `docs/`). `git status` showed it before
@@ -522,7 +522,7 @@ patterns to what the command really prints.
 Fix belongs in: AGENTS.md of driver-lab (a rename rule), if it recurs.
 
 ### 2026-10-07T12:20-07:00 — glob tests that could not fail
-Chapter: [LS11](notebook/LS11.md)
+Chapter: [LS11](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS11.md)
 What happened: two tests for glob handling used `wide/b*/x`, but a glob matches only paths that
 exist and no `x` file did, so the glob matched nothing on the old code and the new. They looked
 like coverage until the fail-first run on a reverted copy was read test by test.
@@ -532,7 +532,7 @@ themselves), then assert the verdict.
 Fix belongs in: the project-plan skill (fail-first: read why each test failed, not only that it did).
 
 ### 2026-10-08T12:09-07:00 — design chapter written after the session, a third time
-Chapter: [SF2-design](notebook/SF2-design.md)
+Chapter: [SF2-design](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-design.md)
 What happened: the spec format 2 design session ran as a subagent task without opening a
 notebook chapter; the chapter was written when the plan was, so its entries carry the time of
 writing and the decisions' times come from commits. Same pattern as the 2026-09-24 and
@@ -545,7 +545,7 @@ Fix belongs in: the orchestrator's brief template (`orchestrate-milestones`) or 
 skill's design phase.
 
 ### 2026-10-08T12:41-07:00 — `uv run --with-requirements` installed a file with wrong hashes
-Chapter: [SF2-1](notebook/SF2-1.md)
+Chapter: [SF2-1](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-1.md)
 What happened: the plan's check lines could have used `uv run --with-requirements` on the
 hash-pinned requirements file, as the other checks use `uv run --with`. A tamper test (every
 hash of one package replaced) showed uv installing and running anyway, while
@@ -556,7 +556,7 @@ installer refuses before relying on it.
 Fix belongs in: the `dep-quality` skill (pinning step) or driver-lab AGENTS.md, if it recurs.
 
 ### 2026-10-08T17:38-07:00 — a mutation pass without a clean baseline counted every mutation as caught
-Chapter: [SF2-2](notebook/SF2-2.md)
+Chapter: [SF2-2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-2.md)
 What happened: the pre-review mutation pass copied only `skills/` into a scratch tree. One test
 reads the design document, so the copied suite failed before any mutation, and every mutation was
 counted as caught (80 of 80). Codex found it in round 1. The rerun copies the whole tree, asserts
@@ -568,7 +568,7 @@ passes, and judges by `failures=` rather than a nonzero exit.
 Fix belongs in: the project-plan skill's "mutation pass" step (or a shared runner script).
 
 ### 2026-10-08T17:38-07:00 — a fixture named `*~` was ignored by git and left out of a commit
-Chapter: [SF2-2](notebook/SF2-2.md)
+Chapter: [SF2-2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-2.md)
 What happened: the round-2 backup-name fixture `b.spec.yaml~` matched the repository's `*~` ignore
 rule, so `git add <dir>` skipped it without a word. Tests passed locally; a fresh checkout would
 have passed that case for the wrong reason. Caught by `git status` and fixed with `git add -f`; a
@@ -680,7 +680,7 @@ assumption. Leave these unchanged tools for the orchestrator’s environment.
 
 ### 2026-10-09T14:27:42-07:00 — export environment setup and oversized reads
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The brief asked for a dot-directory
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. The brief asked for a dot-directory
 venv, but the export instruction forbids creating one; system Python also lacked ensurepip.
 A seeded temporary venv plus pip hash verification worked. Initial document batches exceeded
 the output budget and required targeted reads. Cost: extra setup and read calls. Prevention:
@@ -689,7 +689,7 @@ batching. Fix belongs in the implementer brief and tool usage.
 
 ### 2026-10-09T14:34:50-07:00 — test fixture typing and new diagnostics
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A tag-shaped unquoted claim became a YAML
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. A tag-shaped unquoted claim became a YAML
 list, reused Python objects generated YAML aliases, and generic YAML loading changed a zero
 hash to an integer. New safety findings also invalidated two first-error assumptions. Cost:
 three focused test reruns. Prevention: quote fixture strings, avoid shared objects in YAML
@@ -698,7 +698,7 @@ than its position. Fix belongs in test authoring guidance.
 
 ### 2026-10-09T14:42:46-07:00 — checkout-dependent checks in an export
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Utilities reported two failures and
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. Utilities reported two failures and
 campaign-review reported ten errors: directory markers made filesystem checks classify temporary
 paths as git trees, while git could not read a valid repository. Cost: two checks cannot be
 verified here. Prevention: identify checkout-dependent suites in export briefs and rerun them
@@ -707,7 +707,7 @@ utility or campaign code was changed.
 
 ### 2026-10-09T15:16:34-07:00 — round-1 export environment and diagnostic expectations
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. The default Python again lacked
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. The default Python again lacked
 ensurepip; a seeded Python 3.12 temporary environment installed the hash-pinned dependencies.
 Initial batched reads were truncated and a patch failed because its last context did not
 exist. Cost: targeted reads and one corrected patch. New safety rules changed existing
@@ -717,7 +717,7 @@ context. Fix belongs in implementer tooling and test authoring guidance.
 
 ### 2026-10-09T15:22:19-07:00 — mutation scoring and fixture assumptions
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. A missing rendered substring raised
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. A missing rendered substring raised
 ValueError in a mutation test; assertions must establish its presence before indexing. A
 fixture assumed every support class allowed notes; switching to its document citation made
 the containment test valid. Self-review caught a status-variable collision in the fix. Cost:
@@ -727,7 +727,7 @@ belongs in implementation and test authoring guidance.
 
 ### 2026-10-09T15:53:34-07:00 — round-2 environment and fixture corrections
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. System Python again lacked ensurepip;
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. System Python again lacked ensurepip;
 used the recorded seeded Python 3.12 temporary environment. Initial reads exceeded their
 output budget. A missing local import broke diagnostic formatting; importing the loader
 in the dependency-failure handler also broke the no-site-packages exit contract. Moved
@@ -739,7 +739,7 @@ schema branches and exercise dependency failures. Fix belongs in implementation 
 
 ### 2026-10-09T15:59:28-07:00 — mutation scoring and GFM audit imports
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: open. Two containment mutations made
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: open. Two containment mutations made
 direct-render tests raise ValueError instead of failing an assertion; a redundant diagnostic
 formatting layer had no independent boundary test. Added explicit assertion conversions
 and a text-output probe, then reran all mutations. The first standalone GFM audit imported
@@ -776,7 +776,7 @@ in the implementation workflow; corrected in this session.
 
 ### 2026-10-09T16:19:20-07:00 — SF2-4 mutation target scope
 
-Chapter: [SF2-4](notebook/SF2-4.md). Status: corrected. The initial integration mutation's
+Chapter: [SF2-4](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md). Status: corrected. The initial integration mutation's
 unscoped replacement matched the new function's declaration before its call; compilation
 failed, so that attempt is not scored. Match the indented call with surrounding newlines.
 Cost: a partial mutation run and a complete rerun in four independent temporary copies.
@@ -784,7 +784,7 @@ Prevention: compile every changed mutation target before starting the suite. Fix
 in the mutation runner's preflight; all 112 current targets compile and fail by assertion.
 
 ### 2026-10-09T16:26-07:00 — exported implementation needs temporary hash-pinned setup
-Chapter: [SF2-8a](notebook/SF2-8a.md)
+Chapter: [SF2-8a](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md)
 What happened: the system Python venv lacked ensurepip. The brief also named an in-tree
 virtual environment while the direct request forbade dot-directories. A seeded uv environment
 in temporary storage installed the pinned requirements with pip's hash check.
@@ -794,7 +794,7 @@ uv command when system Python lacks ensurepip.
 Fix belongs in: the orchestrator's exported-implementation brief.
 
 ### 2026-10-09T16:26-07:00 — scaffold test helper confused syntax with a placeholder
-Chapter: [SF2-8a](notebook/SF2-8a.md)
+Chapter: [SF2-8a](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md)
 What happened: the first helper rejected YAML's folding indicator as an angle-bracket remainder,
 then treated load_strict's dictionary as a wrapper object. Inspection corrected both assumptions.
 A delete-and-add patch on one path was also refused; a single rewrite replaced that operation.
@@ -804,7 +804,7 @@ a helper as a gate; use one update operation for an existing path.
 Fix belongs in: this unit's implementation practice; the helper is corrected here.
 
 ### 2026-10-09T16:26-07:00 — sandbox git-tree detection differs from a working checkout
-Chapter: [SF2-8a](notebook/SF2-8a.md)
+Chapter: [SF2-8a](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md)
 What happened: utility tests detected git entries in both temporary storage and the export, while
 campaign stand-in tests could not list files with git. The implementation did not add metadata
 or alter the unrelated safety tools to make those tests pass.
@@ -814,7 +814,7 @@ Prevention: state checkout-dependent test limits in export briefs or run them at
 Fix belongs in: the export harness/brief and the orchestrator's final check gate.
 
 ### 2026-10-10T11:32-07:00 — tests that pass for the wrong reason, twice in one gate
-Chapter: [SF2-G](notebook/SF2-G.md)
+Chapter: [SF2-G](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-G.md)
 What happened: the suite depended on where the checkout lies (a path cut and an "outside temp"
 case), so CI's short path hid two failures that a deep scratch clone showed. The first fix
 for the second one then picked a brief that an earlier syntax check refused, so the test still

@@ -12,7 +12,7 @@ is the set of paths where they may stay. See also the [design's terms](../docs/L
 
 Design: [LICENSE-SPLIT.md](../docs/LICENSE-SPLIT.md) (LS-R20; LS-R14's design-text part). Plan:
 [LS8](../docs/LICENSE-SPLIT-PLAN.md#ls8--documents-split-frozen-archive-open-side-check).
-Notebook: [LS8](../notebook/LS8.md). Starting revisions: driver-lab `6a58cb4` (origin/main,
+Notebook: [LS8](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS8.md). Starting revisions: driver-lab `6a58cb4` (origin/main,
 LS1–LS7 merged), `cleanroom-skills` `c8754dd`; no pre-existing changes.
 
 **Status: complete at the checkpoint;** pushes and pull requests are the orchestrator's. Commits:

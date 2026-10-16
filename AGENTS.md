@@ -106,6 +106,14 @@ python3 -m unittest discover -s evals/e1000/harness/tests
     - The gate's exit status is the orchestrator's own check before committing. A Haiku runner
       cost about 71k tokens per patch for these same commands, and the orchestrator had to
       rerun them anyway.
+    - A passing gate prints a `worktree digest:` line just before `gate: pass`. A suite process
+      that escaped its group can change the worktree after the gate, so the gate's verdict
+      holds only if the worktree still has that digest when it is staged (#80). The commit
+      runner's brief makes this its first step, before any `git status`: run the main
+      checkout's `utilities/patch-gate.py --verify-digest DIGEST WORKTREE` (never the
+      worktree's copy), and on exit 1 stop without staging and report. A mismatch is safe:
+      a `git status` that refreshed the index also causes one, and the fix either way is to
+      rerun the gate and pass the new digest on.
   - **Git sequences (Haiku), through the `git-delegate` skill:** committing applied changes,
     merging `origin/main` into a branch, push, `gh pr create`, merge and the `git cherry`-gated
     cleanup. A push or merge is named on the brief's approved line. The brief tells the

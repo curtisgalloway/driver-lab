@@ -95,7 +95,9 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
    use named resources and matching class with precise `at` locators. Preserve canonical
    HTTPS citation URLs separately from `retrieval` URLs (Arm developer pages versus static
    documentation-service PDFs), revision, hashes and page counts. Never cite confidential or
-   NDA documents in public roots; state gaps or use a public applicable proxy.
+   NDA documents in public roots; state gaps or use a public applicable proxy. Match tables
+   and their filters (inherited defaults, disabled-state checks) are evidence to cite: they
+   decide whether a driver is selected.
 7. Use `requirement` for behavior: `hw-required` needs document-class evidence,
    `comment-explained` attributes a comment, `driver-choice` is policy, `as-implemented` is what
    code does without hardware justification. Source alone cannot prove a silicon requirement.

@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A synthetic link protocol (no real hardware): bit-packed layouts with byte order, bit
+# numbering in both conventions, enumerated values and a shared enumeration, all cited to a
+# synthetic protocol document.
+format: 2
+kind: peripheral
+id: packet
+name: Packet link protocol
+resources:
+  documents:
+    - name: proto
+      class: standard
+      title: Packet link protocol
+      url: https://example.invalid/packet-link.pdf
+      sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+      pages: 40
+enumerationDefinitions:
+  - name: message-kind
+    enumeratedValues:
+      - {name: get, value: "0x0", description: request the current value}
+      - {name: data, value: "0x1"}
+      - {name: ack, value: "0x2"}
+      - {name: done, value: "0x3"}
+    support: [{class: standard, doc: proto, at: [{page: "8", table: "3-1"}]}]
+facts:
+  - id: layout-credit-update
+    section: data-formats
+    title: Credit update word
+    claim: A credit update is one 32-bit big-endian word.
+    support: [{class: standard, doc: proto, at: [{page: "5", table: "2-4"}]}]
+    data:
+      layout:
+        name: CREDIT_UPDATE
+        size: 4
+        byteOrder: bigEndian
+        bitNumbering: lsb0
+        fields:
+          - id: indicator
+            name: INDICATOR
+            offset: "0x0"
+            size: 4
+            bits: [31, 31]
+            meaning: zero for a credit update
+            enumeratedValues:
+              - {name: update, value: "0x0", description: credit update}
+              - {name: other, value: "0x1"}
+          - id: vc
+            name: VC
+            offset: "0x0"
+            size: 4
+            bits: [28, 30]
+            meaning: virtual channel the credits belong to
+          - id: posted-data
+            name: POSTED_DATA
+            offset: "0x0"
+            size: 4
+            bits: [12, 27]
+            meaning: posted data credits
+          - id: nonposted-data
+            name: NONPOSTED_DATA
+            offset: "0x0"
+            size: 4
+            bits: [0, 11]
+            meaning: non-posted data credits
+  - id: layout-message-header
+    section: data-formats
+    title: Message header
+    claim: A message starts with a four-byte little-endian header.
+    support: [{class: standard, doc: proto, at: [{page: "7", table: "3-0"}]}]
+    data:
+      layout:
+        name: MESSAGE_HEADER
+        size: 4
+        byteOrder: littleEndian
+        bitNumbering: msb0
+        fields:
+          - id: kind
+            name: KIND
+            offset: "0x0"
+            size: 1
+            bits: [0, 1]
+            meaning: message kind
+            enumerationDefinitionRef: message-kind
+          - id: function-mask
+            name: FUNCTION_MASK
+            offset: "0x2"
+            size: 2
+            bits: [0, 15]
+            meaning: function types the request covers, one bit each
+            enumeratedValues:
+              - {name: endpoint, value: "0x1"}
+              - {name: legacy-endpoint, value: "0x2"}
+              - {name: integrated-endpoint, value: "0x4"}
+          - id: length
+            name: LENGTH
+            offset: "0x1"
+            size: 1
+            meaning: payload length in words

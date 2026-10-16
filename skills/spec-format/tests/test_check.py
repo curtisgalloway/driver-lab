@@ -1168,6 +1168,178 @@ class Rules(TempRoots):
             self.assertEqual(result["specs"], 0, ref)  # refused by the schema, before any check
 
 
+class PeripheralComposition(TempRoots):
+    """#126: a peripheral spec joins a soc, chip or board through its own `describes` or an
+    instance row's `peripheral`, both structural like `parts`."""
+
+    def periph(self, sid="widget-uart", head=""):
+        return (HDR + f"format: 2\nkind: peripheral\nid: {sid}\nname: Widget UART\n" + head
+                + "resources:\n  documents:\n"
+                '    - {name: trm, class: databook, title: Widget TRM, '
+                'url: "https://example.invalid/trm.pdf", pages: 80}\n'
+                "facts:\n  - id: reset\n    section: identity\n    title: T\n    claim: C.\n"
+                '    support: [{class: databook, doc: trm, at: [{section: "1"}]}]\n')
+
+    @staticmethod
+    def instance(**refs):
+        names = "".join(f"    {k}: {v}\n" for k, v in refs.items())
+        return ("instances:\n  - id: uart0\n    name: uart0\n" + names
+                + '    reg: "0x10000000"\n    irq: {kind: SPI, number: 3}\n    clocks: []\n'
+                '    support: [{class: databook, doc: trm, at: [{section: "2"}]}]\n')
+
+    def run_root(self, files):
+        r = self.root(f"r{len(os.listdir(self.tmp))}", {"board-specs.yaml": marker(), **files})
+        return check(r)
+
+    def unattached(self, result):
+        return [f for f in warnings(result) if "is linked to no soc, chip or board" in f["message"]]
+
+    def test_describes_resolves_to_a_parent_kind(self):
+        for target, want in (("widgetchip", None),
+                             ("nosuch", "describes entry 'nosuch' resolves to no spec"),
+                             ("ipx", "describes entry 'ipx' is not a soc, chip or board spec "
+                                     "(kind ip)"),
+                             ("other-uart", "describes entry 'other-uart' is not a soc, chip or "
+                                            "board spec (kind peripheral)")):
+            with self.subTest(target):
+                ip = (HDR + "format: 2\nkind: ip\nid: ipx\nname: X\ntriggers: [ipx]\n"
+                      "resources:\n  documents:\n    - {name: trm, class: databook, title: T, "
+                      'url: "https://example.invalid/t.pdf"}\nfacts: []\n')
+                code, result = self.run_root({
+                    "chip.spec.yaml": chip(), "ip.spec.yaml": ip,
+                    "other.spec.yaml": self.periph("other-uart", "describes: [widgetchip]\n"),
+                    "p.spec.yaml": self.periph(head=f"describes: [{target}]\n")})
+                msgs = [f["message"] for f in errors(result)]
+                if want is None:
+                    self.assertEqual((code, msgs), (0, []))
+                    self.assertEqual(self.unattached(result), [])
+                else:
+                    self.assertEqual(msgs, [want])
+
+    def test_describes_never_names_a_later_layer(self):
+        product = self.root("product", {"board-specs.yaml": marker("p", layer="product"),
+                                        "chip.spec.yaml": chip()})
+        public = self.root("public", {"board-specs.yaml": marker("q"),
+                                      "p.spec.yaml": self.periph(head="describes: [widgetchip]\n")})
+        code, result = check(public, product)
+        self.assertEqual(only(errors(result))["message"],
+                         "describes entry 'widgetchip' is in layer product, after this root's "
+                         "layer public; name it from that layer's instances[].peripheral instead")
+        later = self.root("later", {"board-specs.yaml": marker("s", layer="product"),
+                                    "p.spec.yaml": self.periph(head="describes: [widgetchip]\n")})
+        earlier = self.root("earlier", {"board-specs.yaml": marker("e"), "chip.spec.yaml": chip()})
+        code, result = check(earlier, later)
+        self.assertEqual((code, errors(result)), (0, []))
+
+    def test_describes_is_a_unique_non_empty_list(self):
+        for head in ("describes: []\n", "describes: [widgetchip, widgetchip]\n",
+                     "describes: widgetchip\n"):
+            with self.subTest(head):
+                code, result = self.run_root({"chip.spec.yaml": chip(),
+                                              "p.spec.yaml": self.periph(head=head)})
+                self.assertEqual(code, 1)
+                self.assertTrue(errors(result, "p.spec.yaml"))
+
+    def test_describes_only_on_peripheral_specs(self):
+        code, result = self.run_root({"chip.spec.yaml": chip(head="describes: [widgetchip]\n")})
+        self.assertIn("describes", only(errors(result))["message"])
+
+    def test_instance_names_ip_peripheral_or_both(self):
+        ip = (HDR + "format: 2\nkind: ip\nid: ipx\nname: X\ntriggers: [ipx]\n"
+              "resources:\n  documents:\n    - {name: trm, class: databook, title: T, "
+              'url: "https://example.invalid/t.pdf"}\nfacts: []\n')
+        cases = {
+            "peripheral": ({"peripheral": "widget-uart"}, []),
+            "both": ({"ip": "ipx", "peripheral": "widget-uart"}, []),
+            "ip": ({"ip": "ipx"}, []),
+            "dangling": ({"peripheral": "nosuch"},
+                         ["instance 'uart0': peripheral 'nosuch' resolves to no spec"]),
+            "wrong-kind": ({"peripheral": "ipx"},
+                           ["instance 'uart0': 'ipx' is not a peripheral spec (kind ip)"]),
+            "ip-wrong-kind": ({"ip": "widget-uart"},
+                              ["instance 'uart0': 'widget-uart' is not an ip spec "
+                               "(kind peripheral)"]),
+        }
+        for what, (refs, want) in cases.items():
+            with self.subTest(what):
+                code, result = self.run_root({"chip.spec.yaml": chip(head=self.instance(**refs)),
+                                              "ip.spec.yaml": ip,
+                                              "p.spec.yaml": self.periph()})
+                self.assertEqual([f["message"] for f in errors(result)], want)
+        code, result = self.run_root({"chip.spec.yaml": chip(head=self.instance()),
+                                      "p.spec.yaml": self.periph()})
+        self.assertEqual(only(errors(result))["message"], "instances[0]: an instance names an "
+                                                          "ip spec, a peripheral spec, or both")
+
+    def test_unattached_peripheral_warns_only_beside_a_parent(self):
+        cases = {
+            "alone": ({"p.spec.yaml": self.periph()}, False),
+            "beside-a-chip": ({"chip.spec.yaml": chip(), "p.spec.yaml": self.periph()}, True),
+            "describes": ({"chip.spec.yaml": chip(),
+                           "p.spec.yaml": self.periph(head="describes: [widgetchip]\n")}, False),
+            "instance": ({"chip.spec.yaml": chip(head=self.instance(peripheral="widget-uart")),
+                          "p.spec.yaml": self.periph()}, False),
+            "overlay-instance": ({"chip.spec.yaml": chip(),
+                                  "o.spec.yaml": overlay(head=self.instance(
+                                      peripheral="widget-uart").replace(
+                                      "support: [{class: databook, doc: trm, "
+                                      'at: [{section: "2"}]}]', "support: [{class: press, "
+                                      "title: T, url: \"https://example.invalid/p\"}]\n"
+                                      "    todo: {check: document, text: t.}")),
+                                  "p.spec.yaml": self.periph()}, False),
+        }
+        for what, (files, warned) in cases.items():
+            with self.subTest(what):
+                code, result = self.run_root(files)
+                self.assertEqual(errors(result), [], what)
+                found = self.unattached(result)
+                self.assertEqual(len(found), 1 if warned else 0, found)
+                if warned:
+                    self.assertIn("peripheral spec 'widget-uart' is linked to no soc, chip or "
+                                  "board spec", found[0]["message"])
+
+    def test_describes_stays_out_of_every_basis(self):
+        import types
+
+        import records
+        import speccheck
+
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        texts = []
+        for head in ("", "describes: [widgetchip]\n"):
+            r = self.root(f"b{len(head)}", {"board-specs.yaml": marker(),
+                                            "chip.spec.yaml": chip(),
+                                            "p.spec.yaml": self.periph(head=head)})
+            checker = speccheck.check(api, spec_cli.load_schemas(), [r])
+            rec = next(x for f in checker.files if f.spec_id == "widget-uart"
+                       for x in f.records.values())
+            texts.append(records.local_part(rec))
+        self.assertIsNotNone(texts[0][0])
+        self.assertEqual(texts[0], texts[1])
+
+    def test_instance_peripheral_is_in_the_row_basis(self):
+        import types
+
+        import records
+        import speccheck
+
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        texts = []
+        for name in ("widget-uart", "other-uart"):
+            r = self.root(f"i{name}", {
+                "board-specs.yaml": marker(),
+                "chip.spec.yaml": chip(head=self.instance(peripheral=name)),
+                "p.spec.yaml": self.periph(), "q.spec.yaml": self.periph("other-uart")})
+            checker = speccheck.check(api, spec_cli.load_schemas(), [r])
+            rec = next(x for f in checker.files if f.spec_id == "widgetchip"
+                       for x in f.records.values() if x.path[0] == "instances")
+            texts.append(records.local_part(rec)[0])
+        self.assertIn("widget-uart", texts[0])
+        self.assertNotEqual(texts[0], texts[1])
+
+
 class WorkedExample(unittest.TestCase):
     def test_only_the_slice_elisions_remain(self):
         code, result = check(WORKED / "docs", WORKED / "permissive", WORKED / "gpl",

@@ -1,0 +1,151 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A synthetic block (no real hardware): every IP-XACT field property, the registries,
+# arrays, a register file, an alias and the three extensions, all cited to a synthetic TRM.
+format: 2
+kind: peripheral
+id: gadget
+name: Gadget link controller
+resources:
+  documents:
+    - name: trm
+      class: databook
+      title: Gadget TRM
+      url: https://example.invalid/gadget-trm.pdf
+      sha256: "2222222222222222222222222222222222222222222222222222222222222222"
+      pages: 80
+resetTypes:
+  - name: power-on
+    description: fundamental reset
+    support: [{class: databook, doc: trm, at: [{page: "10"}]}]
+  - name: hot
+    description: hot reset
+    support: [{class: databook, doc: trm, at: [{page: "10"}]}]
+fieldAccessPolicyDefinitions:
+  - name: RW1CS
+    access: read-write
+    modifiedWriteValue: oneToClear
+    unaffectedBy: [hot]
+    support: [{class: databook, doc: trm, at: [{page: "11", table: "2-1"}]}]
+enumerationDefinitions:
+  - name: link-width
+    enumeratedValues:
+      - {name: off, value: "0x0", description: link down}
+      - {name: x1, value: "0x1"}
+      - {name: x4, value: "0x2"}
+    support: [{class: databook, doc: trm, at: [{page: "12", table: "2-2"}]}]
+registerFiles:
+  - name: queue
+    addressOffset: "0x100"
+    range: "0x10"
+    array: {dim: [4], stride: "0x10"}
+    support: [{class: databook, doc: trm, at: [{page: "20"}]}]
+facts:
+  - id: reg-status
+    section: registers
+    title: STATUS
+    data:
+      register: {name: STATUS, offset: "0x4", width: 32, access: read-write}
+      fields:
+        - id: err
+          name: ERR
+          bits: [0, 0]
+          meaning: an uncorrectable error was detected
+          fieldAccessPolicyDefinitionRef: RW1CS
+          resets: [{value: "0x0", resetTypeRef: power-on}]
+        - id: mode
+          name: MODE
+          bits: [1, 3]
+          meaning: link mode
+          access: read-write
+          writeValueConstraint: {useEnumeratedValues: true}
+          enumeratedValues:
+            - {name: off, value: "0x0", description: no link}
+            - {name: x1, value: "0x1"}
+            - {name: x4, value: "0x2", usage: read-write}
+        - id: width
+          name: WIDTH
+          bits: [4, 5]
+          meaning: negotiated link width
+          access: read-only
+          volatile: true
+          enumerationDefinitionRef: link-width
+        - id: cnt
+          name: CNT
+          bits: [8, 15]
+          meaning: error count, cleared on read
+          access: read-only
+          readAction: clear
+          volatile: true
+          resets: [{value: "0x0"}]
+        - id: rsvd
+          name: RSVD
+          bits: [16, 23]
+          meaning: reserved, preserve on write
+          reserved: true
+          writeValueConstraint: {writeAsRead: true}
+        - id: rsvdz
+          name: RSVDZ
+          bits: [24, 31]
+          meaning: reserved, write zero
+          reserved: true
+          writeValueConstraint: {minimum: "0x0", maximum: "0x0"}
+    support: [{class: databook, doc: trm, at: [{page: "30", table: "3-1"}]}]
+  - id: reg-cap
+    section: registers
+    title: CAP
+    data:
+      register: {name: CAP, offset: "0x8", width: 32, access: read-write}
+      fields:
+        - id: lanes
+          name: LANES
+          bits: [0, 7]
+          meaning: lane count, set before software runs
+          access: read-only
+          initializedBy: firmware
+        - id: en
+          name: EN
+          bits: [8, 8]
+          meaning: per-lane enable, one bit per lane
+          access: read-write
+          array: {dim: [8], bitStride: 1}
+          lockedBy: {field: "#reg-lock.wen", lockedValue: "0x0"}
+          resets:
+            - {value: "0x0", resetTypeRef: power-on}
+          unaffectedBy: [hot]
+        - id: err-mirror
+          name: ERR_MIRROR
+          bits: [16, 16]
+          meaning: read-only view of STATUS.ERR
+          access: read-only
+          aliasOf: "#reg-status.err"
+    support: [{class: databook, doc: trm, at: [{page: "31"}]}]
+  - id: reg-lock
+    section: registers
+    title: LOCK
+    data:
+      register: {name: LOCK, offset: "0xc", width: 32}
+      fields:
+        - id: wen
+          name: WEN
+          bits: [0, 0]
+          meaning: write enable for CAP.EN; cleared once, stays cleared until reset
+          access: read-write
+          modifiedWriteValue: zeroToClear
+          resets: [{value: "0x1", mask: "0x1", resetTypeRef: power-on}]
+    support: [{class: databook, doc: trm, at: [{page: "32"}]}]
+  - id: reg-qhead
+    section: registers
+    title: QHEAD
+    data:
+      register:
+        name: QHEAD
+        offset: "0x0"
+        width: 32
+        access: read-write
+        registerFile: queue
+        array: {dim: [2], stride: "0x4"}
+      fields:
+        - {id: ptr, name: PTR, bits: [0, 15], meaning: queue head pointer, access: read-write,
+           support: [{class: databook, doc: trm, at: [{page: "21"}]}]}
+    support: [{class: databook, doc: trm, at: [{page: "21"}]}]

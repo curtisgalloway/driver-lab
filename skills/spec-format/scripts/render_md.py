@@ -147,6 +147,35 @@ def _citation(file, entry) -> str:
     return escape(cls) + (": " + "; ".join(bits) if bits else "")
 
 
+NESTED = ("enumeratedValues", "resets")
+
+
+def _nested(name, value):
+    """Bullet lines for a key whose value is a list of small records, never a JSON dump."""
+    lines = ["- " + escape(name) + ":"]
+    for item in value:
+        if name == "enumeratedValues":
+            lines.append("  - " + code(item["value"]) + " " + escape(item["name"]) +
+                         (": " + escape(item["description"]) if "description" in item else "") +
+                         (" (" + escape(item["usage"]) + ")" if "usage" in item else ""))
+        else:
+            lines.append("  - " + code(item["value"]) +
+                         (" mask " + code(item["mask"]) if "mask" in item else "") +
+                         (" (" + escape(item["resetTypeRef"]) + ")"
+                          if "resetTypeRef" in item else ""))
+    return lines
+
+
+def _keys(out, row, skip):
+    for name, value in row.items():
+        if name in skip:
+            continue
+        if name in NESTED and isinstance(value, list):
+            out.extend(_nested(name, value))
+        else:
+            out.append("- " + escape(name) + ": " + escape(_value(value)))
+
+
 def _support(out, checker, file, entries, prefix="- ", notes=None):
     indent = prefix[:-2]
     for entry in entries:
@@ -187,9 +216,20 @@ def _fact(out, checker, rec, status, with_status):
     else:
         if "register" in data.get("data", {}):
             reg = data["data"]["register"]
+            where = (" in register file " + code(reg["registerFile"])
+                     if "registerFile" in reg else "")
+            array = ""
+            if "array" in reg:
+                array = ", array dim " + "x".join(escape(d) for d in reg["array"]["dim"])
+                if "stride" in reg["array"]:
+                    array += ", stride " + code(reg["array"]["stride"])
             out.extend(["Register " + code(reg["name"]) + " at " + code(reg["offset"]) +
+                        where +
                         (", " + str(reg["width"]) + " bits" if "width" in reg else "") +
-                        (", " + escape(reg["access"]) if "access" in reg else "") + ".", ""])
+                        (", " + escape(reg["access"]) if "access" in reg else "") +
+                        "".join(", " + key + " " + escape(reg[key])
+                                for key in ("modifiedWriteValue", "readAction")
+                                if key in reg) + array + ".", ""])
         # Instance and variant rows remain visible, using their structured fields.
         for key, value in data.items():
             if key not in ("id", "support", "note", "todo", "title", "name", "data"):
@@ -251,6 +291,10 @@ def _fact(out, checker, rec, status, with_status):
         _author(out, note, label)
 
 
+STEP_KEYS = ("op", "target", "value", "mask", "until", "interval", "timeout", "duration",
+             "onTimeout")
+
+
 def _payload(out, checker, rec, status, with_status):
     import peripheral
 
@@ -268,14 +312,23 @@ def _payload(out, checker, rec, status, with_status):
             _support(out, checker, rec.file, [{"class": "src", "anchors": anchors}])
             out.append("")
     if "layout" in payload:
-        out.extend(["Layout " + code(payload["layout"]["name"]) + ": " +
-                    str(payload["layout"]["size"]) + " bytes.", ""])
+        layout = payload["layout"]
+        parts = [str(layout["size"]) + " bytes"]
+        if "byteOrder" in layout:
+            parts.append(code(layout["byteOrder"]))
+        if "bitNumbering" in layout:
+            parts.append("bit numbering " + code(layout["bitNumbering"]))
+        out.extend(["Layout " + code(layout["name"]) + ": " + ", ".join(parts) + ".", ""])
+    if "quantity" in payload:
+        out.extend(["Quantity (generated): " +
+                    escape(peripheral.quantity_text(payload["quantity"])) + ".", ""])
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get("id", row.get("before", "") + "->" + row.get("after", ""))
         out.extend(["Payload entry " + code(rec.id + "." + key) + ":", ""])
-        for name, value in row.items():
-            if name not in ("support", "note", "todo"):
-                out.append("- " + escape(name) + ": " + escape(_value(value)))
+        is_op = path[-2] == "steps" and "op" in row
+        _keys(out, row, ("support", "note", "todo") + (STEP_KEYS if is_op else ()))
+        if is_op:
+            out.append("- step (generated): " + escape(peripheral.step_text(row)))
         if "requirement" not in row and "requirement" in rec.data:
             out.append("- requirement: " + code(rec.data["requirement"]) + " (inherited)")
         notes = []
@@ -291,7 +344,37 @@ def _payload(out, checker, rec, status, with_status):
             _author(out, note, label)
 
 
-def _generated(out, file):
+DEFINITIONS = {"resetTypes": "Reset types", "fieldAccessPolicyDefinitions":
+               "Field access policies", "enumerationDefinitions": "Enumerations",
+               "registerFiles": "Register files"}
+
+
+def _definitions(out, checker, file, summary):
+    """The spec-level registries: each entry's keys, then its provenance, todo and note."""
+    if not summary["definitions"] or checker is None:
+        return
+    out.heading(2, "Definitions (generated): " + escape(file.root.label))
+    for group, entries in summary["definitions"].items():
+        out.heading(3, DEFINITIONS[group])
+        for entry in entries:
+            out.extend(["Definition entry " + code(entry["name"]) + ":", ""])
+            _keys(out, entry, ("name", "support", "note", "todo"))
+            notes = []
+            _support(out, checker, file, entry.get("support", []), notes=notes)
+            if "todo" in entry:
+                todo = entry["todo"]
+                out.append("- TODO (verify on " + escape(todo["check"]) + "): " +
+                           escape(todo["text"]))
+                if "method" in todo:
+                    out.append("- method: " + escape(todo["method"]))
+            out.append("")
+            if "note" in entry:
+                notes.append(("Definition note", entry["note"]))
+            for label, note in notes:
+                _author(out, note, label)
+
+
+def _generated(out, file, checker=None):
     import peripheral
 
     summary = peripheral.generated(file)
@@ -300,6 +383,12 @@ def _generated(out, file):
     _table(out, "Canonical references (generated)", summary["references"])
     rows = peripheral.register_rows(summary)
     _table(out, "Register map (generated)", rows)
+    fields = peripheral.field_rows(summary)
+    if any(set(row) - {"field", "name", "bits"} for row in fields):
+        _table(out, "Register fields (generated)", fields)
+    layout_fields = peripheral.layout_field_rows(summary)
+    if any(set(row) - {"field", "layout", "offset", "size"} for row in layout_fields):
+        _table(out, "Layout fields (generated)", layout_fields)
     _table(out, "Findings (generated)", summary["findings"])
     _table(out, "Correspondence (generated)", summary["pairs"])
     _table(out, "Comparison coverage (generated)", summary["coverage"])
@@ -310,6 +399,7 @@ def _generated(out, file):
         out.append("")
     _table(out, "Open questions (generated)", summary["questions"])
     _table(out, "Area confidence", file.data.get("areas", []))
+    _definitions(out, checker, file, summary)
 
 
 def source_commits(groups, source_commit) -> dict:
@@ -398,7 +488,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
         for file in group:
             _resources(out, file)
             if peripheral_spec or any("data" in fact for fact in file.data["facts"]):
-                _generated(out, file)
+                _generated(out, file, checker)
         if any(any(key in f.data for key in ("orientation", "milestones", "notes")) for f in group):
             out.heading(2, "Context (not facts)")
             for file in group:

@@ -94,10 +94,10 @@ A file that cannot be read is a finding on that file.
 `check` reads each root's `board-specs.yaml`, validates every `*.spec.yaml` below it, then
 checks what a schema cannot: names (`doc`, `repo`, `assumption`) resolving in the citing file,
 document classes and page bounds, ids unique per spec id per root, composition (`parts`,
-`variant_of`, `instances[].ip`, overlays), fact references (`#id`, `spec#id`,
-`spec@root#id`) with layer order and no premise cycles, and the license gate, direct and
-through references. `--context-root` reads a further root so references and overlays resolve;
-findings in its own files are warnings. `--require-license` also gates repos entries no anchor
+`variant_of`, `instances[].ip` and `.peripheral`, `describes`, overlays), fact references
+(`#id`, `spec#id`, `spec@root#id`) with layer order and no premise cycles, and the license
+gate, direct and through references. `--context-root` reads a further root so references and
+overlays resolve; findings in its own files are warnings. `--require-license` also gates repos entries no anchor
 cites. `--public-skill` names a skill a public root's tools may name in `via:`. Output: one
 `path:line:column: error|warning: message` per finding, then a summary; `--json` prints
 `{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "verification",
@@ -218,9 +218,12 @@ returns `{"ok", "markdown", "findings"}` for md or `{"ok", "html", "findings"}` 
 (the view is null on error). HTML renders author CommonMark separately in each field with raw
 HTML disabled, images as links and checked hrefs only. Only structured fields produce badges.
 `--format atlas` (atlas.py) needs `--spec ID` and emits one self-contained page centered on that
-spec: it adds the closure of its `parts`, every spec one fact link away from the spec or a part,
-and the IP specs those specs' instances name, and shows them as an outline, a spec graph, a memory map of instance base addresses, a
-verification coverage grid and a list of open items. Its `--json` key is `html`; `--with-status` has no effect, since the
+spec: it adds the closure of its `parts`, the peripheral specs whose `describes` names one of
+those, every spec one fact link (`relates`, a premise or an observation) away from the spec or a
+part, and the IP and peripheral specs those specs' instances name, and shows them as an outline,
+a spec graph, a memory map of instance base addresses, a verification coverage grid and a list
+of open items; specs in the rendered roots it leaves out are listed under its limits. Its
+`--json` key is `html`; `--with-status` has no effect, since the
 atlas always shows verdicts. Author text uses the viewer's renderer; the page loads nothing from
 elsewhere.
 The reusable publishing workflow and local build/verify helper live under `spec-format/ci/`.

@@ -44,7 +44,8 @@ the generated list; ref-issue must explain why the reference should not be follo
 requirement label does not earn an assessment. Check precise document locators and note unavailable
 bytes. Search for contrary evidence. Review coverage for constants, sequences/timing,
 interrupts/DMA, error/recovery, power and errata: every exclusion needs a reason and every
-zero-finding comparison says what was read. Account for unmapped routines. Flag excessive quoting.
+zero-finding comparison says what was read. Account for unmapped routines and untraced
+selection paths. Flag excessive quoting.
 
 Return a full report and proposed `<root>/resources/<driver>-review.verify.yaml` via
 spec-verifier, keyed by fact ids with bases/upstream from status JSON, contrary_evidence,

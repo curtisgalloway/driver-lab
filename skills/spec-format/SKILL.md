@@ -4,6 +4,8 @@ description: >-
   Reference skill: the spec format contract for YAML hardware specs and verification records.
   Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving spec.py.
   Defines evidence classes, references, roots, rendering and freshness; schemas define shapes.
+  Also read when asked for a board atlas or spec map (render --format atlas): an interactive map
+  of a board's specs.
 ---
 
 <!--
@@ -24,7 +26,9 @@ SPDX-License-Identifier: Apache-2.0
 - **Verification record**: a separate file of verdicts. A **basis hash** fingerprints a fact's
   declared dependencies; **freshness** compares the recorded hash with the current one.
 - **Rendered view**: generated Markdown for reading. The **viewer** is the HTML view with
-  provenance labels (**badges**) drawn only from fields.
+  provenance labels (**badges**) drawn only from fields. The **atlas** (`render --format atlas
+  --spec ID`) is one interactive page for a board and the specs around it: outline, spec graph,
+  memory map, coverage grid and open items.
 
 See the [glossary](../../GLOSSARY.md) for these and the hardware terms. This is the shared
 contract; the [design](../../docs/SPEC-FORMAT.md) records its rationale and decisions D1–D22.

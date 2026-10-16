@@ -305,6 +305,7 @@ function factNode(f) {
     const b = el('div', 'fbody');
     if (f.claim_html) b.append(html('div', 'claim', f.claim_html));
     if (f.todo) { const t = el('div', 'todo'); t.append(el('b', null, f.todo.check || 'check'), f.todo.text); b.append(t); }
+    for (const r of f.row_todos) { const t = el('div', 'todo'); t.append(el('b', null, r.check), r.fact + ' (' + r.kind + '): ' + r.text); b.append(t); }
     for (const r of f.out) { const li = el('div', 'rel'); li.append(el('span', 'verb', r.relation + ' →'), factLink(r.fact, revealInOutline)); b.append(li); }
     for (const r of f.inc) { const li = el('div', 'rel'); li.append(el('span', 'verb', '← ' + r.relation), factLink(r.fact, revealInOutline)); b.append(li); }
     b.append(el('span', 'idline mono', f.key));
@@ -371,7 +372,7 @@ function applyFilter() {
   let shown = 0;
   for (const f of facts) {
     const d = factEls.get(f.key);
-    const hay = (f.title + ' ' + f.text + ' ' + f.key + ' ' + (f.todo ? f.todo.text : '')).toLowerCase();
+    const hay = (f.title + ' ' + f.text + ' ' + f.key + ' ' + (f.todo ? f.todo.text : '') + ' ' + f.row_todos.map(r => r.text).join(' ')).toLowerCase();
     const ok = (!q || hay.includes(q)) && (!filt.crit || f.critical) && (!filt.gap || f.verdict === 'GAP')
       && (!filt.todo || f.todo || f.row_todos.length) && (!filt.root || f.root === filt.root);
     d.hidden = !ok;

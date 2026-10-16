@@ -1452,7 +1452,7 @@ class RoundThree(Validator):
     """Round-3 review fixes."""
 
     def test_fragment_regex_constructs(self):
-        """Codex 1 and Claude: a comment cannot hide a $; \Z is Python-only."""
+        r"""Codex 1 and Claude: a comment cannot hide a $; \Z is Python-only."""
         def frag(pattern):
             return {"type": "object", "properties": {
                 "observer": {"type": "string", "pattern": pattern}}}

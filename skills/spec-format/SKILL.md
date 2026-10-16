@@ -85,6 +85,18 @@ or `source`; `text` states the question and check; optional `method` describes h
 it. The method must observe the thing (an EL1-only probe cannot read an EL3-only register).
 For a supported claim with a remaining unknown, keep support and add a TODO for that unknown.
 
+**Mark omissions with a document TODO.** When a fact or payload row summarizes what its locator
+holds (names a bitmask, opcode table or enum without its values, or leaves out rows, conditions
+or footnotes), add `todo: {check: document, text: ...}` saying what was left out and where:
+`Per-bit Function Type encodings (Table 12-47, p. 1857) not extracted.` The Markdown and HTML
+renders show it beside the record (and, for a spec with typed payloads, in the generated open
+questions), and `spec.py todo --check document` lists it. A record holds one TODO. When it
+already needs one, put the omission on the payload row it concerns if there is one; otherwise
+say both things in the existing TODO's text, which keeps its own `check`, so the
+`--check document` list no longer shows the omission.
+The marker records an omission the author knows about. It is not a completeness claim, and
+nothing checks for a missing one: a record without it may still summarize its source.
+
 Mark bring-up-critical addressing, entry and debug-console facts `critical: true`; omit it
 otherwise. The record needs a fresh independent second reader. Declare dependencies with
 `assumes` (same-file `assumptions` ids) or `relates` (fact references with `qualifies`,

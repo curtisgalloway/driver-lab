@@ -179,6 +179,13 @@ def _support(out, checker, file, entries, prefix="- ", notes=None):
             notes.append(("Support note", entry["note"]))
 
 
+def _todo(out, todo):
+    """A record's TODO, for a fact and for a payload row alike (an omission is one, issue 106)."""
+    out.append("- TODO (verify on " + escape(todo["check"]) + "): " + escape(todo["text"]))
+    if "method" in todo:
+        out.append("- method: " + escape(todo["method"]))
+
+
 def _fact(out, checker, rec, status, with_status):
     data, file = rec.data, rec.file
     out.heading(4, escape(data.get("title", data.get("name", rec.id))))
@@ -204,10 +211,7 @@ def _fact(out, checker, rec, status, with_status):
         assumption = file.data["assumptions"][file.assumptions[aid][1]]
         out.append("- assumes " + code(aid) + ": " + escape(assumption["text"]))
     if "todo" in data:
-        todo = data["todo"]
-        out.append("- TODO (verify on " + escape(todo["check"]) + "): " + escape(todo["text"]))
-        if "method" in todo:
-            out.append("- method: " + escape(todo["method"]))
+        _todo(out, data["todo"])
     if "scope" in data:
         out.append("- scope: " + "; ".join(escape(k) + ": " + ", ".join(escape(v) for v in vals)
                                          for k, vals in data["scope"].items()))
@@ -278,6 +282,8 @@ def _payload(out, checker, rec, status, with_status):
                 out.append("- " + escape(name) + ": " + escape(_value(value)))
         if "requirement" not in row and "requirement" in rec.data:
             out.append("- requirement: " + code(rec.data["requirement"]) + " (inherited)")
+        if "todo" in row:
+            _todo(out, row["todo"])
         notes = []
         _support(out, checker, rec.file, row.get("support", []), notes=notes)
         if with_status and rec.id + "." + key in status[rec.file]:

@@ -24,6 +24,8 @@ mappings. Invent no anchor for a line you did not read and no investigator retur
 
 Start from this minimal complete record template (its supported subset is not a finished spec).
 Use the target's license in the SPDX header. Unknown register width/access/reset are absent.
+Add `describes: [<id>]` after `name` naming the soc, chip or board spec whose block this is,
+unless that spec's instance row names this spec in `peripheral`.
 
 ```yaml
 # SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
@@ -64,7 +66,9 @@ facts:
       sequence:
         steps:
           - id: s1
-            action: write 0 to CTRL
+            op: write
+            target: "#reg-ctrl"
+            value: "0x0"
             support:
               - class: src
                 anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
@@ -72,6 +76,26 @@ facts:
       - class: src
         anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
 ```
+
+A field, opcode or mask whose source gives a table of values or bit assignments lists them:
+`enumeratedValues`, an `enumerationDefinitionRef`, or bit-level fields. If you leave a table out
+on purpose, add `todo: {check: document, text: "<what is omitted and where>"}` to the field;
+naming the table in `meaning` alone is a defect. Use IP-XACT access values, and give a document
+abbreviation such as RW1CS one `fieldAccessPolicyDefinitions` entry, cited once.
+
+A layout field packed inside a word (packet header, descriptor, mailbox word) takes `bits: [a, b]`
+within its `offset`/`size` container, numbered as the cited document numbers bits; set the
+layout's `bitNumbering` (`lsb0` or `msb0`) and `byteOrder` (`bigEndian` or `littleEndian`), and
+list value tables as on register fields.
+
+A sequence step that writes, sets or clears bits, reads, polls, delays or waits for an interrupt
+takes `op`, `target` (`#fact` or `#fact.field`), `value`, `until` and quantities for `timeout`,
+`interval` and `duration` (`{unit: ms, max: 10}`) instead of `action`; other steps keep
+`action`. Every wait, poll or handshake step states its bound or carries `todo: {check:
+document, text: "<the source gives no bound>"}`: a `poll` or `waitInterrupt` as a `timeout`
+(the document's tolerance as `min`/`max`); an `action` step, which cannot take `timeout`, in
+its `action` text or in a `data.quantity` fact its `note` names. A fact whose whole claim is one
+limit carries `data.quantity`.
 
 Add complete register fields in databook order, performing steps and separate ordering
 constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,

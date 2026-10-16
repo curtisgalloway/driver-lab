@@ -58,7 +58,9 @@ or permissions; follow the caller's authorized scope.
    substrings. Check `not_triggers` first, longest first: `pi 5` must not select `pi 500`.
    Several matching boards or a variant choice that changes the answer produce Needs decision.
    An SoC/chip alone is useful; say which board-level facts are absent.
-4. **Compose** `parts` recursively, then IP specs named by the question's `instances[].ip`.
+4. **Compose** `parts` recursively, then the specs the question's instances name in `ip` and
+   `peripheral`, and the peripheral specs whose `describes` names a composed id (a block's
+   programming model).
    Anchored IP uses the instance's placement and the board's pinned repository as the map;
    several indistinguishable rows require a decision. Generic IP uses its own pin and document
    authorities and has no instance facts. Branch-only map entries must be resolved to the

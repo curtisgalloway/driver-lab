@@ -1,0 +1,98 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# A synthetic block (no real hardware): a start sequence with an operation per step (every
+# op), the registers and interrupt it names, and a time limit as a quantity, all cited to a
+# synthetic programming guide.
+format: 2
+kind: peripheral
+id: sequence
+name: Timer block start sequence
+resources:
+  documents:
+    - name: guide
+      class: databook
+      title: Timer block programming guide
+      url: https://example.invalid/timer-guide.pdf
+      sha256: "4444444444444444444444444444444444444444444444444444444444444444"
+      pages: 60
+facts:
+  - id: reg-ctrl
+    section: registers
+    title: CTRL
+    data:
+      register: {name: CTRL, offset: "0x0", width: 32, access: read-write}
+      fields:
+        - id: en
+          name: EN
+          bits: [0, 0]
+          meaning: block enable
+          access: read-write
+        - id: mode
+          name: MODE
+          bits: [1, 2]
+          meaning: run mode
+          access: read-write
+          enumeratedValues:
+            - {name: idle, value: "0x0"}
+            - {name: run, value: "0x1"}
+            - {name: stop, value: "0x2", usage: write}
+            - {name: busy, value: "0x3", usage: read}
+    support: [{class: databook, doc: guide, at: [{page: "10", table: "2-1"}]}]
+  - id: reg-status
+    section: registers
+    title: STATUS
+    data:
+      register: {name: STATUS, offset: "0x4", width: 32, access: read-only}
+      fields:
+        - id: ready
+          name: READY
+          bits: [0, 0]
+          meaning: the block is ready
+          access: read-only
+    support: [{class: databook, doc: guide, at: [{page: "11", table: "2-2"}]}]
+  - id: irq-done
+    section: interrupts
+    title: Done interrupt
+    claim: The block raises the done interrupt when a run completes.
+    support: [{class: databook, doc: guide, at: [{page: "20"}]}]
+  - id: seq-start
+    section: sequences
+    title: Start sequence
+    claim: Software starts the block with the steps below, in this order.
+    support: [{class: databook, doc: guide, at: [{page: "30"}]}]
+    data:
+      sequence:
+        steps:
+          - {id: enable, op: setBits, target: "#reg-ctrl.en"}
+          - {id: set-mode, op: write, target: "#reg-ctrl.mode", value: run}
+          - {id: clear-low, op: clearBits, target: "#reg-ctrl", mask: "0xf0"}
+          - {id: read-ctrl, op: read, target: "#reg-ctrl"}
+          - id: wait-ready
+            op: poll
+            target: "#reg-status.ready"
+            until: {equals: "0x1"}
+            interval: {unit: us, nom: 10}
+            timeout: {unit: ms, max: 10}
+            onTimeout: fail
+            support: [{class: databook, doc: guide, at: [{page: "31"}]}]
+          - {id: settle, op: delay, duration: {unit: us, min: 50}}
+          - id: wait-done
+            op: waitInterrupt
+            target: "#irq-done"
+            timeout: {unit: s, max: 1}
+            onTimeout: enable
+          - {id: report, action: Report the result to the caller.}
+          - id: wait-idle
+            op: poll
+            target: "#reg-status"
+            until: {bitsClear: "0x1"}
+            todo: {check: document, text: The guide gives no time limit for the idle poll.}
+        order:
+          - {before: enable, after: set-mode}
+  - id: lim-idle-timer
+    section: gotchas
+    title: Idle timer
+    claim: The idle timer expires after 1 minute (+50%/-0%).
+    support: [{class: databook, doc: guide, at: [{page: "40"}]}]
+    data:
+      quantity: {unit: s, min: 60, nom: 60, max: 90}

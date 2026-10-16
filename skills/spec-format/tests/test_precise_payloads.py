@@ -467,6 +467,19 @@ class Basis(Fixture):
             self.entry("resetTypes", "hot")["description"] = "warm reset"
         self.assertEqual(self.changed(edit), ["reg-cap", "reg-status"])
 
+    def test_a_fields_own_encoding_changes_the_basis_of_its_fact(self):
+        """#103: the basis hashes the whole fact, so a changed own value table needs no
+        basis code; only the facts holding that field go stale."""
+        def edit():
+            self.field("reg-status", "mode")["enumeratedValues"][1]["name"] = "renamed"
+        self.assertEqual(self.changed(edit), ["reg-status"])
+
+    def test_an_added_encoding_value_changes_the_basis_of_its_fact(self):
+        def edit():
+            self.field("reg-status", "mode")["enumeratedValues"].append(
+                {"name": "extra", "value": "0x7"})
+        self.assertEqual(self.changed(edit), ["reg-status"])
+
     def test_a_referenced_enumeration_and_policy(self):
         def edit_table():
             self.entry("enumerationDefinitions", "link-width")["enumeratedValues"][1]["name"] = "one"
@@ -702,6 +715,12 @@ class LayoutBasis(LayoutFixture):
         self.entry("enumerationDefinitions", "message-kind")["enumeratedValues"][1][
             "name"] = "reply"
         self.assertNotEqual(self.basis("layout-message-header"), before)
+
+    def test_a_layout_fields_own_encoding_changes_its_basis(self):
+        before = self.basis("layout-credit-update")
+        field = self.lfield("layout-credit-update", "indicator")
+        field["enumeratedValues"][1]["name"] = "renamed"
+        self.assertNotEqual(self.basis("layout-credit-update"), before)
 
     def test_a_layout_naming_no_entry_is_unaffected(self):
         before = self.basis("layout-credit-update")

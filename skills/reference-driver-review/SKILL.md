@@ -113,10 +113,18 @@ anchor; the verifier must still establish the claimed absence on the reference s
 - **Correspondence**: `section: correspondence`, `data.pair: {impl: [anchors], ref: [anchors]}`.
   Pair anchors count as support and freshness dependencies; pair-only facts need no artificial
   TODO. Account for every entry point; unmapped entries become findings or explicit scope limits.
+  Trace each entry point's selection path, not only its callback: registration, inherited
+  traits or defaults, dispatcher or match filters, the callback, driver selection and
+  initialization. Reading a callback does not show that it runs. Record positive and negative
+  selection conditions (a match string, a disabled flag) as facts with `src` support.
 - **Coverage**: `section: coverage`, `data.coverage: {area, compared, read, reason}`.
   State what was read even for zero-finding areas. Cover constants, sequencing/timing,
   interrupts, DMA/layouts, error/recovery, power, errata and sub-protocols, or give reasons
   for exclusions. Use source search evidence for a coverage claim, not an unrelated manual.
+  An untraced selection path is a coverage gap: record it in a `coverage` entry's `reason` or
+  as an `open-questions` gap fact. A test of configuration or package policy does not execute
+  the dispatcher; state that limit in any claim that cites it. Fixtures must not copy one OS's
+  disabled state into both expected and candidate data, because equal data hides the defect.
 - **Findings**: list bugs first, suspects second, then other assessments. Keep stable ids.
 - **Agreements**: supported `agreements` facts for meaningful independent agreement.
 - **Questions**: `open-questions` gap facts with TODOs for what neither tree nor document settles.

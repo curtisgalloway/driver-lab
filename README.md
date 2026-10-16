@@ -54,6 +54,7 @@ bringing up a particular board, which happen in projects that use these skills.
 | You have a hardware question and the answer will be published in a spec repository, so each source you cite must be one that repository's license accepts | `hardware-investigator` |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
 | You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
+| You have a bank of code-writing items for a spec and want to measure, by compiling and running tests, whether readers of the spec answer them correctly | `spec-eval` |
 
 ## Installing
 
@@ -158,6 +159,8 @@ off to these by name.
 
 ## Evaluating spec quality
 
+- [Spec eval skill](skills/spec-eval/SKILL.md): grades code-writing item banks against a spec by
+  compiling and running unit tests; self-tests a bank and grades a sweep of answers.
 - [Faster driver development with evidence we can test](DRIVER-QUALITY.md): the problem, the
   proposed workflow, and how independent checks could reduce human review while improving
   driver quality and test coverage. Written for programmers new to driver development.
@@ -189,6 +192,7 @@ uv pip install --python /tmp/driver-lab-spec/bin/python --require-hashes -r skil
 python3 -m unittest discover -s skills/board-expert/tests -v
 /tmp/driver-lab-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 /tmp/driver-lab-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
+python3 -m unittest discover -s skills/spec-eval/tests -v
 /tmp/driver-lab-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
 ```
 

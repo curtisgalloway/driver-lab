@@ -10,8 +10,10 @@ already-parsed data and never over prose:
   spelling, none twice; root names unique among the roots read together; no symbolic link in or
   above a root; no nested marker; no file that looks like a spec but would not be discovered;
 - composition: spec ids unique across every root (aliases too); `parts`, `variant_of`,
-  `instances[].ip` and an overlay's target resolve, to the right kind; no `parts` cycle; an
-  overlay merges no earlier than its target (layer) and uses its target kind's sections;
+  `instances[].ip`, `instances[].peripheral`, a peripheral spec's `describes` and an overlay's
+  target resolve, to the right kind; no `parts` cycle; an overlay merges no earlier than its
+  target (layer) and uses its target kind's sections; a peripheral spec nothing composes, beside
+  a soc, chip or board spec, is a warning;
 - names: every `doc`, `repo` and `assumption` name resolves in the citing file; document class
   matches the citation class; a `cite: false` document is never cited; numeric pages lie within
   the document's `pages`, written without leading zeros, `pages` in order; a `standard` locator
@@ -64,6 +66,7 @@ SECTIONS = {
     "review": ("identity", "correspondence", "coverage", "findings", "agreements", "open-questions"),
 }
 ANCHORED = ("src", "DT", "rtl")
+PARENT_KINDS = ("soc", "chip", "board")  # what a peripheral spec's `describes` may name
 DOC_CLASS = {"databook": "databook", "standard": "standard", "doc": "doc"}  # citation -> document
 PRECISE = ("section", "page", "pages", "table", "figure", "clause")
 IRQ_OFFSET = {"SPI": 32, "PPI": 16}
@@ -157,6 +160,9 @@ class SpecFile:
     # Names this file declares twice, so a citation of them is ambiguous (freshness: unknown):
     # ("documents", name), ("repos", name), ("assumptions", id), ("files", repos name, path).
     ambiguous: set = dataclasses.field(default_factory=set)
+    # The spec-level registries (peripheral.REGISTRIES): group -> name -> (entry, path). A name
+    # declared twice keeps its first entry and is in `ambiguous` as (group, name).
+    registries: dict = dataclasses.field(default_factory=dict)
     # Its verification record (records.py): none | ok | invalid | shared; valid verdicts by id.
     record_state: str = "none"
     record_path: Path | None = None
@@ -503,6 +509,15 @@ class Checker:
                              f"{group} entry {entry['name']!r} is listed twice in this file")
                 else:
                     table[entry["name"]] = (entry, ("resources", group, i))
+        for group in peripheral.REGISTRIES:
+            table = f.registries.setdefault(group, {})
+            for i, entry in enumerate(f.data.get(group, [])):
+                if entry["name"] in table:
+                    f.ambiguous.add((group, entry["name"]))
+                    self.add(f, (group, i, "name"),
+                             f"{group} entry {entry['name']!r} is listed twice in this file")
+                else:
+                    table[entry["name"]] = (entry, (group, i))
         for name, (entry, path) in f.repos.items():
             seen = set()
             for i, item in enumerate(entry.get("files", [])):
@@ -522,6 +537,7 @@ class Checker:
                 self.check_record(f, rec, cited)
         import peripheral
 
+        peripheral.check_registries(self, f, cited)
         peripheral.check_file(self, f)
         import review
 
@@ -551,10 +567,22 @@ class Checker:
 
     def check_record(self, f: SpecFile, rec: Record, cited: set):
         what = f"{_label(rec)} {rec.id!r}"
-        for entry, path in supports(rec.data, rec.path):
+        self.check_support(f, what, rec.data, rec.path, cited)
+        irq = rec.data.get("irq")
+        if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
+            want = irq["number"] + IRQ_OFFSET[irq["kind"]]
+            if irq["intid"] != want:
+                self.add(f, rec.path + ("irq", "intid"),
+                         f"{what}: intid {irq['intid']} does not agree with {irq['kind']} "
+                         f"{irq['number']} (INTID {want})")
+
+    def check_support(self, f: SpecFile, what: str, data: dict, base: tuple, cited: set):
+        """The citation, anchor and assumption checks of anything that carries support: a
+        record (data at base), or a registry entry. Every error is a rejected citation."""
+        for entry, path in supports(data, base):
             if "doc" in entry:
                 self.check_citation(f, what, entry, path)
-        for anchor, path in anchors(rec.data, rec.path):
+        for anchor, path in anchors(data, base):
             if "stale" in anchor:
                 self.add(f, path + ("stale",), f"{what}: stale anchor; re-verify and remove stale")
             name = anchor["repo"]
@@ -576,8 +604,8 @@ class Checker:
                 self.reject(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the "
                                                  f"files of repos entry {name!r} (the closed "
                                                  f"list of cited paths, D12)", citation=True)
-        names = [(a, rec.path + ("assumes", i)) for i, a in enumerate(rec.data.get("assumes", []))]
-        for entry, at in supports(rec.data, rec.path):
+        names = [(a, base + ("assumes", i)) for i, a in enumerate(data.get("assumes", []))]
+        for entry, at in supports(data, base):
             for j, premise in enumerate(entry.get("premises", [])):
                 if "assumption" in premise:
                     names.append((premise["assumption"],
@@ -586,13 +614,6 @@ class Checker:
             if name not in f.assumptions:
                 self.reject(f, path, f"{what}: assumption {name!r} is not in this file's "
                                      f"assumptions", citation=True)
-        irq = rec.data.get("irq")
-        if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
-            want = irq["number"] + IRQ_OFFSET[irq["kind"]]
-            if irq["intid"] != want:
-                self.add(f, rec.path + ("irq", "intid"),
-                         f"{what}: intid {irq['intid']} does not agree with {irq['kind']} "
-                         f"{irq['number']} (INTID {want})")
 
     def check_citation(self, f: SpecFile, what: str, entry: dict, path: tuple):
         """A document citation's checks; every error here is a rejected citation."""
@@ -1001,7 +1022,9 @@ class Checker:
                     self.add(f, ("variant_of",), f"variant_of {target!r} is not a board spec "
                                                  f"(kind {base[target][0].kind})")
             self.check_instances(f, base)
+            self.check_describes(f, base)
         self.check_parts_cycles(parts_graph, base)
+        self.check_unattached_peripherals()
         overlays: dict = {}
         for f in self.files:
             if f.is_overlay:
@@ -1027,13 +1050,47 @@ class Checker:
 
     def check_instances(self, f: SpecFile, base: dict):
         for i, row in enumerate(f.data.get("instances", [])):
-            ip = row["ip"]
-            if ip not in base:
-                self.add(f, ("instances", i, "ip"), f"instance {row['name']!r}: ip {ip!r} "
-                                                    f"resolves to no spec")
-            elif base[ip][0].kind != "ip":
-                self.add(f, ("instances", i, "ip"), f"instance {row['name']!r}: {ip!r} is not "
-                                                    f"an ip spec (kind {base[ip][0].kind})")
+            for key, kind in (("ip", "ip"), ("peripheral", "peripheral")):
+                if key not in row:
+                    continue
+                target = row[key]
+                if target not in base:
+                    self.add(f, ("instances", i, key), f"instance {row['name']!r}: {key} "
+                                                       f"{target!r} resolves to no spec")
+                elif base[target][0].kind != kind:
+                    self.add(f, ("instances", i, key), f"instance {row['name']!r}: {target!r} "
+                                                       f"is not {'an' if kind == 'ip' else 'a'} "
+                                                       f"{kind} spec (kind "
+                                                       f"{base[target][0].kind})")
+
+    def check_describes(self, f: SpecFile, base: dict):
+        for i, target in enumerate(f.data.get("describes", [])):
+            if target not in base:
+                self.add(f, ("describes", i), f"describes entry {target!r} resolves to no spec")
+            elif base[target][0].kind not in PARENT_KINDS:
+                self.add(f, ("describes", i), f"describes entry {target!r} is not a soc, chip "
+                                              f"or board spec (kind {base[target][0].kind})")
+            elif base[target][0].root.rank > f.root.rank:
+                # describes points up, from a block to its board: a public spec naming a
+                # product board would publish that board's id and fail a check on its own
+                self.add(f, ("describes", i), f"describes entry {target!r} is in layer "
+                                              f"{base[target][0].root.layer}, after this root's "
+                                              f"layer {f.root.layer}; name it from that layer's "
+                                              f"instances[].peripheral instead")
+
+    def check_unattached_peripherals(self):
+        """Warn on a peripheral spec nothing composes, when there is something to compose it
+        into: no `describes` of its own and no `instances[].peripheral` naming it."""
+        if not any(f.kind in PARENT_KINDS and not f.is_overlay for f in self.files):
+            return
+        named = {row["peripheral"] for f in self.files
+                 for row in f.data.get("instances", []) if "peripheral" in row}
+        for f in self.files:
+            if (f.kind == "peripheral" and not f.is_overlay and "describes" not in f.data
+                    and f.spec_id not in named):
+                self.add(f, ("id",), f"peripheral spec {f.spec_id!r} is linked to no soc, chip "
+                                     f"or board spec: name one in describes, or name this spec "
+                                     f"in that spec's instances[].peripheral", level="warning")
 
     def check_overlay(self, f: SpecFile, base: dict):
         target = f.spec_id

@@ -11,6 +11,7 @@ the fact's **basis hash** when it was reached (D2):
                           + "\\n" + canonical(the resource entries the fact cites, all but
                                               bookkeeping fields)
                           + "\\n" + canonical(the assumptions it names)
+                          + ["\\n" + canonical(the registry entries it names)]
                           + "\\n" + sorted "<full reference> <basis(ref)>" lines, one per fact
                                     it references )
 
@@ -19,8 +20,13 @@ string and key in NFC; the data holds only strings, integers, booleans, null, li
 (anything else is a bug, never hashed). The resource part is `{"documents": {name: entry},
 "repos": {name: entry}}` and the assumption part `{id: entry}`: each cited entry whole, minus the
 named bookkeeping fields of its kind (BOOKKEEPING), so a field not named there, a future one
-included, counts. A repos entry's `files` holds only the entries of the paths the fact cites,
-by path, each minus its own bookkeeping. A fact references facts through inference premises,
+included, counts. The registry part exists only when the record names a registry entry (a reset
+type, an access policy, an enumeration, a register file); it is `{"resetTypes": {name: entry},
+"fieldAccessPolicyDefinitions": {...}, "enumerationDefinitions": {...}, "registerFiles": {...}}`
+with empty groups left out, each entry whole minus its `note`, and the documents and repos
+those entries cite join the maps above as the record's own citations do. A record that names
+none gets exactly the three parts above, so its basis is what it was before registries existed.
+A repos entry's `files` holds only the entries of the paths the fact cites, by path, each minus its own bookkeeping. A fact references facts through inference premises,
 `relates` and an emulated entry's `observation`.
 
 References form a graph that `relates` can make cyclic (`same-as` both ways). A fact on a cycle
@@ -62,6 +68,7 @@ BOOKKEEPING = {
     "repos": frozenset({"verified", "fetch", "fetch_via", "note"}),
     "files": frozenset({"note", "attribution"}),  # a repos entry's `files` item
     "assumptions": frozenset({"todo"}),
+    "registry": frozenset({"note"}),  # a resetTypes, ... or registerFiles entry
 }
 SUMMARY = {"pass": "PASS", "fail": "FAIL", "unverifiable": "UNVERIFIABLE", "gap": "GAP",
            "adjudicate": "ADJUDICATE"}
@@ -121,8 +128,14 @@ def local_part(rec):
     f = rec.file
     data = peripheral.basis_data(rec)
     fact = {k: v for k, v in data.items() if k != "section"}
+    named, why = peripheral.referenced_registries(rec)
+    if why:
+        return None, why
     documents, repos, paths = {}, {}, {}
-    for entry, _ in speccheck.supports(data, ()):
+    cited = [entry for entry, _ in speccheck.supports(data, ())]
+    for _, _, reg, _ in named:
+        cited += [entry for entry, _ in speccheck.supports(reg, ())]
+    for entry in cited:
         if "doc" in entry:
             name = entry["doc"]
             if ("documents", name) in f.ambiguous:
@@ -166,8 +179,12 @@ def local_part(rec):
         if name not in f.assumptions:
             return None, f"{rec.full}: assumption {name!r} is not in its file's assumptions"
         assumptions[name] = _entry("assumptions", f.data["assumptions"][f.assumptions[name][1]])
-    return (canonical(fact) + "\n" + canonical({"documents": documents, "repos": repos}) + "\n"
-            + canonical(assumptions)), None
+    registries = {}
+    for group, name, reg, _ in named:
+        registries.setdefault(group, {})[name] = _entry("registry", reg)
+    text = (canonical(fact) + "\n" + canonical({"documents": documents, "repos": repos}) + "\n"
+            + canonical(assumptions))
+    return (text + "\n" + canonical(registries) if registries else text), None
 
 
 def compute(starts, edges, local, fixed, out):
@@ -304,8 +321,10 @@ class Freshness:
         n = len(rec.path)
         import peripheral
 
+        named, _ = peripheral.referenced_registries(rec)
         bad = sorted((p for p in self.cites.get(rec.file, ())
-                      if p[:n] == rec.path and peripheral.owns_citation(rec, p)), key=repr)
+                      if (p[:n] == rec.path and peripheral.owns_citation(rec, p))
+                      or any(p[:len(at)] == at for _, _, _, at in named)), key=repr)
         if bad:
             return None, (f"{rec.full}: the citation at {self._where(bad[0])} failed the check "
                           f"(see the error there)")

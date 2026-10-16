@@ -38,6 +38,14 @@ against structs. Recompute counts and repeat every scoped absence/global search.
 ranges, wrong symbols and plausible lines that do not support the claim. Re-derive roughly 10%
 of anchors blind before reading the claims, seeded by the spec hash, and record the sample.
 
+A field whose cited source gives a value table or bit assignments, with neither values nor a
+`todo` saying they were left out, is a FAIL; so is a property (access, reset, value) that
+disagrees with the source. A layout field whose `bits`, `byteOrder` or `bitNumbering` disagrees
+with the cited document is a FAIL. A wait, poll or handshake step with neither a bound nor a
+`todo` is a FAIL; so is a step whose `op`, `target`, `value`, `until` or `timeout` disagrees
+with the cited source, and a quantity whose unit or levels (tolerance included) disagree with
+the document.
+
 Check all required subject areas and omissions: databook register organization including
 untouched registers, identity/revision, prerequisites, init/error/power/teardown, layouts,
 interrupts/DMA, sub-protocols, target integration, gotchas and questions. Test `requirement`:
@@ -45,7 +53,11 @@ hw-required needs an applicable document, comment-explained needs attributed com
 as-implemented is code observation. Every code-only hardware assumption has an observable TODO;
 generated hardware and open-question lists must represent the records. Spot-check locators
 against obtainable documents; name every unavailable source. Search for contrary evidence,
-including limitations and revision mismatches. A zero-finding result must say how coverage was earned.
+including limitations and revision mismatches. Read the notes that govern each cited value,
+wherever they appear: table footnotes, exception rows, and clauses for another actor or type.
+A dropped condition or a contradicted exclusivity is FAIL. A true claim that omits a sibling
+rule is PASS with `contrary_evidence: found`; its `note` names the omission and proposes text.
+A zero-finding result must say how coverage was earned.
 
 Return a full report plus proposed `<root>/resources/<device>.verify.yaml` following
 spec-verifier. Key verdicts by fact id and `fact-id.sub-id` for fields/steps with independent

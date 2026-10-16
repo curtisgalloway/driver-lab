@@ -85,6 +85,8 @@ SHA-256 when available and precise locators in support. Use `databook`, `standar
 as the contract defines, not interchangeable classes. Store usable fetch URLs in `retrieval`,
 separate from the citation URL. For Arm manuals cite the developer documentation page and
 record the documentation-service static PDF in retrieval. Record revision and page count.
+A fact that states a document value carries the notes that govern it, wherever they appear
+(table footnotes, exception rows, clauses for another actor), and cites them.
 Public roots never cite confidential or NDA documents, even when copies are obtainable.
 
 Every source citation uses `class: src` with `anchors: [{repo, path, lines, symbol}]`.
@@ -104,23 +106,63 @@ There are no citation aliases or table-wide evidence: each fact/row carries its 
 ## Record types and requirements
 
 Start `<device>.spec.yaml` with SPDX comments matching the destination, `format: 2`,
-`kind: peripheral`, `id`, `name`, `resources` and `facts`. Repository entries have HTTPS URLs,
-full lowercase immutable `commit` values, file licenses and `role: source` or `target`.
-Quote structured hex values in lowercase canonical form (`"0x0"`, never `"0x00"` or `"0xA"`);
-omit unknown width, access or reset rather than guessing them. No Markdown frontmatter or
+`kind: peripheral`, `id`, `name`, `resources` and `facts`. Link the spec to the hardware it
+belongs to: `describes: [<soc-or-board-id>]` names the soc, chip or board specs whose block
+this is (the same or an earlier layer), or the SoC's instance row names this spec in
+`peripheral`. When a soc, chip or board spec is in the same check, the checker warns on a
+peripheral spec with neither, since a reader composing the board would never find it.
+
+Repository entries have HTTPS URLs, full lowercase immutable `commit` values, file licenses
+and `role: source` or `target`. Quote structured hex values in lowercase canonical form
+(`"0x0"`, never `"0x00"` or `"0xA"`); omit unknown width, access or reset rather than guessing
+them. No Markdown frontmatter or
 body surrounds the YAML.
 
 - **Register map**: `section: registers`, `data.register: {name, offset, width, access, reset}`
   (last three optional), and optional `data.fields`. Each field has `id`, `name`, inclusive
   `bits: [low, high]`, and `meaning`. Follow databook order, including untouched registers
   when documents cover them. The register's `claim` may be omitted; the view derives it.
+  `access` takes IP-XACT values (`read-only`, `read-write`, ...; the short `ro`/`rw`/`w1c` still
+  parse, with a warning). A field may add IP-XACT properties (`access`, `modifiedWriteValue`,
+  `readAction`, `reserved`, `resets`, `enumeratedValues`, ...; the table is in
+  [SPEC-FORMAT.md](../../docs/SPEC-FORMAT.md#register-fields-ip-xact-properties)), and a spec may
+  hold the registries `resetTypes`, `fieldAccessPolicyDefinitions`, `enumerationDefinitions` and
+  `registerFiles`; a `kind: facts` file may carry them too, and they are copied into the spec
+  with the facts that name them. A document abbreviation such as RW1CS becomes one
+  `fieldAccessPolicyDefinitions` entry, cited once. Sticky bits are `unaffectedBy`, HwInit is
+  `initializedBy`, a write-enable lock is `lockedBy`.
+  **Authoring rule**: a field, opcode or mask whose source gives a table of values or bit
+  assignments gets `enumeratedValues` (or an `enumerationDefinitionRef`, or bit-level fields).
+  When the table is left out on purpose, the field carries `todo: {check: document, text:
+  "<what is omitted and where>"}`. Naming the table in `meaning` alone is a defect the verifier
+  reports.
 - **Sequences**: `section: sequences`, `data.sequence.steps` with stable ids and `action`,
   and optional `order` constraints `{before, after, requirement, support}`. Support every
   performing step precisely; record prerequisites, initialization, reset, power, error and
   teardown paths. Constraints describe required ordering separately from the driver's order.
+  A step that is a register write, a set or clear of bits, a read, a poll, a delay or an
+  interrupt wait takes `op` (`write`, `setBits`, `clearBits`, `read`, `poll`, `delay`,
+  `waitInterrupt`) instead of `action`: `target` (`#reg-fact` or `#reg-fact.field` in the same
+  file; an interrupts fact for `waitInterrupt`), `value` (canonical hex, or an enumerated
+  value's name), `until`, and `timeout`, `interval` and `duration` as quantities (a UCUM
+  `unit`, IEC 61360 levels `min`/`nom`/`typ`/`max`, decimal integers). Such a step has no
+  `action`, because the renderer writes its English; explanations go in `note`. Other steps keep
+  `action`. **Every wait, poll or handshake step states its bound or carries** `todo: {check:
+  document, text: "<the source gives no bound>"}` (#105). A `poll` or `waitInterrupt` states it
+  as a `timeout` quantity, with the document's tolerance as `min`/`max`, and the checker
+  enforces the rule; an `action` step (a handshake no `op` expresses) cannot take `timeout`, so
+  its `action` states the bound and tolerance, or a `data.quantity` fact holds them and the
+  step's `note` names that fact, and the verifier enforces the rule. A fact whose whole claim is one limit
+  carries `data.quantity`. See
+  [SPEC-FORMAT](../../docs/SPEC-FORMAT.md#sequences-an-operation-per-step).
 - **Layouts**: `section: data-formats`, `data.layout: {name, size, fields}`; fields have
-  ids, names, byte offsets, sizes and meanings. Include ownership, wrap, status, alignment
-  and addressing facts with their evidence.
+  ids, names, byte offsets, sizes and meanings. A field packed inside a word takes
+  `bits: [a, b]` within its `offset`/`size` container, numbered as the cited document numbers
+  them, with the layout's `bitNumbering` (`lsb0`/`msb0`) and `byteOrder`
+  (`bigEndian`/`littleEndian`, required when a multi-byte container has `bits`); value tables use
+  `enumeratedValues` or `enumerationDefinitionRef` as on register fields (see
+  [SPEC-FORMAT](../../docs/SPEC-FORMAT.md#layouts-bit-packed-fields-and-byte-order)).
+  Include ownership, wrap, status, alignment and addressing facts with their evidence.
 - **Ordinary claims**: `identity`, `interrupts`, `dma`, `sub-protocols`, `target`, `gotchas`,
   `open-questions`. Cover routing, ack/clear semantics, coherency and address translation,
   revision limits and target protocols/binding/packaging. Use `areas` for per-area confidence

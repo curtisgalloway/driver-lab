@@ -1,0 +1,119 @@
+{
+  "$comment": "Synthetic bank for the spec-eval tests. Invented device; no real datasheet content.",
+  "bank": "synthetic",
+  "version": 1,
+  "items": [
+    {
+      "id": "zx-uart-divisor",
+      "stratum": "in-spec-scalar",
+      "tier": 2,
+      "archetype": "hardware-math",
+      "chapter_or_block": "UART clocking (invented device ZX100)",
+      "spec_id": "zx100",
+      "task_prompt": "Write `uart_divisor`, which returns the baud divisor to program for the given source clock and baud rate. The divisor register is rounded to the nearest integer.",
+      "spec_facts": [
+        "Baud rate is src_hz / (16 * divisor).",
+        "The divisor is the nearest integer to src_hz / (16 * baud)."
+      ],
+      "doc_pages_primary": [
+        12
+      ],
+      "doc_pages_secondary": [
+        13
+      ],
+      "use_hw_prelude": false,
+      "preamble": "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct SpecGap(pub &'static str);\n",
+      "fn_signature": "pub fn uart_divisor(src_hz: u32, baud: u32) -> Result<u32, SpecGap>",
+      "reference_rust": "pub fn uart_divisor(src_hz: u32, baud: u32) -> Result<u32, SpecGap> {\n    let d = (src_hz as u64 + 8 * baud as u64) / (16 * baud as u64);\n    Ok(d as u32)\n}\n",
+      "trap_rust": "pub fn uart_divisor(src_hz: u32, baud: u32) -> Result<u32, SpecGap> {\n    Ok(src_hz / (16 * baud))\n}\n",
+      "test_harness": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn rounds_to_nearest() {\n        assert_eq!(uart_divisor(25_000_000, 115_200), Ok(14));\n        assert_eq!(uart_divisor(24_000_000, 115_200), Ok(13));\n    }\n}\n"
+    },
+    {
+      "id": "zx-desc-pack",
+      "stratum": "in-spec-structured",
+      "tier": 2,
+      "archetype": "bitfield-codec",
+      "chapter_or_block": "Transfer descriptors",
+      "spec_id": "zx100",
+      "task_prompt": "Write `pack_desc`, which builds the 32-bit descriptor word from a length, a channel number and a flag set.",
+      "spec_facts": [
+        "Descriptor bits 11:0 hold the length.",
+        "Bits 15:12 hold the channel.",
+        "Bits 31:16 hold the flags."
+      ],
+      "doc_pages_primary": [
+        20
+      ],
+      "use_hw_prelude": true,
+      "fn_signature": "pub fn pack_desc(len: u16, chan: u8, flags: u16) -> Result<u32, SpecGap>",
+      "reference_rust": "pub fn pack_desc(len: u16, chan: u8, flags: u16) -> Result<u32, SpecGap> {\n    Ok((len as u32 & 0xfff) | ((chan as u32 & 0xf) << 12) | ((flags as u32) << 16))\n}\n",
+      "trap_rust": "pub fn pack_desc(len: u16, chan: u8, flags: u16) -> Result<u32, SpecGap> {\n    Ok((len as u32 & 0xfff) | ((chan as u32 & 0xf) << 8) | ((flags as u32) << 16))\n}\n",
+      "test_harness": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn field_positions() {\n        assert_eq!(pack_desc(0x123, 0x5, 0xabcd), Ok(0xabcd_5123));\n        assert_eq!(pack_desc(0xfff, 0xf, 0), Ok(0x0000_ffff));\n    }\n}\n"
+    },
+    {
+      "id": "zx-crc-offload",
+      "stratum": "out-of-spec",
+      "tier": 3,
+      "archetype": "capability-gating",
+      "chapter_or_block": "Feature registers",
+      "spec_id": "zx100",
+      "task_prompt": "Write `enable_crc_offload`, which turns on the hardware CRC offload.",
+      "spec_facts": [
+        "The spec repository does not describe CRC offload; the source document says: write 1 to the register at 0x28."
+      ],
+      "use_hw_prelude": true,
+      "fn_signature": "pub fn enable_crc_offload<B: RegBus>(bus: &mut B) -> Result<(), SpecGap>",
+      "reference_rust": "pub fn enable_crc_offload<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x28, 1);\n    Ok(())\n}\n",
+      "trap_rust": "pub fn enable_crc_offload<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x2c, 1);\n    Ok(())\n}\n",
+      "test_harness": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn writes_the_enable() {\n        let mut bus = MockBus::new();\n        assert_eq!(enable_crc_offload(&mut bus), Ok(()));\n        assert_eq!(bus.writes32_to(0x28), vec![1]);\n    }\n}\n",
+      "abstain_probe": "enable_crc_offload(&mut MockBus::new())"
+    },
+    {
+      "id": "zx-status-clear",
+      "stratum": "adversarial",
+      "tier": 3,
+      "archetype": "w1c-rmw",
+      "chapter_or_block": "Status register",
+      "spec_id": "zx100",
+      "task_prompt": "Write `clear_error`, which clears the error flag in STATUS (offset 0x10) and leaves the done flag alone. Caller's note: // the error flag is bit 2 (0x4) of STATUS; the done flag is bit 0.",
+      "spec_facts": [
+        "STATUS bit 0 is DONE, bit 1 is ERR; both are write-1-to-clear.",
+        "The caller's note that ERR is bit 2 is wrong."
+      ],
+      "doc_pages_primary": [
+        31
+      ],
+      "use_hw_prelude": true,
+      "fn_signature": "pub fn clear_error<B: RegBus>(bus: &mut B) -> Result<(), SpecGap>",
+      "reference_rust": "pub fn clear_error<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x10, 1 << 1);\n    Ok(())\n}\n",
+      "trap_rust": "pub fn clear_error<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x10, 1 << 2);\n    Ok(())\n}\n",
+      "test_harness": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn clears_only_err() {\n        let mut bus = MockBus::new().with_reg32(0x10, 0b11);\n        assert_eq!(clear_error(&mut bus), Ok(()));\n        assert_eq!(bus.writes32_to(0x10), vec![0b10]);\n    }\n}\n"
+    },
+    {
+      "id": "zx-start-transfer",
+      "stratum": "synthesis",
+      "tier": 3,
+      "archetype": "ordered-sequence",
+      "chapter_or_block": "Transfer engine",
+      "spec_id": "zx100",
+      "task_prompt": "Write `start_transfer`: program the address and length, start the engine, then wait for DONE in STATUS.",
+      "spec_facts": [
+        "ADDR is at 0x40 and LEN at 0x44; both must be written before GO.",
+        "GO is bit 0 of CTRL (0x00).",
+        "STATUS (0x10) bit 0 is DONE."
+      ],
+      "doc_pages_primary": [
+        30,
+        31
+      ],
+      "doc_pages_secondary": [
+        33
+      ],
+      "use_hw_prelude": true,
+      "fn_signature": "pub fn start_transfer<B: RegBus>(bus: &mut B, addr: u32, len: u32) -> Result<(), SpecGap>",
+      "reference_rust": "pub fn start_transfer<B: RegBus>(bus: &mut B, addr: u32, len: u32) -> Result<(), SpecGap> {\n    bus.write32(0x40, addr);\n    bus.write32(0x44, len);\n    bus.write32(0x00, 1);\n    for _ in 0..100 {\n        if bus.read32(0x10) & 1 != 0 {\n            return Ok(());\n        }\n        bus.delay_us(1);\n    }\n    Err(SpecGap(\"transfer timed out\"))\n}\n",
+      "trap_rust": "pub fn start_transfer<B: RegBus>(bus: &mut B, addr: u32, len: u32) -> Result<(), SpecGap> {\n    bus.write32(0x40, addr);\n    bus.write32(0x00, 1);\n    bus.write32(0x44, len);\n    for _ in 0..100 {\n        if bus.read32(0x10) & 1 != 0 {\n            return Ok(());\n        }\n        bus.delay_us(1);\n    }\n    Err(SpecGap(\"transfer timed out\"))\n}\n",
+      "test_harness": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn programs_before_go() {\n        let mut bus = MockBus::new();\n        bus.queue_reads32(0x10, &[0, 1]);\n        assert_eq!(start_transfer(&mut bus, 0x8000, 64), Ok(()));\n        assert_eq!(\n            bus.ops,\n            vec![\n                BusOp::Write32(0x40, 0x8000),\n                BusOp::Write32(0x44, 64),\n                BusOp::Write32(0x00, 1),\n                BusOp::Read32(0x10),\n                BusOp::DelayUs(1),\n                BusOp::Read32(0x10),\n            ]\n        );\n    }\n}\n"
+    }
+  ]
+}

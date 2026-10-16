@@ -1,0 +1,20 @@
+[
+  {
+    "id": "legacy-checksum",
+    "stratum": "in-spec-scalar",
+    "tier": "tier2",
+    "domain": "Checksums (invented)",
+    "task_prompt": "Write `fold8`, which folds a 16-bit sum into 8 bits by adding the two bytes.",
+    "pdf_pages": [
+      3
+    ],
+    "pdf_pages_secondary": [
+      4
+    ],
+    "preamble_rs": "#[derive(Debug, Clone, PartialEq, Eq)]\npub struct SpecGap(pub &'static str);\n",
+    "signature": "pub fn fold8(sum: u16) -> Result<u8, SpecGap>",
+    "ref_rs": "pub fn fold8(sum: u16) -> Result<u8, SpecGap> {\n    Ok(((sum >> 8) as u8).wrapping_add(sum as u8))\n}\n",
+    "trap_rs": "pub fn fold8(sum: u16) -> Result<u8, SpecGap> {\n    Ok(sum as u8)\n}\n",
+    "tests_rs": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn adds_bytes() {\n        assert_eq!(fold8(0x0102), Ok(3));\n        assert_eq!(fold8(0xff01), Ok(0));\n    }\n}\n"
+  }
+]

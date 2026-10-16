@@ -18,7 +18,8 @@ SPDX-License-Identifier: Apache-2.0
 
 - **Fact record**: one stable-id claim with structured support, or an explicit gap with a TODO.
 - **Root**: a directory of specs whose marker declares layer and source-license policy.
-- **Composition**: a board's shared SoC/chip parts and their IP-block instances.
+- **Composition**: a board's shared SoC/chip parts and their block instances, each naming an
+  IP spec, a peripheral spec, or both.
 - **Overlay**: added facts with their own origin, without rewriting a base fact.
 - **Stub**: a short skill naming a spec and handing questions to board-expert.
 
@@ -64,7 +65,9 @@ When creating a spec repository, install and configure the [repository checks](.
    for a new code project; spec content must match its chosen repository's license.
 2. **Research-fill** by spawning an expert that loads board-expert and applicable vendor skills.
    Ask for YAML fact records (`id`, `section`, `title`, `claim`, `support`, TODO as needed),
-   resource entries with immutable commits/doc hashes, and supported instances/variants.
+   resource entries with immutable commits/doc hashes, and supported instances/variants: an
+   `instances:` row for every MMIO block that a document, device tree or source gives a base
+   address for, naming its `ip` spec, its `peripheral` spec, or both.
    The expert manages fetching and its cache. A skeleton request or unavailable source gets
    explicit gap records with observable TODO methods; do not fabricate a citation to fill a form.
 3. **Write YAML**, replacing every template placeholder with a real value, removing irrelevant

@@ -323,6 +323,89 @@ class Views(unittest.TestCase):
         renderer.assert_not_called()
 
 
+class Attribution(unittest.TestCase):
+    """Source copyright attribution in the views (#101)."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        (self.root / "board-specs.yaml").write_text(
+            marker("root_name", accepts="[GPL-2.0-only]"))
+        self.path = self.root / "widget_chip.spec.yaml"
+        self.data = yaml.safe_load(chip(
+            repos=repo(),
+            facts=src_fact("a") + src_fact("b", path="drivers/x.c")
+            + src_fact("c", path="drivers/y.c")))
+        self.files = self.data["resources"]["repos"][0]["files"]
+        self.files.append({"path": "drivers/x.c", "license_from": "spdx-line"})
+        self.files.append({"path": "drivers/y.c", "license_from": "spdx-line"})
+
+    def render(self):
+        self.path.write_text(yaml.safe_dump(self.data, sort_keys=False))
+        code, out, err = run(self.root, "--format", "md")
+        self.assertEqual((code, err), (0, ""), out)
+        return out
+
+    def test_a_spec_without_attribution_renders_as_before(self):
+        out = self.render()
+        self.assertNotIn("ttribution", out)
+
+    def test_files_cell_evidence_list_and_fact_summary(self):
+        self.files[0]["attribution"] = {
+            "status": "recorded", "names": ["Example Corp"],
+            "evidence": [{"line": 2, "text": "Copyright 2020 Example Corp"}]}
+        self.files[1]["attribution"] = {"status": "none-found"}
+        out = self.render()
+        self.assertIn("recorded: Example Corp", out)
+        self.assertIn("no notice found", out)
+        self.assertNotIn('{"evidence"', out)
+        self.assertIn("Attribution evidence for `drivers/w.c`:\n\n"
+                      "- `line 2: Copyright 2020 Example Corp`\n", out)
+        self.assertNotIn("Attribution evidence for `drivers/x.c`", out)
+        self.assertIn("- source copyright attribution (cited files): Example Corp", out)
+        self.assertIn("- source copyright attribution (cited files): "
+                      "attribution incomplete \\(1 no notice found\\)", out)
+        self.assertEqual(out.count("source copyright attribution"), 2)
+        self.data["facts"][2]["support"][0]["anchors"].append(
+            {"repo": "linux", "path": "drivers/w.c", "lines": [1, 2], "symbol": "S"})
+        self.assertIn("(cited files): Example Corp\\; attribution incomplete \\(1 unrecorded\\)",
+                      self.render())
+        self.assertLess(out.index("(cited files): Example Corp"),
+                        out.index("`widgetchip@root_name#a`"))
+
+    def derived(self):
+        self.data["facts"].append(yaml.safe_load(inference("d", "#a"))[0])
+        self.data["facts"][-1]["support"][0]["premises"].append(
+            {"states": "A stated premise.", "support": [
+                {"class": "src", "anchors": [{"repo": "linux", "path": "drivers/y.c",
+                                              "lines": [1, 2], "symbol": "S"}]}]})
+
+    def test_derived_fact_shows_attribution_through_premises(self):
+        self.files[0]["attribution"] = {
+            "status": "recorded", "names": ["Example Corp"],
+            "evidence": [{"line": 2, "text": "Copyright 2020 Example Corp"}]}
+        self.derived()
+        out = self.render()
+        self.assertIn("- source copyright attribution (through premises "
+                      "`widgetchip@root_name#a`): Example Corp\n", out)
+        self.assertIn("- source copyright attribution (cited files): "
+                      "attribution incomplete \\(1 unrecorded\\)\n", out)
+
+    def test_derived_fact_without_any_attribution_is_unchanged(self):
+        self.derived()
+        self.assertNotIn("ttribution", self.render())
+
+    def test_evidence_text_is_literal(self):
+        self.files[0]["attribution"] = {
+            "status": "ambiguous", "evidence": [{"line": 1, "text": "Copyright *x* | <b>"}]}
+        out = self.render()
+        tokens = PARSER.parse(out)
+        self.assertEqual(sum(t.type == "bullet_list_open" for t in tokens) > 0, True)
+        self.assertNotIn("<b>Attribution", out)
+        self.assertIn("`line 1: Copyright *x* | <b>`", out)
+
+
 class WorkedExample(unittest.TestCase):
     def test_merged_design_slice_and_current_status(self):
         with tempfile.TemporaryDirectory() as temp:

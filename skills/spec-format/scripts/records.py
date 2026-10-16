@@ -59,11 +59,14 @@ import unicodedata
 CANONICAL = "fact-v1"
 # The only fields a basis leaves out of a cited entry, per kind: a closed list, each named in the
 # design. Every other field, one the schema adds later included, is hashed (review round 2, the
-# user's decision of 2026-10-08: "hash all but bookkeeping").
+# user's decision of 2026-10-08: "hash all but bookkeeping"). A files item's `attribution` joins the
+# list as an amendment to that decision (issue #101, 2026-10-15): it has its own verification,
+# `resolve` checks it mechanically against the pinned source, and an attribution-only edit must not
+# stale a verdict on a hardware fact.
 BOOKKEEPING = {
     "documents": frozenset({"verified", "fetch", "note"}),
     "repos": frozenset({"verified", "fetch", "fetch_via", "note"}),
-    "files": frozenset({"note"}),  # a repos entry's `files` item
+    "files": frozenset({"note", "attribution"}),  # a repos entry's `files` item
     "assumptions": frozenset({"todo"}),
     "registry": frozenset({"note"}),  # a resetTypes, ... or registerFiles entry
 }

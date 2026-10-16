@@ -9,6 +9,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+import attribution
 import records
 import render_md
 import speccheck
@@ -193,6 +194,16 @@ def fact(checker, rec, status, with_status):
     if not speccheck.has_support(data):
         out.append(badge('gap', 'Gap'))
     out.append(support(checker, file, data.get('support', []), notes))
+    own_files = attribution.fact_files(file, data)
+    through_ids, through_files = attribution.premise_files(checker, rec)
+    if attribution.summary(own_files) is not None or attribution.summary(through_files):
+        if own_files:
+            out.append('<p>Source copyright attribution (cited files): '
+                       + literal(attribution.summary(own_files, always=True)) + '</p>')
+        if through_ids and through_files:
+            out.append('<p>Source copyright attribution (through premises '
+                       + ', '.join('<code>' + literal(i) + '</code>' for i in through_ids) + '): '
+                       + literal(attribution.summary(through_files, always=True)) + '</p>')
     out.append(badge('origin', file.root.layer + ' · ' + file.root.label))
     for aid in data.get('assumes', []):
         a = file.data['assumptions'][file.assumptions[aid][1]]
@@ -399,9 +410,17 @@ def resources(file):
         out.append('</tr></thead><tbody>')
         for entry in entries:
             out.append('<tr>')
-            out.extend('<td>' + literal(entry.get(k, '')) + '</td>' for k in keys)
+            out.extend('<td>' + literal(attribution.cell(entry.get(k)) if k == 'attribution'
+                                        else entry.get(k, '')) + '</td>' for k in keys)
             out.append('</tr>')
         out.append('</tbody></table>')
+        for entry in entries:
+            if entry.get('attribution', {}).get('evidence'):
+                out.append('<p>Attribution evidence for <code>' + literal(entry['path']) +
+                           '</code>:</p><ul>')
+                out.extend('<li>' + literal(f"line {e['line']}: {e['text']}") + '</li>'
+                           for e in entry['attribution']['evidence'])
+                out.append('</ul>')
         for entry in entries:
             if 'note' in entry:
                 out.append(field('Resource note', entry['note']))

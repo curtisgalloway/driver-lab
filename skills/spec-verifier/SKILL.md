@@ -164,6 +164,10 @@ guessing at an unchecked result.
   the pin, confirm it applies to the cited source file, and compare it with the declared
   license. Record the comparison; a mismatch is FAIL, and inaccessible evidence is
   UNVERIFIABLE rather than an assumed match.
+  A files item's `attribution` (declared copyright notices) is different: `resolve` checks it
+  against the pin, and it is bookkeeping for freshness, not part of the hardware fact's
+  verdict. A `resolve` attribution error is fixed in the spec's files item, never recorded as
+  FAIL on the fact. Never infer contributors from collective names or git history.
 - **Reuse pinned inputs across rounds.** Keep one input cache for the session or campaign,
   outside the repository, and bind it explicitly on every round: `--repo <name>=<checkout>`
   for a repository, `--docs-dir` for documents. Acquire an input once, then reuse it.

@@ -684,8 +684,11 @@ class Checker:
         def walk(node, path):
             if isinstance(node, dict):
                 for k, v in node.items():
-                    if k == "symbol" or (path[:1] == ("notices",) and k == "text"):
-                        continue  # a symbol is spelled as the source spells it; a notice is verbatim
+                    if (k == "symbol" or (path[:1] == ("notices",) and k == "text")
+                            or (k == "text" and "attribution" in path)):
+                        # a symbol is spelled as the source spells it; a notice, and the
+                        # evidence of a source copyright attribution, are verbatim
+                        continue
                     walk(v, path + (k,))
             elif isinstance(node, list):
                 for i, v in enumerate(node):

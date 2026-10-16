@@ -28,7 +28,7 @@ import render_md
 import speccheck
 import specmd
 import spec
-from test_check import chip, fact, marker, inference, repo
+from test_check import chip, fact, marker, inference, repo, src_fact
 from test_render_md import checked
 from test_records import record, verdict
 
@@ -491,6 +491,69 @@ class Views(Fixture):
         self.assertEqual(code, 0, result)
         self.assertIn('PASS 2026-10-08</span>', result['html'])
         self.assertIn('record <em>note</em>', result['html'])
+
+
+class AttributionViews(Fixture):
+    """Source copyright attribution in the HTML view (#101)."""
+
+    def setUp(self):
+        super().setUp()
+        (self.root / 'board-specs.yaml').write_text(marker('viewer', accepts='[GPL-2.0-only]'))
+        self.data = yaml.safe_load(chip(
+            repos=repo(), facts=src_fact('a') + src_fact('b', path='drivers/x.c')))
+        self.files = self.data['resources']['repos'][0]['files']
+        self.files.append({'path': 'drivers/x.c', 'license_from': 'spdx-line'})
+
+    def render(self):
+        self.write(self.data)
+        code, result, err = cli(self.root)
+        self.assertEqual((code, err), (0, ''), result)
+        self.assertEqual(Tree(result['html']).stack, [])
+        return result['html']
+
+    def test_a_spec_without_attribution_renders_as_before(self):
+        self.assertNotIn('ttribution', self.render())
+
+    def test_files_cell_evidence_list_and_fact_summary(self):
+        self.files[0]['attribution'] = {
+            'status': 'recorded', 'names': ['Example Corp'],
+            'evidence': [{'line': 2, 'text': 'Copyright 2020 Example <Corp>'}]}
+        html = self.render()
+        self.assertIn('<td>recorded: Example Corp</td>', html)
+        self.assertNotIn('&quot;evidence&quot;', html)
+        self.assertIn('<p>Attribution evidence for <code>drivers/w.c</code>:</p><ul>'
+                      '<li>line 2: Copyright 2020 Example &lt;Corp&gt;</li></ul>', html)
+        self.assertIn('<p>Source copyright attribution (cited files): Example Corp</p>', html)
+        self.assertEqual(html.count('Source copyright attribution'), 1)
+        self.files[1]['attribution'] = {'status': 'none-found'}
+        html = self.render()
+        self.assertIn('<td>no notice found</td>', html)
+        self.assertIn('Source copyright attribution (cited files): '
+                      'attribution incomplete (1 no notice found)</p>', html)
+
+
+    def derive(self):
+        self.data['facts'].append(yaml.safe_load(inference('d', '#a'))[0])
+        self.data['facts'][-1]['support'][0]['premises'].append(
+            {'states': 'A stated premise.', 'support': [
+                {'class': 'src', 'anchors': [{'repo': 'linux', 'path': 'drivers/x.c',
+                                              'lines': [1, 2], 'symbol': 'S'}]}]})
+
+    def test_derived_fact_shows_attribution_through_premises(self):
+        self.files[0]['attribution'] = {
+            'status': 'recorded', 'names': ['Example Corp'],
+            'evidence': [{'line': 2, 'text': 'Copyright 2020 Example Corp'}]}
+        self.derive()
+        html = self.render()
+        self.assertIn('<p>Source copyright attribution (through premises '
+                      '<code>widgetchip@viewer#a</code>): Example Corp</p>', html)
+        self.assertIn('<p>Source copyright attribution (cited files): '
+                      'attribution incomplete (1 unrecorded)</p>', html)
+
+    def test_derived_fact_without_any_attribution_is_unchanged(self):
+        self.derive()
+        self.assertNotIn('ttribution', self.render())
+
 
 
 class Publishing(Fixture):

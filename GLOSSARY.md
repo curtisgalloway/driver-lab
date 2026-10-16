@@ -25,6 +25,7 @@ evaluation; add other terms as the documents that use them are updated.
 | SDK | Software development kit: headers, libraries, and tools for building against a platform. |
 | Corpus | The pinned collection of source code and documents used as reference evidence. |
 | Pin | An exact revision, edition, or digest identifying an input. A cited `resources.repos` entry uses full `commit` and `license`; a branch-only `ref` entry is a map. |
+| Source copyright attribution | The holders named by the copyright notices in a cited source file at the pinned commit, copied as written (a person, a company, or a collective such as "The Fuchsia Authors"). It is a record of what the file declares, not a finding about who wrote the code or who owns it. A file with no notice is recorded as "no notice found", not as unowned. |
 | Symbolic link / hard link | A path pointing to another path / another name for the same underlying file. Replacing a symbolic link replaces the pointer; replacing one hard link separates it from the other names. |
 | Mode bits | Unix file flags recording read, write and execute permissions and special modes. |
 | Setuid / setgid | Unix mode flags that can make an executable run with its owner's user identity / its group's identity. Spec files with either flag are refused for rewriting. |

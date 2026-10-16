@@ -15,6 +15,7 @@ import re
 import string
 from pathlib import Path
 
+import attribution
 import records
 import speccheck
 import specload
@@ -88,9 +89,16 @@ def _table(out, title, entries):
     out.extend(["| " + " | ".join(escape(k).replace("|", "\\|") for k in keys) + " |",
                 "| " + " | ".join("---" for _ in keys) + " |"])
     for entry in entries:
-        out.append("| " + " | ".join(escape(_value(entry.get(k, ""))).replace("|", "\\|")
-                                      for k in keys) + " |")
+        out.append("| " + " | ".join(
+            escape(attribution.cell(entry.get(k)) if k == "attribution"
+                   else _value(entry.get(k, ""))).replace("|", "\\|") for k in keys) + " |")
     out.append("")
+    for entry in entries:
+        if entry.get("attribution", {}).get("evidence"):
+            out.extend(["Attribution evidence for " + code(entry["path"]) + ":", ""])
+            out.extend("- " + escape(f"line {e['line']}: {e['text']}")
+                       for e in entry["attribution"]["evidence"])
+            out.append("")
     for entry in entries:
         if "note" in entry:
             out.extend(["Note for " + code(entry.get("name", entry.get("path", title))) + ":",
@@ -240,6 +248,16 @@ def _fact(out, checker, rec, status, with_status):
         out.append("- Gap")
     notes = []
     _support(out, checker, file, data.get("support", []), notes=notes)
+    own_files = attribution.fact_files(file, data)
+    through_ids, through_files = attribution.premise_files(checker, rec)
+    if attribution.summary(own_files) is not None or attribution.summary(through_files):
+        if own_files:
+            out.append("- source copyright attribution (cited files): "
+                       + escape(attribution.summary(own_files, always=True)))
+        if through_ids and through_files:
+            out.append("- source copyright attribution (through premises "
+                       + ", ".join(code(i) for i in through_ids) + "): "
+                       + escape(attribution.summary(through_files, always=True)))
     for aid in data.get("assumes", []):
         assumption = file.data["assumptions"][file.assumptions[aid][1]]
         out.append("- assumes " + code(aid) + ": " + escape(assumption["text"]))

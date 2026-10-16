@@ -73,6 +73,12 @@ facts:
         anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
 ```
 
+A field, opcode or mask whose source gives a table of values or bit assignments lists them:
+`enumeratedValues`, an `enumerationDefinitionRef`, or bit-level fields. If you leave a table out
+on purpose, add `todo: {check: document, text: "<what is omitted and where>"}` to the field;
+naming the table in `meaning` alone is a defect. Use IP-XACT access values, and give a document
+abbreviation such as RW1CS one `fieldAccessPolicyDefinitions` entry, cited once.
+
 Add complete register fields in databook order, performing steps and separate ordering
 constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,
 gotchas and questions. Every actionable item is a supported record or a gap TODO; orientation

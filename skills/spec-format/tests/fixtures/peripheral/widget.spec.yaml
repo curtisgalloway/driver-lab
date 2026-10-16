@@ -27,7 +27,7 @@ facts:
     section: registers
     title: CTRL
     data:
-      register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: rw, reset: "0x0"}
+      register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: read-write, reset: "0x0"}
       fields:
         - id: en
           name: WIDGET_CTRL_EN
@@ -42,14 +42,14 @@ facts:
   - id: reg-baud
     section: registers
     data:
-      register: {name: WIDGET_BAUD, offset: "0x4", width: 32, access: rw}
+      register: {name: WIDGET_BAUD, offset: "0x4", width: 32, access: read-write}
     support:
       - class: src
         anchors: [{repo: linux, path: drivers/tty/serial/widget.c, lines: [6, 6], symbol: WIDGET_BAUD}]
   - id: reg-lcr
     section: registers
     data:
-      register: {name: WIDGET_LCR, offset: "0x8", width: 32, access: rw}
+      register: {name: WIDGET_LCR, offset: "0x8", width: 32, access: read-write}
       fields:
         - {id: format, name: WIDGET_LCR_8N1, bits: [0, 1], meaning: 8N1 format}
     support:

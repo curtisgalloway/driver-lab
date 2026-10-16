@@ -12,7 +12,11 @@
     "resources": {"$ref": "#/$defs/resources"},
     "assumptions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/assumption"}},
     "orientation": {"$ref": "#/$defs/text"},
-    "notices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/notice"}}
+    "notices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/notice"}},
+    "resetTypes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/resetType"}},
+    "fieldAccessPolicyDefinitions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fieldAccessPolicyDefinition"}},
+    "enumerationDefinitions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/enumerationDefinition"}},
+    "registerFiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/registerFile"}}
   },
   "allOf": [
     {
@@ -284,6 +288,18 @@
             }
           }
         }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"enum": ["board", "soc", "chip", "ip", "review"]}}},
+      "then": {
+        "not": {"anyOf": [
+          {"required": ["resetTypes"]},
+          {"required": ["fieldAccessPolicyDefinitions"]},
+          {"required": ["enumerationDefinitions"]},
+          {"required": ["registerFiles"]}
+        ]},
+        "$comment": "message: resetTypes, fieldAccessPolicyDefinitions, enumerationDefinitions and registerFiles belong to a peripheral, an overlay or a facts file, not to this kind"
       }
     }
   ],
@@ -1127,6 +1143,161 @@
         },
         "additionalProperties": false
       },
+      "registryName": {
+        "$comment": "A name in one of a spec's registries (resetTypes, fieldAccessPolicyDefinitions, enumerationDefinitions, registerFiles), as the standard or the document spells it: RW1CS, power-on, link-width.",
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_.-]*(?![\\s\\S])"
+      },
+      "fieldRef": {
+        "$comment": "A field of a register fact in the same file: #<fact id>.<field id>.",
+        "type": "string",
+        "pattern": "^#[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*(?![\\s\\S])"
+      },
+      "ipxactAccess": {
+        "$comment": "IEEE 1685-2022 accessType, spelled as the standard spells it (D24).",
+        "enum": ["read-only", "write-only", "read-write", "writeOnce", "read-writeOnce", "no-access"]
+      },
+      "modifiedWriteValue": {
+        "enum": ["oneToClear", "oneToSet", "oneToToggle", "zeroToClear", "zeroToSet", "zeroToToggle", "clear", "set", "modify"]
+      },
+      "readAction": {"enum": ["clear", "set", "modify"]},
+      "writeValueConstraint": {
+        "$comment": "message: writeValueConstraint is exactly one of {writeAsRead: true}, {useEnumeratedValues: true} or {minimum, maximum}",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["writeAsRead"],
+            "properties": {"writeAsRead": {"const": true}},
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["useEnumeratedValues"],
+            "properties": {"useEnumeratedValues": {"const": true}},
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["minimum", "maximum"],
+            "properties": {
+              "minimum": {"type": "string", "$ref": "#/$defs/hex"},
+              "maximum": {"type": "string", "$ref": "#/$defs/hex"}
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "enumeratedValue": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {"$ref": "#/$defs/symbol"},
+          "value": {"type": "string", "$ref": "#/$defs/hex"},
+          "description": {"$ref": "#/$defs/text"},
+          "usage": {"enum": ["read", "write", "read-write"]}
+        },
+        "additionalProperties": false
+      },
+      "enumeratedValues": {
+        "type": "array",
+        "minItems": 1,
+        "items": {"$ref": "#/$defs/enumeratedValue"}
+      },
+      "resetValue": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": {"type": "string", "$ref": "#/$defs/hex"},
+          "mask": {"type": "string", "$ref": "#/$defs/hex"},
+          "resetTypeRef": {"$ref": "#/$defs/registryName"}
+        },
+        "additionalProperties": false
+      },
+      "unaffectedBy": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {"$ref": "#/$defs/registryName"}
+      },
+      "fieldArray": {
+        "type": "object",
+        "required": ["dim"],
+        "properties": {
+          "dim": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+          "bitStride": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      },
+      "registerArray": {
+        "type": "object",
+        "required": ["dim", "stride"],
+        "properties": {
+          "dim": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+          "stride": {"type": "string", "$ref": "#/$defs/hex"}
+        },
+        "additionalProperties": false
+      },
+      "resetType": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "fieldAccessPolicyDefinition": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "access": {"$ref": "#/$defs/ipxactAccess"},
+          "modifiedWriteValue": {"$ref": "#/$defs/modifiedWriteValue"},
+          "readAction": {"$ref": "#/$defs/readAction"},
+          "writeValueConstraint": {"$ref": "#/$defs/writeValueConstraint"},
+          "unaffectedBy": {"$ref": "#/$defs/unaffectedBy"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "enumerationDefinition": {
+        "type": "object",
+        "required": ["name", "enumeratedValues"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "enumeratedValues": {"$ref": "#/$defs/enumeratedValues"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "registerFile": {
+        "type": "object",
+        "required": ["name", "addressOffset", "range"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "addressOffset": {"type": "string", "$ref": "#/$defs/hex"},
+          "range": {"type": "string", "$ref": "#/$defs/hex"},
+          "array": {"$ref": "#/$defs/registerArray"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
       "register": {
         "type": "object",
         "required": [
@@ -1146,7 +1317,14 @@
             "minimum": 1
           },
           "access": {
+            "$comment": "The six IP-XACT values, and the six legacy short values the checker warns about (LEGACY_ACCESS in peripheral.py).",
             "enum": [
+              "read-only",
+              "write-only",
+              "read-write",
+              "writeOnce",
+              "read-writeOnce",
+              "no-access",
               "ro",
               "wo",
               "rw",
@@ -1155,12 +1333,36 @@
               "rc"
             ]
           },
+          "modifiedWriteValue": {
+            "$ref": "#/$defs/modifiedWriteValue"
+          },
+          "readAction": {
+            "$ref": "#/$defs/readAction"
+          },
           "reset": {
             "type": "string",
             "$ref": "#/$defs/hex"
+          },
+          "array": {
+            "$ref": "#/$defs/registerArray"
+          },
+          "registerFile": {
+            "$ref": "#/$defs/registryName"
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "required": ["access"],
+              "properties": {"access": {"enum": ["ro", "wo", "rw", "w1c", "w1s", "rc"]}}
+            },
+            "then": {
+              "not": {"anyOf": [{"required": ["modifiedWriteValue"]}, {"required": ["readAction"]}]},
+              "$comment": "message: a register with a legacy short access (ro, wo, rw, w1c, w1s, rc) may not also carry modifiedWriteValue or readAction; write the IP-XACT access"
+            }
+          }
+        ]
       },
       "bits": {
         "type": "array",
@@ -1209,6 +1411,59 @@
           },
           "bits": {
             "$ref": "#/$defs/bits"
+          },
+          "access": {
+            "$ref": "#/$defs/ipxactAccess"
+          },
+          "modifiedWriteValue": {
+            "$ref": "#/$defs/modifiedWriteValue"
+          },
+          "readAction": {
+            "$ref": "#/$defs/readAction"
+          },
+          "writeValueConstraint": {
+            "$ref": "#/$defs/writeValueConstraint"
+          },
+          "reserved": {
+            "const": true
+          },
+          "volatile": {
+            "type": "boolean"
+          },
+          "resets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"$ref": "#/$defs/resetValue"}
+          },
+          "enumeratedValues": {
+            "$ref": "#/$defs/enumeratedValues"
+          },
+          "enumerationDefinitionRef": {
+            "$ref": "#/$defs/registryName"
+          },
+          "fieldAccessPolicyDefinitionRef": {
+            "$ref": "#/$defs/registryName"
+          },
+          "aliasOf": {
+            "$ref": "#/$defs/fieldRef"
+          },
+          "array": {
+            "$ref": "#/$defs/fieldArray"
+          },
+          "unaffectedBy": {
+            "$ref": "#/$defs/unaffectedBy"
+          },
+          "initializedBy": {
+            "enum": ["hardware", "firmware"]
+          },
+          "lockedBy": {
+            "type": "object",
+            "required": ["field", "lockedValue"],
+            "properties": {
+              "field": {"$ref": "#/$defs/fieldRef"},
+              "lockedValue": {"type": "string", "$ref": "#/$defs/hex"}
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false,
@@ -1221,6 +1476,23 @@
             },
             "then": {
               "$ref": "#/$defs/supportRules"
+            }
+          },
+          {
+            "not": {"required": ["enumeratedValues", "enumerationDefinitionRef"]},
+            "$comment": "message: a field has its own enumeratedValues or an enumerationDefinitionRef, not both"
+          },
+          {
+            "if": {"required": ["fieldAccessPolicyDefinitionRef"]},
+            "then": {
+              "not": {"anyOf": [
+                {"required": ["access"]},
+                {"required": ["modifiedWriteValue"]},
+                {"required": ["readAction"]},
+                {"required": ["writeValueConstraint"]},
+                {"required": ["unaffectedBy"]}
+              ]},
+              "$comment": "message: a field that names a fieldAccessPolicyDefinitionRef may not also set access, modifiedWriteValue, readAction, writeValueConstraint or unaffectedBy; the policy holds them"
             }
           }
         ]

@@ -109,6 +109,20 @@ body surrounds the YAML.
   (last three optional), and optional `data.fields`. Each field has `id`, `name`, inclusive
   `bits: [low, high]`, and `meaning`. Follow databook order, including untouched registers
   when documents cover them. The register's `claim` may be omitted; the view derives it.
+  `access` takes IP-XACT values (`read-only`, `read-write`, ...; the short `ro`/`rw`/`w1c` still
+  parse, with a warning). A field may add IP-XACT properties (`access`, `modifiedWriteValue`,
+  `readAction`, `reserved`, `resets`, `enumeratedValues`, ...; the table is in
+  [SPEC-FORMAT.md](../../docs/SPEC-FORMAT.md#register-fields-ip-xact-properties)), and a spec may
+  hold the registries `resetTypes`, `fieldAccessPolicyDefinitions`, `enumerationDefinitions` and
+  `registerFiles`; a `kind: facts` file may carry them too, and they are copied into the spec
+  with the facts that name them. A document abbreviation such as RW1CS becomes one
+  `fieldAccessPolicyDefinitions` entry, cited once. Sticky bits are `unaffectedBy`, HwInit is
+  `initializedBy`, a write-enable lock is `lockedBy`.
+  **Authoring rule**: a field, opcode or mask whose source gives a table of values or bit
+  assignments gets `enumeratedValues` (or an `enumerationDefinitionRef`, or bit-level fields).
+  When the table is left out on purpose, the field carries `todo: {check: document, text:
+  "<what is omitted and where>"}`. Naming the table in `meaning` alone is a defect the verifier
+  reports.
 - **Sequences**: `section: sequences`, `data.sequence.steps` with stable ids and `action`,
   and optional `order` constraints `{before, after, requirement, support}`. Support every
   performing step precisely; record prerequisites, initialization, reset, power, error and

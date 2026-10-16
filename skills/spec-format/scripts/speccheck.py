@@ -157,6 +157,9 @@ class SpecFile:
     # Names this file declares twice, so a citation of them is ambiguous (freshness: unknown):
     # ("documents", name), ("repos", name), ("assumptions", id), ("files", repos name, path).
     ambiguous: set = dataclasses.field(default_factory=set)
+    # The spec-level registries (peripheral.REGISTRIES): group -> name -> (entry, path). A name
+    # declared twice keeps its first entry and is in `ambiguous` as (group, name).
+    registries: dict = dataclasses.field(default_factory=dict)
     # Its verification record (records.py): none | ok | invalid | shared; valid verdicts by id.
     record_state: str = "none"
     record_path: Path | None = None
@@ -503,6 +506,15 @@ class Checker:
                              f"{group} entry {entry['name']!r} is listed twice in this file")
                 else:
                     table[entry["name"]] = (entry, ("resources", group, i))
+        for group in peripheral.REGISTRIES:
+            table = f.registries.setdefault(group, {})
+            for i, entry in enumerate(f.data.get(group, [])):
+                if entry["name"] in table:
+                    f.ambiguous.add((group, entry["name"]))
+                    self.add(f, (group, i, "name"),
+                             f"{group} entry {entry['name']!r} is listed twice in this file")
+                else:
+                    table[entry["name"]] = (entry, (group, i))
         for name, (entry, path) in f.repos.items():
             seen = set()
             for i, item in enumerate(entry.get("files", [])):
@@ -522,6 +534,7 @@ class Checker:
                 self.check_record(f, rec, cited)
         import peripheral
 
+        peripheral.check_registries(self, f, cited)
         peripheral.check_file(self, f)
         import review
 
@@ -551,10 +564,22 @@ class Checker:
 
     def check_record(self, f: SpecFile, rec: Record, cited: set):
         what = f"{_label(rec)} {rec.id!r}"
-        for entry, path in supports(rec.data, rec.path):
+        self.check_support(f, what, rec.data, rec.path, cited)
+        irq = rec.data.get("irq")
+        if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
+            want = irq["number"] + IRQ_OFFSET[irq["kind"]]
+            if irq["intid"] != want:
+                self.add(f, rec.path + ("irq", "intid"),
+                         f"{what}: intid {irq['intid']} does not agree with {irq['kind']} "
+                         f"{irq['number']} (INTID {want})")
+
+    def check_support(self, f: SpecFile, what: str, data: dict, base: tuple, cited: set):
+        """The citation, anchor and assumption checks of anything that carries support: a
+        record (data at base), or a registry entry. Every error is a rejected citation."""
+        for entry, path in supports(data, base):
             if "doc" in entry:
                 self.check_citation(f, what, entry, path)
-        for anchor, path in anchors(rec.data, rec.path):
+        for anchor, path in anchors(data, base):
             if "stale" in anchor:
                 self.add(f, path + ("stale",), f"{what}: stale anchor; re-verify and remove stale")
             name = anchor["repo"]
@@ -576,8 +601,8 @@ class Checker:
                 self.reject(f, path + ("path",), f"{what}: {anchor['path']!r} is not in the "
                                                  f"files of repos entry {name!r} (the closed "
                                                  f"list of cited paths, D12)", citation=True)
-        names = [(a, rec.path + ("assumes", i)) for i, a in enumerate(rec.data.get("assumes", []))]
-        for entry, at in supports(rec.data, rec.path):
+        names = [(a, base + ("assumes", i)) for i, a in enumerate(data.get("assumes", []))]
+        for entry, at in supports(data, base):
             for j, premise in enumerate(entry.get("premises", [])):
                 if "assumption" in premise:
                     names.append((premise["assumption"],
@@ -586,13 +611,6 @@ class Checker:
             if name not in f.assumptions:
                 self.reject(f, path, f"{what}: assumption {name!r} is not in this file's "
                                      f"assumptions", citation=True)
-        irq = rec.data.get("irq")
-        if isinstance(irq, dict) and "intid" in irq and irq["kind"] in IRQ_OFFSET:
-            want = irq["number"] + IRQ_OFFSET[irq["kind"]]
-            if irq["intid"] != want:
-                self.add(f, rec.path + ("irq", "intid"),
-                         f"{what}: intid {irq['intid']} does not agree with {irq['kind']} "
-                         f"{irq['number']} (INTID {want})")
 
     def check_citation(self, f: SpecFile, what: str, entry: dict, path: tuple):
         """A document citation's checks; every error here is a rejected citation."""

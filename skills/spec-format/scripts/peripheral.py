@@ -8,6 +8,23 @@ Layout offsets and sizes count bytes; register bits are [low, high], inclusive.
 
 import copy
 
+# The four spec-level registries, and what one entry is called in a message.
+REGISTRIES = ("resetTypes", "fieldAccessPolicyDefinitions", "enumerationDefinitions",
+              "registerFiles")
+ENTRY_LABEL = {"resetTypes": "reset type", "fieldAccessPolicyDefinitions": "access policy",
+               "enumerationDefinitions": "enumeration", "registerFiles": "register file"}
+
+# Today's short register access values and their IP-XACT form (D24). The checker warns on a
+# short value and builds its message from this table; `drift --rewrite` reuses it.
+LEGACY_ACCESS = {
+    "ro": {"access": "read-only"},
+    "wo": {"access": "write-only"},
+    "rw": {"access": "read-write"},
+    "w1c": {"access": "read-write", "modifiedWriteValue": "oneToClear"},
+    "w1s": {"access": "read-write", "modifiedWriteValue": "oneToSet"},
+    "rc": {"access": "read-only", "readAction": "clear"},
+}
+
 
 def children(data, base=()):
     payload = data.get("data", {})
@@ -52,6 +69,54 @@ def basis_data(rec):
 def owns_citation(rec, path):
     """The parent's freshness does not include a separately supported child's citation."""
     return not any(path[:len(at)] == at for _, at in subrecords(rec.data, rec.path))
+
+
+def referenced_registries(rec):
+    """([(group, name, entry, path)], why): the registry entries a record's basis covers.
+
+    Taken from basis_data, so a parent leaves out the entries only its separately supported
+    fields name, and such a field's sub-record holds only its own. A policy brings the reset
+    types it is unaffected by. why is set (and the list empty) when a name is not in the file
+    or is declared twice there. Sorted by group and name."""
+    f = rec.file
+    data = basis_data(rec)
+    if getattr(rec, "parent", None) is not None:
+        fields, register = [data], {}
+    else:
+        payload = data.get("data", {})
+        fields, register = payload.get("fields", []), payload.get("register", {})
+    wanted, queue = set(), []
+
+    def want(group, name):
+        if (group, name) not in wanted:
+            wanted.add((group, name))
+            queue.append((group, name))
+
+    if "registerFile" in register:
+        want("registerFiles", register["registerFile"])
+    for field in fields:
+        for reset in field.get("resets", []):
+            if "resetTypeRef" in reset:
+                want("resetTypes", reset["resetTypeRef"])
+        for name in field.get("unaffectedBy", []):
+            want("resetTypes", name)
+        if "enumerationDefinitionRef" in field:
+            want("enumerationDefinitions", field["enumerationDefinitionRef"])
+        if "fieldAccessPolicyDefinitionRef" in field:
+            want("fieldAccessPolicyDefinitions", field["fieldAccessPolicyDefinitionRef"])
+    out = []
+    while queue:
+        group, name = queue.pop()
+        if (group, name) in f.ambiguous:
+            return [], f"{rec.full}: {ENTRY_LABEL[group]} {name!r} is listed twice in its file"
+        if name not in f.registries.get(group, {}):
+            return [], f"{rec.full}: {ENTRY_LABEL[group]} {name!r} is not in its file's {group}"
+        entry, path = f.registries[group][name]
+        out.append((group, name, entry, path))
+        if group == "fieldAccessPolicyDefinitions":
+            for reset in entry.get("unaffectedBy", []):
+                want("resetTypes", reset)
+    return sorted(out, key=lambda item: item[:2]), None
 
 
 def requirement(checker, file, row, path, inherited=None, inherited_support=()):
@@ -123,12 +188,272 @@ def check_file(checker, file):
                 entry = file.repos.get(anchor["repo"])
                 if entry and entry[0].get("role") != "target":
                     checker.add(file, at + ("repo",), "target facts need a repos entry with role: target")
+    check_registers(checker, file)
+
+
+# --- precise payloads: registries, field properties, arrays (docs/SPEC-FORMAT.md) ----------
+
+def _count(dim):
+    n = 1
+    for d in dim:
+        n *= d
+    return n
+
+
+def _width(row):
+    """A field's width from its bits, or None when the bits are out of order."""
+    low, high = row["bits"]
+    return high - low + 1 if low <= high else None
+
+
+def _fits(value, width):
+    return width is None or int(value, 16).bit_length() <= width
+
+
+def _overlap(a, b):
+    """Whether two usages (absent is read-write) can apply to one access."""
+    a, b = a.get("usage", "read-write"), b.get("usage", "read-write")
+    return {a, b} != {"read", "write"}
+
+
+def _check_table(checker, file, rows, path, what):
+    """Names unique within a table; values unique among entries whose usages overlap."""
+    names = {}
+    for k, row in enumerate(rows):
+        if row["name"] in names:
+            checker.add(file, path + (k, "name"),
+                        f"{what}: value name {row['name']!r} is listed twice")
+        names.setdefault(row["name"], k)
+        for earlier in rows[:k]:
+            if int(earlier["value"], 16) == int(row["value"], 16) and _overlap(earlier, row):
+                checker.add(file, path + (k, "value"),
+                            f"{what}: value {row['value']} is listed twice for "
+                            f"{earlier['name']!r} and {row['name']!r}")
+                break
+
+
+def _check_constraint(checker, file, constraint, path, what):
+    if "minimum" in constraint and int(constraint["minimum"], 16) > int(constraint["maximum"], 16):
+        checker.add(file, path + ("minimum",),
+                    f"{what}: minimum {constraint['minimum']} is above maximum "
+                    f"{constraint['maximum']}")
+
+
+def check_registries(checker, file, cited):
+    """The four registries' entries: their support as a fact's is checked, and each entry's
+    own rules (the checks that hold wherever it is used)."""
+    for group in REGISTRIES:
+        for i, entry in enumerate(file.data.get(group, [])):
+            path = (group, i)
+            what = f"{ENTRY_LABEL[group]} {entry['name']!r}"
+            import speccheck
+
+            for sup, at in speccheck.supports(entry, path):
+                if sup["class"] in ("inference", "emulated"):
+                    checker.reject(file, at + ("class",),
+                                   f"{what}: {sup['class']} support names facts, which a "
+                                   f"registry entry cannot; cite the source", citation=True)
+            checker.check_support(file, what, entry, path, cited)
+            if group == "fieldAccessPolicyDefinitions":
+                for k, name in enumerate(entry.get("unaffectedBy", [])):
+                    if name not in file.registries["resetTypes"]:
+                        checker.add(file, path + ("unaffectedBy", k),
+                                    f"{what}: unaffectedBy {name!r} names no resetTypes entry")
+                if "writeValueConstraint" in entry:
+                    _check_constraint(checker, file, entry["writeValueConstraint"],
+                                      path + ("writeValueConstraint",), what)
+            elif group == "enumerationDefinitions":
+                _check_table(checker, file, entry["enumeratedValues"],
+                             path + ("enumeratedValues",), what)
+            elif group == "registerFiles" and "array" in entry:
+                if int(entry["array"]["stride"], 16) < int(entry["range"], 16):
+                    checker.add(file, path + ("array", "stride"),
+                                f"{what}: array stride {entry['array']['stride']} is below the "
+                                f"range {entry['range']}, so the elements overlap")
+
+
+def _field_index(file):
+    """{(fact id, field id): (field, register)} over the register facts of this file."""
+    out = {}
+    for fact in file.data.get("facts", []):
+        payload = fact.get("data", {})
+        if "register" in payload:
+            for field in payload.get("fields", []):
+                out.setdefault((fact["id"], field["id"]), (field, payload["register"]))
+    return out
+
+
+def _lookup(file, group, name):
+    found = file.registries.get(group, {}).get(name)
+    return found[0] if found else None
+
+
+def _field_ref(index, ref):
+    fact, _, field = ref[1:].partition(".")
+    return index.get((fact, field))
+
+
+def _check_register(checker, file, register, rpath):
+    access = register.get("access")
+    if access in LEGACY_ACCESS:
+        form = ", ".join(f"{k}: {v}" for k, v in LEGACY_ACCESS[access].items())
+        checker.add(file, rpath + ("access",),
+                    f"register access {access!r} is a legacy value: write {form} (IP-XACT)",
+                    level="warning")
+    width = register.get("width")
+    array = register.get("array")
+    count = _count(array["dim"]) if array else 1
+    stride = int(array["stride"], 16) if array else 0
+    size = (width + 7) // 8 if width else None
+    if array and size is not None and stride < size:
+        checker.add(file, rpath + ("array", "stride"),
+                    f"register array stride {array['stride']} is below the register's "
+                    f"{size} bytes, so the elements overlap")
+    name = register.get("registerFile")
+    if name is None:
+        return
+    group = _lookup(file, "registerFiles", name)
+    if group is None:
+        checker.add(file, rpath + ("registerFile",),
+                    f"registerFile {name!r} names no registerFiles entry")
+    elif size is not None:
+        end = int(register["offset"], 16) + (count - 1) * stride + size
+        if end > int(group["range"], 16):
+            checker.add(file, rpath + ("offset",),
+                        f"register ends at byte {hex(end)} of register file {name!r}, whose "
+                        f"range is {group['range']}")
+
+
+def _check_field(checker, file, fact, register, field, fpath, index):
+    width = _width(field)
+    policy = None
+    ref = field.get("fieldAccessPolicyDefinitionRef")
+    if ref is not None:
+        policy = _lookup(file, "fieldAccessPolicyDefinitions", ref)
+        if policy is None:
+            checker.add(file, fpath + ("fieldAccessPolicyDefinitionRef",),
+                        f"fieldAccessPolicyDefinitionRef {ref!r} names no "
+                        f"fieldAccessPolicyDefinitions entry")
+    # Enumerated values: the field's own table, or the shared one it names.
+    table = field.get("enumeratedValues")
+    if table is not None:
+        for k, row in enumerate(table):
+            if not _fits(row["value"], width):
+                checker.add(file, fpath + ("enumeratedValues", k, "value"),
+                            f"enumerated value {row['value']} ({row['name']}) does not fit the "
+                            f"{width}-bit field")
+        _check_table(checker, file, table, fpath + ("enumeratedValues",),
+                     f"field {field['id']!r}")
+    name = field.get("enumerationDefinitionRef")
+    if name is not None:
+        definition = _lookup(file, "enumerationDefinitions", name)
+        if definition is None:
+            checker.add(file, fpath + ("enumerationDefinitionRef",),
+                        f"enumerationDefinitionRef {name!r} names no enumerationDefinitions "
+                        f"entry")
+        else:
+            for row in definition["enumeratedValues"]:
+                if not _fits(row["value"], width):
+                    checker.add(file, fpath + ("enumerationDefinitionRef",),
+                                f"enumeration {name!r} value {row['value']} ({row['name']}) "
+                                f"does not fit the {width}-bit field")
+    # The write constraint, the field's own or its policy's.
+    if "writeValueConstraint" in field:
+        constraint, cpath = field["writeValueConstraint"], fpath + ("writeValueConstraint",)
+        _check_constraint(checker, file, constraint, cpath, f"field {field['id']!r}")
+    elif policy is not None and "writeValueConstraint" in policy:
+        constraint, cpath = (policy["writeValueConstraint"],
+                             fpath + ("fieldAccessPolicyDefinitionRef",))
+    else:
+        constraint, cpath = None, None
+    if constraint is not None:
+        for key in ("minimum", "maximum"):
+            if key in constraint and not _fits(constraint[key], width):
+                checker.add(file, cpath if policy and "writeValueConstraint" not in field
+                            else cpath + (key,),
+                            f"{key} {constraint[key]} does not fit the {width}-bit field")
+        if constraint.get("useEnumeratedValues") and table is None and name is None:
+            checker.add(file, cpath, f"field {field['id']!r}: useEnumeratedValues needs "
+                                     f"enumeratedValues or an enumerationDefinitionRef")
+    # Resets and the reset types that leave the field alone.
+    resets = file.registries["resetTypes"]
+    unaffected = field.get("unaffectedBy", policy.get("unaffectedBy", []) if policy else [])
+    seen = set()
+    for k, reset in enumerate(field.get("resets", [])):
+        rpath = fpath + ("resets", k)
+        kind = reset.get("resetTypeRef")
+        if kind is not None and kind not in resets:
+            checker.add(file, rpath + ("resetTypeRef",),
+                        f"resetTypeRef {kind!r} names no resetTypes entry")
+        if kind in seen:
+            checker.add(file, rpath, f"field {field['id']!r}: "
+                        + (f"reset type {kind!r}" if kind else "the default reset type")
+                        + " has two resets entries")
+        seen.add(kind)
+        if kind in unaffected:
+            checker.add(file, rpath + ("resetTypeRef",),
+                        f"reset type {kind!r} is in both resets and unaffectedBy of field "
+                        f"{field['id']!r}")
+        for key in ("value", "mask"):
+            if key in reset and not _fits(reset[key], width):
+                checker.add(file, rpath + (key,),
+                            f"reset {key} {reset[key]} does not fit the {width}-bit field")
+    for k, kind in enumerate(field.get("unaffectedBy", [])):
+        if kind not in resets:
+            checker.add(file, fpath + ("unaffectedBy", k),
+                        f"unaffectedBy {kind!r} names no resetTypes entry")
+    # A field repeated inside the register.
+    array = field.get("array")
+    if array and width is not None:
+        stride = array.get("bitStride", width)
+        if stride < width:
+            checker.add(file, fpath + ("array", "bitStride"),
+                        f"bitStride {stride} is below the {width}-bit field, so the elements "
+                        f"overlap")
+        last = field["bits"][1] + (_count(array["dim"]) - 1) * stride
+        if "width" in register and last >= register["width"]:
+            checker.add(file, fpath + ("array",),
+                        f"the last element ends at bit {last}, outside the "
+                        f"{register['width']}-bit register")
+    # Other fields.
+    own = f"#{fact['id']}.{field['id']}"
+    alias = field.get("aliasOf")
+    if alias is not None:
+        if alias == own:
+            checker.add(file, fpath + ("aliasOf",), f"field {field['id']!r} is an alias of itself")
+        elif _field_ref(index, alias) is None:
+            checker.add(file, fpath + ("aliasOf",), f"aliasOf {alias!r} names no field of "
+                                                    f"this file")
+    lock = field.get("lockedBy")
+    if lock is not None:
+        target = _field_ref(index, lock["field"])
+        if target is None:
+            checker.add(file, fpath + ("lockedBy", "field"),
+                        f"lockedBy field {lock['field']!r} names no field of this file")
+        elif not _fits(lock["lockedValue"], _width(target[0])):
+            checker.add(file, fpath + ("lockedBy", "lockedValue"),
+                        f"lockedValue {lock['lockedValue']} does not fit the "
+                        f"{_width(target[0])}-bit field {lock['field']!r}")
+
+
+def check_registers(checker, file):
+    """Register-level and field-level checks of the precise-payload properties."""
+    index = _field_index(file)
+    for i, fact in enumerate(file.data.get("facts", [])):
+        payload = fact.get("data", {})
+        register = payload.get("register")
+        if not register:
+            continue
+        path = ("facts", i, "data")
+        _check_register(checker, file, register, path + ("register",))
+        for j, field in enumerate(payload.get("fields", [])):
+            _check_field(checker, file, fact, register, field, path + ("fields", j), index)
 
 
 def generated(file):
     """Exact structured projection for both reading views (no prose parsing)."""
     registers, verify, questions = [], [], []
-    findings, pairs, coverage = [], [], []
+    findings, pairs, coverage, field_list = [], [], [], []
     for fact in file.data["facts"]:
         fid = fact["id"]
         payload = fact.get("data", {})
@@ -142,6 +467,7 @@ def generated(file):
             coverage.append(dict(payload["coverage"], fact=fid))
         if "register" in payload:
             registers.append(dict(payload["register"], fact=fid, fields=payload.get("fields", [])))
+            field_list.extend(dict(field, fact=fid) for field in payload.get("fields", []))
         sequence_steps = payload.get("sequence", {}).get("steps", [])
         suspect = payload.get("finding", {}).get("assessment") == "suspect"
         if fact.get("requirement") == "as-implemented" and not sequence_steps and not suspect:
@@ -166,9 +492,11 @@ def generated(file):
 
     classes = sorted({entry["class"] for fact in file.data["facts"]
                       for entry, _ in speccheck.supports(fact, ())})
+    definitions = {name: file.data[name] for name in REGISTRIES if name in file.data}
     return {"registers": registers, "verify": verify, "questions": questions,
             "references": references, "classes": classes,
-            "findings": findings, "pairs": pairs, "coverage": coverage}
+            "findings": findings, "pairs": pairs, "coverage": coverage,
+            "fields": field_list, "definitions": definitions}
 
 
 def register_rows(summary):
@@ -179,5 +507,75 @@ def register_rows(summary):
                for key in ("fact", "offset", "name", "width", "access", "reset")}
         row["fields"] = [{k: field[k] for k in ("id", "name", "bits", "meaning")}
                          for field in register["fields"]]
+        row.update({key: register[key] for key in
+                    ("registerFile", "array", "modifiedWriteValue", "readAction")
+                    if key in register})
         rows.append(row)
     return rows
+
+
+def _enumerated(values):
+    """`0x0 off; 0x1 x1`; a value whose usage is not read-write names it."""
+    return "; ".join(
+        f"{v['value']} {v['name']}" + (f" ({v['usage']})" if v.get("usage", "read-write")
+                                         != "read-write" else "")
+        for v in values)
+
+
+def _constraint(constraint):
+    if constraint.get("writeAsRead"):
+        return "writeAsRead"
+    if constraint.get("useEnumeratedValues"):
+        return "useEnumeratedValues"
+    return f"{constraint['minimum']}..{constraint['maximum']}"
+
+
+FIELD_COLUMNS = ("field", "name", "bits", "access", "modifiedWriteValue", "readAction",
+                 "policy", "resets", "unaffectedBy", "values", "writeValueConstraint",
+                 "reserved", "volatile", "initializedBy", "lockedBy", "aliasOf", "array")
+
+
+def field_rows(summary):
+    """One row per register field with only what the field itself states.
+
+    Policies are not resolved and register-level values are not inherited: the definition
+    of a policy is shown with the other registries. Every row carries every column that any
+    row uses, in FIELD_COLUMNS order, with "" where the field lacks it.
+    """
+    rows = []
+    for field in summary["fields"]:
+        row = {"field": field["fact"] + "." + field["id"], "name": field["name"],
+               "bits": field["bits"]}
+        for key in ("access", "modifiedWriteValue", "readAction"):
+            if key in field:
+                row[key] = field[key]
+        if "fieldAccessPolicyDefinitionRef" in field:
+            row["policy"] = field["fieldAccessPolicyDefinitionRef"]
+        if "resets" in field:
+            row["resets"] = "; ".join(
+                r["value"] + (f" ({r['resetTypeRef']})" if "resetTypeRef" in r else "")
+                + (f" mask {r['mask']}" if "mask" in r else "") for r in field["resets"])
+        if "unaffectedBy" in field:
+            row["unaffectedBy"] = ", ".join(field["unaffectedBy"])
+        if "enumeratedValues" in field:
+            row["values"] = _enumerated(field["enumeratedValues"])
+        elif "enumerationDefinitionRef" in field:
+            row["values"] = "see " + field["enumerationDefinitionRef"]
+        if "writeValueConstraint" in field:
+            row["writeValueConstraint"] = _constraint(field["writeValueConstraint"])
+        for key in ("reserved", "volatile"):
+            if key in field:
+                row[key] = "true" if field[key] else "false"
+        if "initializedBy" in field:
+            row["initializedBy"] = field["initializedBy"]
+        if "lockedBy" in field:
+            row["lockedBy"] = f"{field['lockedBy']['field']} = {field['lockedBy']['lockedValue']}"
+        if "aliasOf" in field:
+            row["aliasOf"] = field["aliasOf"]
+        if "array" in field:
+            array = field["array"]
+            row["array"] = "dim " + "x".join(map(str, array["dim"])) + (
+                f", bitStride {array['bitStride']}" if "bitStride" in array else "")
+        rows.append(row)
+    used = [key for key in FIELD_COLUMNS if any(key in row for row in rows)]
+    return [{key: row.get(key, "") for key in used} for row in rows]

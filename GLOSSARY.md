@@ -223,7 +223,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Unicode NFC / case folding | A standard way to represent equivalent characters identically / comparing letters without case differences. The verifier identity comparison also collapses whitespace; it is not proof that two named readers are independent. |
 | IP-XACT | IEEE Std 1685-2022: an XML format for describing hardware blocks, including registers and fields. The spec format uses its field property names verbatim (`access`, `modifiedWriteValue`, `readAction`, `enumeratedValues`, …) and can export to it. |
 | XSD | XML Schema Definition: the machine-readable grammar an XML file is validated against. Accellera publishes IP-XACT's under Apache-2.0. |
-| Vendor extension | IP-XACT's `vendorExtensions` slot, where a tool puts elements the standard does not define without breaking validation. The spec format's `unaffectedBy` and `initializedBy` are exported there. |
+| Vendor extension | IP-XACT's `vendorExtensions` slot, where a tool puts elements the standard does not define without breaking validation. The spec format's `unaffectedBy`, `initializedBy` and `lockedBy` are exported there. |
 | Reset type | A named kind of reset (power-on, hot reset, …). A field can have a different reset value per reset type, or be unaffected by one (`unaffectedBy`). |
 | UCUM | Unified Code for Units of Measure: case-sensitive unit codes such as `us`, `ms`, `min`, `Hz`, used for quantities in specs. |
 | IEC 61360 levels | `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for the levels of a specified value, used in a spec's quantities. |

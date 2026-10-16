@@ -16,6 +16,7 @@ import json
 import pathlib
 import shutil
 import sys
+import types
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -204,6 +205,55 @@ class WorklistTests(TempRoots):
         self.assertTrue(rows[0]["fact"].endswith(".type"), rows[0]["fact"])
         self.assertEqual(rows[0]["method"], "Dump four bytes.")
         self.assertEqual(result["counts"]["by_kind"]["layout-field"], 1)
+
+    def test_atlas_and_explorer_carry_the_row_todos_that_the_worklist_lists(self):
+        import atlas
+        import explorer
+
+        src = HERE / "fixtures" / "peripheral"
+        r = self.tmp / "views"
+        r.mkdir()
+        shutil.copy(src / "board-specs.yaml", r)
+        text = (src / "widget.spec.yaml").read_text(encoding="utf-8")
+        edits = {
+            "          meaning: block enable\n":
+                "          meaning: block enable\n"
+                "          todo: {check: hardware, text: Read it back., method: Toggle it.}\n",
+            "{id: s2, action: write the divisor to BAUD}":
+                "{id: s2, action: write the divisor to BAUD, "
+                "todo: {check: source, text: Confirm the step.}}",
+            "            requirement: comment-explained\n":
+                "            requirement: comment-explained\n"
+                "            todo: {check: document, text: Read the order.}\n",
+        }
+        for old, new in edits.items():
+            self.assertEqual(text.count(old), 1, old)
+            text = text.replace(old, new)
+        (r / "widget.spec.yaml").write_text(text, encoding="utf-8")
+        code, result = todo(r)
+        self.assertEqual(code, 0, result["findings"])
+        row_kinds = {"field", "layout-field", "step", "order"}
+        expected = sorted((t["fact"], t["kind"], t["check"], t["text"], t["method"] or "")
+                          for t in result["todos"] if t["kind"] in row_kinds)
+        self.assertEqual(len(expected), 3, result["todos"])
+
+        args = types.SimpleNamespace(roots=[r], context_root=[], require_license=False,
+                                           public_skill=[])
+        checker = spec_cli._run_check(args)
+        flat = lambda facts: sorted(
+            (t["fact"], t["kind"], t["check"], t["text"], t["method"])
+            for f in facts for t in f["row_todos"])
+        spec_id = next(f.spec_id for f in checker.files)
+        atlas_facts = atlas.data(checker, spec_id)["facts"]
+        self.assertEqual(flat(atlas_facts), expected)
+        explorer_facts = [f for s in explorer.data(checker, {}, []) for f in s["facts"]]
+        shown = sorted(
+            [(t["fact"], t["kind"], t["check"], t["text"], t["method"])
+             for f in explorer_facts for t in f["row_todos"]]
+            + [(f["ref"], "", f["todo"]["check"], f["todo"]["text"], "")
+               for f in explorer_facts if f["todo"] and "." in f["ref"].split("#")[-1]])
+        self.assertEqual([(x[0], x[2], x[3]) for x in shown],
+                         [(x[0], x[2], x[3]) for x in expected])
 
     def test_every_payload_row_kind_is_listed_once_under_its_parent(self):
         src = HERE / "fixtures" / "peripheral"

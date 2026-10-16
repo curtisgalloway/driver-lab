@@ -22,6 +22,7 @@ import explorer
 import render_html
 import render_md
 import speccheck
+import worklist
 
 HERE = Path(__file__).resolve().parent
 HEX = re.compile(r'0x[0-9a-fA-F]+')
@@ -231,6 +232,7 @@ def _fact(checker, file, rec, common):
         'section': str(d.get('section', 'facts')), 'title': str(d.get('title', rec.id)),
         'claim_html': claim, 'text': explorer.plain(claim), 'critical': d.get('critical') is True,
         'gap': not speccheck.has_support(d),
+        'row_todos': worklist.page_rows(file, rec),
         'todo': {'check': str(todo.get('check', '')), 'text': str(todo.get('text', ''))} if todo else None,
         'classes': classes, 'sources': sources, 'relates': relates, 'outside': outside,
     })

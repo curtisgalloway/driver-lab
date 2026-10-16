@@ -13,7 +13,7 @@
       f.spec = s.id;
       const page = s.pages.find(p => p.label === f.source);
       f.page = page ? page.html : '';
-      f.hay = [f.title, f.text, s.id, s.name, f.section, f.todo ? f.todo.text : '',
+      f.hay = [f.title, f.text, s.id, s.name, f.section, f.todo ? f.todo.text : '', ...f.row_todos.map(r => r.text),
         ...f.cites.map(c => c.title + ' ' + c.at.map(a => a.label).join(' '))].join(' ').toLowerCase();
       FACTS.push(f);
     }
@@ -61,7 +61,7 @@
     if (state.verdict === 'PASS' && !(f.verdict === 'PASS' && !isProblem(f))) return false;
     if (state.verdict === 'GAP' && !f.gap) return false;
     if (state.verdict === 'PROBLEM' && !isProblem(f)) return false;
-    if (state.todo && !(f.todo && f.todo.check === state.todo)) return false;
+    if (state.todo && !((f.todo && f.todo.check === state.todo) || f.row_todos.some(r => r.check === state.todo))) return false;
     if (state.cls && !f.cites.some(c => c.class === state.cls)) return false;
     return true;
   }
@@ -89,7 +89,7 @@
   function renderFilters(shown) {
     const chip = (label, on, fn) => el('button', { class: 'chip', 'aria-pressed': String(!!on), onclick: () => { fn(); render(); } }, label);
     const toggle = (key, value) => () => { state[key] = state[key] === value ? null : value; };
-    const todos = [...new Set(scoped().filter(f => f.todo).map(f => f.todo.check))].sort();
+    const todos = [...new Set(scoped().flatMap(f => (f.todo ? [f.todo] : []).concat(f.row_todos)).map(t => t.check))].sort();
     const classes = [...new Set(scoped().flatMap(f => f.cites.map(c => c.class)))].sort();
     const any = state.crit || state.verdict || state.todo || state.cls || state.q;
     document.getElementById('filters').replaceChildren(...[
@@ -124,7 +124,7 @@
       s.orientation_html ? trusted('div', 'ov-text', s.orientation_html) : null,
       el('div', { class: 'stats' }, [[s.facts.length, 'facts'], [count(f => f.verdict === 'PASS' && !isProblem(f)), 'verified'],
         [count(f => f.gap), 'gaps'], [count(f => f.critical), 'bring-up critical'],
-        [count(f => f.todo && f.todo.check === 'hardware'), 'need hardware check'], [s.documents.length, 'documents']]
+        [count(f => f.todo && f.todo.check === 'hardware'), 'need hardware check'], [s.facts.reduce((n, f) => n + f.row_todos.length, 0), 'row checks'], [s.documents.length, 'documents']]
         .map(([v, l]) => el('div', { class: 'stat' }, el('b', {}, String(v)), el('span', {}, l)))),
       s.documents.length ? el('details', {}, el('summary', {}, 'Source documents (' + s.documents.length + ')'),
         el('ul', { class: 'doclist' }, s.documents.map(d => el('li', {}, el('span', { class: 'cls' }, d.class),
@@ -179,6 +179,8 @@
         f.children.length ? el('div', { class: 'kv' }, el('h4', {}, 'Entries'),
           f.children.map(c => el('p', { class: 'note' }, c.key + ': ' + [c.verdict || 'unverified', c.status].filter(Boolean).join(' · ')))) : null,
         f.todo ? el('div', { class: 'kv' }, el('h4', {}, 'Open check: ' + f.todo.check), el('p', { class: 'note' }, f.todo.text)) : null,
+        f.row_todos.length ? el('div', { class: 'kv' }, el('h4', {}, 'Open checks on rows'),
+          f.row_todos.map(r => el('p', { class: 'note' }, r.check + ' · ' + r.fact + ' (' + r.kind + '): ' + r.text + (r.method ? ' Method: ' + r.method : '')))) : null,
         el('div', { class: 'meta' }, el('span', {}, [f.verdict, f.date, f.status].filter(Boolean).join(' · ')),
           el('span', {}, f.origin), el('span', { class: 'mono' }, f.ref), copy,
           f.page ? el('a', { href: f.page + '#' + encodeURIComponent(f.ref) }, 'Full page') : null),

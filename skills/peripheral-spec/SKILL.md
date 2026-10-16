@@ -127,6 +127,21 @@ body surrounds the YAML.
   and optional `order` constraints `{before, after, requirement, support}`. Support every
   performing step precisely; record prerequisites, initialization, reset, power, error and
   teardown paths. Constraints describe required ordering separately from the driver's order.
+  A step that is a register write, a set or clear of bits, a read, a poll, a delay or an
+  interrupt wait takes `op` (`write`, `setBits`, `clearBits`, `read`, `poll`, `delay`,
+  `waitInterrupt`) instead of `action`: `target` (`#reg-fact` or `#reg-fact.field` in the same
+  file; an interrupts fact for `waitInterrupt`), `value` (canonical hex, or an enumerated
+  value's name), `until`, and `timeout`, `interval` and `duration` as quantities (a UCUM
+  `unit`, IEC 61360 levels `min`/`nom`/`typ`/`max`, decimal integers). Such a step has no
+  `action`, because the renderer writes its English; explanations go in `note`. Other steps keep
+  `action`. **Every wait, poll or handshake step states its bound or carries** `todo: {check:
+  document, text: "<the source gives no bound>"}` (#105). A `poll` or `waitInterrupt` states it
+  as a `timeout` quantity, with the document's tolerance as `min`/`max`, and the checker
+  enforces the rule; an `action` step (a handshake no `op` expresses) cannot take `timeout`, so
+  its `action` states the bound and tolerance, or a `data.quantity` fact holds them and the
+  step's `note` names that fact, and the verifier enforces the rule. A fact whose whole claim is one limit
+  carries `data.quantity`. See
+  [SPEC-FORMAT](../../docs/SPEC-FORMAT.md#sequences-an-operation-per-step).
 - **Layouts**: `section: data-formats`, `data.layout: {name, size, fields}`; fields have
   ids, names, byte offsets, sizes and meanings. A field packed inside a word takes
   `bits: [a, b]` within its `offset`/`size` container, numbered as the cited document numbers

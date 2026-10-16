@@ -64,7 +64,9 @@ facts:
       sequence:
         steps:
           - id: s1
-            action: write 0 to CTRL
+            op: write
+            target: "#reg-ctrl"
+            value: "0x0"
             support:
               - class: src
                 anchors: [{repo: linux, path: <header>, lines: [12, 12], symbol: widget_uart_init}]
@@ -83,6 +85,15 @@ A layout field packed inside a word (packet header, descriptor, mailbox word) ta
 within its `offset`/`size` container, numbered as the cited document numbers bits; set the
 layout's `bitNumbering` (`lsb0` or `msb0`) and `byteOrder` (`bigEndian` or `littleEndian`), and
 list value tables as on register fields.
+
+A sequence step that writes, sets or clears bits, reads, polls, delays or waits for an interrupt
+takes `op`, `target` (`#fact` or `#fact.field`), `value`, `until` and quantities for `timeout`,
+`interval` and `duration` (`{unit: ms, max: 10}`) instead of `action`; other steps keep
+`action`. Every wait, poll or handshake step states its bound or carries `todo: {check:
+document, text: "<the source gives no bound>"}`: a `poll` or `waitInterrupt` as a `timeout`
+(the document's tolerance as `min`/`max`); an `action` step, which cannot take `timeout`, in
+its `action` text or in a `data.quantity` fact its `note` names. A fact whose whole claim is one
+limit carries `data.quantity`.
 
 Add complete register fields in databook order, performing steps and separate ordering
 constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,

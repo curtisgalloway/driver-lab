@@ -278,6 +278,9 @@ def nested_tables(row):
     return ''.join(out)
 
 
+STEP_KEYS = render_md.STEP_KEYS
+
+
 def payload(checker, rec, status, with_status):
     """Keep child support, requirements and verdicts visible even when a claim exists."""
     import peripheral
@@ -288,6 +291,9 @@ def payload(checker, rec, status, with_status):
         if name in data:
             entries = [{k: v for k, v in data[name].items() if k != 'settled_by'}]
             out.append(table(name.capitalize() + ' (generated)', entries))
+    if 'quantity' in data:
+        out.append('<p>Quantity (generated): ' +
+                   literal(peripheral.quantity_text(data['quantity'])) + '.</p>')
     for side, anchors in data.get('pair', {}).items():
         notes = []
         out.append('<div class="provenance"><p>Correspondence side: ' + literal(side) + '</p>')
@@ -295,10 +301,13 @@ def payload(checker, rec, status, with_status):
         out.append('</div>')
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get('id', row.get('before', '') + '->' + row.get('after', ''))
-        out.append(table('Payload entry ' + rec.id + '.' + key,
-                         [{k: v for k, v in row.items()
-                           if k not in ('support', 'note') + tuple(NESTED)
-                           or (k in NESTED and not isinstance(v, list))}]))
+        shown = {k: v for k, v in row.items()
+                 if k not in ('support', 'note') + tuple(NESTED)
+                 or (k in NESTED and not isinstance(v, list))}
+        if path[-2] == 'steps' and 'op' in row:
+            shown = {k: v for k, v in shown.items() if k not in STEP_KEYS}
+            shown['step (generated)'] = peripheral.step_text(row)
+        out.append(table('Payload entry ' + rec.id + '.' + key, [shown]))
         out.append(nested_tables(row))
         notes = []
         out.append('<div class="provenance">')

@@ -1153,6 +1153,133 @@
         "type": "string",
         "pattern": "^#[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*(?![\\s\\S])"
       },
+      "quantity": {
+        "$comment": "A measured or specified amount (D27): a UCUM code and IEC 61360 level names. Values are decimal integers (D6 keeps floats out); the unit list selects codes and copies none of UCUM's tables.",
+        "type": "object",
+        "required": [
+          "unit"
+        ],
+        "properties": {
+          "unit": {
+            "enum": [
+              "s",
+              "ms",
+              "us",
+              "ns",
+              "min",
+              "h",
+              "Hz",
+              "kHz",
+              "MHz",
+              "GHz",
+              "V",
+              "mV",
+              "A",
+              "mA",
+              "Cel",
+              "%",
+              "By",
+              "bit"
+            ]
+          },
+          "min": {
+            "type": "integer"
+          },
+          "nom": {
+            "type": "integer"
+          },
+          "typ": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "min"
+                ]
+              },
+              {
+                "required": [
+                  "nom"
+                ]
+              },
+              {
+                "required": [
+                  "typ"
+                ]
+              },
+              {
+                "required": [
+                  "max"
+                ]
+              }
+            ],
+            "$comment": "message: a quantity needs a unit and at least one of min, nom, typ, max"
+          }
+        ]
+      },
+      "timeQuantity": {
+        "$comment": "A quantity in a time unit with no level below 0: a step's timeout, interval and duration.",
+        "allOf": [
+          {
+            "$ref": "#/$defs/quantity"
+          },
+          {
+            "properties": {
+              "unit": {
+                "enum": [
+                  "s",
+                  "ms",
+                  "us",
+                  "ns",
+                  "min",
+                  "h"
+                ],
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "min": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "nom": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "typ": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "max": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              }
+            }
+          }
+        ]
+      },
+      "stepTarget": {
+        "$comment": "message: a step target is #<fact id> or #<fact id>.<field id> in the same file",
+        "type": "string",
+        "pattern": "^#[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)?(?![\\s\\S])"
+      },
+      "stepValue": {
+        "$comment": "Canonical hex or an enumerated value's name; the checker sorts them out.",
+        "type": "string",
+        "anyOf": [
+          {
+            "$ref": "#/$defs/hex"
+          },
+          {
+            "$ref": "#/$defs/symbol"
+          }
+        ]
+      },
       "ipxactAccess": {
         "$comment": "IEEE 1685-2022 accessType, spelled as the standard spells it (D24).",
         "enum": ["read-only", "write-only", "read-write", "writeOnce", "read-writeOnce", "no-access"]
@@ -1567,8 +1694,7 @@
       "step": {
         "type": "object",
         "required": [
-          "id",
-          "action"
+          "id"
         ],
         "properties": {
           "id": {
@@ -1576,6 +1702,74 @@
           },
           "action": {
             "$ref": "#/$defs/text"
+          },
+          "op": {
+            "enum": [
+              "write",
+              "setBits",
+              "clearBits",
+              "read",
+              "poll",
+              "delay",
+              "waitInterrupt"
+            ]
+          },
+          "target": {
+            "$ref": "#/$defs/stepTarget"
+          },
+          "value": {
+            "$ref": "#/$defs/stepValue"
+          },
+          "mask": {
+            "type": "string",
+            "$ref": "#/$defs/hex"
+          },
+          "until": {
+            "type": "object",
+            "properties": {
+              "equals": {
+                "$ref": "#/$defs/stepValue"
+              },
+              "bitsSet": {
+                "type": "string",
+                "$ref": "#/$defs/hex"
+              },
+              "bitsClear": {
+                "type": "string",
+                "$ref": "#/$defs/hex"
+              }
+            },
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "equals"
+                ]
+              },
+              {
+                "required": [
+                  "bitsSet"
+                ]
+              },
+              {
+                "required": [
+                  "bitsClear"
+                ]
+              }
+            ],
+            "$comment": "message: until is exactly one of equals, bitsSet or bitsClear"
+          },
+          "interval": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "timeout": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "duration": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "onTimeout": {
+            "$ref": "#/$defs/factId"
           },
           "requirement": {
             "$ref": "#/$defs/requirement"
@@ -1600,6 +1794,528 @@
             },
             "then": {
               "$ref": "#/$defs/supportRules"
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "op"
+              ]
+            },
+            "then": {
+              "not": {
+                "type": "object",
+                "required": [
+                  "action"
+                ]
+              },
+              "$comment": "message: a step with op has no action: the renderer writes its English; explanations go in note (D40)"
+            },
+            "else": {
+              "allOf": [
+                {
+                  "required": [
+                    "action"
+                  ]
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "target"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: target, value, mask, until, interval, timeout, duration and onTimeout belong to a step with op"
+                }
+              ]
+            }
+          },
+          {
+            "dependentRequired": {
+              "onTimeout": [
+                "timeout"
+              ]
+            },
+            "$comment": "message: onTimeout needs a timeout"
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "write"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target",
+                    "value"
+                  ],
+                  "$comment": "message: a write step needs target and value"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a write step takes only target, value besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "setBits"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a setBits step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a setBits step takes only mask, target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "clearBits"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a clearBits step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a clearBits step takes only mask, target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "read"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a read step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a read step takes only target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "poll"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target",
+                    "until"
+                  ],
+                  "$comment": "message: a poll step needs target and until"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a poll step takes only interval, onTimeout, target, timeout, until besides id, requirement, support, todo and note"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "timeout"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "todo"
+                      ]
+                    }
+                  ],
+                  "$comment": "message: a poll or waitInterrupt step needs a timeout, or a todo saying the source gives none (#105)"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "delay"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "duration"
+                  ],
+                  "$comment": "message: a delay step needs duration"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "target"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a delay step takes only duration besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "waitInterrupt"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a waitInterrupt step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a waitInterrupt step takes only onTimeout, target, timeout besides id, requirement, support, todo and note"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "timeout"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "todo"
+                      ]
+                    }
+                  ],
+                  "$comment": "message: a poll or waitInterrupt step needs a timeout, or a todo saying the source gives none (#105)"
+                }
+              ]
             }
           }
         ]
@@ -1730,9 +2446,17 @@
           "required": [
             "coverage"
           ]
+        },
+        {
+          "required": [
+            "quantity"
+          ]
         }
       ],
       "properties": {
+        "quantity": {
+          "$ref": "#/$defs/quantity"
+        },
         "register": {
           "$ref": "#/$defs/register"
         },

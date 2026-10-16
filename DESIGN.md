@@ -318,6 +318,14 @@ with its own investigation method. The report adds contributing roots, layers, o
 commits, and verification status. It refuses to guess material identity choices or edit a spec
 without being asked. With no spec, it reports best-effort findings and suggests scaffolding.
 
+In Claude Code that role is also an agent definition,
+[`agents/board-expert.md`](agents/board-expert.md): it preloads the skill, sets `model: opus`
+(an alias that follows newer Opus releases) at high effort, removes file-editing tools and keeps
+the Agent tool, so a vendor tool that is itself an agent can run beneath it. The tool limits and
+the agent's instructions guard against spec edits; they are not a sandbox, since Bash remains. The skill stays the procedure every harness reads, and skill
+names stay the interface. Overlays name tool drivers as skills only; a `via: agent:` form is
+deferred ([VENDOR-GUIDE.md](skills/board-expert/VENDOR-GUIDE.md#4-wrap-a-tool)).
+
 Board stub skills are user-discoverable names for that same delegated role (none ship today).
 They produce no independent hardware database. Research-fill and reference selection can
 invoke the shared expert through a stub or directly; source acquisition remains the expert's

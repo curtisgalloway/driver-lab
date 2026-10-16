@@ -97,6 +97,15 @@ document, text: "<the source gives no bound>"}`: a `poll` or `waitInterrupt` as 
 its `action` text or in a `data.quantity` fact its `note` names. A fact whose whole claim is one
 limit carries `data.quantity`.
 
+Do not copy a fact that a canonical source already gives (D31, D32). A canonical source is
+machine-readable, pinned and efficient to use, and the spec's readers may use it under their
+root's license (a register database, an IP-XACT or SVD file, a device tree binding, a header).
+Cite it (the format has no reference to a register source yet), and record only what it lacks:
+citations, `requirement`, verdict-relevant notes, `todo`s, sequences that point at it, and
+`conflicts` where the documentation and the source disagree. A fact from a source a reader cannot be pointed to, a reading of driver code,
+and a summary that saves the cost of reading a long document are not duplicates and stay. A fact
+whose only support is a usable canonical source is a duplicate, and the verifier fails it.
+
 Add complete register fields in databook order, performing steps and separate ordering
 constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,
 gotchas and questions. Every actionable item is a supported record or a gap TODO; orientation

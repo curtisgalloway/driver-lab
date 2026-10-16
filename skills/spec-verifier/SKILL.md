@@ -227,6 +227,12 @@ guessing at an unchecked result.
 
   A rule about a value or behavior the claim never states, which this search does not reach,
   is a drafting coverage question, not something this check can find.
+- **A named table must be listed (#103).** A field, opcode or mask that the claim or
+  `meaning` names as a finite encoding, opcode set or bitmask (for example "a 16-bit function
+  type mask") must list its values in `enumeratedValues`, an `enumerationDefinitionRef` or
+  bit-level fields, or carry `todo: {check: document, text: ...}` naming what is left out. A
+  bare name is FAIL when the cited source gives the table; propose the
+  values (with locator) as the `correction`.
 - **Grade citation precision separately.** Set `citation_precision: exact` when the anchors
   or locators identify the evidence for the whole claim closely enough to repeat the reading;
   use `imprecise` for overly broad or incomplete citations and explain how to narrow them.

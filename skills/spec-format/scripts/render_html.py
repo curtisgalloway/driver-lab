@@ -318,7 +318,7 @@ def payload(checker, rec, status, with_status):
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get('id', row.get('before', '') + '->' + row.get('after', ''))
         shown = {k: v for k, v in row.items()
-                 if k not in ('support', 'note') + tuple(NESTED)
+                 if k not in ('support', 'note', 'todo') + tuple(NESTED)
                  or (k in NESTED and not isinstance(v, list))}
         if path[-2] == 'steps' and 'op' in row:
             shown = {k: v for k, v in shown.items() if k not in STEP_KEYS}

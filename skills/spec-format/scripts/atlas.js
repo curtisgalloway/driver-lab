@@ -826,7 +826,7 @@ const graph = (() => {
   ];
   if (crit > facts.length / 2) lines.push(`${crit} of ${facts.length} facts are marked critical, so the critical marker separates little.`);
   if (DATA.outside_links) lines.push(`${DATA.outside_links} fact links point at specs outside this page and are not drawn.`);
-  if (DATA.row_links) lines.push(`${DATA.row_links} fact links point at instance or variant rows on this page and are not drawn in the graph.`);
+  if (DATA.row_links) lines.push(`${DATA.row_links} fact links point at instance rows in the memory map and are not drawn in the graph.`);
   if (DATA.unplaced.length) {
     const byKind = new Map();
     for (const u of DATA.unplaced) {
@@ -835,7 +835,7 @@ const graph = (() => {
     }
     const groups = [...byKind].map(([k, ids]) => `${k}: ${ids.join(', ')}`).join('; ');
     const n = DATA.unplaced.length;
-    lines.push(`${n} spec${n === 1 ? '' : 's'} in the rendered roots ${n === 1 ? 'is' : 'are'} not linked to ${focusSpec.name}: ${groups}.`);
+    lines.push(`${n} spec${n === 1 ? '' : 's'} in the rendered roots ${n === 1 ? 'is' : 'are'} not shown on this page: ${groups}.`);
   }
   for (const t of lines) ul.append(el('li', null, t));
   lim.append(ul); host.append(lim);

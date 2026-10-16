@@ -3,8 +3,8 @@
 """Board atlas: one interactive page for a board (or any spec) and the specs around it.
 
 `spec.py render --format atlas --spec ID` selects the spec, the closure of its `parts`, the
-peripheral specs whose `describes` names one of those, every spec one fact link (`relates` or an
-inference premise) away from the spec or a part, and the IP and peripheral specs named by the
+peripheral specs whose `describes` names one of those, every spec one fact link (`relates`, an
+inference premise or an emulated observation) away from the spec or a part, and the IP and peripheral specs named by the
 instances of all of those, then embeds them as one JSON document in a page with outline, graph,
 memory map, coverage, open-items and about views. Specs in the rendered roots it does not place
 are listed, so none is left out silently. The page loads no script from elsewhere. Its *_html fields are render_html.author()
@@ -90,7 +90,7 @@ def select(checker, spec_id, merged=False):
                         add(row.get('peripheral'), sid, 'programming')
 
     add_ips(core)
-    # A peripheral spec joins the first core spec it describes. It stays out of core, so the
+    # A peripheral spec joins the first spec in its describes list that is in core. It stays out of core, so the
     # fact-link pass below stays one hop from the spec and its parts.
     for f in files:
         if f.kind == 'peripheral' and not f.is_overlay:
@@ -168,20 +168,22 @@ def data(checker, spec_id, *, merged=False, source_commit=None, tool_commit=None
                 elif rec.path[0] == 'instances':
                     instances.append(_instance(rec, common))
     known = {x['key'] for x in facts}
+    memory_map = _memory_map(instances, facts)
+    drawn = {row['key'] for row in memory_map}  # the only rows the page shows
     row_links = 0
     for x in facts:
         kept = []
         for r in x['relates']:
-            row, spec = r.pop('row'), r.pop('spec')
+            row = r.pop('row')
             if r['to'] in known:
                 kept.append(r)
-            elif row and spec in placed:
-                row_links += 1  # an instance or variant row of a spec on this page
+            elif row and r['to'] in drawn:
+                row_links += 1  # an instance row drawn in the memory map
             else:
                 x['outside'] += 1
         x['relates'] = kept
     return {
-        'focus': spec_id, 'specs': specs, 'facts': facts, 'memory_map': _memory_map(instances, facts),
+        'focus': spec_id, 'specs': specs, 'facts': facts, 'memory_map': memory_map,
         'instances': instances, 'roots': list(roots.values()),
         'outside_links': sum(x.pop('outside') for x in facts), 'row_links': row_links,
         'unplaced': _unplaced(checker, placed), 'tool_commit': tool_commit or '',
@@ -216,7 +218,7 @@ def _fact(checker, file, rec, common):
             outside += 1
             continue
         relates.append({'to': target.full, 'relation': str(rel.get('relation', '')),
-                        'row': target.path[0] != 'facts', 'spec': target.file.spec_id})
+                        'row': target.path[0] != 'facts'})
     classes = []
     for s in d.get('support', []):
         if s.get('class') not in classes:

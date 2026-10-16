@@ -174,7 +174,8 @@ class AtlasPeripherals(unittest.TestCase):
                 '    support:\n      - class: inference\n        premises:\n'
                 '          - fact: "wsoc#uart-base"\n        derivation: it follows\n'
                 '    todo: {check: hardware, text: check it.}\n')), 'chip'),
-            'wrow': chip('wrow', relating('at-row', 'wsoc#u0') + relating('at-fact', 'wb#console')),
+            'wrow': chip('wrow', relating('at-row', 'wsoc#u0') + relating('at-fact', 'wb#console')
+                         + relating('at-unmapped', 'wsoc#g0')),
         }
         for name, text in files.items():
             (self.root / f'{name}.spec.yaml').write_text(text)
@@ -198,12 +199,13 @@ class AtlasPeripherals(unittest.TestCase):
     def test_links_to_rows_on_the_page_are_not_outside_links(self):
         d = atlas.data(self.checker(), 'wb')
         joins = {s['id']: (s['parent'], s['join']) for s in d['specs']}
-        self.assertEqual(joins['wrow'], ('wb', 'related'))
+        self.assertEqual(joins['wrow'], ('wsoc', 'related'))  # two links to wsoc, one to wb
         at_row = next(f for f in d['facts'] if f['id'] == 'at-row')
         self.assertEqual(at_row['relates'], [])
         at_fact = next(f for f in d['facts'] if f['id'] == 'at-fact')
         self.assertEqual(at_fact['relates'], [{'to': 'wb@atlas-root#console', 'relation': 'refines'}])
-        self.assertEqual((d['row_links'], d['outside_links']), (1, 1))  # wpmic#off is outside
+        # wpmic#off is outside; so is wsoc#g0, a row with no base the memory map does not draw
+        self.assertEqual((d['row_links'], d['outside_links']), (1, 2))
 
     def test_specs_left_out_are_listed_by_kind(self):
         d = atlas.data(self.checker(), 'wb')

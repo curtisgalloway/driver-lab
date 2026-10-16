@@ -1,0 +1,6 @@
+{"item_id": "zx-uart-divisor", "model": "m1", "arm": "A", "rust_code": "pub fn uart_divisor(src_hz: u32, baud: u32) -> Result<u32, SpecGap> {\n    let d = (src_hz as u64 + 8 * baud as u64) / (16 * baud as u64);\n    Ok(d as u32)\n}\n"}
+{"item_id": "zx-uart-divisor", "model": "m1", "arm": "B", "rust_code": "pub fn uart_divisor(src_hz: u32, baud: u32) -> Result<u32, SpecGap> {\n    Ok(src_hz / (16 * baud))\n}\n"}
+{"item_id": "zx-desc-pack", "model": "m1", "arm": "A", "rust_code": "pub fn pack_desc(len: u16, chan: u8, flags: u16) -> Result<u32, SpecGap> {\n    Ok((len as u32 & 0xfff) | ((chan as u32 & 0xf) << 12) | ((flags as u32) << 16))\n}\n"}
+{"item_id": "zx-desc-pack", "model": "m1", "arm": "B", "rust_code": "pub fn pack_desc( {"}
+{"item_id": "zx-status-clear", "model": "m1", "arm": "A", "rust_code": "pub fn clear_error<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x10, 1 << 1);\n    Ok(())\n}\n"}
+{"item_id": "zx-status-clear", "model": "m1", "arm": "B", "rust_code": "pub fn clear_error<B: RegBus>(bus: &mut B) -> Result<(), SpecGap> {\n    bus.write32(0x10, 1 << 2);\n    Ok(())\n}\n"}

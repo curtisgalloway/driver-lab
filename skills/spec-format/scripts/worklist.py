@@ -48,10 +48,30 @@ def _item(f, ref: str, kind: str, todo: dict, *, critical=False, scope=None, ins
     return item
 
 
-def collect(checker) -> list[dict]:
-    """Every TODO of the checked (non-context) roots, in file order, then document order."""
+def row_items(f, rec) -> list[dict]:
+    """The TODOs on the payload rows of one top-level record, in document order (the part of
+    `collect` the atlas and the explorer reuse, so all three views list the same rows)."""
     import peripheral
 
+    items = []
+    for row, path in peripheral.children(rec.data):
+        if "todo" not in row:
+            continue
+        row_id = row["id"] if "id" in row else f"{path[-2]}[{path[-1]}]"
+        items.append(_item(f, f"{rec.full}.{row_id}", _row_kind(path), row["todo"],
+                           critical=rec.data.get("critical") is True))
+    return items
+
+
+def page_rows(f, rec) -> list[dict]:
+    """row_items(), cut to the fields a rendered page shows (no file path)."""
+    return [{"fact": i["fact"], "kind": i["kind"], "check": str(i["check"]),
+             "text": str(i["text"]), "method": str(i["method"] or "")}
+            for i in row_items(f, rec)]
+
+
+def collect(checker) -> list[dict]:
+    """Every TODO of the checked (non-context) roots, in file order, then document order."""
     items = []
     for f in checker.files:
         if f.root.context:
@@ -69,12 +89,7 @@ def collect(checker) -> list[dict]:
                 items.append(_item(f, rec.full, kind, data["todo"], critical=critical,
                                    scope=data.get("scope"),
                                    instance=data["name"] if top == "instances" else None))
-            for row, path in peripheral.children(data):
-                if "todo" not in row:
-                    continue
-                row_id = row["id"] if "id" in row else f"{path[-2]}[{path[-1]}]"
-                items.append(_item(f, f"{rec.full}.{row_id}", _row_kind(path),
-                                   row["todo"], critical=critical))
+            items.extend(row_items(f, rec))
         for entry in f.data.get("assumptions", []):
             if "todo" in entry:
                 items.append(_item(f, f"{f.spec_id}@{f.root.label}#{entry['id']}",

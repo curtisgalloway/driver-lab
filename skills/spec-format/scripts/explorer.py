@@ -22,6 +22,7 @@ import urllib.request
 import render_html
 import render_md
 import speccheck
+import worklist
 
 HERE = Path(__file__).resolve().parent
 ANCHORS_FORMAT = 1
@@ -255,6 +256,15 @@ def _citations(checker, file, entries, anchors, notes):
     return out
 
 
+def _row_todos(file, rec):
+    """Row TODOs of a record, as `spec.py todo` lists them. A supported field or step is a fact
+    of its own here and carries its todo as that fact's `todo`, so it is not repeated."""
+    if rec.parent is not None:
+        return []
+    own = {r.full for r in file.records.values()}
+    return [t for t in worklist.page_rows(file, rec) if t['fact'] not in own]
+
+
 def _fact(checker, rec, row, children, anchors):
     data, file = rec.data, rec.file
     if 'claim' in data:
@@ -293,6 +303,7 @@ def _fact(checker, rec, row, children, anchors):
         'contested': any(not c['resolved'] for c in conflicts),
         'conflicts': conflicts,
         'assumes': assumes,
+        'row_todos': _row_todos(file, rec),
         'todo': {'check': str(todo['check']), 'text': str(todo.get('text', ''))} if todo else None,
         'verdict': row.get('verdict') or '',
         'date': str(verdict.get('date', '')),

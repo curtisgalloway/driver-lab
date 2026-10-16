@@ -70,6 +70,7 @@ const count = pred => facts.filter(pred).length;
 for (const [cls, n, label] of [
   ['', specs.length, 'specs'], ['', facts.length, 'facts'], ['pass', count(f => f.verdict === 'PASS'), 'verified'],
   ['gap', count(f => f.verdict === 'GAP'), 'gaps'], ['crit', count(f => f.critical), 'critical'], ['', count(f => f.todo), 'open checks'],
+  ['', facts.reduce((n, f) => n + f.row_todos.length, 0), 'row checks'],
 ]) { const s = el('div', 'stat ' + cls); s.append(el('b', null, String(n)), el('span', null, label)); $('#stats').append(s); }
 
 /* ---------- shared bits ---------- */
@@ -189,6 +190,12 @@ function renderFact(f) {
   if (f.todo) {
     panel.append(el('h3', null, 'Open check'));
     const t = el('div', 'todo'); t.append(el('b', null, f.todo.check || 'check'), f.todo.text); panel.append(t);
+  }
+  if (f.row_todos.length) {
+    panel.append(el('h3', null, 'Open checks on rows'));
+    for (const r of f.row_todos) {
+      const t = el('div', 'todo'); t.append(el('b', null, r.check), r.fact + ' (' + r.kind + '): ' + r.text + (r.method ? ' Method: ' + r.method : '')); panel.append(t);
+    }
   }
   if (f.out.length || f.inc.length) {
     panel.append(el('h3', null, 'Relations'));
@@ -366,7 +373,7 @@ function applyFilter() {
     const d = factEls.get(f.key);
     const hay = (f.title + ' ' + f.text + ' ' + f.key + ' ' + (f.todo ? f.todo.text : '')).toLowerCase();
     const ok = (!q || hay.includes(q)) && (!filt.crit || f.critical) && (!filt.gap || f.verdict === 'GAP')
-      && (!filt.todo || f.todo) && (!filt.root || f.root === filt.root);
+      && (!filt.todo || f.todo || f.row_todos.length) && (!filt.root || f.root === filt.root);
     d.hidden = !ok;
     if (ok) shown++;
     mark(d.querySelector('summary .t'), f.title, q);
@@ -774,8 +781,9 @@ const graph = (() => {
   const gaps = facts.filter(f => f.verdict === 'GAP');
   const stale = facts.filter(isStale);
   const nov = facts.filter(f => !f.verdict || f.verdict === 'UNVERIFIABLE');
-  const todo = facts.filter(f => f.todo && f.verdict !== 'GAP');
-  const bench = todo.filter(f => f.todo.check === 'hardware'), reading = todo.filter(f => f.todo.check !== 'hardware');
+  const todo = facts.filter(f => (f.todo || f.row_todos.length) && f.verdict !== 'GAP');
+  const checksOf = f => (f.todo ? [f.todo] : []).concat(f.row_todos);
+  const bench = todo.filter(f => checksOf(f).some(t => t.check === 'hardware')), reading = todo.filter(f => checksOf(f).some(t => t.check !== 'hardware'));
   const order = list => list.slice().sort((a, b) => (b.critical - a.critical) || a.spec.localeCompare(b.spec));
   const cards = el('div', 'icards');
   const card = (n, label, cls, help, target) => {
@@ -806,6 +814,7 @@ const graph = (() => {
       head.append(factLink(f), el('span', 'idline', f.spec));
       li.append(head);
       if (f.todo) { const t = el('div', 'todo'); t.append(el('b', null, f.todo.check || 'check'), f.todo.text); li.append(t); }
+      for (const r of f.row_todos) { const t = el('div', 'todo'); t.append(el('b', null, r.check), r.fact + ' (' + r.kind + '): ' + r.text); li.append(t); }
       ul.append(li);
     }
     s.append(ul); host.append(s);

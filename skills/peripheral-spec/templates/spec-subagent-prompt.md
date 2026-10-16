@@ -24,6 +24,8 @@ mappings. Invent no anchor for a line you did not read and no investigator retur
 
 Start from this minimal complete record template (its supported subset is not a finished spec).
 Use the target's license in the SPDX header. Unknown register width/access/reset are absent.
+Add `describes: [<id>]` after `name` naming the soc, chip or board spec whose block this is,
+unless that spec's instance row names this spec in `peripheral`.
 
 ```yaml
 # SPDX-FileCopyrightText: <copyright-year> <copyright-holder>

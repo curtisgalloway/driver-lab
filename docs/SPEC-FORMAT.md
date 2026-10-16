@@ -169,6 +169,7 @@ Keys by kind (closed: any key not listed for the kind is a schema error):
 | `overlays` (the target id) | no | no | no | no | required | no | no | no |
 | `parts` | required | no | optional | no | no | no | no | no |
 | `instances` | no | required (may be empty) | recommended | no | optional | no | no | no |
+| `describes` (soc, chip or board ids) | no | no | no | no | no | optional | no | no |
 | `variants`, `variant_of` | optional | no | no | no | no | no | no | no |
 | `cache` | required | recommended | optional | recommended | no | optional | optional | no |
 | `resources` | optional | optional | optional | required | optional | required | required | required |
@@ -277,10 +278,43 @@ conditional. Changing an assumption's text changes the basis hash of every fact 
 
 `instances:` rows keep their shape (name, `ip`, `reg`, `irq`, `clocks`, `role`, `note`) and gain
 `id` and `support`, so each row is verified like any fact (today keyed `instances/<name>` with no
-citation of its own). `reg` is a hex string (D6). `variants:` rows gain `id` and `support` in
-place of today's `tag` and `source`, so a variant known only from press carries a `press` entry
-and its TODO like any fact. A row is never a gap fact: a `GAP` verdict on an instance or variant
+citation of its own). A row names the block's `ip` spec, its `peripheral` spec, or both
+([Composing peripheral specs](#composing-peripheral-specs-d42d44)). `reg` is a hex string (D6).
+`variants:` rows gain `id` and `support` in place of today's `tag` and `source`, so a variant
+known only from press carries a `press` entry and its TODO like any fact. A row is never a gap fact: a `GAP` verdict on an instance or variant
 row is an error (settled in SF2-3; made explicit in review round 1, 2026-10-08).
+
+### Composing peripheral specs (D42–D44)
+
+A `kind: peripheral` spec holds one block's programming model. Two structural links attach it to
+the specs it belongs to, so a tool composing a board can find it:
+
+- **`describes`** on the peripheral spec: a non-empty list of `soc`, `chip` or `board` spec ids
+  whose block it programs. The checker resolves each entry across the roots read together (a
+  target in another root needs that root, as for `parts`) and refuses any other kind, and any
+  target in a later layer than the peripheral spec's root: `describes` points up, from a block
+  to its board, so a public spec naming a product board would publish that board's id. A later
+  layer links its own board to an earlier peripheral spec through `instances[].peripheral`.
+- **`instances[].peripheral`** on a `soc`, `chip` or overlay instance row: the peripheral spec for
+  that placement. A row names `ip`, `peripheral` or both; the checker resolves `peripheral` to a
+  `kind: peripheral` spec as it resolves `ip` to a `kind: ip` spec. A block with an SoC-specific
+  programming model and no reusable IP spec gets its row (base address, interrupt, clocks)
+  without a placeholder `kind: ip` file.
+
+`describes`, like `parts`, is composition: it sits outside every fact's basis, so adding it
+changes no verdict's freshness, and it is not license-gated. `instances[].peripheral` is a field
+of the instance record, like `ip`, so it is in that row's basis and is verified with the row. A `relates` link is still the way for one fact to rest on
+another; it is not a composition pointer.
+
+When the roots read together hold a `soc`, `chip` or `board` spec, a peripheral spec that has no
+`describes` and that no instance row names is a warning: it would never appear when a board is
+composed.
+
+| # | Question | Decision | Effect |
+| --- | --- | --- | --- |
+| D42 | How a peripheral spec joins a board (#126) | `describes` on the peripheral spec, a list of `soc`, `chip` or `board` ids in the same or an earlier layer; structural, outside every basis, not gated | no fact-to-fact `relates` invented for composition; adding it stales nothing; no private id in a public spec |
+| D43 | An instance whose block has a peripheral spec and no ip spec | `instances[].peripheral`; a row names `ip`, `peripheral` or both | the SoC's memory map is complete without hollow `kind: ip` files |
+| D44 | A peripheral spec nothing composes | A checker warning when a `soc`, `chip` or `board` spec is read with it | an unlinked spec is visible at check time, not silently missing from a board |
 
 ### Prose that is not a fact
 
@@ -517,7 +551,9 @@ the license split carry over. Restated for the spec format:
   root is a spec. No symbolic links inside a root.
 - **Merge order.** By layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then
   pointer order; the spec repositories in the order docs, permissive, gpl. Composition first
-  (`parts`, then `instances[].ip`), then overlays.
+  (`parts`, then `instances[].ip` and `instances[].peripheral`, then peripheral specs whose
+  `describes` names a composed id), then overlays. `render --merged` renders one id and follows
+  no composition link; the reader and the atlas compose.
 - **Merging.** An overlay's `facts` are appended to the target's facts, each keeping its
   `origin` (root name and layer) and its full reference in the merged view; the renderer groups them under the target's
   sections with an "Overlay: <layer> (<root>)" sub-heading, as today. `resources` lists
@@ -544,8 +580,9 @@ the license split carry over. Restated for the spec format:
   reached through other facts, is an error, and that error makes the citing root untrusted in
   turn. A reference that resolves to nothing, or to more than one fact, is an error too. A
   marker that cannot be read leaves its root's name unknown, so while any given marker is
-  unreadable, every root-qualified reference fails. `parts` and `instances[].ip` into another
-  root are composition, not a fact resting on a source, and are not gated.
+  unreadable, every root-qualified reference fails. `parts`, `instances[].ip`,
+  `instances[].peripheral` and `describes` into another root are composition, not a fact
+  resting on a source, and are not gated.
 
 ## Verification records
 
@@ -1365,7 +1402,8 @@ Each is one session and one pull request, in this order:
 | Citation `class` matches the document's `class`; numeric pages within `pages` | | yes | |
 | Fact references resolve; no cycles; layer order respected | | yes | |
 | License gate (SPDX expression logic), direct and transitive | | yes | |
-| `parts`, `overlays`, `variant_of`, `instances[].ip` resolve; stubs resolve | | yes | |
+| `parts`, `overlays`, `variant_of`, `instances[].ip`, `instances[].peripheral`, `describes` resolve, to the right kind; stubs resolve | | yes | |
+| A peripheral spec no `describes` or instance row composes, beside a soc, chip or board (warning, D44) | | yes | |
 | Public-layer privacy (`access: internal`, `via:` to a private skill) | | yes | |
 | Template placeholders left in: `<`, a letter, then letters, digits, spaces, `-` or `_`, then `>`, outside code (`<linux/of.h>`, `<a@b>` and URLs are not placeholders; SF2-2 review) | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |

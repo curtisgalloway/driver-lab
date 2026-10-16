@@ -2,11 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 """Board atlas: one interactive page for a board (or any spec) and the specs around it.
 
-`spec.py render --format atlas --spec ID` selects the spec, the closure of its `parts`, every spec
-one fact link away from the spec or a part, and the IP specs named by the instances of all of
-those, then embeds them as
-one JSON document in a page with outline, graph, memory map, coverage, open-items and about
-views. The page loads no script from elsewhere. Its *_html fields are render_html.author()
+`spec.py render --format atlas --spec ID` selects the spec, the closure of its `parts`, the
+peripheral specs whose `describes` names one of those, every spec one fact link (`relates`, an
+inference premise or an emulated observation) away from the spec or a part, and the IP and peripheral specs named by the
+instances of all of those, then embeds them as one JSON document in a page with outline, graph,
+memory map, coverage, open-items and about views. Specs in the rendered roots it does not place
+are listed, so none is left out silently. The page loads no script from elsewhere. Its *_html fields are render_html.author()
 output (the fixed-element renderer); every other value is a string the page script inserts
 with textContent.
 """
@@ -80,20 +81,29 @@ def select(checker, spec_id, merged=False):
     core = list(placed)
 
     def add_ips(ids):
+        """The ip and peripheral specs the instances of these specs name, overlays included."""
         for sid in ids:
             for f in files:
                 if f.spec_id == sid:
                     for row in f.data.get('instances', []):
                         add(row.get('ip'), sid, 'ip')
+                        add(row.get('peripheral'), sid, 'programming')
 
     add_ips(core)
+    # A peripheral spec joins the first spec in its describes list that is in core. It stays out of core, so the
+    # fact-link pass below stays one hop from the spec and its parts.
+    for f in files:
+        if f.kind == 'peripheral' and not f.is_overlay:
+            for target in f.data.get('describes', []):
+                if target in core and add(f.spec_id, target, 'programming'):
+                    break
     counts = {}
     for f in files:
         for rec in f.records.values():
             if rec.path[0] != 'facts' or rec.parent is not None:
                 continue
-            for rel in rec.data.get('relates', []):
-                target, why = checker.resolve(f, rel['fact'])
+            for _, ref, _ in speccheck.references(rec.data, rec.path):
+                target, why = checker.resolve(f, ref)
                 if why or target is None:
                     continue
                 a, b = f.spec_id, target.file.spec_id
@@ -158,15 +168,43 @@ def data(checker, spec_id, *, merged=False, source_commit=None, tool_commit=None
                 elif rec.path[0] == 'instances':
                     instances.append(_instance(rec, common))
     known = {x['key'] for x in facts}
+    memory_map = _memory_map(instances, facts)
+    drawn = {row['key'] for row in memory_map}  # the only rows the page shows
+    row_links = 0
     for x in facts:
-        kept = [r for r in x['relates'] if r['to'] in known]
-        x['outside'] += len(x['relates']) - len(kept)
+        kept = []
+        for r in x['relates']:
+            row = r.pop('row')
+            if r['to'] in known:
+                kept.append(r)
+            elif row and r['to'] in drawn:
+                row_links += 1  # an instance row drawn in the memory map
+            else:
+                x['outside'] += 1
         x['relates'] = kept
     return {
-        'focus': spec_id, 'specs': specs, 'facts': facts, 'memory_map': _memory_map(instances, facts),
+        'focus': spec_id, 'specs': specs, 'facts': facts, 'memory_map': memory_map,
         'instances': instances, 'roots': list(roots.values()),
-        'outside_links': sum(x.pop('outside') for x in facts), 'tool_commit': tool_commit or '',
+        'outside_links': sum(x.pop('outside') for x in facts), 'row_links': row_links,
+        'unplaced': _unplaced(checker, placed), 'tool_commit': tool_commit or '',
     }
+
+
+def _unplaced(checker, placed):
+    """Specs in the rendered (non-context) roots that the page does not show, by kind then id,
+    each with its count of fact records."""
+    out = {}
+    for f in checker.files:
+        if f.root.context or f.spec_id in placed:
+            continue
+        entry = out.setdefault(f.spec_id, {'id': f.spec_id, 'kind': '', 'facts': 0})
+        if not f.is_overlay:
+            entry['kind'] = f.kind
+        entry['facts'] += sum(1 for r in f.records.values()
+                              if r.path[0] == 'facts' and r.parent is None)
+    for entry in out.values():
+        entry['kind'] = entry['kind'] or 'overlay'
+    return sorted(out.values(), key=lambda e: (e['kind'], e['id']))
 
 
 def _fact(checker, file, rec, common):
@@ -179,7 +217,8 @@ def _fact(checker, file, rec, common):
         if why or target is None:
             outside += 1
             continue
-        relates.append({'to': target.full, 'relation': str(rel.get('relation', ''))})
+        relates.append({'to': target.full, 'relation': str(rel.get('relation', '')),
+                        'row': target.path[0] != 'facts'})
     classes = []
     for s in d.get('support', []):
         if s.get('class') not in classes:
@@ -203,6 +242,7 @@ def _instance(rec, common):
     base = _address(d.get('reg'))
     return dict(common, **{
         'name': str(d.get('name', rec.id)), 'ip': str(d.get('ip', '')),
+        'peripheral': str(d.get('peripheral', '')),
         'reg': '' if base is None else f'0x{base:08X}', 'base': base,
         'irq': ' '.join(str(irq[k]) for k in ('kind', 'number') if k in irq),
         'trigger': str(irq.get('trigger', '')),

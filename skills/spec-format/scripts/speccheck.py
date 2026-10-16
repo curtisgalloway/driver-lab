@@ -10,8 +10,10 @@ already-parsed data and never over prose:
   spelling, none twice; root names unique among the roots read together; no symbolic link in or
   above a root; no nested marker; no file that looks like a spec but would not be discovered;
 - composition: spec ids unique across every root (aliases too); `parts`, `variant_of`,
-  `instances[].ip` and an overlay's target resolve, to the right kind; no `parts` cycle; an
-  overlay merges no earlier than its target (layer) and uses its target kind's sections;
+  `instances[].ip`, `instances[].peripheral`, a peripheral spec's `describes` and an overlay's
+  target resolve, to the right kind; no `parts` cycle; an overlay merges no earlier than its
+  target (layer) and uses its target kind's sections; a peripheral spec nothing composes, beside
+  a soc, chip or board spec, is a warning;
 - names: every `doc`, `repo` and `assumption` name resolves in the citing file; document class
   matches the citation class; a `cite: false` document is never cited; numeric pages lie within
   the document's `pages`, written without leading zeros, `pages` in order; a `standard` locator
@@ -64,6 +66,7 @@ SECTIONS = {
     "review": ("identity", "correspondence", "coverage", "findings", "agreements", "open-questions"),
 }
 ANCHORED = ("src", "DT", "rtl")
+PARENT_KINDS = ("soc", "chip", "board")  # what a peripheral spec's `describes` may name
 DOC_CLASS = {"databook": "databook", "standard": "standard", "doc": "doc"}  # citation -> document
 PRECISE = ("section", "page", "pages", "table", "figure", "clause")
 IRQ_OFFSET = {"SPI": 32, "PPI": 16}
@@ -1016,7 +1019,9 @@ class Checker:
                     self.add(f, ("variant_of",), f"variant_of {target!r} is not a board spec "
                                                  f"(kind {base[target][0].kind})")
             self.check_instances(f, base)
+            self.check_describes(f, base)
         self.check_parts_cycles(parts_graph, base)
+        self.check_unattached_peripherals()
         overlays: dict = {}
         for f in self.files:
             if f.is_overlay:
@@ -1042,13 +1047,47 @@ class Checker:
 
     def check_instances(self, f: SpecFile, base: dict):
         for i, row in enumerate(f.data.get("instances", [])):
-            ip = row["ip"]
-            if ip not in base:
-                self.add(f, ("instances", i, "ip"), f"instance {row['name']!r}: ip {ip!r} "
-                                                    f"resolves to no spec")
-            elif base[ip][0].kind != "ip":
-                self.add(f, ("instances", i, "ip"), f"instance {row['name']!r}: {ip!r} is not "
-                                                    f"an ip spec (kind {base[ip][0].kind})")
+            for key, kind in (("ip", "ip"), ("peripheral", "peripheral")):
+                if key not in row:
+                    continue
+                target = row[key]
+                if target not in base:
+                    self.add(f, ("instances", i, key), f"instance {row['name']!r}: {key} "
+                                                       f"{target!r} resolves to no spec")
+                elif base[target][0].kind != kind:
+                    self.add(f, ("instances", i, key), f"instance {row['name']!r}: {target!r} "
+                                                       f"is not {'an' if kind == 'ip' else 'a'} "
+                                                       f"{kind} spec (kind "
+                                                       f"{base[target][0].kind})")
+
+    def check_describes(self, f: SpecFile, base: dict):
+        for i, target in enumerate(f.data.get("describes", [])):
+            if target not in base:
+                self.add(f, ("describes", i), f"describes entry {target!r} resolves to no spec")
+            elif base[target][0].kind not in PARENT_KINDS:
+                self.add(f, ("describes", i), f"describes entry {target!r} is not a soc, chip "
+                                              f"or board spec (kind {base[target][0].kind})")
+            elif base[target][0].root.rank > f.root.rank:
+                # describes points up, from a block to its board: a public spec naming a
+                # product board would publish that board's id and fail a check on its own
+                self.add(f, ("describes", i), f"describes entry {target!r} is in layer "
+                                              f"{base[target][0].root.layer}, after this root's "
+                                              f"layer {f.root.layer}; name it from that layer's "
+                                              f"instances[].peripheral instead")
+
+    def check_unattached_peripherals(self):
+        """Warn on a peripheral spec nothing composes, when there is something to compose it
+        into: no `describes` of its own and no `instances[].peripheral` naming it."""
+        if not any(f.kind in PARENT_KINDS and not f.is_overlay for f in self.files):
+            return
+        named = {row["peripheral"] for f in self.files
+                 for row in f.data.get("instances", []) if "peripheral" in row}
+        for f in self.files:
+            if (f.kind == "peripheral" and not f.is_overlay and "describes" not in f.data
+                    and f.spec_id not in named):
+                self.add(f, ("id",), f"peripheral spec {f.spec_id!r} is linked to no soc, chip "
+                                     f"or board spec: name one in describes, or name this spec "
+                                     f"in that spec's instances[].peripheral", level="warning")
 
     def check_overlay(self, f: SpecFile, base: dict):
         target = f.spec_id

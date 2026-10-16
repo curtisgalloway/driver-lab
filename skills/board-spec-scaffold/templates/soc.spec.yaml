@@ -6,7 +6,9 @@ id: <soc-id>
 name: "<soc-name>"
 triggers: ["<soc-trigger>"]
 cache: <soc-id>-resources
-# Each instance needs an ip spec that resolves in the supplied roots.
+# Give every MMIO block with supporting document, DT or source evidence a row. A row names
+# an ip spec (a reusable block), a peripheral spec (its programming model), or both, and
+# each must resolve in the supplied roots.
 # Use instances: [] as the valid minimal form when no supported placements are available.
 instances:
   - id: console-uart

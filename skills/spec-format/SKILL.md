@@ -203,7 +203,8 @@ SPDX identifiers, not expressions; `[]` means documents only. The gate accepts `
 either is accepted, `A AND B` only when both are; use canonical ids (`GPL-2.0-only`). Placement
 follows the most restrictive cited source, including transitive dependencies. `DT` is gated
 as source despite describing hardware. `--require-license` also gates map-only repos.
-Composition (`parts`, `instances[].ip`) is not evidence and is not license-gated.
+Composition (`parts`, `instances[].ip` and `.peripheral`, a peripheral spec's `describes`) is not
+evidence and is not license-gated.
 
 Discover pointers from exactly four places, never by searching a checkout for markers:
 board-expert's shipped `specs/`; loaded skills' `board-spec root: <path>` lines; the checkout's

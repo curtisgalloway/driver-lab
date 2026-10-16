@@ -94,10 +94,10 @@ A file that cannot be read is a finding on that file.
 `check` reads each root's `board-specs.yaml`, validates every `*.spec.yaml` below it, then
 checks what a schema cannot: names (`doc`, `repo`, `assumption`) resolving in the citing file,
 document classes and page bounds, ids unique per spec id per root, composition (`parts`,
-`variant_of`, `instances[].ip`, overlays), fact references (`#id`, `spec#id`,
-`spec@root#id`) with layer order and no premise cycles, and the license gate, direct and
-through references. `--context-root` reads a further root so references and overlays resolve;
-findings in its own files are warnings. `--require-license` also gates repos entries no anchor
+`variant_of`, `instances[].ip` and `.peripheral`, `describes`, overlays), fact references
+(`#id`, `spec#id`, `spec@root#id`) with layer order and no premise cycles, and the license
+gate, direct and through references. `--context-root` reads a further root so references and
+overlays resolve; findings in its own files are warnings. `--require-license` also gates repos entries no anchor
 cites. `--public-skill` names a skill a public root's tools may name in `via:`. Output: one
 `path:line:column: error|warning: message` per finding, then a summary; `--json` prints
 `{"ok", "roots": [{"path", "name", "layer", "context"}], "specs", "stubs", "verification",

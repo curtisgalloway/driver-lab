@@ -253,6 +253,10 @@
           "aliases": {
             "$ref": "#/$defs/idList"
           },
+          "describes": {
+            "$comment": "The soc, chip or board specs whose block this peripheral spec programs: structural composition, like parts, so outside every fact's basis and not license-gated.",
+            "$ref": "#/$defs/parts"
+          },
           "cache": {
             "$ref": "#/$defs/name"
           },
@@ -644,13 +648,14 @@
     },
 
     "instance": {
-      "$comment": "One placement of an IP block in an SoC or chip; verified like a fact. reg and irq are null when unknown, and then the row carries a todo.",
+      "$comment": "One placement of a block in an SoC or chip; verified like a fact. It names the block's ip spec, its peripheral spec, or both. reg and irq are null when unknown, and then the row carries a todo.",
       "type": "object",
-      "required": ["id", "name", "ip", "reg", "irq", "clocks"],
+      "required": ["id", "name", "reg", "irq", "clocks"],
       "properties": {
         "id": {"$ref": "#/$defs/factId"},
         "name": {"$ref": "#/$defs/line"},
         "ip": {"$ref": "#/$defs/specId"},
+        "peripheral": {"$ref": "#/$defs/specId"},
         "reg": {"type": ["string", "null"], "$ref": "#/$defs/hex"},
         "irq": {"$ref": "#/$defs/irq"},
         "clocks": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
@@ -661,6 +666,8 @@
       },
       "allOf": [
         {"$ref": "#/$defs/supportRules"},
+        {"anyOf": [{"required": ["ip"]}, {"required": ["peripheral"]}],
+         "$comment": "message: an instance names an ip spec, a peripheral spec, or both"},
         {
           "if": {"anyOf": [
             {"required": ["reg"], "properties": {"reg": {"type": "null"}}},

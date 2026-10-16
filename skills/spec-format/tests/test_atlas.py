@@ -234,3 +234,22 @@ class AtlasPeripherals(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PageScript(unittest.TestCase):
+    """atlas.js has no browser test; these read its source for the row-TODO contract."""
+
+    JS = (HERE.parent / 'scripts' / 'atlas.js').read_text()
+
+    def test_every_view_of_a_fact_todo_also_shows_its_row_todos(self):
+        lines = self.JS.splitlines()
+        views = [i for i, line in enumerate(lines) if "f.todo.check || 'check'" in line]
+        self.assertGreaterEqual(len(views), 3)  # detail panel, open items, outline
+        for i in views:
+            near = '\n'.join(lines[i:i + 8])
+            self.assertIn('f.row_todos', near, f'atlas.js line {i + 1} shows f.todo only')
+
+    def test_search_reads_row_todo_text(self):
+        hay = re.search(r'const hay = \(([^\n]*)\)\.toLowerCase\(\);', self.JS)
+        self.assertIsNotNone(hay)
+        self.assertIn('f.row_todos', hay.group(1))

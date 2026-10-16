@@ -61,8 +61,8 @@ class OmissionMarker(Fixture):
         self.assertEqual(view.count(render_html.badge("todo", "verify on document")), 2)
         for text in (FACT_TEXT, ROW_TEXT):
             self.assertIn("<p>" + render_html.literal(text) + "</p>", view)
-        self.assertNotIn("&#x27;check&#x27;", view)
-        self.assertNotIn("'check'", view)
+        self.assertNotIn("<th>todo</th>", view)
+        self.assertNotIn("&quot;check&quot;", view)
 
     def test_open_questions_and_worklist_list_both(self):
         code, result = run("todo", self.root, "--check", "document")

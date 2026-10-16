@@ -4,6 +4,7 @@ format: 2
 kind: peripheral
 id: widget-peripheral
 name: Widget peripheral
+describes: [widget-soc]
 resources:
   documents:
     - {name: trm, class: databook, title: Widget TRM, url: https://example.invalid/widget-trm.pdf}

@@ -114,6 +114,14 @@ Use the spec as the map, not as a substitute for evidence when the question asks
 or disputed fact. Pin hardware, subsystem, build and the exact commit of every tree read.
 Vendor and mainline behavior can differ; state which you used.
 
+Answer from the spec when the value asked for is in a fact's claim or structured payload
+(register fields, sequence steps, layout fields). When the detail is not there, or a TODO on
+the fact or payload row says it was omitted (usually with `check: document`), open that
+record's cited locator (`support.at`: section, clause, page or pages, table, figure) and read
+those pages rather than searching the whole document. A missing omission marker is not proof
+of completeness: open the locator whenever the question needs a row, bit, condition or
+footnote the record does not state.
+
 Read files rather than answer addresses, interrupts or ordering from memory. Apply every bus
 `ranges` translation explicitly to obtain CPU-physical addresses. When cloning is impractical,
 fetch needed raw files at a full commit into the same cache, recording the commit. Follow

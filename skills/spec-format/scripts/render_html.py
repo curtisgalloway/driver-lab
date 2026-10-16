@@ -177,6 +177,14 @@ def verification(file, key, row, notes):
     return ''.join(out)
 
 
+def todo_badge(todo):
+    """A record's TODO, for a fact and for a payload row alike (an omission is one, issue 106)."""
+    text = badge('todo', 'verify on ' + todo['check']) + '<p>' + literal(todo['text']) + '</p>'
+    if 'method' in todo:
+        text += '<p>Method: ' + literal(todo['method']) + '</p>'
+    return text
+
+
 def fact(checker, rec, status, with_status):
     data, file = rec.data, rec.file
     out = ['<article class="fact" id="' + escape(rec.full, quote=True) + '"><header><h4>' +
@@ -209,10 +217,7 @@ def fact(checker, rec, status, with_status):
         a = file.data['assumptions'][file.assumptions[aid][1]]
         out.append(badge('assumes', 'assumes ' + aid) + '<p>' + literal(a['text']) + '</p>')
     if 'todo' in data:
-        todo = data['todo']
-        out.append(badge('todo', 'verify on ' + todo['check']) + '<p>' + literal(todo['text']) + '</p>')
-        if 'method' in todo:
-            out.append('<p>Method: ' + literal(todo['method']) + '</p>')
+        out.append(todo_badge(data['todo']))
     for key in ('requirement', 'assessment'):
         if key in data:
             out.append(badge(key, data[key]))
@@ -323,6 +328,8 @@ def payload(checker, rec, status, with_status):
         notes = []
         out.append('<div class="provenance">')
         out.append(support(checker, rec.file, row.get('support', []), notes))
+        if 'todo' in row:
+            out.append(todo_badge(row['todo']))
         requirement = row.get('requirement', rec.data.get('requirement'))
         if requirement:
             out.append(badge('requirement', requirement))

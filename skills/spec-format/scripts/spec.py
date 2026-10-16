@@ -23,6 +23,7 @@ spec.py cannot evaluate (there is no fallback parser), or a root has no board-sp
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import re
 import sys
@@ -268,11 +269,21 @@ def pinned_versions() -> dict[str, str]:
     return pins
 
 
+@functools.cache
+def _installed(dist: str) -> str | None:
+    """The installed version of `dist`, or None; cached because the lookup scans sys.path."""
+    import importlib.metadata
+
+    try:
+        return importlib.metadata.version(dist)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
 def check_dependencies() -> list[str]:
     """Problems with the pinned dependencies; empty when every pin that applies is installed
     at its version and the three direct ones import."""
     import importlib
-    import importlib.metadata
 
     try:
         pins = pinned_versions()
@@ -286,9 +297,8 @@ def check_dependencies() -> list[str]:
         if want is None:
             problems.append(f"{REQUIREMENTS.name} pins no version of {dist}")
             continue
-        try:
-            have = importlib.metadata.version(dist)
-        except importlib.metadata.PackageNotFoundError:
+        have = _installed(dist)
+        if have is None:
             problems.append(f"{dist} is not installed (pinned {want})")
             continue
         if have != want:
@@ -301,9 +311,8 @@ def check_dependencies() -> list[str]:
     for dist, want in sorted(pins.items()):
         if dist in DIRECT:
             continue
-        try:
-            have = importlib.metadata.version(dist)
-        except importlib.metadata.PackageNotFoundError:
+        have = _installed(dist)
+        if have is None:
             problems.append(f"{dist} is not installed (pinned {want})")
             continue
         if have != want:

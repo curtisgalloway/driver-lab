@@ -191,6 +191,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Delta verification | Re-reading the noncurrent facts and current critical facts missing a second reader, selected by `spec.py status --stale`. |
 | Contrary evidence / citation precision | A verdict's record of a search for conflicting evidence / whether the locator identifies the exact supporting passage; recorded as `contrary_evidence` and `citation_precision`, required on every verdict. |
 | Stub / Needs decision | A thin skill naming a spec and handing work to board-expert / the expert's report block returning unresolved choices to the orchestrator. |
+| Agent definition / expert agent | A Claude Code file (`agents/<name>.md`) that fixes a subagent's instructions, model and allowed tools / the plugin's `driver-porting:board-expert` agent, which runs the board-expert skill that way. Other harnesses use the skill alone. |
 | Cache / materialize | The user-chosen local copy of reference resources / fetch or reuse those resources at the identities the spec records. |
 | MMIO / DMA | Memory-mapped input/output registers / direct memory access by a device without a processor moving each byte. |
 | EL / MMU / MPIDR | Arm exception level, a privilege state / memory management unit translating addresses / multiprocessor identifier used to identify cores. |

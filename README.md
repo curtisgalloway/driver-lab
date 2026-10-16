@@ -134,6 +134,10 @@ and per-fact status; edit the YAML, then regenerate the views.
   or answered generically. Without a spec it investigates and suggests scaffolding.
   Its shipped `specs/` root is empty; published specs live in the separate
   spec repositories. It also ships the structured question catalog and vendor guide.
+  In Claude Code the plugin also installs a `driver-porting:board-expert` agent that runs the
+  skill in its own context, on Opus, with its file-editing tools removed and an instruction not
+  to edit specs; that is a guard, not a sandbox ([agents/board-expert.md](agents/board-expert.md)). Other harnesses run the skill in a
+  subagent the caller starts.
 - **`board-spec-scaffold`** creates board, SoC, chip or IP YAML from templates, with optional
   expert stubs, overlays, vendor tool skills and root markers. Its interview settles identity,
   placement and sources; optional research-fill returns fact records. Its verification phase

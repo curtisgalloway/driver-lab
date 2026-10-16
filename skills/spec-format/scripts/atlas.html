@@ -1,0 +1,98 @@
+<!-- SPDX-FileCopyrightText: 2026 contributors
+SPDX-License-Identifier: Apache-2.0 -->
+<div class="app">
+  <header class="mast">
+    <div class="mast-top">
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="title"></h1>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-tab="outline" aria-selected="true">Outline</button>
+      <button class="tab" role="tab" data-tab="graph" aria-selected="false">Graph</button>
+      <button class="tab" role="tab" data-tab="map" aria-selected="false">Memory map</button>
+      <button class="tab" role="tab" data-tab="coverage" aria-selected="false">Coverage</button>
+      <button class="tab" role="tab" data-tab="issues" aria-selected="false">Open items</button>
+      <button class="tab" role="tab" data-tab="about" aria-selected="false">About</button>
+      <button class="btn panel-toggle" id="panel-toggle" aria-pressed="true" title="Show or hide the details sidebar"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M10 2.5v11"/></svg><span>Hide details</span></button>
+    </nav>
+  </header>
+  <div class="body">
+    <main class="view" data-view="outline" id="view-outline">
+      <div class="toolbar">
+        <svg class="ficon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h12L9.5 8.5V13l-3 1.2V8.5z"/></svg>
+        <input type="search" id="q" placeholder="Search facts: uart, 0xfeb50000, boot order…" aria-label="Search facts" autocomplete="off">
+        <span class="count" id="q-count"></span>
+        <button class="toggle" id="f-crit" aria-pressed="false">◆ Critical</button>
+        <button class="toggle" id="f-gap" aria-pressed="false">Gaps</button>
+        <button class="toggle" id="f-todo" aria-pressed="false">Open checks</button>
+        <span class="seg" id="f-root"></span>
+        <button class="btn" id="expand">Open all</button>
+        <button class="btn" id="collapse">Collapse all</button>
+      </div>
+      <div class="tree" id="tree"><noscript><p class="empty">The atlas needs JavaScript. The spec viewer (render --format html) shows the same facts without it.</p></noscript></div>
+      <div class="empty" id="tree-empty" hidden>No fact matches these filters.</div>
+    </main>
+    <main class="view" data-view="graph" id="view-graph" hidden>
+      <svg id="graph-svg" role="img" aria-label="Graph of the specs and the fact links between them"></svg>
+      <div class="overlay g-tools">
+        <div class="legend-row" id="g-filters">
+          <svg class="ficon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><title>Filter</title><path d="M2 3h12L9.5 8.5V13l-3 1.2V8.5z"/></svg>
+          <span id="g-kinds" class="legend-row"></span>
+          <span class="fsep"></span>
+          <button class="toggle" data-f="struct" aria-pressed="true">Structure</button>
+          <button class="toggle" data-f="relates" aria-pressed="true">Fact links</button>
+          <span class="fsep"></span>
+          <button class="btn" id="g-fit">Fit</button>
+        </div>
+      </div>
+      <div class="overlay g-legend">
+        <div class="legend-row" id="g-legend-kinds"></div>
+        <div class="legend-row">
+          <span class="sw">ring: <i style="background:var(--pass)"></i>verified <i style="background:var(--gap)"></i>gap <i style="background:var(--fail)"></i>fail</span>
+          <span class="sw"><s style="border-color:var(--ink)"></s>part / instance</span>
+          <span class="sw"><s style="border-color:var(--rel-refines);border-top-width:3px"></s>fact links (width = count)</span>
+        </div>
+      </div>
+    </main>
+    <main class="view" data-view="map" id="view-map" hidden><div class="mm-wrap" id="mm"></div></main>
+    <main class="view" data-view="coverage" id="view-coverage" hidden><div id="cov"></div></main>
+    <main class="view" data-view="issues" id="view-issues" hidden><div class="iss" id="iss"></div></main>
+    <main class="view" data-view="about" id="view-about" hidden>
+      <article class="about">
+        <h2>How this works</h2>
+        <p class="lede">A spec is a set of short, cited claims about a piece of hardware: where the debug console is, how the boot ROM picks a boot device, which address and interrupt a block uses. An agent writing a driver reads the spec instead of digging through vendor source.</p>
+        <ol class="steps">
+          <li><b>Specs are YAML, one per part.</b> A board spec names its parts (an SoC, companion chips). Peripheral specs cover how to program one block, and IP specs describe a block design used in several chips. Each fact is one claim with a <code>support</code> list naming its evidence: a document page, device-tree or source lines at a pinned commit, a standard, or a labeled inference.</li>
+          <li><b>Roots and licenses.</b> Specs live in roots, each with its own license. A root built only from public documents can be used by anyone; a root that cites GPL source is GPL like that source. An overlay in one root adds facts to a spec in another. This page combines the roots listed below, and the root tag on each fact says where it came from.</li>
+          <li><b>Every fact is verified separately.</b> A verifier agent reads each fact in a fresh context, opens the cited evidence and records a verdict in a separate <code>.verify.yaml</code> file. <span class="pill PASS">PASS</span> means the evidence supports the claim. <span class="pill GAP">GAP</span> means no source read so far states it, and it names the check that would settle it. <span class="pill FAIL">FAIL</span> means the evidence disagrees with the claim, and an author has to fix it. A verdict goes <span class="stale">stale</span> when the fact or its evidence changes afterward.</li>
+          <li><b>Facts link across specs.</b> A board fact can <em>refine</em> a SoC fact, <em>qualify</em> it with a condition, or say the <em>same</em> thing from another source. These links are the lines in the Graph view.</li>
+          <li><b>The main test is a rebuilt driver.</b> A driver written from a spec alone is run side by side with the original driver against the same device, and their behavior is compared. Verification shows that the citations hold. The rebuilt driver shows whether the spec is complete enough to use.</li>
+        </ol>
+        <h3>The views</h3>
+        <dl class="kv about-kv">
+          <dt>Outline</dt><dd>The spec → its parts, peripherals and IP blocks → sections → facts. Opening a fact loads it in the sidebar.</dd>
+          <dt>Graph</dt><dd>One node per spec, sized by fact count, ringed by verification state. Dark lines show which spec contains which. Colored curves are fact links, wider for more links. Click a node to list its facts.</dd>
+          <dt>Memory map</dt><dd>Instances that have a recorded base address, with interrupts, clocks and the facts that cite each address.</dd>
+          <dt>Coverage</dt><dd>One square per fact, by spec and section. Hover a legend item for its meaning.</dd>
+          <dt>Open items</dt><dd>Failures, gaps, stale verdicts, outstanding bench and reading checks, and what this page cannot show.</dd>
+        </dl>
+        <h3>Roots on this page</h3>
+        <dl class="kv about-kv" id="about-roots"></dl>
+        <h3>Documentation</h3>
+        <ul class="links">
+          <li><a href="https://github.com/curtisgalloway/driver-lab" target="_blank" rel="noopener">driver-lab</a>: the skills that write, check and verify specs</li>
+          <li><a href="https://github.com/curtisgalloway/driver-lab/blob/main/docs/HOW-IT-WORKS.md" target="_blank" rel="noopener">How it works</a>: a one-page overview of the system and its quality checks</li>
+          <li><a href="https://github.com/curtisgalloway/driver-lab/blob/main/skills/board-expert/SPEC-FORMAT.md" target="_blank" rel="noopener">Spec format</a>: the YAML fields shown here</li>
+          <li><a href="https://github.com/curtisgalloway/driver-lab/blob/main/skills/spec-verifier/SKILL.md" target="_blank" rel="noopener">Spec verifier</a>: how verdicts are reached</li>
+          <li><a href="https://github.com/curtisgalloway/driver-lab/blob/main/GLOSSARY.md" target="_blank" rel="noopener">Glossary</a>: the terms used on this page</li>
+        </ul>
+        <p class="snap mono" id="about-snap"></p>
+      </article>
+    </main>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>

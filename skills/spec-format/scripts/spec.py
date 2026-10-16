@@ -66,7 +66,7 @@ description: Drive spec.py, the spec format tool (validate a file against its sc
         [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
         [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
-        [--tool-commit <40-hex>] --format md|html [--json]
+        [--tool-commit <40-hex>] --format md|html|atlas [--json]
     python3 skills/spec-format/scripts/spec.py resolve <file>... [--repo NAME=CHECKOUT]...
         [--docs-dir DIR] [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
     python3 skills/spec-format/scripts/spec.py show <file>... [resolver options]
@@ -217,6 +217,12 @@ checked file gets its own view. Errors print diagnostics instead of a partial vi
 returns `{"ok", "markdown", "findings"}` for md or `{"ok", "html", "findings"}` for html
 (the view is null on error). HTML renders author CommonMark separately in each field with raw
 HTML disabled, images as links and checked hrefs only. Only structured fields produce badges.
+`--format atlas` (atlas.py) needs `--spec ID` and emits one self-contained page centered on that
+spec: it adds the closure of its `parts`, every spec one fact link away from the spec or a part,
+and the IP specs those specs' instances name, and shows them as an outline, a spec graph, a memory map of instance base addresses, a
+verification coverage grid and a list of open items. Its `--json` key is `html`; `--with-status` has no effect, since the
+atlas always shows verdicts. Author text uses the viewer's renderer; the page loads nothing from
+elsewhere.
 The reusable publishing workflow and local build/verify helper live under `spec-format/ci/`.
 """
 
@@ -1035,7 +1041,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="ROOT=SHA, once per rendered root (roots holding a selected spec; "
                          "context roots only under --merged); bare SHA only with one root")
     rd.add_argument("--tool-commit", type=commit_arg, help="driver-lab commit (40 lowercase hex)")
-    rd.add_argument("--format", required=True, choices=("md", "html"))
+    rd.add_argument("--format", required=True, choices=("md", "html", "atlas"),
+                    help="md: Markdown view; html: the viewer; atlas: the board atlas page "
+                         "(needs --spec)")
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
     resolve.register(sub)
     drift.register(sub)
@@ -1074,8 +1082,8 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     want_json = any(a == "--json" or a.startswith("--json=") for a in argv)
     command = next((a for a in argv if not a.startswith("-")), None)
-    render_format = "html" if ("--format=html" in argv or any(
-        a == "--format" and argv[i + 1:i + 2] == ["html"] for i, a in enumerate(argv))) else "md"
+    render_format = "html" if any(f"--format={k}" in argv for k in ("html", "atlas")) or any(
+        a == "--format" and argv[i + 1:i + 2] in (["html"], ["atlas"]) for i, a in enumerate(argv)) else "md"
     parser = build_parser()
 
     def fail(kind: str, code: int, messages: list[str], hint: str = "") -> int:
@@ -1120,10 +1128,15 @@ def main(argv: list[str] | None = None) -> int:
         import render_md
         import render_html
 
+        def renderer(fmt):
+            if fmt == "atlas":
+                import atlas
+                return atlas
+            return render_html if fmt == "html" else render_md
+
         handler = getattr(args, "handler", None) or {
             "check": cmd_check, "status": cmd_status, "todo": cmd_todo, "validate": cmd_validate,
-            "render": lambda a: (render_html if a.format == "html" else render_md).command(
-                sys.modules[__name__], a)}[args.command]
+            "render": lambda a: renderer(a.format).command(sys.modules[__name__], a)}[args.command]
         code, result = handler(args)
     except Usage as exc:
         return fail("usage", EXIT_USAGE, [str(exc)])

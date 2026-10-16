@@ -175,6 +175,19 @@ inherit the parent's requirement unless they override it. Independently supporte
 fields and sequence steps get verdict sub-keys `fact-id.sub-id`; otherwise the parent's
 verdict covers them. A changed independent child does not stale unrelated children.
 
+**Authoring rule (D31, D32)**: do not copy a fact that a canonical source already gives. A
+canonical source is machine-readable, pinned and efficient to use, and your readers may use it
+under their root's license (a register database, an IP-XACT or SVD file, a device tree
+binding, a header). Cite it, and record only what it lacks: citations, the
+`requirement`, verdict-relevant notes, `todo`s, sequences that point at it, and `conflicts`
+where the documentation and the source disagree. A fact from a source the reader cannot be
+pointed to (its license is outside the root's, or it is private) is a stand-in and stays, with
+its citations; so does a reading of driver code and a summary that saves the reader the cost of
+reading a long document. A fact whose only support is a usable canonical source is a
+duplicate, which the verifier fails. Until the format has a reference for that source, strip the
+fact to what the source lacks or leave it out. See
+[SPEC-FORMAT](../../docs/SPEC-FORMAT.md#what-a-spec-holds-d31).
+
 Inference is its own fact with premises and derivation, alone in support, plus a `todo`.
 A gap omits support and carries `todo: {check, text}` and an observable `method` when needed.
 Do not replace unsupported values with invented ones. Rendered hardware and open-question

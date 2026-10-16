@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Precise payloads, units 1 and 2.
+"""Precise payloads, units 1 to 3.
 
 Unit 1: IP-XACT field properties, registries, arrays, register files. Unit 2: layout fields
-with bits, byte order and bit numbering, and enumerated values on them.
+with bits, byte order and bit numbering, and enumerated values on them. Unit 3: quantities
+(`data.quantity` and a step's timeout, interval and duration) and sequence steps with an op.
 
 Schema refusals, one checker test per rule of the design's "Checks" paragraph, and the
 basis: registry entries a record names join its basis, and a record that names none keeps
@@ -972,6 +973,540 @@ def _args(root):
 
     return types.SimpleNamespace(roots=[root], context_root=[], require_license=False,
                                  public_skill=[])
+
+
+class SeqFixture(Fixture):
+    """The synthetic start sequence: a step per op, the registers and interrupt it names."""
+
+    def setUp(self):
+        super().setUp()
+        self.file = self.root / "sequence.spec.yaml"
+        self.data = specload.load_strict(FIX / "sequence.spec.yaml")
+
+    def step(self, sid):
+        steps = self.fact("seq-start")["data"]["sequence"]["steps"]
+        return next(s for s in steps if s["id"] == sid)
+
+    def quantity(self):
+        return self.fact("lim-idle-timer")["data"]["quantity"]
+
+    def accepts(self):
+        code, result = self.check()
+        self.assertEqual(code, 0, result)
+
+    def basis(self, key):
+        return self.bases()[key]["basis"]
+
+    def verify_rows(self):
+        self.write()
+        checker = spec._run_check(_args(self.root))
+        self.assertTrue(checker.files, checker.findings)
+        file = next(f for f in checker.files if f.data.get("id") == "sequence")
+        return {v["fact"]: v["text"] for v in peripheral.generated(file)["verify"]}
+
+
+class SeqClean(SeqFixture):
+    def test_the_sequence_fixture_checks_clean(self):
+        self.accepted()
+
+
+class SeqSchema(SeqFixture):
+    def refused(self, sid, text, **change):
+        """Set or (None) remove keys on a step, and expect a schema refusal."""
+        step = self.step(sid)
+        for key, value in change.items():
+            if value is None:
+                step.pop(key, None)
+            else:
+                step[key] = value
+        self.invalid(text, schema=True)
+
+    def test_op_and_action_together(self):
+        self.refused("enable", "has no action", action="Set the enable bit.")
+
+    def test_neither_op_nor_action(self):
+        self.refused("report", "'action' is a required property", action=None)
+
+    def test_target_on_a_step_without_op(self):
+        self.refused("report", "belong to a step with op", target="#reg-ctrl")
+
+    def test_each_op_needs_its_required_key(self):
+        for sid, key in (("set-mode", "value"), ("set-mode", "target"),
+                         ("enable", "target"), ("read-ctrl", "target"),
+                         ("wait-ready", "until"), ("wait-ready", "target"),
+                         ("settle", "duration"), ("wait-done", "target")):
+            with self.subTest(step=sid, missing=key):
+                self.setUp()
+                self.refused(sid, "needs", **{key: None})
+
+    def test_a_clear_bits_step_needs_a_target(self):
+        self.refused("clear-low", "a clearBits step needs target", target=None)
+
+    def test_a_key_the_op_does_not_take(self):
+        for sid, key, value in (
+                ("set-mode", "until", {"equals": "0x1"}),
+                ("read-ctrl", "timeout", {"unit": "ms", "max": 1}),
+                ("set-mode", "mask", "0x1"),
+                ("settle", "target", "#reg-ctrl"),
+                ("enable", "value", "0x1"),
+                ("wait-done", "mask", "0x1"),
+                ("wait-done", "until", {"equals": "0x1"}),
+                ("wait-ready", "duration", {"unit": "ms", "max": 1}),
+                ("wait-ready", "value", "0x1"),
+                ("clear-low", "value", "0x1")):
+            with self.subTest(step=sid, key=key):
+                self.setUp()
+                self.refused(sid, "takes only", **{key: value})
+
+    def test_a_step_that_is_not_a_mapping_draws_one_error(self):
+        steps = self.fact("seq-start")["data"]["sequence"]["steps"]
+        steps.insert(0, "x")
+        self.write()
+        code, result = run("validate", self.file)
+        self.assertEqual(code, 1, result)
+        errors = [f["message"] for f in result["findings"] if f.get("level", "error") == "error"]
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("is not of type 'object'", errors[0])
+
+    def test_a_poll_without_a_timeout_or_todo(self):
+        self.step("wait-idle").pop("todo")
+        self.invalid("needs a timeout, or a todo saying the source gives none (#105)",
+                     schema=True)
+
+    def test_a_wait_interrupt_without_a_timeout_or_todo(self):
+        step = self.step("wait-done")
+        del step["timeout"], step["onTimeout"]
+        self.invalid("needs a timeout, or a todo saying the source gives none (#105)",
+                     schema=True)
+
+    def test_a_poll_with_a_todo_instead_of_a_timeout_is_accepted(self):
+        self.accepts()
+
+    def test_on_timeout_without_a_timeout(self):
+        step = self.step("wait-idle")
+        step["onTimeout"] = "fail"
+        self.invalid("onTimeout needs a timeout", schema=True)
+
+    def test_until_with_two_keys(self):
+        self.step("wait-ready")["until"] = {"equals": "0x1", "bitsSet": "0x1"}
+        self.invalid("exactly one of equals, bitsSet or bitsClear", schema=True)
+
+    def test_until_with_no_key(self):
+        self.step("wait-ready")["until"] = {}
+        self.invalid("exactly one of equals, bitsSet or bitsClear", schema=True)
+
+    def test_a_quantity_with_no_level(self):
+        self.fact("lim-idle-timer")["data"]["quantity"] = {"unit": "s"}
+        self.invalid("a quantity needs a unit and at least one of min, nom, typ, max",
+                     schema=True)
+
+    def test_a_step_quantity_with_no_level(self):
+        self.step("settle")["duration"] = {"unit": "us"}
+        self.invalid("a quantity needs a unit and at least one of", schema=True)
+
+    def test_an_unknown_unit(self):
+        self.quantity()["unit"] = "sec"
+        self.invalid("'sec' is not one of", schema=True)
+
+    def test_a_float_level(self):
+        self.quantity()["max"] = 90.5
+        self.invalid("is not of type 'integer'", schema=True)
+
+    def test_a_negative_level_is_accepted_on_a_temperature(self):
+        self.fact("lim-idle-timer")["data"]["quantity"] = {"unit": "Cel", "min": -40, "max": 85}
+        self.accepts()
+
+    def test_a_timeout_in_hertz(self):
+        self.step("wait-ready")["timeout"] = {"unit": "Hz", "max": 10}
+        self.invalid("are times: unit s, ms, us, ns, min or h", schema=True)
+
+    def test_a_negative_timeout(self):
+        self.step("wait-ready")["timeout"] = {"unit": "ms", "min": -1, "max": 10}
+        self.invalid("no level below 0", schema=True)
+
+    def test_a_quantity_beside_a_register(self):
+        self.fact("reg-status")["data"]["quantity"] = {"unit": "s", "max": 1}
+        self.invalid("is valid under each of", schema=True)
+
+    def test_a_quantity_fact_still_needs_its_claim(self):
+        del self.fact("lim-idle-timer")["claim"]
+        self.invalid("'claim' is a required property", schema=True)
+
+    def test_a_target_with_a_spec_prefix(self):
+        self.step("enable")["target"] = "other#reg-ctrl"
+        self.invalid("a step target is #<fact id> or #<fact id>.<field id>", schema=True)
+
+    def test_an_unknown_op(self):
+        self.step("enable")["op"] = "toggle"
+        self.invalid("is not one of", schema=True)
+
+    def test_a_numeric_value(self):
+        self.step("set-mode")["value"] = 1
+        self.invalid("expected string", schema=True)
+
+    def test_a_numeric_mask(self):
+        self.step("clear-low")["mask"] = 240
+        self.invalid("expected string", schema=True)
+
+
+class SeqQuantity(SeqFixture):
+    def test_each_ordered_pair(self):
+        for levels, text in (
+                ({"min": 90, "nom": 60}, "min 90 is above nom 60"),
+                ({"nom": 90, "max": 60}, "nom 90 is above max 60"),
+                ({"min": 90, "max": 60}, "min 90 is above max 60"),
+                ({"min": 90, "typ": 60}, "min 90 is above typ 60"),
+                ({"typ": 90, "max": 60}, "typ 90 is above max 60")):
+            with self.subTest(text=text):
+                self.setUp()
+                self.fact("lim-idle-timer")["data"]["quantity"] = dict(levels, unit="s")
+                self.invalid(text)
+
+    def test_every_violated_pair_is_reported(self):
+        self.fact("lim-idle-timer")["data"]["quantity"] = {
+            "unit": "s", "min": 90, "nom": 60, "max": 30}
+        self.write()
+        code, result = run("check", self.root)
+        self.assertEqual(code, 1, result)
+        messages = [f["message"] for f in result["findings"]]
+        for text in ("min 90 is above nom 60", "nom 60 is above max 30",
+                     "min 90 is above max 30"):
+            self.assertTrue(any(text in m for m in messages), messages)
+
+    def test_a_step_quantity_is_checked(self):
+        self.step("wait-ready")["timeout"] = {"unit": "ms", "min": 20, "max": 10}
+        self.invalid("min 20 is above max 10")
+
+    def test_an_interval_and_a_duration_are_checked(self):
+        self.step("wait-ready")["interval"] = {"unit": "us", "nom": 10, "max": 5}
+        self.invalid("nom 10 is above max 5")
+        self.setUp()
+        self.step("settle")["duration"] = {"unit": "us", "typ": 5, "max": 1}
+        self.invalid("typ 5 is above max 1")
+
+    def test_equal_levels_are_accepted(self):
+        self.fact("lim-idle-timer")["data"]["quantity"] = {
+            "unit": "s", "min": 60, "nom": 60, "typ": 60, "max": 60}
+        self.accepts()
+
+    def test_the_error_is_at_the_quantity(self):
+        self.fact("lim-idle-timer")["data"]["quantity"] = {"unit": "s", "min": 9, "max": 1}
+        self.write()
+        code, result = run("check", self.root)
+        self.assertEqual(code, 1, result)
+        found = [f for f in result["findings"] if "is above" in f["message"]]
+        self.assertEqual(len(found), 1, result)
+        line = self.file.read_text(encoding="utf-8").splitlines()[found[0]["line"] - 1]
+        self.assertIn("unit: s", line)
+
+
+class SeqTargets(SeqFixture):
+    def test_a_target_naming_no_fact(self):
+        self.step("read-ctrl")["target"] = "#reg-nope"
+        self.invalid("target '#reg-nope' names no register fact of this file")
+
+    def test_a_target_naming_a_fact_with_no_register(self):
+        self.step("read-ctrl")["target"] = "#irq-done"
+        self.invalid("target '#irq-done' names no register fact of this file")
+
+    def test_a_target_naming_no_field(self):
+        self.step("enable")["target"] = "#reg-ctrl.nope"
+        self.invalid("target '#reg-ctrl.nope' names no field of register fact 'reg-ctrl'")
+
+    def test_a_wait_interrupt_on_a_register_fact(self):
+        self.step("wait-done")["target"] = "#reg-ctrl"
+        self.invalid("waitInterrupt target '#reg-ctrl' names no interrupts fact of this file")
+
+    def test_a_wait_interrupt_with_a_field_part(self):
+        self.step("wait-done")["target"] = "#irq-done.bit"
+        self.invalid("waitInterrupt target '#irq-done.bit' names no interrupts fact")
+
+    def test_a_wait_interrupt_on_no_fact(self):
+        self.step("wait-done")["target"] = "#irq-nope"
+        self.invalid("waitInterrupt target '#irq-nope' names no interrupts fact")
+
+    def test_a_bad_target_skips_the_other_checks(self):
+        step = self.step("set-mode")
+        step["target"] = "#reg-nope"
+        step["value"] = "0x01"
+        self.write()
+        code, result = run("check", self.root)
+        self.assertEqual(code, 1, result)
+        messages = [f["message"] for f in result["findings"]]
+        self.assertFalse(any("canonical" in m for m in messages), messages)
+
+    def test_targets_are_not_fact_references(self):
+        self.write()
+        code, result = run("status", self.root)
+        self.assertEqual(code, 0, result)
+        fact = next(r for s in result["specs"] for r in s["facts"] if r["key"] == "seq-start")
+        self.assertNotIn("irq-done", json.dumps(fact.get("references", [])))
+
+
+class SeqValues(SeqFixture):
+    def test_a_non_canonical_hex_value(self):
+        self.step("set-mode")["value"] = "0x01"
+        self.invalid("value '0x01' is not canonical hex (D6)")
+
+    def test_a_non_canonical_equals(self):
+        self.step("wait-ready")["until"] = {"equals": "0xA"}
+        self.invalid("value '0xA' is not canonical hex (D6)")
+
+    def test_a_value_wider_than_the_field(self):
+        self.step("set-mode")["value"] = "0x4"
+        self.invalid("value 0x4 does not fit the 2-bit field '#reg-ctrl.mode'")
+
+    def test_the_largest_value_that_fits_the_field(self):
+        self.step("set-mode")["value"] = "0x3"
+        self.accepts()
+
+    def test_a_value_wider_than_the_register(self):
+        step = self.step("read-ctrl")
+        del step["target"]
+        step.update(op="write", target="#reg-ctrl", value="0x100000000")
+        self.invalid("value 0x100000000 does not fit the 32-bit register '#reg-ctrl'")
+
+    def test_the_largest_value_that_fits_the_register(self):
+        step = self.step("read-ctrl")
+        step.update(op="write", target="#reg-ctrl", value="0xffffffff")
+        self.accepts()
+
+    def test_an_equals_wider_than_its_field(self):
+        self.step("wait-ready")["until"] = {"equals": "0x2"}
+        self.invalid("value 0x2 does not fit the 1-bit field '#reg-status.ready'")
+
+    def test_a_name_not_in_the_table(self):
+        self.step("set-mode")["value"] = "fast"
+        self.invalid("value 'fast' is not an enumerated value of '#reg-ctrl.mode'")
+
+    def test_a_name_from_a_shared_table(self):
+        self.data["enumerationDefinitions"] = [{
+            "name": "speeds",
+            "enumeratedValues": [{"name": "fast", "value": "0x1"}],
+            "support": [{"class": "databook", "doc": "guide", "at": [{"page": "12"}]}]}]
+        field = next(f for f in self.fact("reg-ctrl")["data"]["fields"] if f["id"] == "mode")
+        del field["enumeratedValues"]
+        field["enumerationDefinitionRef"] = "speeds"
+        self.step("set-mode")["value"] = "fast"
+        self.accepts()
+        self.setUp()
+        self.data["enumerationDefinitions"] = [{
+            "name": "speeds",
+            "enumeratedValues": [{"name": "fast", "value": "0x1"}],
+            "support": [{"class": "databook", "doc": "guide", "at": [{"page": "12"}]}]}]
+        field = next(f for f in self.fact("reg-ctrl")["data"]["fields"] if f["id"] == "mode")
+        del field["enumeratedValues"]
+        field["enumerationDefinitionRef"] = "speeds"
+        self.step("set-mode")["value"] = "slow"
+        self.invalid("value 'slow' is not an enumerated value of '#reg-ctrl.mode'")
+
+    def test_a_name_on_a_register_target(self):
+        step = self.step("read-ctrl")
+        step.update(op="write", value="run")
+        self.invalid("value 'run' is not an enumerated value of '#reg-ctrl'")
+
+    def test_a_write_of_a_read_meaning(self):
+        self.step("set-mode")["value"] = "busy"
+        self.invalid("'busy' is a read meaning of '#reg-ctrl.mode'; a write needs a write or "
+                     "read-write value")
+
+    def test_a_write_of_a_write_meaning_is_accepted(self):
+        self.step("set-mode")["value"] = "stop"
+        self.accepts()
+
+    def test_a_poll_for_a_write_meaning(self):
+        step = self.step("wait-ready")
+        step.update(target="#reg-ctrl.mode", until={"equals": "stop"})
+        self.invalid("'stop' is a write meaning of '#reg-ctrl.mode'; a poll compares a read "
+                     "value")
+
+    def test_a_poll_for_a_read_meaning_is_accepted(self):
+        step = self.step("wait-ready")
+        step.update(target="#reg-ctrl.mode", until={"equals": "busy"})
+        self.accepts()
+
+
+class SeqMasks(SeqFixture):
+    def test_a_mask_wider_than_the_register(self):
+        self.step("clear-low")["mask"] = "0x100000000"
+        self.invalid("mask 0x100000000 does not fit the 32-bit register '#reg-ctrl'")
+
+    def test_the_largest_mask_that_fits(self):
+        self.step("clear-low")["mask"] = "0xffffffff"
+        self.accepts()
+
+    def test_bits_set_wider_than_the_field(self):
+        self.step("wait-ready")["until"] = {"bitsSet": "0x2"}
+        self.invalid("mask 0x2 does not fit the 1-bit field '#reg-status.ready'")
+
+    def test_bits_clear_wider_than_the_register(self):
+        self.step("wait-idle")["until"] = {"bitsClear": "0x100000000"}
+        self.invalid("mask 0x100000000 does not fit the 32-bit register '#reg-status'")
+
+    def test_set_bits_on_a_register_without_a_mask(self):
+        step = self.step("clear-low")
+        del step["mask"]
+        self.invalid("clearBits on register '#reg-ctrl' needs a mask, or name a field")
+
+    def test_a_mask_on_a_field_target(self):
+        self.step("enable")["mask"] = "0x1"
+        self.invalid("mask is for a register target; '#reg-ctrl.en' is a field")
+
+
+class SeqOnTimeout(SeqFixture):
+    def test_on_timeout_naming_no_step(self):
+        self.step("wait-done")["onTimeout"] = "nowhere"
+        self.invalid("onTimeout 'nowhere' names no step of this sequence")
+
+    def test_on_timeout_naming_a_step_is_accepted(self):
+        self.step("wait-done")["onTimeout"] = "set-mode"
+        self.accepts()
+
+    def test_fail_is_accepted(self):
+        self.step("wait-done")["onTimeout"] = "fail"
+        self.accepts()
+
+
+class SeqText(SeqFixture):
+    def test_quantity_text(self):
+        self.assertEqual(peripheral.quantity_text({"unit": "ms", "max": 10}), "max 10 ms")
+        self.assertEqual(peripheral.quantity_text(
+            {"unit": "s", "nom": 60, "min": 60, "max": 90}), "min 60 s, nom 60 s, max 90 s")
+        self.assertEqual(peripheral.quantity_text(
+            {"unit": "V", "max": 5, "typ": 3, "min": 1, "nom": 2}),
+            "min 1 V, nom 2 V, typ 3 V, max 5 V")
+
+    def test_step_text_of_every_op(self):
+        text = {sid: peripheral.step_text(self.step(sid)) for sid in (
+            "enable", "set-mode", "clear-low", "read-ctrl", "wait-ready", "settle",
+            "wait-done", "report", "wait-idle")}
+        self.assertEqual(text, {
+            "enable": "Set #reg-ctrl.en.",
+            "set-mode": "Write run to #reg-ctrl.mode.",
+            "clear-low": "Clear bits 0xf0 of #reg-ctrl.",
+            "read-ctrl": "Read #reg-ctrl.",
+            "wait-ready": "Poll #reg-status.ready until it equals 0x1, every nom 10 us; "
+                          "timeout max 10 ms; on timeout, fail.",
+            "settle": "Wait min 50 us.",
+            "wait-done": "Wait for interrupt #irq-done; timeout max 1 s; "
+                         "on timeout, go to step enable.",
+            "report": "Report the result to the caller.",
+            "wait-idle": "Poll #reg-status until bits 0x1 are clear.",
+        })
+
+    def test_the_other_forms(self):
+        text = peripheral.step_text
+        self.assertEqual(text({"id": "a", "op": "clearBits", "target": "#r.f"}), "Clear #r.f.")
+        self.assertEqual(text({"id": "a", "op": "setBits", "target": "#r", "mask": "0x3"}),
+                         "Set bits 0x3 of #r.")
+        self.assertEqual(text({"id": "a", "op": "poll", "target": "#r",
+                               "until": {"bitsSet": "0x4"}}), "Poll #r until bits 0x4 are set.")
+        self.assertEqual(text({"id": "a", "op": "waitInterrupt", "target": "#i"}),
+                         "Wait for interrupt #i.")
+
+    def test_the_verify_text_of_an_op_step_is_its_step_text(self):
+        self.step("wait-ready")["requirement"] = "as-implemented"
+        rows = self.verify_rows()
+        self.assertEqual(rows["seq-start.wait-ready"],
+                         peripheral.step_text(self.step("wait-ready")))
+
+    def test_an_action_step_is_byte_identical(self):
+        self.step("report")["requirement"] = "as-implemented"
+        rows = self.verify_rows()
+        self.assertEqual(rows["seq-start.report"], "Report the result to the caller.")
+
+
+class SeqBasis(SeqFixture):
+    def test_a_supported_steps_timeout_changes_only_its_own_basis(self):
+        parent, child = self.basis("seq-start"), self.basis("seq-start.wait-ready")
+        self.step("wait-ready")["timeout"] = {"unit": "ms", "max": 20}
+        self.assertEqual(self.basis("seq-start"), parent)
+        self.assertNotEqual(self.basis("seq-start.wait-ready"), child)
+
+    def test_an_unsupported_steps_timeout_changes_the_parent(self):
+        parent, child = self.basis("seq-start"), self.basis("seq-start.wait-ready")
+        self.step("wait-done")["timeout"] = {"unit": "s", "max": 2}
+        self.assertNotEqual(self.basis("seq-start"), parent)
+        self.assertEqual(self.basis("seq-start.wait-ready"), child)
+
+    def test_a_quantity_changes_its_facts_basis(self):
+        before = self.basis("lim-idle-timer")
+        self.quantity()["max"] = 120
+        self.assertNotEqual(self.basis("lim-idle-timer"), before)
+
+
+
+class SeqRender(SeqFixture):
+    """Op steps and quantities in both views, and nothing else changes."""
+
+    OP_STEPS = ("enable", "set-mode", "clear-low", "read-ctrl", "wait-ready", "settle",
+                "wait-done", "wait-idle")
+
+    def views(self):
+        self.write()
+        checker = spec._run_check(_args(self.root))
+        self.assertTrue(checker.files, checker.findings)
+        return render_md.render(checker), render_html.render(checker)
+
+    def test_every_op_step_shows_its_english(self):
+        md, html = self.views()
+        for sid in self.OP_STEPS:
+            english = peripheral.step_text(self.step(sid))
+            self.assertIn("- step (generated): " + render_md.escape(english) + "\n", md, sid)
+            self.assertIn("<td>" + render_html.literal(english) + "</td>", html, sid)
+        self.assertIn("<th>step (generated)</th>", html)
+
+    def test_the_action_step_keeps_its_action(self):
+        md, html = self.views()
+        self.assertIn("- action: Report the result to the caller\\.\n", md)
+        self.assertIn("<th>action</th>", html)
+        self.assertIn("<td>Report the result to the caller.</td>", html)
+
+    def test_the_quantity_line(self):
+        md, html = self.views()
+        line = peripheral.quantity_text(self.quantity())
+        self.assertEqual(line, "min 60 s, nom 60 s, max 90 s")
+        self.assertIn("\nQuantity (generated): " + render_md.escape(line) + ".\n", md)
+        self.assertIn("<p>Quantity (generated): " + line + ".</p>", html)
+
+    def test_no_json_dumps_and_no_operation_keys_listed(self):
+        md, html = self.views()
+        for view in (md, html):
+            self.assertNotIn('"unit"', view)
+            self.assertNotIn("&quot;unit&quot;", view)
+            self.assertNotIn("bitsClear", view)
+        for key in ("op", "target", "until", "timeout", "interval", "duration", "onTimeout"):
+            self.assertNotIn("- " + key + ":", md)
+            self.assertNotIn("<th>" + key + "</th>", html)
+
+    def test_metacharacters_in_a_value_name_are_escaped(self):
+        bad = "a<b>*c*"
+        table = self.field("reg-ctrl", "mode")["enumeratedValues"]
+        next(e for e in table if e["name"] == "run")["name"] = bad
+        self.step("set-mode")["value"] = bad
+        md, html = self.views()
+        english = peripheral.step_text(self.step("set-mode"))
+        self.assertIn("- step (generated): " + render_md.escape(english) + "\n", md)
+        self.assertNotIn("a<b>*c*", re.sub(r"`[^`]*`", "", md))
+        self.assertIn("a&lt;b&gt;*c*", html)
+        self.assertNotIn("a<b>", html)
+
+    def test_the_verify_list_uses_the_english(self):
+        self.step("wait-ready")["requirement"] = "as-implemented"
+        md, _ = self.views()
+        english = peripheral.step_text(self.step("wait-ready"))
+        self.assertIn("Verify on hardware", md)
+        self.assertIn("- `seq-start.wait-ready`: " + render_md.escape(english) + "\n", md)
+
+    def test_the_commands_run(self):
+        self.write()
+        for command in (("check",), ("render", "--format", "md"),
+                        ("render", "--format", "html"),
+                        ("render", "--format", "md", "--with-status"),
+                        ("render", "--format", "html", "--with-status"),
+                        ("render", "--format", "atlas", "--spec", "sequence")):
+            code, result = run(command[0], self.root, *command[1:])
+            self.assertEqual(code, 0, (command, result))
 
 
 if __name__ == "__main__":

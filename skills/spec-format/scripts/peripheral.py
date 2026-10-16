@@ -7,6 +7,7 @@ Layout offsets and sizes count bytes; register bits are [low, high], inclusive.
 """
 
 import copy
+import re
 
 # The four spec-level registries, and what one entry is called in a message.
 REGISTRIES = ("resetTypes", "fieldAccessPolicyDefinitions", "enumerationDefinitions",
@@ -192,6 +193,7 @@ def check_file(checker, file):
                     checker.add(file, at + ("repo",), "target facts need a repos entry with role: target")
     check_registers(checker, file)
     check_layouts(checker, file)
+    check_sequences(checker, file)
 
 
 # --- precise payloads: registries, field properties, arrays (docs/SPEC-FORMAT.md) ----------
@@ -489,8 +491,9 @@ def generated(file):
         for row, at in children(fact):
             if row.get("requirement", fact.get("requirement")) == "as-implemented":
                 key = row.get("id", row.get("before", "") + "->" + row.get("after", ""))
-                verify.append({"fact": fid + "." + key,
-                               "text": row.get("action", row.get("meaning", key))})
+                text = (step_text(row) if at[-2] == "steps"
+                        else row.get("action", row.get("meaning", key)))
+                verify.append({"fact": fid + "." + key, "text": text})
         if "todo" in fact:
             questions.append({"fact": fid, **fact["todo"]})
         for row, at in children(fact):
@@ -659,3 +662,175 @@ def check_layouts(checker, file):
                                     f"otherwise a mistake", level="warning")
                         break
                 placed.append(field)
+
+
+# --- precise payloads: quantities and an operation per step (docs/SPEC-FORMAT.md) -----------
+
+LEVELS = ("min", "nom", "typ", "max")
+LEVEL_PAIRS = (("min", "nom"), ("nom", "max"), ("min", "max"), ("min", "typ"), ("typ", "max"))
+CANONICAL_HEX = re.compile(r"^0x(0|[1-9a-f][0-9a-f]*)$")
+
+
+def quantity_text(quantity):
+    """`min 60 s, nom 60 s, max 90 s`: the levels present, in the order min, nom, typ, max."""
+    return ", ".join(f"{level} {quantity[level]} {quantity['unit']}"
+                     for level in LEVELS if level in quantity)
+
+
+def _timeout_text(step):
+    out = f"; timeout {quantity_text(step['timeout'])}" if "timeout" in step else ""
+    if "onTimeout" in step:
+        out += ("; on timeout, fail" if step["onTimeout"] == "fail"
+                else f"; on timeout, go to step {step['onTimeout']}")
+    return out
+
+
+def step_text(step):
+    """The English of a step: an action step's own text, else written from its operation."""
+    if "op" not in step:
+        return step["action"]
+    op, target = step["op"], step.get("target", "")
+    on_field = "." in target
+    if op == "write":
+        return f"Write {step['value']} to {target}."
+    if op in ("setBits", "clearBits"):
+        verb = "Set" if op == "setBits" else "Clear"
+        return f"{verb} {target}." if on_field else f"{verb} bits {step['mask']} of {target}."
+    if op == "read":
+        return f"Read {target}."
+    if op == "poll":
+        until = step["until"]
+        if "equals" in until:
+            cond = f"it equals {until['equals']}"
+        elif "bitsSet" in until:
+            cond = f"bits {until['bitsSet']} are set"
+        else:
+            cond = f"bits {until['bitsClear']} are clear"
+        every = f", every {quantity_text(step['interval'])}" if "interval" in step else ""
+        return f"Poll {target} until {cond}{every}{_timeout_text(step)}."
+    if op == "delay":
+        return f"Wait {quantity_text(step['duration'])}."
+    return f"Wait for interrupt {target}{_timeout_text(step)}."
+
+
+def _check_quantity(checker, file, quantity, path):
+    """Levels in order: min <= nom <= max, and typ inside [min, max]."""
+    for low, high in LEVEL_PAIRS:
+        if low in quantity and high in quantity and quantity[low] > quantity[high]:
+            checker.add(file, path, f"{low} {quantity[low]} is above {high} {quantity[high]}")
+
+
+def _check_step_value(checker, file, step, spath, key, value, target, field, register, entries):
+    """One value or equals: canonical hex that fits, or an enumerated value's name."""
+    where = spath + ((key,) if key == "value" else ("until", "equals"))
+    if value.startswith("0x"):
+        if not CANONICAL_HEX.match(value):
+            checker.add(file, where, f"value {value!r} is not canonical hex (D6)")
+        elif field is not None:
+            if not _fits(value, _width(field)):
+                checker.add(file, where, f"value {value} does not fit the {_width(field)}-bit "
+                                         f"field {target!r}")
+        elif "width" in register and not _fits(value, register["width"]):
+            checker.add(file, where, f"value {value} does not fit the {register['width']}-bit "
+                                     f"register {target!r}")
+        return
+    entry = next((e for e in entries if e["name"] == value), None)
+    if entry is None:
+        checker.add(file, where, f"value {value!r} is not an enumerated value of {target!r}")
+        return
+    usage = entry.get("usage", "read-write")
+    if step["op"] == "write" and usage == "read":
+        checker.add(file, where, f"{value!r} is a read meaning of {target!r}; a write needs a "
+                                 f"write or read-write value")
+    if step["op"] == "poll" and usage == "write":
+        checker.add(file, where, f"{value!r} is a write meaning of {target!r}; a poll "
+                                 f"compares a read value")
+
+
+def _check_step_mask(checker, file, where, mask, target, field, register):
+    if field is not None:
+        width, label = _width(field), "field"
+    else:
+        width, label = register.get("width"), "register"
+    if not _fits(mask, width):
+        checker.add(file, where, f"mask {mask} does not fit the {width}-bit {label} {target!r}")
+
+
+def check_sequences(checker, file):
+    """Quantities, and the steps with an op: targets, values, masks and onTimeout."""
+    facts = {f["id"]: f for f in file.data.get("facts", [])}
+    index = _field_index(file)
+    for i, fact in enumerate(file.data.get("facts", [])):
+        payload = fact.get("data", {})
+        if "quantity" in payload:
+            _check_quantity(checker, file, payload["quantity"],
+                            ("facts", i, "data", "quantity"))
+        steps = payload.get("sequence", {}).get("steps", [])
+        ids = {step["id"] for step in steps}
+        for j, step in enumerate(steps):
+            spath = ("facts", i, "data", "sequence", "steps", j)
+            for key in ("timeout", "interval", "duration"):
+                if key in step:
+                    _check_quantity(checker, file, step[key], spath + (key,))
+            if "op" not in step:
+                continue
+            _check_step(checker, file, step, spath, facts, index, ids)
+
+
+def _check_step(checker, file, step, spath, facts, index, ids):
+    op, target = step["op"], step.get("target")
+    field = register = None
+    if target is not None:
+        fid, _, name = target[1:].partition(".")
+        owner = facts.get(fid)
+        if op == "waitInterrupt":
+            if name or owner is None or owner.get("section") != "interrupts":
+                checker.add(file, spath + ("target",),
+                            f"waitInterrupt target {target!r} names no interrupts fact of "
+                            f"this file")
+                return
+        elif owner is None or "register" not in owner.get("data", {}):
+            checker.add(file, spath + ("target",),
+                        f"target {target!r} names no register fact of this file")
+            return
+        else:
+            register = owner["data"]["register"]
+            if name:
+                found = index.get((fid, name))
+                if found is None:
+                    checker.add(file, spath + ("target",),
+                                f"target {target!r} names no field of register fact {fid!r}")
+                    return
+                field = found[0]
+    if field is not None:
+        entries = list(field.get("enumeratedValues", []))
+        ref = field.get("enumerationDefinitionRef")
+        if ref is not None:
+            definition = _lookup(file, "enumerationDefinitions", ref)
+            entries += definition["enumeratedValues"] if definition else []
+    else:
+        entries = []
+    if "value" in step:
+        _check_step_value(checker, file, step, spath, "value", step["value"], target, field,
+                          register, entries)
+    until = step.get("until", {})
+    if "equals" in until:
+        _check_step_value(checker, file, step, spath, "equals", until["equals"], target, field,
+                          register, entries)
+    if op != "waitInterrupt":
+        for where, mask in ((spath + ("mask",), step.get("mask")),
+                            (spath + ("until", "bitsSet"), until.get("bitsSet")),
+                            (spath + ("until", "bitsClear"), until.get("bitsClear"))):
+            if mask is not None:
+                _check_step_mask(checker, file, where, mask, target, field, register)
+        if op in ("setBits", "clearBits"):
+            if field is None and "mask" not in step:
+                checker.add(file, spath, f"{op} on register {target!r} needs a mask, or name "
+                                         f"a field")
+            elif field is not None and "mask" in step:
+                checker.add(file, spath + ("mask",),
+                            f"mask is for a register target; {target!r} is a field")
+    action = step.get("onTimeout")
+    if action is not None and action != "fail" and action not in ids:
+        checker.add(file, spath + ("onTimeout",),
+                    f"onTimeout {action!r} names no step of this sequence")

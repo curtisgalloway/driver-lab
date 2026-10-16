@@ -291,6 +291,10 @@ def _fact(out, checker, rec, status, with_status):
         _author(out, note, label)
 
 
+STEP_KEYS = ("op", "target", "value", "mask", "until", "interval", "timeout", "duration",
+             "onTimeout")
+
+
 def _payload(out, checker, rec, status, with_status):
     import peripheral
 
@@ -315,10 +319,16 @@ def _payload(out, checker, rec, status, with_status):
         if "bitNumbering" in layout:
             parts.append("bit numbering " + code(layout["bitNumbering"]))
         out.extend(["Layout " + code(layout["name"]) + ": " + ", ".join(parts) + ".", ""])
+    if "quantity" in payload:
+        out.extend(["Quantity (generated): " +
+                    escape(peripheral.quantity_text(payload["quantity"])) + ".", ""])
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get("id", row.get("before", "") + "->" + row.get("after", ""))
         out.extend(["Payload entry " + code(rec.id + "." + key) + ":", ""])
-        _keys(out, row, ("support", "note", "todo"))
+        is_op = path[-2] == "steps" and "op" in row
+        _keys(out, row, ("support", "note", "todo") + (STEP_KEYS if is_op else ()))
+        if is_op:
+            out.append("- step (generated): " + escape(peripheral.step_text(row)))
         if "requirement" not in row and "requirement" in rec.data:
             out.append("- requirement: " + code(rec.data["requirement"]) + " (inherited)")
         notes = []

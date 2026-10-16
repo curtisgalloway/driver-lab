@@ -827,8 +827,10 @@ and the generated verify-on-hardware list collects every `as-implemented` step.
 ### Data formats, interrupts, DMA, target mapping
 
 `data-formats` facts carry `data.layout` (`name`, `size`, and `fields` shaped like register
-fields with byte offsets); `interrupts` and `dma` facts are ordinary claims with support; `target`
-facts cite repos entries with `role: target`. Per-area confidence is the spec-level `areas` list
+fields with byte offsets, plus the optional `bits`, `byteOrder` and `bitNumbering` described
+under [Layouts](#layouts-bit-packed-fields-and-byte-order)); `interrupts` and `dma` facts are
+ordinary claims with support; `target` facts cite repos entries with `role: target`. Per-area
+confidence is the spec-level `areas` list
 (`{area, level: document-and-code | code-only | inferred, note}`).
 
 ### Review findings
@@ -875,13 +877,14 @@ copies its records into the spec unchanged, ids included.
 
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
-Status: **approved by the user; unit 1 is implemented** (register fields, the registries, field
-and register arrays, register files, aliases, the three extensions, and register-level
-`access`); units 2-5 (layout `bits`/`byteOrder`, quantities, sequence `op`s, the exporter and
-register sources) are not. Originally proposed 2026-10-14. The choices in the table at the end
-(D23–D41) were made by the user on 2026-10-14 (D34 proposed from the user's note that
-some register tools hold far more than IP-XACT expresses, then accepted); this section turns
-them into a design. Apart from unit 1, nothing here is built. It reshapes issues
+Status: **approved by the user; units 1 and 2 are implemented** (register fields, the registries,
+field and register arrays, register files, aliases, the three extensions, and register-level
+`access`; layout `bits`, `byteOrder`, `bitNumbering` and enumerated values on layout fields);
+units 3-5 (quantities, sequence `op`s, the exporter and register sources) are not.
+Originally proposed 2026-10-14. The choices in the table at the end (D23–D41) were made by
+the user on 2026-10-14 (D34 proposed from the user's note that some register tools hold far
+more than IP-XACT expresses, then accepted); this section turns them into a design. Apart
+from units 1 and 2, nothing here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
 layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
 resets, sequence timeouts), and it answers the precision goal behind
@@ -1153,6 +1156,42 @@ document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (D39
 
 **Checks:** `bits` inside `size × 8`; values fit; under `byteOrder` absent, a multi-byte
 field with `bits` fails. Overlapping fields in one container are a warning, since unions exist.
+
+A synthetic example, a 32-bit big-endian word whose document numbers bits from the least
+significant end:
+
+```yaml
+layout:
+  name: CREDIT_UPDATE
+  size: 4
+  byteOrder: bigEndian
+  bitNumbering: lsb0
+  fields:
+    - {id: indicator, name: INDICATOR, offset: "0x0", size: 4, bits: [31, 31],
+       meaning: zero for a credit update,
+       enumeratedValues: [{name: update, value: "0x0"}, {name: other, value: "0x1"}]}
+    - {id: vc, name: VC, offset: "0x0", size: 4, bits: [28, 30], meaning: virtual channel}
+```
+
+The design left some points open; the checker settles them this way:
+
+1. `bits: [a, b]` is ordered (`a <= b`) in both numberings. Under `msb0`, `a` is the
+   lower-numbered, more significant end, as the cited document writes it.
+2. A "multi-byte field" is one whose `size` is above 1. A one-byte container needs no
+   `byteOrder`.
+3. A layout field without `bits` is the whole container: its enumerated values must fit
+   `size × 8` bits.
+4. The overlap warning covers fields with `bits` in the same container (same `offset` and
+   `size`). Overlap across different containers is not checked.
+5. `byteOrder` and `bitNumbering` may be given on a layout with no `bits` fields. An absent
+   `bitNumbering` reads as `lsb0` but is not filled in.
+6. A layout field's `enumerationDefinitionRef` brings that entry into its fact's basis, as for
+   register fields. Layout fields are not verdict sub-records, so the whole layout fact goes
+   stale when the entry changes.
+
+The generated views add a "Layout fields (generated)" table, shown only when a layout uses
+`bits`, `byteOrder`, `bitNumbering` or enumerated values, and the Markdown headline for a layout
+names its byte order and bit numbering when they are present.
 
 ### Sequences: an operation per step
 

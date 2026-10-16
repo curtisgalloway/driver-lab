@@ -361,6 +361,9 @@ def generated(file, checker=None):
     fields = peripheral.field_rows(summary)
     if any(set(row) - {'field', 'name', 'bits'} for row in fields):
         out.append(table('Register fields (generated)', fields))
+    layout_fields = peripheral.layout_field_rows(summary)
+    if any(set(row) - {'field', 'layout', 'offset', 'size'} for row in layout_fields):
+        out.append(table('Layout fields (generated)', layout_fields))
     out.append(table('Findings (generated)', summary['findings']))
     out.append(table('Correspondence (generated)', summary['pairs']))
     out.append(table('Comparison coverage (generated)', summary['coverage']))

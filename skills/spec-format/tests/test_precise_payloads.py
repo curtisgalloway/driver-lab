@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Precise payloads, unit 1: IP-XACT field properties, registries, arrays, register files.
+"""Precise payloads, units 1 and 2.
+
+Unit 1: IP-XACT field properties, registries, arrays, register files. Unit 2: layout fields
+with bits, byte order and bit numbering, and enumerated values on them.
 
 Schema refusals, one checker test per rule of the design's "Checks" paragraph, and the
 basis: registry entries a record names join its basis, and a record that names none keeps
@@ -12,6 +15,7 @@ import copy
 import io
 import json
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -536,6 +540,179 @@ class Basis(Fixture):
         self.assertEqual(rows["reg-plain"]["status"], "unverified")
 
 
+class LayoutFixture(Fixture):
+    """The synthetic packet protocol: layouts with bits, byte order and enumerations."""
+
+    def setUp(self):
+        super().setUp()
+        self.file = self.root / "packet.spec.yaml"
+        self.data = specload.load_strict(FIX / "packet.spec.yaml")
+
+    def layout(self, fid="layout-credit-update"):
+        return self.fact(fid)["data"]["layout"]
+
+    def lfield(self, fid, name):
+        return next(x for x in self.layout(fid)["fields"] if x["id"] == name)
+
+    def warnings(self, text):
+        code, result = self.check()
+        self.assertEqual(code, 0, result)
+        return [f for f in result["findings"] if text in f["message"]]
+
+
+class LayoutClean(LayoutFixture):
+    def test_the_packet_fixture_checks_clean(self):
+        self.accepted()
+
+
+class LayoutSchema(LayoutFixture):
+    def test_an_unknown_byte_order(self):
+        self.layout()["byteOrder"] = "middleEndian"
+        self.invalid("byteOrder", schema=True)
+
+    def test_an_unknown_bit_numbering(self):
+        self.layout()["bitNumbering"] = "msb1"
+        self.invalid("bitNumbering", schema=True)
+
+    def test_bits_with_one_item(self):
+        self.lfield("layout-credit-update", "vc")["bits"] = [28]
+        self.invalid("bits", schema=True)
+
+    def test_a_table_and_a_definition_ref(self):
+        self.lfield("layout-credit-update", "indicator")[
+            "enumerationDefinitionRef"] = "message-kind"
+        self.invalid("a layout field has its own", schema=True)
+
+    def test_no_bit_numbering_is_not_filled_in(self):
+        del self.layout()["bitNumbering"]
+        self.accepted()
+        self.assertNotIn("bitNumbering", self.layout())
+
+
+class LayoutChecker(LayoutFixture):
+    def test_reversed_bits(self):
+        self.lfield("layout-credit-update", "vc")["bits"] = [30, 28]
+        self.invalid("must be ordered and inside the field's 4 bytes (32 bits)")
+
+    def test_a_one_byte_container_is_named_in_the_singular(self):
+        self.lfield("layout-message-header", "kind")["bits"] = [0, 8]
+        self.invalid("bits [0, 8] must be ordered and inside the field's 1 byte (8 bits)")
+
+    def test_bits_one_past_the_container(self):
+        self.lfield("layout-credit-update", "vc")["bits"] = [28, 32]
+        self.invalid("bits [28, 32] must be ordered and inside the field's 4 bytes")
+
+    def test_bits_to_the_last_bit_of_the_container(self):
+        self.lfield("layout-credit-update", "vc")["bits"] = [28, 31]
+        self.lfield("layout-credit-update", "indicator")["bits"] = [27, 27]
+        self.lfield("layout-credit-update", "posted-data")["bits"] = [12, 26]
+        self.accepted()
+
+    def test_multi_byte_bits_without_a_byte_order(self):
+        del self.layout()["byteOrder"]
+        self.invalid("layout 'CREDIT_UPDATE' has no byteOrder, but field 'indicator' has bits "
+                     "in a 4-byte container; say bigEndian or littleEndian")
+
+    def test_single_byte_bits_without_a_byte_order(self):
+        layout = self.layout("layout-message-header")
+        del layout["byteOrder"]
+        layout["fields"] = [f for f in layout["fields"] if f["id"] != "function-mask"]
+        self.accepted()
+
+    def test_an_enumerated_value_wider_than_the_bits(self):
+        self.lfield("layout-credit-update", "indicator")["enumeratedValues"][1][
+            "value"] = "0x2"
+        self.invalid("enumerated value 0x2 (other) does not fit the 1-bit field")
+
+    def test_a_value_that_fits_the_container_without_bits(self):
+        field = self.lfield("layout-message-header", "length")
+        field["enumeratedValues"] = [{"name": "max", "value": "0xff"}]
+        self.accepted()
+
+    def test_a_value_wider_than_the_container_without_bits(self):
+        field = self.lfield("layout-message-header", "length")
+        field["enumeratedValues"] = [{"name": "big", "value": "0x100"}]
+        self.invalid("enumerated value 0x100 (big) does not fit the 8-bit field")
+
+    def test_a_value_name_listed_twice(self):
+        self.lfield("layout-message-header", "function-mask")["enumeratedValues"][1][
+            "name"] = "endpoint"
+        self.invalid("layout field 'function-mask': value name 'endpoint' is listed twice")
+
+    def test_an_enumeration_ref_that_names_nothing(self):
+        self.lfield("layout-message-header", "kind")["enumerationDefinitionRef"] = "nope"
+        self.invalid("enumerationDefinitionRef 'nope' names no enumerationDefinitions entry")
+
+    def test_a_shared_value_wider_than_the_layout_field(self):
+        self.lfield("layout-message-header", "kind")["bits"] = [0, 0]
+        self.invalid("enumeration 'message-kind' value 0x2 (ack) does not fit the 1-bit field")
+
+    def test_overlap_in_one_container_warns(self):
+        self.lfield("layout-credit-update", "vc")["bits"] = [27, 29]
+        found = self.warnings("overlap")
+        self.assertEqual(len(found), 1, found)
+        self.assertEqual(found[0]["level"], "warning")
+        self.assertIn("field 'posted-data' bits [12, 27] overlap field 'vc' in the same "
+                      "container; fine for a union, otherwise a mistake", found[0]["message"])
+
+    def test_each_later_field_warns_once(self):
+        fields = self.layout()["fields"]
+        for f in fields:
+            f["bits"] = [0, 3]
+            f.pop("enumeratedValues", None)
+        found = self.warnings("overlap")
+        self.assertEqual(len(found), 3, found)
+        self.assertTrue(all("overlap field 'indicator'" in f["message"] for f in found), found)
+
+    def test_the_same_bits_in_different_containers_do_not_warn(self):
+        fields = self.layout()["fields"]
+        for k, f in enumerate(fields):
+            f["bits"] = [0, 3]
+            f["offset"] = hex(k * 4)
+            f.pop("enumeratedValues", None)
+        self.layout()["size"] = 16
+        self.assertEqual(self.warnings("overlap"), [])
+
+    def test_fields_without_bits_do_not_warn(self):
+        for f in self.layout()["fields"]:
+            f.pop("bits")
+            f.pop("enumeratedValues", None)
+        self.assertEqual(self.warnings("overlap"), [])
+
+    def test_bits_do_not_break_the_commands(self):
+        self.write()
+        for command in (("check",), ("status",), ("render", "--format", "md"),
+                        ("render", "--format", "html")):
+            code, result = run(*command[:1], self.root, *command[1:])
+            self.assertEqual(code, 0, (command, result))
+
+
+class LayoutBasis(LayoutFixture):
+    def basis(self, fid, code=0):
+        self.write()
+        got, result = run("status", self.root)
+        self.assertEqual(got, code, result)
+        rows = {r["key"]: r for s in result["specs"] for r in s["facts"]}
+        return rows[fid]["basis"]
+
+    def test_a_named_enumeration_joins_the_basis(self):
+        before = self.basis("layout-message-header")
+        self.assertIsNotNone(before)
+        self.entry("enumerationDefinitions", "message-kind")["enumeratedValues"][1][
+            "name"] = "reply"
+        self.assertNotEqual(self.basis("layout-message-header"), before)
+
+    def test_a_layout_naming_no_entry_is_unaffected(self):
+        before = self.basis("layout-credit-update")
+        self.entry("enumerationDefinitions", "message-kind")["enumeratedValues"][1][
+            "name"] = "reply"
+        self.assertEqual(self.basis("layout-credit-update"), before)
+
+    def test_a_name_the_file_lacks_makes_the_basis_unknown(self):
+        self.lfield("layout-message-header", "kind")["enumerationDefinitionRef"] = "nope"
+        self.assertIsNone(self.basis("layout-message-header", code=1))
+
+
 class Render(Fixture):
     """Both reading views show the new properties exactly, and escape every author string."""
 
@@ -696,6 +873,98 @@ class Render(Fixture):
             self.assertIn("Register map", view)
             self.assertNotIn("Register fields", view)
             self.assertNotIn("Definitions (generated)", view)
+            self.assertNotIn("Layout fields", view)
+        self.assertEqual(summary["layouts"][0]["fact"], "frame")
+        self.assertIn("\nLayout `widget_frame`: 4 bytes.\n", render_md.render(checker))
+        self.assertNotIn("bit numbering", render_md.render(checker))
+
+
+class LayoutRender(LayoutFixture):
+    """Layout fields in both views, with every author string escaped."""
+
+    def views(self):
+        self.write()
+        checker = spec._run_check(_args(self.root))
+        self.assertTrue(checker.files, checker.findings)
+        return (checker.files[0], render_md.render(checker), render_html.render(checker))
+
+    def test_the_layout_field_table_in_both_views(self):
+        from test_spec_format_7b import Tables
+
+        file, md, html = self.views()
+        rows = peripheral.layout_field_rows(peripheral.generated(file))
+        self.assertEqual(rows[0], {
+            "field": "layout-credit-update.indicator", "layout": "CREDIT_UPDATE",
+            "offset": "0x0", "size": 4, "bits": [31, 31], "byteOrder": "bigEndian",
+            "bitNumbering": "lsb0", "values": "0x0 update; 0x1 other"})
+        self.assertEqual(rows[4], {
+            "field": "layout-message-header.kind", "layout": "MESSAGE_HEADER",
+            "offset": "0x0", "size": 1, "bits": [0, 1], "byteOrder": "littleEndian",
+            "bitNumbering": "msb0", "values": "see message-kind"})
+        self.assertEqual(rows[6], {
+            "field": "layout-message-header.length", "layout": "MESSAGE_HEADER",
+            "offset": "0x1", "size": 1, "bits": "", "byteOrder": "littleEndian",
+            "bitNumbering": "msb0", "values": ""})
+        self.assertEqual([r["field"] for r in rows], [
+            "layout-credit-update.indicator", "layout-credit-update.vc",
+            "layout-credit-update.posted-data", "layout-credit-update.nonposted-data",
+            "layout-message-header.kind", "layout-message-header.function-mask",
+            "layout-message-header.length"])
+        keys = list(peripheral.LAYOUT_COLUMNS)
+        self.assertTrue(all(list(r) == keys for r in rows))
+        lines = [line for line in md.split("### Layout fields \\(generated\\)\n", 1)[1]
+                 .split("\n#", 1)[0].splitlines() if line.startswith("| ")]
+        self.assertEqual(lines[2:], [
+            "| " + " | ".join(render_md.escape(render_md._value(r[k])).replace("|", "\\|")
+                              for k in keys) + " |" for r in rows])
+        self.assertIn("| layout\\-message\\-header\\.kind | `MESSAGE_HEADER` | 0x0 | 1 | "
+                      "`[0, 1]` | littleEndian | msb0 | see message\\-kind |", md)
+        table = Tables(html).tables["Layout fields (generated)"][0]
+        self.assertEqual(table[0], keys)
+        self.assertEqual(table[1:], [[render_md._value(r[k]) for k in keys] for r in rows])
+
+    def test_the_headline_names_byte_order_and_bit_numbering(self):
+        _, md, html = self.views()
+        self.assertIn("\nLayout `CREDIT_UPDATE`: 4 bytes, `bigEndian`, bit numbering `lsb0`.\n",
+                      md)
+        self.assertIn("\nLayout `MESSAGE_HEADER`: 4 bytes, `littleEndian`, bit numbering "
+                      "`msb0`.\n", md)
+        self.assertIn("<td>CREDIT_UPDATE</td><td>4</td><td>bigEndian</td><td>lsb0</td>", html)
+        self.assertIn("<td>littleEndian</td><td>msb0</td>", html)
+
+    def test_the_headline_names_only_the_parts_present(self):
+        del self.layout()["bitNumbering"]
+        del self.layout("layout-message-header")["byteOrder"]
+        del self.layout("layout-message-header")["bitNumbering"]
+        _, md, _ = self.views()
+        self.assertIn("\nLayout `CREDIT_UPDATE`: 4 bytes, `bigEndian`.\n", md)
+        self.assertIn("\nLayout `MESSAGE_HEADER`: 4 bytes.\n", md)
+
+    def test_enumerated_values_of_a_layout_field(self):
+        _, md, html = self.views()
+        self.assertIn("- enumeratedValues:\n  - `0x0` update: credit update\n  - `0x1` other\n",
+                      md)
+        self.assertIn("- enumerationDefinitionRef: message\\-kind\n", md)
+        self.assertIn("- bits: `[31, 31]`\n", md)
+        self.assertNotIn('"enumeratedValues": [', md)
+        self.assertIn("<p>enumeratedValues</p><table><thead><tr><th>value</th><th>name</th>"
+                      "<th>description</th><th>usage</th></tr></thead><tbody>"
+                      "<tr><td>0x0</td><td>update</td><td>credit update</td><td></td></tr>"
+                      "<tr><td>0x1</td><td>other</td><td></td><td></td></tr></tbody></table>",
+                      html)
+
+    def test_author_strings_are_escaped_in_both_views(self):
+        bad = "<script>alert(1)</script>"
+        field = self.lfield("layout-credit-update", "indicator")
+        field["name"] = bad
+        field["meaning"] = bad
+        field["enumeratedValues"][0]["name"] = bad
+        field["enumeratedValues"][0]["description"] = bad
+        _, md, html = self.views()
+        self.assertNotIn("<script>", html)
+        self.assertGreaterEqual(html.count("&lt;script&gt;"), 4)
+        self.assertGreaterEqual(md.count("<script>"), 4)
+        self.assertNotIn("<script>", re.sub(r"`[^`]*`", "", md))
 
 
 def _args(root):

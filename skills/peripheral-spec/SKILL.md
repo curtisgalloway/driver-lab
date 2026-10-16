@@ -128,8 +128,13 @@ body surrounds the YAML.
   performing step precisely; record prerequisites, initialization, reset, power, error and
   teardown paths. Constraints describe required ordering separately from the driver's order.
 - **Layouts**: `section: data-formats`, `data.layout: {name, size, fields}`; fields have
-  ids, names, byte offsets, sizes and meanings. Include ownership, wrap, status, alignment
-  and addressing facts with their evidence.
+  ids, names, byte offsets, sizes and meanings. A field packed inside a word takes
+  `bits: [a, b]` within its `offset`/`size` container, numbered as the cited document numbers
+  them, with the layout's `bitNumbering` (`lsb0`/`msb0`) and `byteOrder`
+  (`bigEndian`/`littleEndian`, required when a multi-byte container has `bits`); value tables use
+  `enumeratedValues` or `enumerationDefinitionRef` as on register fields (see
+  [SPEC-FORMAT](../../docs/SPEC-FORMAT.md#layouts-bit-packed-fields-and-byte-order)).
+  Include ownership, wrap, status, alignment and addressing facts with their evidence.
 - **Ordinary claims**: `identity`, `interrupts`, `dma`, `sub-protocols`, `target`, `gotchas`,
   `open-questions`. Cover routing, ack/clear semantics, coherency and address translation,
   revision limits and target protocols/binding/packaging. Use `areas` for per-area confidence

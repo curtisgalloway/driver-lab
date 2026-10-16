@@ -85,6 +85,8 @@ def referenced_registries(rec):
     else:
         payload = data.get("data", {})
         fields, register = payload.get("fields", []), payload.get("register", {})
+        # Layout facts are not split into sub-records: their fields belong to this record.
+        fields = fields + payload.get("layout", {}).get("fields", [])
     wanted, queue = set(), []
 
     def want(group, name):
@@ -153,7 +155,7 @@ def check_file(checker, file):
                 if key in seen:
                     checker.add(file, at + ("id",), "field or step id is listed twice")
                 seen.add(key)
-            if "bits" in row:
+            if "bits" in row and at[-3] == "data":
                 low, high = row["bits"]
                 if low > high or ("width" in register and high >= register["width"]):
                     checker.add(file, at + ("bits",), "bits must be ordered and inside register width")
@@ -189,6 +191,7 @@ def check_file(checker, file):
                 if entry and entry[0].get("role") != "target":
                     checker.add(file, at + ("repo",), "target facts need a repos entry with role: target")
     check_registers(checker, file)
+    check_layouts(checker, file)
 
 
 # --- precise payloads: registries, field properties, arrays (docs/SPEC-FORMAT.md) ----------
@@ -324,17 +327,10 @@ def _check_register(checker, file, register, rpath):
                         f"range is {group['range']}")
 
 
-def _check_field(checker, file, fact, register, field, fpath, index):
-    width = _width(field)
-    policy = None
-    ref = field.get("fieldAccessPolicyDefinitionRef")
-    if ref is not None:
-        policy = _lookup(file, "fieldAccessPolicyDefinitions", ref)
-        if policy is None:
-            checker.add(file, fpath + ("fieldAccessPolicyDefinitionRef",),
-                        f"fieldAccessPolicyDefinitionRef {ref!r} names no "
-                        f"fieldAccessPolicyDefinitions entry")
-    # Enumerated values: the field's own table, or the shared one it names.
+def _check_enumeration(checker, file, field, width, fpath, what):
+    """Enumerated values: the field's own table, or the shared one it names.
+
+    Returns (own table or None, shared name or None)."""
     table = field.get("enumeratedValues")
     if table is not None:
         for k, row in enumerate(table):
@@ -342,8 +338,7 @@ def _check_field(checker, file, fact, register, field, fpath, index):
                 checker.add(file, fpath + ("enumeratedValues", k, "value"),
                             f"enumerated value {row['value']} ({row['name']}) does not fit the "
                             f"{width}-bit field")
-        _check_table(checker, file, table, fpath + ("enumeratedValues",),
-                     f"field {field['id']!r}")
+        _check_table(checker, file, table, fpath + ("enumeratedValues",), what)
     name = field.get("enumerationDefinitionRef")
     if name is not None:
         definition = _lookup(file, "enumerationDefinitions", name)
@@ -357,6 +352,21 @@ def _check_field(checker, file, fact, register, field, fpath, index):
                     checker.add(file, fpath + ("enumerationDefinitionRef",),
                                 f"enumeration {name!r} value {row['value']} ({row['name']}) "
                                 f"does not fit the {width}-bit field")
+    return table, name
+
+
+def _check_field(checker, file, fact, register, field, fpath, index):
+    width = _width(field)
+    policy = None
+    ref = field.get("fieldAccessPolicyDefinitionRef")
+    if ref is not None:
+        policy = _lookup(file, "fieldAccessPolicyDefinitions", ref)
+        if policy is None:
+            checker.add(file, fpath + ("fieldAccessPolicyDefinitionRef",),
+                        f"fieldAccessPolicyDefinitionRef {ref!r} names no "
+                        f"fieldAccessPolicyDefinitions entry")
+    table, name = _check_enumeration(checker, file, field, width, fpath,
+                                     f"field {field['id']!r}")
     # The write constraint, the field's own or its policy's.
     if "writeValueConstraint" in field:
         constraint, cpath = field["writeValueConstraint"], fpath + ("writeValueConstraint",)
@@ -453,7 +463,7 @@ def check_registers(checker, file):
 def generated(file):
     """Exact structured projection for both reading views (no prose parsing)."""
     registers, verify, questions = [], [], []
-    findings, pairs, coverage, field_list = [], [], [], []
+    findings, pairs, coverage, field_list, layouts = [], [], [], [], []
     for fact in file.data["facts"]:
         fid = fact["id"]
         payload = fact.get("data", {})
@@ -465,6 +475,8 @@ def generated(file):
             pairs.append(dict(payload["pair"], fact=fid))
         if "coverage" in payload:
             coverage.append(dict(payload["coverage"], fact=fid))
+        if "layout" in payload:
+            layouts.append(dict(payload["layout"], fact=fid))
         if "register" in payload:
             registers.append(dict(payload["register"], fact=fid, fields=payload.get("fields", [])))
             field_list.extend(dict(field, fact=fid) for field in payload.get("fields", []))
@@ -496,7 +508,7 @@ def generated(file):
     return {"registers": registers, "verify": verify, "questions": questions,
             "references": references, "classes": classes,
             "findings": findings, "pairs": pairs, "coverage": coverage,
-            "fields": field_list, "definitions": definitions}
+            "fields": field_list, "layouts": layouts, "definitions": definitions}
 
 
 def register_rows(summary):
@@ -579,3 +591,71 @@ def field_rows(summary):
         rows.append(row)
     used = [key for key in FIELD_COLUMNS if any(key in row for row in rows)]
     return [{key: row.get(key, "") for key in used} for row in rows]
+
+
+LAYOUT_COLUMNS = ("field", "layout", "offset", "size", "bits", "byteOrder", "bitNumbering",
+                  "values")
+
+
+def layout_field_rows(summary):
+    """One row per layout field, with its layout's byte order and bit numbering.
+
+    Only the columns some row uses, in LAYOUT_COLUMNS order, "" where a row lacks one."""
+    rows = []
+    for layout in summary["layouts"]:
+        for field in layout["fields"]:
+            row = {"field": layout["fact"] + "." + field["id"], "layout": layout["name"],
+                   "offset": field["offset"], "size": field["size"]}
+            if "bits" in field:
+                row["bits"] = field["bits"]
+            for key in ("byteOrder", "bitNumbering"):
+                if key in layout:
+                    row[key] = layout[key]
+            if "enumeratedValues" in field:
+                row["values"] = _enumerated(field["enumeratedValues"])
+            elif "enumerationDefinitionRef" in field:
+                row["values"] = "see " + field["enumerationDefinitionRef"]
+            rows.append(row)
+    used = [key for key in LAYOUT_COLUMNS if any(key in row for row in rows)]
+    return [{key: row.get(key, "") for key in used} for row in rows]
+
+
+def check_layouts(checker, file):
+    """Bit-packed layout fields: bits inside the container, byte order, values, overlap."""
+    for i, fact in enumerate(file.data.get("facts", [])):
+        layout = fact.get("data", {}).get("layout")
+        if not layout:
+            continue
+        base = ("facts", i, "data", "layout", "fields")
+        placed = []
+        for j, field in enumerate(layout["fields"]):
+            fpath = base + (j,)
+            size = field["size"]
+            if "bits" in field:
+                low, high = field["bits"]
+                if low > high or high >= size * 8:
+                    checker.add(file, fpath + ("bits",),
+                                f"bits [{low}, {high}] must be ordered and inside the field's "
+                                f"{size} byte{'s' if size != 1 else ''} ({size * 8} bits)")
+                if "byteOrder" not in layout and size > 1:
+                    checker.add(file, fpath + ("bits",),
+                                f"layout {layout['name']!r} has no byteOrder, but field "
+                                f"{field['id']!r} has bits in a {size}-byte container; say "
+                                f"bigEndian or littleEndian")
+                width = _width(field)
+            else:
+                width = size * 8
+            _check_enumeration(checker, file, field, width, fpath,
+                               f"layout field {field['id']!r}")
+            if "bits" in field and low <= high:
+                for other in placed:
+                    olow, ohigh = other["bits"]
+                    if ((int(other["offset"], 16), other["size"])
+                            == (int(field["offset"], 16), size)
+                            and low <= ohigh and olow <= high):
+                        checker.add(file, fpath + ("bits",),
+                                    f"field {field['id']!r} bits [{low}, {high}] overlap field "
+                                    f"{other['id']!r} in the same container; fine for a union, "
+                                    f"otherwise a mistake", level="warning")
+                        break
+                placed.append(field)

@@ -308,8 +308,13 @@ def _payload(out, checker, rec, status, with_status):
             _support(out, checker, rec.file, [{"class": "src", "anchors": anchors}])
             out.append("")
     if "layout" in payload:
-        out.extend(["Layout " + code(payload["layout"]["name"]) + ": " +
-                    str(payload["layout"]["size"]) + " bytes.", ""])
+        layout = payload["layout"]
+        parts = [str(layout["size"]) + " bytes"]
+        if "byteOrder" in layout:
+            parts.append(code(layout["byteOrder"]))
+        if "bitNumbering" in layout:
+            parts.append("bit numbering " + code(layout["bitNumbering"]))
+        out.extend(["Layout " + code(layout["name"]) + ": " + ", ".join(parts) + ".", ""])
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get("id", row.get("before", "") + "->" + row.get("after", ""))
         out.extend(["Payload entry " + code(rec.id + "." + key) + ":", ""])
@@ -371,6 +376,9 @@ def _generated(out, file, checker=None):
     fields = peripheral.field_rows(summary)
     if any(set(row) - {"field", "name", "bits"} for row in fields):
         _table(out, "Register fields (generated)", fields)
+    layout_fields = peripheral.layout_field_rows(summary)
+    if any(set(row) - {"field", "layout", "offset", "size"} for row in layout_fields):
+        _table(out, "Layout fields (generated)", layout_fields)
     _table(out, "Findings (generated)", summary["findings"])
     _table(out, "Correspondence (generated)", summary["pairs"])
     _table(out, "Comparison coverage (generated)", summary["coverage"])

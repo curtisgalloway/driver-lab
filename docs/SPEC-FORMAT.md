@@ -286,11 +286,14 @@ row is an error (settled in SF2-3; made explicit in review round 1, 2026-10-08).
 ### Composing peripheral specs (D42–D44)
 
 A `kind: peripheral` spec holds one block's programming model. Two structural links attach it to
-the specs it belongs to, so a reader composing a board finds it:
+the specs it belongs to, so a tool composing a board can find it:
 
 - **`describes`** on the peripheral spec: a non-empty list of `soc`, `chip` or `board` spec ids
   whose block it programs. The checker resolves each entry across the roots read together (a
-  target in another root needs that root, as for `parts`) and refuses any other kind.
+  target in another root needs that root, as for `parts`) and refuses any other kind, and any
+  target in a later layer than the peripheral spec's root: `describes` points up, from a block
+  to its board, so a public spec naming a product board would publish that board's id. A later
+  layer links its own board to an earlier peripheral spec through `instances[].peripheral`.
 - **`instances[].peripheral`** on a `soc`, `chip` or overlay instance row: the peripheral spec for
   that placement. A row names `ip`, `peripheral` or both; the checker resolves `peripheral` to a
   `kind: peripheral` spec as it resolves `ip` to a `kind: ip` spec. A block with an SoC-specific
@@ -308,7 +311,7 @@ composed.
 
 | # | Question | Decision | Effect |
 | --- | --- | --- | --- |
-| D42 | How a peripheral spec joins a board (#126) | `describes` on the peripheral spec, a list of `soc`, `chip` or `board` ids; structural, outside every basis, not gated | no fact-to-fact `relates` invented for composition; adding it stales nothing |
+| D42 | How a peripheral spec joins a board (#126) | `describes` on the peripheral spec, a list of `soc`, `chip` or `board` ids in the same or an earlier layer; structural, outside every basis, not gated | no fact-to-fact `relates` invented for composition; adding it stales nothing; no private id in a public spec |
 | D43 | An instance whose block has a peripheral spec and no ip spec | `instances[].peripheral`; a row names `ip`, `peripheral` or both | the SoC's memory map is complete without hollow `kind: ip` files |
 | D44 | A peripheral spec nothing composes | A checker warning when a `soc`, `chip` or `board` spec is read with it | an unlinked spec is visible at check time, not silently missing from a board |
 

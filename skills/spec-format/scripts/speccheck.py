@@ -1049,6 +1049,13 @@ class Checker:
             elif base[target][0].kind not in PARENT_KINDS:
                 self.add(f, ("describes", i), f"describes entry {target!r} is not a soc, chip "
                                               f"or board spec (kind {base[target][0].kind})")
+            elif base[target][0].root.rank > f.root.rank:
+                # describes points up, from a block to its board: a public spec naming a
+                # product board would publish that board's id and fail a check on its own
+                self.add(f, ("describes", i), f"describes entry {target!r} is in layer "
+                                              f"{base[target][0].root.layer}, after this root's "
+                                              f"layer {f.root.layer}; name it from that layer's "
+                                              f"instances[].peripheral instead")
 
     def check_unattached_peripherals(self):
         """Warn on a peripheral spec nothing composes, when there is something to compose it

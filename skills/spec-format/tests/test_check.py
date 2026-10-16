@@ -1216,6 +1216,21 @@ class PeripheralComposition(TempRoots):
                 else:
                     self.assertEqual(msgs, [want])
 
+    def test_describes_never_names_a_later_layer(self):
+        product = self.root("product", {"board-specs.yaml": marker("p", layer="product"),
+                                        "chip.spec.yaml": chip()})
+        public = self.root("public", {"board-specs.yaml": marker("q"),
+                                      "p.spec.yaml": self.periph(head="describes: [widgetchip]\n")})
+        code, result = check(public, product)
+        self.assertEqual(only(errors(result))["message"],
+                         "describes entry 'widgetchip' is in layer product, after this root's "
+                         "layer public; name it from that layer's instances[].peripheral instead")
+        later = self.root("later", {"board-specs.yaml": marker("s", layer="product"),
+                                    "p.spec.yaml": self.periph(head="describes: [widgetchip]\n")})
+        earlier = self.root("earlier", {"board-specs.yaml": marker("e"), "chip.spec.yaml": chip()})
+        code, result = check(earlier, later)
+        self.assertEqual((code, errors(result)), (0, []))
+
     def test_describes_is_a_unique_non_empty_list(self):
         for head in ("describes: []\n", "describes: [widgetchip, widgetchip]\n",
                      "describes: widgetchip\n"):

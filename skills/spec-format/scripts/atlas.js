@@ -661,17 +661,19 @@ const graph = (() => {
     const b = el('div', 'blk' + (idx === 0 ? ' first' : ''));
     b.tabIndex = 0;
     const left = el('div');
-    left.append(el('div', 'bn', i.name), el('div', 'ipn', i.ip + ' · ' + i.spec));
+    left.append(el('div', 'bn', i.name), el('div', 'ipn', [i.ip, i.peripheral].filter(Boolean).join(' / ') + ' · ' + i.spec));
     const side = el('div', 'side');
     if (i.irq) side.append(el('span', 'irq', i.irq + (i.trigger ? ' · ' + i.trigger : '')));
     if (i.clocks.length) side.append(el('span', 'clk', i.clocks.join(' · ')));
     b.append(left, side);
     const cites = row.cites.map(k => factByKey.get(k)).filter(Boolean);
     const ipSpec = specById.get(i.ip);
+    const periphSpec = specById.get(i.peripheral);
     const m = el('div', 'mentions');
-    if (ipSpec) {
-      const go = el('button', 'link', 'IP spec: ' + ipSpec.name);
-      go.addEventListener('click', ev => { ev.stopPropagation(); selectSpec(ipSpec); });
+    for (const [label, target] of [['IP spec: ', ipSpec], ['Peripheral spec: ', periphSpec]]) {
+      if (!target) continue;
+      const go = el('button', 'link', label + target.name);
+      go.addEventListener('click', ev => { ev.stopPropagation(); selectSpec(target); });
       m.append(go);
     }
     if (cites.length) {
@@ -679,7 +681,10 @@ const graph = (() => {
       for (const f of cites.slice(0, 6)) m.append(factLink(f));
     }
     if (m.childNodes.length) b.append(m);
-    const open = () => { if (cites[0]) select(cites[0]); else if (ipSpec) selectSpec(ipSpec); };
+    const open = () => {
+      if (cites[0]) select(cites[0]);
+      else if (ipSpec || periphSpec) selectSpec(ipSpec || periphSpec);
+    };
     b.addEventListener('click', open);
     b.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
     mm.append(b);
@@ -821,6 +826,17 @@ const graph = (() => {
   ];
   if (crit > facts.length / 2) lines.push(`${crit} of ${facts.length} facts are marked critical, so the critical marker separates little.`);
   if (DATA.outside_links) lines.push(`${DATA.outside_links} fact links point at specs outside this page and are not drawn.`);
+  if (DATA.row_links) lines.push(`${DATA.row_links} fact links point at instance or variant rows on this page and are not drawn in the graph.`);
+  if (DATA.unplaced.length) {
+    const byKind = new Map();
+    for (const u of DATA.unplaced) {
+      if (!byKind.has(u.kind)) byKind.set(u.kind, []);
+      byKind.get(u.kind).push(`${u.id} (${u.facts} fact${u.facts === 1 ? '' : 's'})`);
+    }
+    const groups = [...byKind].map(([k, ids]) => `${k}: ${ids.join(', ')}`).join('; ');
+    const n = DATA.unplaced.length;
+    lines.push(`${n} spec${n === 1 ? '' : 's'} in the rendered roots ${n === 1 ? 'is' : 'are'} not linked to ${focusSpec.name}: ${groups}.`);
+  }
   for (const t of lines) ul.append(el('li', null, t));
   lim.append(ul); host.append(lim);
 })();

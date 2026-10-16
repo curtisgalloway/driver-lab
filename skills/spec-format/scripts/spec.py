@@ -218,9 +218,11 @@ returns `{"ok", "markdown", "findings"}` for md or `{"ok", "html", "findings"}` 
 (the view is null on error). HTML renders author CommonMark separately in each field with raw
 HTML disabled, images as links and checked hrefs only. Only structured fields produce badges.
 `--format atlas` (atlas.py) needs `--spec ID` and emits one self-contained page centered on that
-spec: it adds the closure of its `parts`, every spec one fact link away from the spec or a part,
-and the IP specs those specs' instances name, and shows them as an outline, a spec graph, a memory map of instance base addresses, a
-verification coverage grid and a list of open items. Its `--json` key is `html`; `--with-status` has no effect, since the
+spec: it adds the closure of its `parts`, the peripheral specs whose `describes` names one of
+those, every spec one fact link (`relates` or a premise) away from the spec or a part, and the IP
+and peripheral specs those specs' instances name, and shows them as an outline, a spec graph, a
+memory map of instance base addresses, a verification coverage grid and a list of open items;
+specs in the rendered roots it leaves out are listed under its limits. Its `--json` key is `html`; `--with-status` has no effect, since the
 atlas always shows verdicts. Author text uses the viewer's renderer; the page loads nothing from
 elsewhere.
 The reusable publishing workflow and local build/verify helper live under `spec-format/ci/`.

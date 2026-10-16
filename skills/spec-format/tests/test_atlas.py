@@ -143,5 +143,92 @@ class Atlas(unittest.TestCase):
         self.assertEqual(rows[-1]['cites'], [])
 
 
+def peripheral(sid, head='', facts=None):
+    """A kind: peripheral spec with one identity fact (or the facts given)."""
+    body = facts if facts is not None else (
+        '  - id: ident\n    section: identity\n    title: T\n    claim: C.\n'
+        '    support: [{class: databook, doc: trm, at: [{section: "1"}]}]\n')
+    return ('format: 2\nkind: peripheral\nid: ' + sid + '\nname: P ' + sid + '\n' + head
+            + 'resources:\n  documents:\n    - {name: trm, class: databook, title: TRM, '
+            'url: "https://example.invalid/trm.pdf", pages: 80}\nfacts:\n' + body)
+
+
+class AtlasPeripherals(unittest.TestCase):
+    """#127: peripheral specs join through `describes` and `instances[].peripheral`, premises
+    count as fact links, links to rows on the page are not outside links, and specs the page
+    leaves out are listed."""
+
+    checker = Atlas.checker
+
+    def setUp(self):
+        Atlas.setUp(self)
+        soc = (self.root / 'wsoc.spec.yaml').read_text()
+        soc = soc.replace('  - {id: g0, name: GPIO, ip: wuart,', '  - {id: g0, name: GPIO, peripheral: wgpio,')
+        (self.root / 'wsoc.spec.yaml').write_text(soc)
+        files = {
+            'wdma': peripheral('wdma', 'describes: [wsoc]\n'),
+            'wgpio': peripheral('wgpio'),
+            'wpwm': peripheral('wpwm', 'describes: [wpmic]\n'),
+            'wclk': kind(chip('wclk', (
+                '  - id: derived\n    section: quick-facts\n    title: D\n    claim: D.\n'
+                '    support:\n      - class: inference\n        premises:\n'
+                '          - fact: "wsoc#uart-base"\n        derivation: it follows\n'
+                '    todo: {check: hardware, text: check it.}\n')), 'chip'),
+            'wrow': chip('wrow', relating('at-row', 'wsoc#u0') + relating('at-fact', 'wb#console')),
+        }
+        for name, text in files.items():
+            (self.root / f'{name}.spec.yaml').write_text(text)
+
+    def test_peripheral_specs_join_by_describes_and_by_instance(self):
+        d = atlas.data(self.checker(), 'wb')
+        joins = {s['id']: (s['parent'], s['join']) for s in d['specs']}
+        self.assertEqual(joins['wdma'], ('wsoc', 'programming'))
+        self.assertEqual(joins['wgpio'], ('wsoc', 'programming'))
+        # describes names a spec one link away, not the board or a part: not placed
+        self.assertNotIn('wpwm', joins)
+        gpio = next(i for i in d['instances'] if i['id'] == 'g0')
+        self.assertEqual((gpio['ip'], gpio['peripheral']), ('', 'wgpio'))
+        uart = next(i for i in d['instances'] if i['id'] == 'u0')
+        self.assertEqual((uart['ip'], uart['peripheral']), ('wuart', ''))
+
+    def test_inference_premises_are_fact_links(self):
+        joins = {s['id']: s['join'] for s in atlas.data(self.checker(), 'wb')['specs']}
+        self.assertEqual(joins['wclk'], 'related')
+
+    def test_links_to_rows_on_the_page_are_not_outside_links(self):
+        d = atlas.data(self.checker(), 'wb')
+        joins = {s['id']: (s['parent'], s['join']) for s in d['specs']}
+        self.assertEqual(joins['wrow'], ('wb', 'related'))
+        at_row = next(f for f in d['facts'] if f['id'] == 'at-row')
+        self.assertEqual(at_row['relates'], [])
+        at_fact = next(f for f in d['facts'] if f['id'] == 'at-fact')
+        self.assertEqual(at_fact['relates'], [{'to': 'wb@atlas-root#console', 'relation': 'refines'}])
+        self.assertEqual((d['row_links'], d['outside_links']), (1, 1))  # wpmic#off is outside
+
+    def test_specs_left_out_are_listed_by_kind(self):
+        d = atlas.data(self.checker(), 'wb')
+        self.assertEqual(d['unplaced'], [
+            {'id': 'farther', 'kind': 'chip', 'facts': 1},
+            {'id': 'unrelated', 'kind': 'chip', 'facts': 1},
+            {'id': 'wpwm', 'kind': 'peripheral', 'facts': 1},
+        ])
+        placed = {s['id'] for s in d['specs']}
+        self.assertFalse(placed & {u['id'] for u in d['unplaced']})
+        self.assertIn('DATA.unplaced', (Path(atlas.__file__).parent / 'atlas.js').read_text())
+
+    def test_context_roots_are_not_listed(self):
+        ctx = Path(self.temp.name) / 'ctx'
+        ctx.mkdir()
+        (ctx / 'board-specs.yaml').write_text(marker('ctx-root'))
+        (ctx / 'lonely.spec.yaml').write_text(chip('lonely'))
+        args = SimpleNamespace(roots=[self.root], context_root=[ctx], require_license=False,
+                               public_skill=[])
+        checker = spec._run_check(args)
+        for merged in (False, True):
+            ids = {u['id'] for u in atlas.data(checker, 'wb', merged=merged)['unplaced']}
+            self.assertNotIn('lonely', ids)
+            self.assertIn('unrelated', ids)
+
+
 if __name__ == '__main__':
     unittest.main()

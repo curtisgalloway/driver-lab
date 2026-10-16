@@ -40,7 +40,8 @@ of anchors blind before reading the claims, seeded by the spec hash, and record 
 
 A field whose cited source gives a value table or bit assignments, with neither values nor a
 `todo` saying they were left out, is a FAIL; so is a property (access, reset, value) that
-disagrees with the source.
+disagrees with the source. A layout field whose `bits`, `byteOrder` or `bitNumbering` disagrees
+with the cited document is a FAIL.
 
 Check all required subject areas and omissions: databook register organization including
 untouched registers, identity/revision, prerequisites, init/error/power/teardown, layouts,

@@ -1535,6 +1535,15 @@
           "size": {
             "type": "integer",
             "minimum": 1
+          },
+          "bits": {
+            "$ref": "#/$defs/bits"
+          },
+          "enumeratedValues": {
+            "$ref": "#/$defs/enumeratedValues"
+          },
+          "enumerationDefinitionRef": {
+            "$ref": "#/$defs/registryName"
           }
         },
         "additionalProperties": false,
@@ -1548,6 +1557,10 @@
             "then": {
               "$ref": "#/$defs/supportRules"
             }
+          },
+          {
+            "not": {"required": ["enumeratedValues", "enumerationDefinitionRef"]},
+            "$comment": "message: a layout field has its own enumeratedValues or an enumerationDefinitionRef, not both"
           }
         ]
       },
@@ -1668,6 +1681,12 @@
           "size": {
             "type": "integer",
             "minimum": 1
+          },
+          "byteOrder": {
+            "enum": ["bigEndian", "littleEndian"]
+          },
+          "bitNumbering": {
+            "enum": ["lsb0", "msb0"]
           },
           "fields": {
             "type": "array",

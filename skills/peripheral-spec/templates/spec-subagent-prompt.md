@@ -79,6 +79,11 @@ on purpose, add `todo: {check: document, text: "<what is omitted and where>"}` t
 naming the table in `meaning` alone is a defect. Use IP-XACT access values, and give a document
 abbreviation such as RW1CS one `fieldAccessPolicyDefinitions` entry, cited once.
 
+A layout field packed inside a word (packet header, descriptor, mailbox word) takes `bits: [a, b]`
+within its `offset`/`size` container, numbered as the cited document numbers bits; set the
+layout's `bitNumbering` (`lsb0` or `msb0`) and `byteOrder` (`bigEndian` or `littleEndian`), and
+list value tables as on register fields.
+
 Add complete register fields in databook order, performing steps and separate ordering
 constraints, layouts, interrupts/DMA/addressing, identity, target protocols/binding/packaging,
 gotchas and questions. Every actionable item is a supported record or a gap TODO; orientation

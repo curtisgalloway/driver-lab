@@ -45,9 +45,12 @@ exit {code}
 
 
 def alive(pid):
+  # A killed process passes through Z (zombie) and, while its reaper releases it, X (dead)
+  # before its /proc entry disappears. Both are dead: X was once read as alive right after
+  # a Z, which failed the interrupted-wait test about once in 500 runs (issue #122).
   try:
     with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
-      return f.read().rsplit(")", 1)[1].split()[0] != "Z"
+      return f.read().rsplit(")", 1)[1].split()[0] not in ("Z", "X")
   except (FileNotFoundError, ProcessLookupError):
     # A process reaped between open() and read() makes the read fail with ESRCH.
     return False
@@ -58,6 +61,27 @@ def load():
   module = importlib.util.module_from_spec(spec)
   spec.loader.exec_module(module)
   return module
+
+
+class AliveTest(unittest.TestCase):
+  """The helper the interrupted-wait test relies on to tell a killed child from a live one."""
+
+  def state(self, letter):
+    stat_line = f"4242 (sle) ep) {letter} 1 4242 4242 0 -1\n"
+    with mock.patch("builtins.open", mock.mock_open(read_data=stat_line)):
+      return alive(4242)
+
+  def test_running_and_sleeping_are_alive(self):
+    self.assertTrue(self.state("R"))
+    self.assertTrue(self.state("S"))
+
+  def test_zombie_and_exit_dead_are_dead(self):
+    self.assertFalse(self.state("Z"))
+    self.assertFalse(self.state("X"))
+
+  def test_missing_entry_is_dead(self):
+    with mock.patch("builtins.open", side_effect=FileNotFoundError):
+      self.assertFalse(alive(4242))
 
 
 class CodexImplementTest(unittest.TestCase):

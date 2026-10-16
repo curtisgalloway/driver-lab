@@ -19,5 +19,7 @@ The `<board-id>` board spec composes the `<soc-id>` SoC and `<chip-id>` companio
 `spec: <board-id>`
 
 This is a subagent role. The orchestrator spawns an expert that loads board-expert, passes the
-spec id and question, and receives its report. The expert manages its own resource cache.
+spec id and question, and receives its report. In Claude Code with the driver-porting plugin
+installed, the expert is the `driver-porting:board-expert` agent; elsewhere it is a subagent
+that loads the skill. The expert manages its own resource cache.
 Facts go in YAML, procedure in board-expert, format rules in spec-format. Keep this a pointer.

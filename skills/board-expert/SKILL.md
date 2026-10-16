@@ -36,7 +36,9 @@ is a public root for hardware with no home tree.
 This is a subagent role. The orchestrator spawns an expert, has it load this skill and any
 applicable vendor skill, and passes the question with `spec: <id>` and/or `ip: <id>` when known.
 The expert manages its own resource cache; the orchestrator receives the report and does not
-micromanage cloning or read raw source/cache bookkeeping. A wrapping skill follows the same
+micromanage cloning or read raw source/cache bookkeeping. In Claude Code, launch the plugin's
+`driver-porting:board-expert` agent, which preloads this skill and removes file-editing tools;
+other harnesses start a general subagent that loads it. A wrapping skill follows the same
 split, with its own rules taking precedence. A separate context does not separate credentials
 or permissions; follow the caller's authorized scope.
 

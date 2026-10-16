@@ -97,6 +97,16 @@ The skill named by `via:` owns invocation, authentication, and safety rules. `bo
 invents a command line for a tool; it loads the skill and follows it. If that skill is not loaded in
 the session, the reader reports the tool as unavailable and continues.
 
+**A tool that is an agent.** `via:` names a skill only; the schema accepts nothing but
+`skill:<name>`. If your tool is a Claude Code agent, the vendor skill names it and says when the
+expert should launch it. The expert agent keeps the Agent tool for this. Claude Code allows
+subagents at most three layers below the main conversation: main session, expert and tool agent
+use two; an orchestrated unit that launches the expert uses all three, so the tool agent there
+cannot start agents of its own.
+A `via: agent:<name>` form is planned, not built: it needs a schema change, `spec.py check`
+support and tests, and a rule for harnesses with no agent definitions. Until then, keep the
+skill as the entry point.
+
 Kinds are free-form. The public conventions are `bench` (a target on a rig: serial console, power,
 netboot, screen), `mcp` (an MCP server or tool), and `script` (a path in the tree). Add your own
 kinds freely; the reader only cares about `via:`.

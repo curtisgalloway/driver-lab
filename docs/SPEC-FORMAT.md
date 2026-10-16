@@ -550,7 +550,9 @@ the license split carry over. Restated for the spec format:
   root is a spec. No symbolic links inside a root.
 - **Merge order.** By layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then
   pointer order; the spec repositories in the order docs, permissive, gpl. Composition first
-  (`parts`, then `instances[].ip`), then overlays.
+  (`parts`, then `instances[].ip` and `instances[].peripheral`, then peripheral specs whose
+  `describes` names a composed id), then overlays. `render --merged` renders one id and follows
+  no composition link; the reader and the atlas compose.
 - **Merging.** An overlay's `facts` are appended to the target's facts, each keeping its
   `origin` (root name and layer) and its full reference in the merged view; the renderer groups them under the target's
   sections with an "Overlay: <layer> (<root>)" sub-heading, as today. `resources` lists

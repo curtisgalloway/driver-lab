@@ -235,3 +235,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Provider / consumer / specifier | Devicetree's names for the node that supplies a clock, reset, interrupt or similar / the node that uses it / the cells after the provider's reference that pick one of its outputs. |
 | Container word | In a layout, the bytes at a field's `offset` and `size`, read as one integer in the layout's byte order; `bits` select a range inside it. |
 | SHA-256 / ISO date | The digest algorithm used for file identities and fact bases / a date written `YYYY-MM-DD`, such as `2026-10-09`. A file digest identifies bytes, while a basis also fingerprints declared dependencies. |
+| Item bank / item (spec-eval) | A JSON file of code-writing tasks for a spec / one task with its reference answer, trap and unit tests. |
+| Trap (spec-eval) | A plausible wrong answer that an item's unit tests must reject; if it passes, the tests are too weak. |
+| Abstention / `SpecGap` (spec-eval) | Answering "the spec does not say" by returning `Err(SpecGap(..))` rather than inventing code; the right answer to an out-of-spec item. |
+| Arm (spec-eval) | One information source a spec-eval round compares. Distinct from the Arm processor company and from an experimental arm above. |
+| Stratum (spec-eval) | The kind of an item: in-spec scalar, in-spec structured, out-of-spec, adversarial or synthesis. |
+| Archetype (spec-eval) | The code pattern an item exercises: write-1-to-clear, ordered sequence, capability gating, bitfield codec or hardware math. |

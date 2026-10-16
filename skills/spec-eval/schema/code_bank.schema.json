@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors; SPDX-License-Identifier: Apache-2.0",
+  "title": "spec-eval code bank",
+  "description": "A bank of code-writing items: an array of items, or an object holding them under items.",
+  "anyOf": [
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/item"
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        },
+        "$comment": {
+          "type": "string"
+        },
+        "bank": {
+          "type": "string"
+        },
+        "version": {}
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": [
+        "id",
+        "stratum",
+        "tier",
+        "task_prompt"
+      ],
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "required": [
+                "fn_signature"
+              ]
+            },
+            {
+              "required": [
+                "signature"
+              ]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "reference_rust"
+              ]
+            },
+            {
+              "required": [
+                "ref_rs"
+              ]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "trap_rust"
+              ]
+            },
+            {
+              "required": [
+                "trap_rs"
+              ]
+            }
+          ]
+        },
+        {
+          "anyOf": [
+            {
+              "required": [
+                "test_harness"
+              ]
+            },
+            {
+              "required": [
+                "tests_rs"
+              ]
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stratum": {
+          "enum": [
+            "in-spec-scalar",
+            "in-spec-structured",
+            "out-of-spec",
+            "adversarial",
+            "synthesis"
+          ]
+        },
+        "tier": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "enum": [
+                2,
+                3
+              ]
+            },
+            {
+              "type": "string",
+              "enum": [
+                "tier2",
+                "tier3"
+              ]
+            }
+          ]
+        },
+        "task_prompt": {
+          "type": "string"
+        },
+        "fn_signature": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "reference_rust": {
+          "type": "string"
+        },
+        "ref_rs": {
+          "type": "string"
+        },
+        "trap_rust": {
+          "type": "string"
+        },
+        "trap_rs": {
+          "type": "string"
+        },
+        "test_harness": {
+          "type": "string"
+        },
+        "tests_rs": {
+          "type": "string"
+        },
+        "preamble": {
+          "type": "string"
+        },
+        "preamble_rs": {
+          "type": "string"
+        },
+        "chapter_or_block": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "abstain_probe": {
+          "type": "string"
+        },
+        "$comment": {
+          "type": "string"
+        },
+        "use_hw_prelude": {
+          "type": "boolean"
+        },
+        "archetype": {
+          "enum": [
+            "w1c-rmw",
+            "ordered-sequence",
+            "capability-gating",
+            "bitfield-codec",
+            "hardware-math"
+          ]
+        },
+        "spec_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spec_facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "doc_pages_primary": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "pdf_pages": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "doc_pages_secondary": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "pdf_pages_secondary": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "citation": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

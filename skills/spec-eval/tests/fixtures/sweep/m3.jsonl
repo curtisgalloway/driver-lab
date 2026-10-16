@@ -1,0 +1,3 @@
+{"item_id": "zx-crc-offload", "model": "m3", "arm": "A", "rust_code": "", "abstained": true}
+{"item_id": "zx-uart-divisor", "model": "m3", "arm": "B", "rust_code": "", "abstained": true}
+{"item_id": "zx-no-such-item", "model": "m3", "arm": "A", "rust_code": "pub fn nothing() {}"}

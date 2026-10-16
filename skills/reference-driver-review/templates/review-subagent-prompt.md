@@ -15,9 +15,11 @@ Destination root: <root>; output: <scratch-review>. Load `reference-driver-revie
 `peripheral-spec` and `spec-format`. Confirm cited file licenses and the destination's accepts
 list first. Quote sparingly, preserve notices, never paste reference code into the implementation.
 
-Build correspondence first, then fan out paired constants, sequences, interrupt/DMA and
-error/quirk slices. Run constants twice independently, resolving differences against both
-headers. Preserve investigators' ids and structured support; no invented line citations.
+Build correspondence first, tracing each entry point's selection path (registration, inherited
+defaults, match filters, callback, driver selection, initialization), then fan out paired
+constants, sequences, interrupt/DMA and error/quirk slices. Run constants twice
+independently, resolving differences against both headers. Preserve investigators' ids and
+structured support; no invented line citations.
 
 Start from this minimal complete finding template. The fixture pins/paths and suspect
 example are synthetic; substitute read evidence and its actual applicability for real work.

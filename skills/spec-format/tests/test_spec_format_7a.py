@@ -96,7 +96,7 @@ class Peripheral(Fixture):
         for text in (render_md.escape("Register map (generated)"), "WIDGET_CTRL", "0x0", "write 0 to CTRL",
                      "seq-init.s1", "reg-ctrl.en", "widget_frame", "4 bytes", "frame_payload"):
             self.assertIn(text, view)
-        self.assertIn("Register `WIDGET_CTRL` at `0x0`, 32 bits, rw.", view)
+        self.assertIn("Register `WIDGET_CTRL` at `0x0`, 32 bits, read\\-write.", view)
 
     def test_closed_payloads_and_no_citation_aliases(self):
         base = copy.deepcopy(self.data)
@@ -123,7 +123,7 @@ class Peripheral(Fixture):
             self.invalid("required property", schema=True)
         for name, values in (("name", ["", " ", "-CTRL", "CTRL\n"]),
                              ("offset", [0, "0x00", "0X1", "0xA", "0x0\n"]),
-                             ("width", [0, -1, "32", True]), ("access", ["", "read-write"]),
+                             ("width", [0, -1, "32", True]), ("access", ["", "read_write"]),
                              ("reset", [None, 1, "0x00"])):
             for value in values:
                 self.data = copy.deepcopy(base)
@@ -452,9 +452,9 @@ class Peripheral(Fixture):
         self.assertTrue(got["questions"])
         for row in got["verify"]:
             self.assertEqual(view.count("- " + render_md.code(row["fact"]) + ": " + render_md.escape(row["text"])), 1)
-        self.assertIn("| reg\\-ctrl | 0x0 | `WIDGET_CTRL` | 32 | rw | 0x0 |", view)
-        self.assertIn("| reg\\-baud | 0x4 | `WIDGET_BAUD` | 32 | rw |  |", view)
-        self.assertIn("| reg\\-lcr | 0x8 | `WIDGET_LCR` | 32 | rw |  |", view)
+        self.assertIn("| reg\\-ctrl | 0x0 | `WIDGET_CTRL` | 32 | read\\-write | 0x0 |", view)
+        self.assertIn("| reg\\-baud | 0x4 | `WIDGET_BAUD` | 32 | read\\-write |  |", view)
+        self.assertIn("| reg\\-lcr | 0x8 | `WIDGET_LCR` | 32 | read\\-write |  |", view)
         self.assertIn("| baud\\-latch\\-test | hardware | " + render_md.escape(got["questions"][0]["text"]) + " |", view)
         self.assertIn("Support classes: `databook`, `src`.", view)
         for row in got["references"]:

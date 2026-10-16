@@ -53,6 +53,13 @@ matching the target repository's license. No frontmatter or Markdown body surrou
 
 Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `peripheral`, `review` and
 `facts`. Peripheral and review specs include `data` payloads, `requirement` and verdict sub-keys.
+Register fields carry IP-XACT properties and the spec-level registries (`resetTypes`,
+`fieldAccessPolicyDefinitions`, `enumerationDefinitions`, `registerFiles`); see
+[SPEC-FORMAT.md](../../docs/SPEC-FORMAT.md#register-fields-ip-xact-properties). Layout fields
+take `bits`, and a layout takes `byteOrder` and `bitNumbering`; see
+[the layouts subsection](../../docs/SPEC-FORMAT.md#layouts-bit-packed-fields-and-byte-order).
+Sequence steps take `op`, and time limits are quantities; see
+[the sequences subsection](../../docs/SPEC-FORMAT.md#sequences-an-operation-per-step).
 Use [peripheral-spec](../peripheral-spec/SKILL.md),
 [reference-driver-review](../reference-driver-review/SKILL.md) and
 [hardware-investigator](../hardware-investigator/SKILL.md) for their authoring procedures.
@@ -62,7 +69,7 @@ Place facts by kind:
 - `board`: wiring, boot media/configuration, console connector/routing, power, headers;
   `parts` composes the SoC and chips.
 - `soc`: addressing, entry contract, core topology, interrupt controller, debug UART placement,
-  timers, clocks/power, GPIO/pinmux, runtime device-tree changes; `instances` places IP blocks.
+  timers, clocks/power, GPIO/pinmux, runtime device-tree changes; `instances` places blocks.
 - `chip`: how the companion is reached, its address window, contents and hand-off state.
 - `ip`: standards, register model/sequences, public variants/errata; no instance addresses.
 - `overlay`: `kind: overlay` and `overlays` name the target; no `id` or `parts` override.
@@ -97,9 +104,11 @@ contested; a resolution records `decided` and, when relevant, the assumption tha
 carries required source-license notices, never source excerpts.
 
 Instances and variants have stable ids and support like facts, verified under those ids.
-Each SoC instance's `ip` must resolve to a spec of kind `ip` in the supplied roots.
-The valid minimal SoC instance list is `instances: []`; omit example rows until their IP
-specs and placement evidence are available.
+Each SoC instance names an `ip` spec (a reusable block), a `peripheral` spec (its programming
+model), or both, and each must resolve to a spec of that kind in the supplied roots.
+The valid minimal SoC instance list is `instances: []`. A block with placement evidence but
+no ip or peripheral spec yet gets no row; record its placement as a gap fact with a `todo`
+until one of those specs exists.
 An instance's `reg` is a canonical hex string such as `"0xfe201000"` (lowercase, no separators
 or leading zeros), or null with a TODO; `irq` may likewise be null with a TODO. SPI/PPI numbers
 and optional INTIDs must agree; extended interrupts name a parent. `clocks: []` is allowed.
@@ -203,7 +212,8 @@ SPDX identifiers, not expressions; `[]` means documents only. The gate accepts `
 either is accepted, `A AND B` only when both are; use canonical ids (`GPL-2.0-only`). Placement
 follows the most restrictive cited source, including transitive dependencies. `DT` is gated
 as source despite describing hardware. `--require-license` also gates map-only repos.
-Composition (`parts`, `instances[].ip`) is not evidence and is not license-gated.
+Composition (`parts`, `instances[].ip` and `.peripheral`, a peripheral spec's `describes`) is not
+evidence and is not license-gated.
 
 Discover pointers from exactly four places, never by searching a checkout for markers:
 board-expert's shipped `specs/`; loaded skills' `board-spec root: <path>` lines; the checkout's
@@ -216,12 +226,19 @@ the route to a root, no nested markers.
 
 Order by layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then pointer order;
 for the spec repositories use docs, permissive, GPL order. Resolve `parts` recursively, then
-needed `instances[].ip`; overlay every composed id. Added facts retain root/layer and full
+the needed instances' `ip` and `peripheral` specs, and the peripheral specs whose `describes`
+names a composed id; overlay every composed id. Added facts retain root/layer and full
 reference. Resource lists concatenate, later same-name entries replacing earlier ones for the
 reader; scalars follow layer precedence. Citations still resolve in their originating file,
 never against a merged resource replacement. Overlays add facts/relations/conflicts, never
 rewrite base facts. Do not depend on competing overlays within one root to select facts:
 make ids distinct and relationships explicit.
+
+The reader composes; the tools do not compose the same way. `render --merged` renders the one
+id it is given with its overlays and follows no composition link. `render --format atlas`
+places the board's `parts`, the ip and peripheral specs their instances name, the peripheral
+specs whose `describes` names the board or a part, and specs one fact link away (`relates` or
+an inference premise), and lists the specs it left out.
 
 Public layers contain no internal documents/tools/host facts; vendor material stays private.
 Public roots never cite documents marked confidential or NDA, whatever their availability.
@@ -373,7 +390,8 @@ from it. It is read-only: no verdict rule changes, and a TODO stays open until a
 settles it.
 
 `status` prints summaries and freshness even on error. `render --spec` selects one id, not
-its composed parts automatically: render every id needed for the question. `--merged` includes
+its composed parts automatically: render every id needed for the question, peripheral
+specs included. `--merged` includes
 context bases/overlays of selected ids; `--with-status` adds verdicts. Supply one
 `--source-commit ROOT=SHA` per rendered root directory, not per input root
 ([example](#source-commits-name-rendered-roots)), and `--tool-commit SHA` for the tool

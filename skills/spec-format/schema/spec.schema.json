@@ -1051,9 +1051,39 @@
               "path": {"$ref": "#/$defs/path"},
               "license_from": {"enum": ["spdx-line", "notice", "license-file"]},
               "status": {"enum": ["unmerged", "merged"]},
-              "note": {"$ref": "#/$defs/text"}
+              "note": {"$ref": "#/$defs/text"},
+              "attribution": {
+                "$comment": "Source copyright attribution declared by the file's notices at the pinned commit (#101). Absent means not recorded. Checked by resolve; bookkeeping for freshness.",
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {"enum": ["none-found", "ambiguous", "recorded"]},
+                  "names": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/line"}},
+                  "evidence": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": ["line", "text"],
+                      "properties": {
+                        "line": {"type": "integer", "minimum": 1},
+                        "text": {"$ref": "#/$defs/line"}
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                  {"if": {"properties": {"status": {"const": "recorded"}}}, "then": {"required": ["names", "evidence"]}},
+                  {"if": {"properties": {"status": {"const": "ambiguous"}}}, "then": {"required": ["evidence"]}},
+                  {"if": {"properties": {"status": {"const": "none-found"}}}, "then": {"not": {"anyOf": [{"required": ["names"]}, {"required": ["evidence"]}]}}}
+                ]
+              }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "if": {"properties": {"path": {"pattern": "/$"}}, "required": ["path"]},
+            "then": {"not": {"required": ["attribution"]}}
           }
         },
         "verified": {"$ref": "#/$defs/date"},

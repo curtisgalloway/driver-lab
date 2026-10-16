@@ -1534,7 +1534,8 @@ class ReviewRound2(Roots):
         changes = {"path": ("drivers/w2.c", "unknown"),  # the cited path is no longer listed
                    "license_from": ("notice", "stale"),
                    "status": ("unmerged", "stale"),
-                   "note": ("m", "current")}
+                   "note": ("m", "current"),
+                   "attribution": ({"status": "none-found"}, "current")}  # #101
         self.assertEqual(set(changes), set(items["properties"]))
         edits = {}
         for field, (value, _) in changes.items():
@@ -1552,6 +1553,21 @@ class ReviewRound2(Roots):
         repo["files"][1]["license_from"] = "notice"
         self.assertEqual(self.outcomes("repo", {"x.c": {"repo": repo}})["x.c"],
                          ("current", "current"))
+
+    def test_changing_only_a_cited_files_attribution_leaves_the_verdict_current(self):
+        """Attribution has its own verification (resolve), so correcting it never stales a
+        verdict on the hardware fact (issue #101)."""
+        repo = json.loads(json.dumps(self.REPO))
+        repo["files"][0]["attribution"] = {
+            "status": "recorded", "names": ["Example Corp"],
+            "evidence": [{"line": 1, "text": "Copyright 2020 Example Corp"}]}
+        edits = {"added": {"repo": repo}}
+        repo2 = json.loads(json.dumps(repo))
+        repo2["files"][0]["attribution"]["names"] = ["Other Corp"]
+        edits["changed"] = {"repo": repo2}
+        got = self.outcomes("repo", edits)
+        self.assertEqual(got["added"], ("current", "current"))
+        self.assertEqual(got["changed"], ("current", "current"))
 
     def test_every_assumption_field_but_bookkeeping_counts(self):
         self.every_field("assumptions", SCHEMA["assumption"], self.ASSUMPTION, "assumption",

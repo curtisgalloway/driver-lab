@@ -21,6 +21,7 @@ import tempfile
 import unicodedata
 
 import speccheck
+import attribution
 import docresolve
 
 COMMIT = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})\Z")
@@ -384,6 +385,32 @@ def check_license(repo, entry, anchor):
         raise ContentError(f"{path}: invalid SPDX expression: {exc}") from exc
 
 
+def check_attribution(repo, entries, entry, anchor, item, add, checked):
+    """Scan the cited file's notices; check the files item's `attribution` once per item (#101).
+
+    The scan lands on the anchor item so an author can copy it. A recorded attribution that
+    disagrees with the source is an error at the item's `attribution` key.
+    """
+    path = anchor["path"]
+    scan = attribution.scan(repo.lines(path))
+    item["attribution"] = scan
+    listed = listed_file(entry, anchor)
+    if "attribution" not in listed:
+        return
+    where = (
+        "resources",
+        "repos",
+        next(i for i, e in enumerate(entries) if e is entry),
+        "files",
+        next(i for i, f in enumerate(entry["files"]) if f is listed),
+    )
+    if where in checked:
+        return
+    checked.add(where)
+    for message in attribution.compare(listed["attribution"], scan, repo.lines(path)):
+        add(where + ("attribution",), f"{path}: {message}")
+
+
 HEX_LITERAL = re.compile(
     r"\b0[xX]([0-9a-fA-F](?:[0-9a-fA-F_']*[0-9a-fA-F])?)(?:[uU](?:ll|LL|l|L)?|(?:ll|LL|l|L)[uU]?)?\b"
 )
@@ -558,6 +585,12 @@ def result_object(files, findings, anchors, facts, documents=()):
             )
             for number, line in citation.get("source", []):
                 text.append(f"  {number}: {display_line(line)}")
+            if "attribution" in citation:
+                scan = citation["attribution"]
+                text.append(
+                    f"  attribution (scanned {scan['lines']} lines): {scan['status']}; "
+                    f"names: {'; '.join(scan['names']) or 'none'}"
+                )
             if citation.get("search"):
                 text.append(
                     f"  Search scope only (re-verify manually): {citation['search']}"
@@ -634,6 +667,7 @@ def run(args):
                             reader = ResolutionError(str(exc))
                             add(("resources", "documents", i, "sha256"), str(exc))
                     documents[doc["name"]] = doc, reader
+            attribution_checked = set()
             by_name = {}
             for entry in entries:
                 by_name.setdefault(entry["name"], []).append(entry)
@@ -696,6 +730,11 @@ def run(args):
                             raise repo
                         span, lines = cited_lines(repo, anchor)
                         check_license(repo, entry, anchor)
+                        if not anchor["path"].endswith("/"):
+                            check_attribution(
+                                repo, entries, entry, anchor, item, add,
+                                attribution_checked,
+                            )
                         item.update(
                             status="resolved",
                             commit=entry["commit"],

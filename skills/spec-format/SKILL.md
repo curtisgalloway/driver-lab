@@ -192,6 +192,13 @@ separate entries. `resolve` compares SPDX lines where available; confirmation fr
 or license files remains the reader's job. `role` is `source`, `target`, `impl`, `ref`, and
 changes no gate rule.
 
+A files item of a file may record source copyright attribution: `attribution` with `status`
+`recorded` (plus `names`, `evidence`), `ambiguous` (plus `evidence`) or `none-found`; absence
+means not recorded. It reports the notices the file declares, never authorship. `resolve` prints
+its whole-file scan of each cited file (copy it) and fails a recorded `attribution` that
+disagrees with it; for `ambiguous`, add evidence lines you resolved by hand, each equal to the
+normalized source line. Editing it never stales a verdict.
+
 `series` maps unmerged work, never a citation. Keep canonical mailing-list URLs and workable
 retrieval guidance in a note. `tools` is declarative: `via: skill:<name>` names the driver
 skill. Fetch-method strings (`fetch_via`, retrieval `via`) are prose, never commands. Internal
@@ -249,7 +256,7 @@ Use `spec.py status --json` to get each current `basis` and `upstream` map to wr
 omit `upstream` when empty. `canonical: fact-v1` identifies the hash contract: fact except
 `section`, cited resources, assumptions and referenced facts' bases. Whole cited entries count
 except `records.BOOKKEEPING`: document `verified`, `fetch`, `note`; repos `verified`, `fetch`,
-`fetch_via`, `note`; files-item `note`; assumption `todo`. Repos contribute only cited paths'
+`fetch_via`, `note`; files-item `note`, `attribution`; assumption `todo`. Repos contribute only cited paths'
 files items. Layout, comments, key order and folding do not count; semantic edits do.
 `spec_sha256` is informational, never the freshness test.
 

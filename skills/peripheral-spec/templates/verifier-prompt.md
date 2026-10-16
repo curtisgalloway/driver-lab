@@ -53,7 +53,11 @@ hw-required needs an applicable document, comment-explained needs attributed com
 as-implemented is code observation. Every code-only hardware assumption has an observable TODO;
 generated hardware and open-question lists must represent the records. Spot-check locators
 against obtainable documents; name every unavailable source. Search for contrary evidence,
-including limitations and revision mismatches. A zero-finding result must say how coverage was earned.
+including limitations and revision mismatches. Read the notes that govern each cited value,
+wherever they appear: table footnotes, exception rows, and clauses for another actor or type.
+A dropped condition or a contradicted exclusivity is FAIL. A true claim that omits a sibling
+rule is PASS with `contrary_evidence: found`; its `note` names the omission and proposes text.
+A zero-finding result must say how coverage was earned.
 
 Return a full report plus proposed `<root>/resources/<device>.verify.yaml` following
 spec-verifier. Key verdicts by fact id and `fact-id.sub-id` for fields/steps with independent

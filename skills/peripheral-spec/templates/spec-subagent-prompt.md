@@ -111,6 +111,8 @@ Use `areas` for confidence. Hardware TODOs cover code-only width/reset/bit assum
 observable checks; the generated lists collect these records.
 
 Document support names `resources.documents` with matching class and precise string locators.
+A document value carries, and cites, the notes that govern it wherever they appear (table
+footnotes, exception rows, clauses for another actor).
 Keep canonical citation URLs separate from workable retrieval URLs, with hashes and page counts.
 For Arm manuals, retain the developer page and static documentation-service PDF retrieval.
 Quote only a few lines when their expression matters. Use inclusive performing lines and

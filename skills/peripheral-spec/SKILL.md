@@ -80,6 +80,8 @@ SHA-256 when available and precise locators in support. Use `databook`, `standar
 as the contract defines, not interchangeable classes. Store usable fetch URLs in `retrieval`,
 separate from the citation URL. For Arm manuals cite the developer documentation page and
 record the documentation-service static PDF in retrieval. Record revision and page count.
+A fact that states a document value carries the notes that govern it, wherever they appear
+(table footnotes, exception rows, clauses for another actor), and cites them.
 Public roots never cite confidential or NDA documents, even when copies are obtainable.
 
 Every source citation uses `class: src` with `anchors: [{repo, path, lines, symbol}]`.

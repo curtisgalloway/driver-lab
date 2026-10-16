@@ -5,6 +5,7 @@
 Usage:
   python3 <main checkout>/utilities/patch-gate.py PATCH WORKTREE --refused FILE [--reuse-venv]
       [--suite NAME=COMMAND]... [--no-default-suites]
+  python3 <main checkout>/utilities/patch-gate.py --verify-digest DIGEST WORKTREE
 
 The orchestrator runs this itself after `git apply` (AGENTS.md, "Delegation in orchestrated
 runs"). It replaces a subagent runner that cost about 71k tokens per patch to run the same
@@ -15,6 +16,9 @@ WORKTREE  The milestone worktree the patch was applied in; every command runs th
 --refused The `.refused.txt` beside the patch; any refused path fails the gate.
 --reuse-venv  Keep WORKTREE/.venv-spec instead of rebuilding it with --require-hashes.
 --suite   An extra check, NAME=COMMAND (split like a shell, run without one).
+--verify-digest  Recompute WORKTREE's digest and compare it with DIGEST, the one a passing
+          gate printed on its `worktree digest:` line; run nothing else. Run it as the last step
+          before staging the commit (#80).
 
 Pattern hits are reported verbatim for the orchestrator to judge; they do not fail the gate.
 
@@ -43,8 +47,17 @@ Trust. The patch may have changed anything in WORKTREE, including the checks the
     scans skip fails: the scans would pass over it, while git may still commit it as text;
   - a path the patch adds or changes that the worktree's ignore rules hide (so the untracked
     scan never sees it) fails; its paths come from `git apply --numstat`, git's own parser.
-Limits. A process that leaves its group (a second setsid) can still outlive the gate; the
-orchestrator should recheck the worktree just before committing. The hooks and config are
+Limits. A process that leaves its group (a second setsid) can still outlive the gate and
+change WORKTREE afterward. The gate prints the digest of the state it scanned, and
+`--verify-digest` recomputes it, so the orchestrator rechecks just before staging and a change
+made before that recheck fails it. The escaped process is never stopped: it can still change
+files between the recheck and the commit, or later (an uncommitted change, or the shared hooks
+and config); this is not fixed. A Linux
+subreaper or PID namespace would close it but was not added: it is Linux-only and needs the
+gate to find and kill reparented processes, while the recheck catches the effect on any OS.
+Any git command that rewrites WORKTREE's index between the gate and the recheck (`git add`, or
+a `git status` that refreshes stale stat data) also fails the recheck; that failure is safe, and
+the fix is to rerun the gate. Only a passing gate prints the digest. The hooks and config are
 shared by every worktree of the checkout, so another session changing them during a run (a
 `git worktree add`, a `push -u`) fails that run. State outside the repository (global git
 config, the home directory) is not covered.
@@ -56,7 +69,8 @@ stand in for the standard library's and fake the venv build or a suite's runner 
 --suite commands that start Python should pass `-I` too.
 
 Exit status: 0 every check passed and nothing was refused; 1 a check failed, a file was refused,
-or a new untracked file holds a home directory path; 2 usage error.
+or a new untracked file holds a home directory path; 2 usage error. With --verify-digest: 0 the
+digest matches, 1 it differs or WORKTREE cannot be read, 2 usage error.
 """
 
 import argparse
@@ -363,7 +377,40 @@ def suite_arg(value):
   return name, shlex.split(command)
 
 
+def outside_worktree(parser, path):
+  """PATH's real path; a usage error when it is not a directory or holds this script."""
+  if not os.path.isdir(path):
+    parser.error(f"not a directory: {path}")
+  worktree = os.path.realpath(path)
+  if os.path.commonpath([worktree, HERE]) == worktree:
+    parser.error("run the gate from the main checkout, not from inside WORKTREE")
+  return worktree
+
+
+def verify_digest(argv):
+  """--verify-digest DIGEST WORKTREE: 0 when WORKTREE still has DIGEST, else 1 (#80)."""
+  parser = argparse.ArgumentParser(prog="patch-gate.py --verify-digest", allow_abbrev=False)
+  parser.add_argument("digest")
+  parser.add_argument("worktree")
+  args = parser.parse_args(argv)
+  if not re.fullmatch(r"[0-9a-f]{64}", args.digest):
+    parser.error("DIGEST must be the 64 hex digits the gate printed")
+  worktree = outside_worktree(parser, args.worktree)
+  try:
+    now = worktree_digest(worktree)
+  except RuntimeError as exc:
+    print(f"FAIL worktree state: {exc}")
+    return 1
+  if now != args.digest:
+    print(f"FAIL worktree changed since the gate ran: now {now}")
+    return 1
+  print("ok   worktree digest matches")
+  return 0
+
+
 def main(argv):
+  if argv[:1] == ["--verify-digest"]:
+    return verify_digest(argv[1:])
   parser = argparse.ArgumentParser(prog="patch-gate.py", allow_abbrev=False)
   parser.add_argument("patch")
   parser.add_argument("worktree")
@@ -372,11 +419,7 @@ def main(argv):
   parser.add_argument("--suite", action="append", default=[], type=suite_arg)
   parser.add_argument("--no-default-suites", action="store_true")
   args = parser.parse_args(argv)
-  if not os.path.isdir(args.worktree):
-    parser.error(f"not a directory: {args.worktree}")
-  worktree = os.path.realpath(args.worktree)
-  if os.path.commonpath([worktree, HERE]) == worktree:
-    parser.error("run the gate from the main checkout, not from inside WORKTREE")
+  worktree = outside_worktree(parser, args.worktree)
   try:
     with open(args.patch, encoding="utf-8", errors="replace") as f:
       patch_text = f.read()
@@ -452,6 +495,8 @@ def main(argv):
   if after != before:
     failed = True
     print("FAIL worktree changed while the suites ran; the scans above no longer describe it")
+  if not failed:
+    print(f"worktree digest: {before}")
   print(f"gate: {'FAIL' if failed else 'pass'}")
   return 1 if failed else 0
 

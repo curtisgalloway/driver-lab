@@ -469,6 +469,149 @@ class ResolveTests(GitFixture):
                 self.assertEqual(cli("resolve", self.path, *args)[0], 2)
 
 
+class AttributionTests(GitFixture):
+    """Source copyright attribution is checked against the pinned source (#101)."""
+
+    NOTICED = (
+        "// SPDX-License-Identifier: MIT\n"
+        "// Copyright 2020 Example Corp\n"
+        "int VALUE = 0x10;\n"
+    )
+
+    def setUp(self):
+        super().setUp()
+        (self.repo / "noticed.c").write_text(self.NOTICED)
+        self.git("add", "noticed.c")
+        self.git("commit", "-qm", "noticed")
+        self.entry["commit"] = self.git("rev-parse", "HEAD")
+        self.entry["files"].append(dict(path="noticed.c", license_from="spdx-line"))
+        self.anchor["path"] = "noticed.c"
+        self.anchor["lines"] = [3, 3]
+
+    def attribute(self, **changes):
+        item = dict(
+            status="recorded",
+            names=["Example Corp"],
+            evidence=[dict(line=2, text="Copyright 2020 Example Corp")],
+        )
+        item.update(changes)
+        self.entry["files"][1]["attribution"] = item
+
+    def test_correct_attribution_has_no_finding_and_the_anchor_carries_the_scan(self):
+        self.attribute()
+        code, result = self.run_cli()
+        self.assertEqual((code, result["resolved"]), (0, 1), result)
+        self.assertEqual(result["findings"], [])
+        self.assertEqual(
+            result["anchors"][0]["attribution"],
+            dict(
+                status="recorded",
+                names=["Example Corp"],
+                evidence=[dict(line=2, text="Copyright 2020 Example Corp")],
+            ),
+        )
+        self.assertEqual(result["anchors"][0]["attribution_scanned_lines"], 3)
+
+    def test_the_attached_record_validates_against_the_schema(self):
+        import jsonschema
+
+        schema = json.loads(
+            (Path(resolve.__file__).parents[1] / "schema" / "spec.schema.json").read_text()
+        )
+        files_item = schema["$defs"]["repo"]["properties"]["files"]["items"]
+        validator = jsonschema.Draft202012Validator(
+            {"$defs": schema["$defs"], **files_item["properties"]["attribution"]}
+        )
+        for source, status in (
+            ("// SPDX-License-Identifier: MIT\nint x;\nint VALUE = 0x10;\n", "none-found"),
+            ("// SPDX-License-Identifier: MIT\n// Copyright (C) 2010\nint VALUE = 0x10;\n",
+             "ambiguous"),
+            (self.NOTICED, "recorded"),
+        ):
+            with self.subTest(status):
+                (self.repo / "noticed.c").write_text(source)
+                self.git("add", "noticed.c")
+                self.git("commit", "-qm", status)
+                self.entry["commit"] = self.git("rev-parse", "HEAD")
+                self.entry["files"][1]["license_from"] = "notice"
+                code, result = self.run_cli()
+                record = result["anchors"][0]["attribution"]
+                self.assertEqual(record["status"], status, result)
+                self.assertEqual(list(validator.iter_errors(record)), [])
+
+    def test_text_output_prints_the_scan_once_per_file(self):
+        self.data["facts"][0]["support"][0]["anchors"].append(
+            dict(repo="code", path="noticed.c", lines=[2, 2], symbol="Copyright")
+        )
+        self.write()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            spec.main(["show", str(self.path), "--repo", f"code={self.repo}"])
+        self.assertEqual(out.getvalue().count("attribution (scanned"), 1)
+
+    def test_wrong_names_is_an_error_at_the_attribution_key(self):
+        self.attribute(names=["Other Corp"])
+        code, result = self.run_cli()
+        self.assertEqual(code, 1, result)
+        found = [f for f in result["findings"] if "names differ" in f["message"]]
+        self.assertEqual(len(found), 1, result)
+        self.assertEqual(found[0]["level"], "error")
+        self.assertTrue(found[0]["message"].startswith("noticed.c: "), found)
+        lines = self.path.read_text().splitlines()
+        self.assertEqual(lines[found[0]["line"] - 2].strip(), "attribution:")
+
+    def test_wrong_status_and_evidence_are_errors(self):
+        self.attribute(status="none-found", names=None, evidence=None)
+        item = self.entry["files"][1]["attribution"]
+        del item["names"], item["evidence"]
+        code, result = self.run_cli()
+        self.assertEqual(code, 1, result)
+        self.assertTrue(any("source scan finds 'recorded'" in f["message"]
+                            for f in result["findings"]), result)
+        self.attribute(evidence=[dict(line=2, text="Copyright 2020 Someone")])
+        code, result = self.run_cli()
+        self.assertEqual(code, 1, result)
+        self.assertTrue(any("evidence line 2" in f["message"] for f in result["findings"]))
+
+    def test_cited_twice_gives_one_finding(self):
+        self.attribute(names=["Other Corp"])
+        self.data["facts"][0]["support"][0]["anchors"].append(
+            dict(repo="code", path="noticed.c", lines=[2, 2], symbol="Copyright")
+        )
+        self.data["facts"].append(
+            dict(
+                id="other",
+                section="quick-facts",
+                title="Other",
+                claim="Another.",
+                support=[dict(**{"class": "src"},
+                              anchors=[dict(repo="code", path="noticed.c", lines=[3, 3],
+                                            symbol="VALUE")])],
+            )
+        )
+        code, result = self.run_cli()
+        self.assertEqual(code, 1, result)
+        self.assertEqual(result["resolved"], 3, result)
+        found = [f for f in result["findings"] if "names differ" in f["message"]]
+        self.assertEqual(len(found), 1, result)
+
+    def test_absent_attribution_gives_no_finding(self):
+        code, result = self.run_cli()
+        self.assertEqual((code, result["findings"]), (0, []), result)
+        self.assertEqual(result["anchors"][0]["attribution"]["status"], "recorded")
+
+    def test_text_output_shows_the_scan(self):
+        self.attribute()
+        self.write()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = spec.main(["show", str(self.path), "--repo", f"code={self.repo}"])
+        self.assertEqual(code, 0)
+        self.assertIn(
+            "  attribution (scanned 3 lines): recorded; names: Example Corp", out.getvalue()
+        )
+
+
 class FetchTests(unittest.TestCase):
 
     def test_subprocess_contract(self):

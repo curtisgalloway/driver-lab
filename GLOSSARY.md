@@ -25,6 +25,7 @@ evaluation; add other terms as the documents that use them are updated.
 | SDK | Software development kit: headers, libraries, and tools for building against a platform. |
 | Corpus | The pinned collection of source code and documents used as reference evidence. |
 | Pin | An exact revision, edition, or digest identifying an input. A cited `resources.repos` entry uses full `commit` and `license`; a branch-only `ref` entry is a map. |
+| Source copyright attribution | The holders named by the copyright notices in a cited source file at the pinned commit, copied as written (a person, a company, or a collective such as "The Fuchsia Authors"). It is a record of what the file declares, not a finding about who wrote the code or who owns it. A file with no notice is recorded as "no notice found", not as unowned. |
 | Symbolic link / hard link | A path pointing to another path / another name for the same underlying file. Replacing a symbolic link replaces the pointer; replacing one hard link separates it from the other names. |
 | Mode bits | Unix file flags recording read, write and execute permissions and special modes. |
 | Setuid / setgid | Unix mode flags that can make an executable run with its owner's user identity / its group's identity. Spec files with either flag are refused for rewriting. |
@@ -167,7 +168,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Canonical form | One fixed serialization of parsed data (sorted keys, no whitespace), so files holding the same data hash the same whatever their layout. |
 | Rendered view | Markdown generated from a YAML spec for people to read, built and published by CI; never committed, edited or parsed for meaning. SF2-4 fences author text to keep it inert; provenance is generated only from structured fields. |
 | Viewer / badge | The HTML view of YAML specs / a provenance label drawn from structured fields, outside author text. Built by `spec.py render --format html`; publishing workflows build and deploy the views. |
-| Atlas | One interactive HTML page for a board (or any spec) and the specs around it: its parts, the IP blocks its instances name and the specs one fact link away, shown as an outline, a spec graph, a memory map of instance base addresses, a verification coverage grid and a list of open items. Built by `spec.py render --format atlas --spec ID`. |
+| Atlas | One interactive HTML page for a board (or any spec) and the specs around it: its parts, the IP and peripheral specs its instances name or that describe it, and the specs one fact link away, shown as an outline, a spec graph, a memory map of instance base addresses, a verification coverage grid and a list of open items. Built by `spec.py render --format atlas --spec ID`. |
 | Explorer | The published site's front page (`index.html`): one searchable, filterable list of every fact across a root's specs, built by `publish.py` from the same checked sources as the viewer. Each fact links to its full viewer page. |
 | Heading anchor / anchors.json | The `#fragment` GitHub gives a heading on its rendered page / the site file mapping each cited heading to that fragment, fetched once by `publish.py build --fetch-anchors` so the explorer's citations open the document at the heading. A heading with no anchor is listed as unresolved. |
 | Conversion-fidelity check | In the historical migration to YAML, a fresh agent's comparison of each Markdown bullet with its converted record (same claim text, same citations, nothing added), which decided whether the old verdict could carry forward; the carried verdicts were later re-read fresh. |
@@ -223,7 +224,7 @@ evaluation; add other terms as the documents that use them are updated.
 | Unicode NFC / case folding | A standard way to represent equivalent characters identically / comparing letters without case differences. The verifier identity comparison also collapses whitespace; it is not proof that two named readers are independent. |
 | IP-XACT | IEEE Std 1685-2022: an XML format for describing hardware blocks, including registers and fields. The spec format uses its field property names verbatim (`access`, `modifiedWriteValue`, `readAction`, `enumeratedValues`, …) and can export to it. |
 | XSD | XML Schema Definition: the machine-readable grammar an XML file is validated against. Accellera publishes IP-XACT's under Apache-2.0. |
-| Vendor extension | IP-XACT's `vendorExtensions` slot, where a tool puts elements the standard does not define without breaking validation. The spec format's `unaffectedBy` and `initializedBy` are exported there. |
+| Vendor extension | IP-XACT's `vendorExtensions` slot, where a tool puts elements the standard does not define without breaking validation. The spec format's `unaffectedBy`, `initializedBy` and `lockedBy` are exported there. |
 | Reset type | A named kind of reset (power-on, hot reset, …). A field can have a different reset value per reset type, or be unaffected by one (`unaffectedBy`). |
 | UCUM | Unified Code for Units of Measure: case-sensitive unit codes such as `us`, `ms`, `min`, `Hz`, used for quantities in specs. |
 | IEC 61360 levels | `min`, `nom` (nominal), `typ` (typical), `max`: the recognized names for the levels of a specified value, used in a spec's quantities. |
@@ -235,3 +236,9 @@ evaluation; add other terms as the documents that use them are updated.
 | Provider / consumer / specifier | Devicetree's names for the node that supplies a clock, reset, interrupt or similar / the node that uses it / the cells after the provider's reference that pick one of its outputs. |
 | Container word | In a layout, the bytes at a field's `offset` and `size`, read as one integer in the layout's byte order; `bits` select a range inside it. |
 | SHA-256 / ISO date | The digest algorithm used for file identities and fact bases / a date written `YYYY-MM-DD`, such as `2026-10-09`. A file digest identifies bytes, while a basis also fingerprints declared dependencies. |
+| Item bank / item (spec-eval) | A JSON file of code-writing tasks for a spec / one task with its reference answer, trap and unit tests. |
+| Trap (spec-eval) | A plausible wrong answer that an item's unit tests must reject; if it passes, the tests are too weak. |
+| Abstention / `SpecGap` (spec-eval) | Answering "the spec does not say" by returning `Err(SpecGap(..))` rather than inventing code; the right answer to an out-of-spec item. |
+| Arm (spec-eval) | One information source a spec-eval round compares. Distinct from the Arm processor company and from an experimental arm above. |
+| Stratum (spec-eval) | The kind of an item: in-spec scalar, in-spec structured, out-of-spec, adversarial or synthesis. |
+| Archetype (spec-eval) | The code pattern an item exercises: write-1-to-clear, ordered sequence, capability gating, bitfield codec or hardware math. |

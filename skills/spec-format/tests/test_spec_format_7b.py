@@ -519,12 +519,12 @@ class Generated(ReviewFixture):
         rows = peripheral.register_rows(peripheral.generated(self.checker().files[0]))
         self.assertEqual(rows, [
             {'fact': 'reg-ctrl', 'offset': '0x0', 'name': 'WIDGET_CTRL', 'width': 32,
-             'access': 'rw', 'reset': '0x0', 'fields': [{'id': 'en', 'name': 'WIDGET_CTRL_EN',
+             'access': 'read-write', 'reset': '0x0', 'fields': [{'id': 'en', 'name': 'WIDGET_CTRL_EN',
                                                      'bits': [0, 0], 'meaning': 'block enable'}]},
             {'fact': 'reg-baud', 'offset': '0x4', 'name': 'WIDGET_BAUD', 'width': 32,
-             'access': 'rw', 'reset': '', 'fields': []},
+             'access': 'read-write', 'reset': '', 'fields': []},
             {'fact': 'reg-lcr', 'offset': '0x8', 'name': 'WIDGET_LCR', 'width': 32,
-             'access': 'rw', 'reset': '', 'fields': [{'id': 'format', 'name': 'WIDGET_LCR_8N1',
+             'access': 'read-write', 'reset': '', 'fields': [{'id': 'format', 'name': 'WIDGET_LCR_8N1',
                                                   'bits': [0, 1], 'meaning': '8N1 format'}]}])
         self.assert_views(self.checker(), lambda s: [('Register map (generated)', peripheral.register_rows(s)),
                                                    ('Open questions (generated)', s['questions'])])

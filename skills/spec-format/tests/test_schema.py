@@ -823,6 +823,44 @@ class Resources(Validator):
             with self.subTest(label):
                 self.assert_invalid(soc(resources={"repos": [entry]}), expected)
 
+    def test_file_attribution(self):
+        """Source copyright attribution on a files item (#101)."""
+        recorded = {"status": "recorded", "names": ["Example Corp"],
+                    "evidence": [{"line": 1, "text": "Copyright 2020 Example Corp"}]}
+
+        def item(attribution, path="a.c"):
+            return repo(files=[{"path": path, "license_from": "notice",
+                                "attribution": attribution}])
+
+        self.assert_valid(soc(resources={"repos": [repo(files=[
+            {"path": "a.c", "license_from": "notice"}])]}))
+        for good in (recorded, {"status": "none-found"},
+                     {"status": "ambiguous", "evidence": recorded["evidence"]}):
+            with self.subTest(good["status"]):
+                self.assert_valid(soc(resources={"repos": [item(good)]}))
+        cases = [
+            ("recorded without names", {k: v for k, v in recorded.items() if k != "names"},
+             "'names' is a required"),
+            ("recorded without evidence", {k: v for k, v in recorded.items() if k != "evidence"},
+             "'evidence' is a required"),
+            ("ambiguous without evidence", {"status": "ambiguous"}, "'evidence' is a required"),
+            ("none-found with evidence", {"status": "none-found",
+                                          "evidence": recorded["evidence"]}, "should not be valid"),
+            ("none-found with names", {"status": "none-found", "names": ["A"]},
+             "should not be valid"),
+            ("unknown status", {"status": "unrecorded"}, "is not one of"),
+            ("unknown key", dict(recorded, author="x"), "unknown key 'author'"),
+            ("empty names", dict(recorded, names=[]), "should be non-empty"),
+            ("line zero", dict(recorded, evidence=[{"line": 0, "text": "x"}]),
+             "less than the minimum"),
+        ]
+        for label, attribution, expected in cases:
+            with self.subTest(label):
+                self.assert_invalid(soc(resources={"repos": [item(attribution)]}), expected)
+        with self.subTest("directory path"):
+            self.assert_invalid(soc(resources={"repos": [item(recorded, "drivers/")]}),
+                                "should not be valid")
+
     def test_documents(self):
         self.assert_valid(with_document(cite=False, sha256=SHA, pages=1, page_numbering="pdf",
                                         access="internal", fetch="partial", commit=COMMIT,

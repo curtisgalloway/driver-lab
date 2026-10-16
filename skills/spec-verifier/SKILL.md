@@ -164,6 +164,10 @@ guessing at an unchecked result.
   the pin, confirm it applies to the cited source file, and compare it with the declared
   license. Record the comparison; a mismatch is FAIL, and inaccessible evidence is
   UNVERIFIABLE rather than an assumed match.
+  A files item's `attribution` (declared copyright notices) is different: `resolve` checks it
+  against the pin, and it is bookkeeping for freshness, not part of the hardware fact's
+  verdict. A `resolve` attribution error is fixed in the spec's files item, never recorded as
+  FAIL on the fact. Never infer contributors from collective names or git history.
 - **Reuse pinned inputs across rounds.** Keep one input cache for the session or campaign,
   outside the repository, and bind it explicitly on every round: `--repo <name>=<checkout>`
   for a repository, `--docs-dir` for documents. Acquire an input once, then reuse it.
@@ -202,6 +206,27 @@ guessing at an unchecked result.
   `not-checked`. `none-found` means the stated search found none, not that none exists.
   `found` names conflicting evidence and its effect on the verdict. `not-checked` states
   the obstacle; never imply the step ran. This is a standing step for delta readings too.
+- **Read the notes that govern the cited values, wherever they appear.** A table footnote or
+  note, an exception row, or a clause for another actor or transaction type can qualify a
+  cited value from a page or table the fact never cites: a note under one table can limit
+  when an encoding listed in another is legal. Bound the search: read the rest of each
+  cited section, follow the source's own references from the cited passage, and search the
+  cited document for each value, field or encoding the claim states, reading the notes of
+  every table or section that defines or lists it. Record that search in `note`. Judge
+  what turns up by what the claim says:
+  - *FAIL, as too broad,* when the claim drops a condition the source attaches to a value
+    it states (an encoding given without the limit that makes it legal), or asserts an
+    exclusivity the source contradicts ("set only by the controller" where the source
+    also lets the host set it). Set `contrary_evidence: found`; the `correction` restores
+    the condition or removes the exclusivity.
+  - *PASS with `contrary_evidence: found`* when the claim is true as written, claims no
+    exclusivity and leaves out a sibling rule. The `note` names the omitted rule with its
+    locator and proposes text to add; leave `correction` out, since only a FAIL carries
+    one. PASS still means supported, not complete. Report each such omission to the author
+    as a finding, not a blocker.
+
+  A rule about a value or behavior the claim never states, which this search does not reach,
+  is a drafting coverage question, not something this check can find.
 - **Grade citation precision separately.** Set `citation_precision: exact` when the anchors
   or locators identify the evidence for the whole claim closely enough to repeat the reading;
   use `imprecise` for overly broad or incomplete citations and explain how to narrow them.
@@ -233,8 +258,8 @@ guessing at an unchecked result.
 
 | Verdict | Use |
 | --- | --- |
-| PASS | Evidence supports the claim as stated and classified, with scope and named assumptions. Explain the comparison in `note`. |
-| FAIL | A discrepancy, wrong class, missing/wrong locator or invalid TODO method. Include `correction` proposing a fix; never edit the spec. |
+| PASS | Evidence supports the claim as stated and classified, with scope and named assumptions. Explain the comparison in `note`. A true claim that omits a sibling rule without denying it stays PASS, with the omission in `note` (see the governing-notes check). |
+| FAIL | A discrepancy, a too-broad claim (a dropped condition or contradicted exclusivity), wrong class, missing/wrong locator or invalid TODO method. Include `correction` proposing a fix; never edit the spec. |
 | UNVERIFIABLE | Evidence could not be read (blocked, partial or truncated fetch, inaccessible measurement). State what was not established. A citation shown nonexistent at the pin is FAIL. |
 | GAP | Only a fact with **no `support`** and a TODO. Check whether the TODO can settle it; explain deficiencies in `note` for the author. Record `citation_precision: imprecise` because there is no citation and `contrary_evidence: not-checked` because there is no supported value to compare, explaining both limits in `note`. Never GAP a supported fact, instance or variant. The checker requires a gap's verdict to be GAP. |
 | ADJUDICATE | Independent readings disagree. Store both in `readings`, each `{verifier, verdict, reasoning}`, and actual second readings in `readers`. Count only in `summary.adjudicate`, never PASS/FAIL merely because of disagreement. |
@@ -290,7 +315,8 @@ ADJUDICATE, and a critical fact whose current or upstream-stale verdict has no s
 are errors. `main` differs only in keeping upstream-stale (D19) and a current ADJUDICATE as
 warnings; local stale and a missing second reader still fail. Current FAIL always fails.
 Repeat status to check the delta and report the gate, five summary counts, precision and
-contrary-evidence limits, TODOs, each FAIL's correction and unsettled ADJUDICATE. Commit or
+contrary-evidence limits, PASS verdicts with `contrary_evidence: found` and the omission each
+names, TODOs, each FAIL's correction and unsettled ADJUDICATE. Commit or
 stage records only when the project calls for it; do not push without authorization.
 
 ## Complete worked record

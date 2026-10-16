@@ -9,6 +9,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
+import attribution
 import records
 import render_md
 import speccheck
@@ -193,7 +194,7 @@ def fact(checker, rec, status, with_status):
     else:
         out.append('<dl>')
         for k, v in data.items():
-            if k not in ('id', 'support', 'note', 'todo', 'title', 'name'):
+            if k not in ('id', 'support', 'note', 'todo', 'title', 'name', 'data'):
                 out.append('<dt>' + literal(k) + '</dt><dd>' + literal(v) + '</dd>')
         out.append('</dl>')
     out.append('</div><div class="provenance">')
@@ -201,6 +202,16 @@ def fact(checker, rec, status, with_status):
     if not speccheck.has_support(data):
         out.append(badge('gap', 'Gap'))
     out.append(support(checker, file, data.get('support', []), notes))
+    own_files = attribution.fact_files(file, data)
+    through_ids, through_files = attribution.premise_files(checker, rec)
+    if attribution.summary(own_files) is not None or attribution.summary(through_files):
+        if own_files:
+            out.append('<p>Source copyright attribution (cited files): '
+                       + literal(attribution.summary(own_files, always=True)) + '</p>')
+        if through_ids and through_files:
+            out.append('<p>Source copyright attribution (through premises '
+                       + ', '.join('<code>' + literal(i) + '</code>' for i in through_ids) + '): '
+                       + literal(attribution.summary(through_files, always=True)) + '</p>')
     out.append(badge('origin', file.root.layer + ' · ' + file.root.label))
     for aid in data.get('assumes', []):
         a = file.data['assumptions'][file.assumptions[aid][1]]
@@ -264,6 +275,28 @@ def table(title, entries):
     return ''.join(out)
 
 
+NESTED = {"enumeratedValues": ("value", "name", "description", "usage"),
+          "resets": ("value", "mask", "resetTypeRef")}
+
+
+def nested_tables(row):
+    """A small table for each list-of-records key, all cells literal."""
+    out = []
+    for name, columns in NESTED.items():
+        if isinstance(row.get(name), list):
+            out.append('<p>' + literal(name) + '</p><table><thead><tr>')
+            out.extend('<th>' + literal(c) + '</th>' for c in columns)
+            out.append('</tr></thead><tbody>')
+            for item in row[name]:
+                out.append('<tr>' + ''.join('<td>' + literal(item.get(c, '')) + '</td>'
+                                            for c in columns) + '</tr>')
+            out.append('</tbody></table>')
+    return ''.join(out)
+
+
+STEP_KEYS = render_md.STEP_KEYS
+
+
 def payload(checker, rec, status, with_status):
     """Keep child support, requirements and verdicts visible even when a claim exists."""
     import peripheral
@@ -274,6 +307,9 @@ def payload(checker, rec, status, with_status):
         if name in data:
             entries = [{k: v for k, v in data[name].items() if k != 'settled_by'}]
             out.append(table(name.capitalize() + ' (generated)', entries))
+    if 'quantity' in data:
+        out.append('<p>Quantity (generated): ' +
+                   literal(peripheral.quantity_text(data['quantity'])) + '.</p>')
     for side, anchors in data.get('pair', {}).items():
         notes = []
         out.append('<div class="provenance"><p>Correspondence side: ' + literal(side) + '</p>')
@@ -281,8 +317,14 @@ def payload(checker, rec, status, with_status):
         out.append('</div>')
     for row, path in peripheral.children(rec.data, rec.path):
         key = row.get('id', row.get('before', '') + '->' + row.get('after', ''))
-        out.append(table('Payload entry ' + rec.id + '.' + key,
-                         [{k: v for k, v in row.items() if k not in ('support', 'note', 'todo')}]))
+        shown = {k: v for k, v in row.items()
+                 if k not in ('support', 'note') + tuple(NESTED)
+                 or (k in NESTED and not isinstance(v, list))}
+        if path[-2] == 'steps' and 'op' in row:
+            shown = {k: v for k, v in shown.items() if k not in STEP_KEYS}
+            shown['step (generated)'] = peripheral.step_text(row)
+        out.append(table('Payload entry ' + rec.id + '.' + key, [shown]))
+        out.append(nested_tables(row))
         notes = []
         out.append('<div class="provenance">')
         out.append(support(checker, rec.file, row.get('support', []), notes))
@@ -301,7 +343,41 @@ def payload(checker, rec, status, with_status):
     return ''.join(out)
 
 
-def generated(file):
+DEFINITIONS = render_md.DEFINITIONS
+
+
+def definitions(checker, file, summary):
+    """The spec-level registries: each entry's keys, nested tables, provenance, todo, note."""
+    if not summary['definitions'] or checker is None:
+        return ''
+    out = ['<h2>Definitions (generated): ' + literal(file.root.label) + '</h2>']
+    for group, entries in summary['definitions'].items():
+        out.append('<h3>' + literal(DEFINITIONS[group]) + '</h3>')
+        for entry in entries:
+            skip = ('support', 'note', 'todo') + tuple(NESTED)
+            keys = [k for k in entry if k not in skip]
+            out.append('<table><thead><tr>' + ''.join('<th>' + literal(k) + '</th>' for k in keys) +
+                       '</tr></thead><tbody><tr>' +
+                       ''.join('<td>' + literal(entry[k]) + '</td>' for k in keys) +
+                       '</tr></tbody></table>')
+            out.append(nested_tables(entry))
+            notes = []
+            out.append('<div class="provenance">')
+            out.append(support(checker, file, entry.get('support', []), notes))
+            if 'todo' in entry:
+                todo = entry['todo']
+                out.append(badge('todo', 'verify on ' + todo['check']) + '<p>' +
+                           literal(todo['text']) + '</p>')
+                if 'method' in todo:
+                    out.append('<p>Method: ' + literal(todo['method']) + '</p>')
+            out.append('</div>')
+            if 'note' in entry:
+                notes.append(('Definition note', entry['note']))
+            out.extend(field(label, text) for label, text in notes)
+    return ''.join(out)
+
+
+def generated(file, checker=None):
     import peripheral
 
     summary = peripheral.generated(file)
@@ -309,6 +385,12 @@ def generated(file):
            '</h2><p>Support classes: ' + literal(', '.join(summary['classes'])) + '.</p>']
     out.append(table('Canonical references (generated)', summary['references']))
     out.append(table('Register map (generated)', peripheral.register_rows(summary)))
+    fields = peripheral.field_rows(summary)
+    if any(set(row) - {'field', 'name', 'bits'} for row in fields):
+        out.append(table('Register fields (generated)', fields))
+    layout_fields = peripheral.layout_field_rows(summary)
+    if any(set(row) - {'field', 'layout', 'offset', 'size'} for row in layout_fields):
+        out.append(table('Layout fields (generated)', layout_fields))
     out.append(table('Findings (generated)', summary['findings']))
     out.append(table('Correspondence (generated)', summary['pairs']))
     out.append(table('Comparison coverage (generated)', summary['coverage']))
@@ -319,6 +401,7 @@ def generated(file):
         out.append('</ul>')
     out.append(table('Open questions (generated)', summary['questions']))
     out.append(table('Area confidence', file.data.get('areas', [])))
+    out.append(definitions(checker, file, summary))
     out.append('</section>')
     return ''.join(out)
 
@@ -334,9 +417,17 @@ def resources(file):
         out.append('</tr></thead><tbody>')
         for entry in entries:
             out.append('<tr>')
-            out.extend('<td>' + literal(entry.get(k, '')) + '</td>' for k in keys)
+            out.extend('<td>' + literal(attribution.cell(entry.get(k)) if k == 'attribution'
+                                        else entry.get(k, '')) + '</td>' for k in keys)
             out.append('</tr>')
         out.append('</tbody></table>')
+        for entry in entries:
+            if entry.get('attribution', {}).get('evidence'):
+                out.append('<p>Attribution evidence for <code>' + literal(entry['path']) +
+                           '</code>:</p><ul>')
+                out.extend('<li>' + literal(f"line {e['line']}: {e['text']}") + '</li>'
+                           for e in entry['attribution']['evidence'])
+                out.append('</ul>')
         for entry in entries:
             if 'note' in entry:
                 out.append(field('Resource note', entry['note']))
@@ -398,7 +489,7 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
                          for f in checker.files)
         for file in group:
             if typed_spec or any('data' in f for f in file.data['facts']):
-                out.append(generated(file))
+                out.append(generated(file, checker))
         if any(key in f.data for f in group for key in ('orientation', 'milestones', 'notes')):
             out.append('<section class="context"><h2>Context (not facts)</h2>')
             for file in group:

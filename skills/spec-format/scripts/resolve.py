@@ -393,7 +393,8 @@ def check_attribution(repo, entries, entry, anchor, item, add, checked):
     """
     path = anchor["path"]
     scan = attribution.scan(repo.lines(path))
-    item["attribution"] = scan
+    item["attribution"] = attribution.record(scan)
+    item["attribution_scanned_lines"] = scan["lines"]
     listed = listed_file(entry, anchor)
     if "attribution" not in listed:
         return
@@ -570,6 +571,7 @@ def result_object(files, findings, anchors, facts, documents=()):
         "skipped": sum(a["status"] == "skipped" for a in anchors),
     }
     text = []
+    shown_attribution = set()
     for fact in facts:
         text.append(f"{fact['id']}: {fact['claim']}")
         for citation in fact["citations"]:
@@ -585,11 +587,14 @@ def result_object(files, findings, anchors, facts, documents=()):
             )
             for number, line in citation.get("source", []):
                 text.append(f"  {number}: {display_line(line)}")
-            if "attribution" in citation:
+            shown = (fact.get("file"), citation["repo"], citation["path"])
+            if "attribution" in citation and shown not in shown_attribution:
+                shown_attribution.add(shown)
                 scan = citation["attribution"]
                 text.append(
-                    f"  attribution (scanned {scan['lines']} lines): {scan['status']}; "
-                    f"names: {'; '.join(scan['names']) or 'none'}"
+                    f"  attribution (scanned {citation['attribution_scanned_lines']} "
+                    f"lines): {scan['status']}; "
+                    f"names: {'; '.join(scan.get('names', [])) or 'none'}"
                 )
             if citation.get("search"):
                 text.append(
@@ -673,6 +678,7 @@ def run(args):
                 by_name.setdefault(entry["name"], []).append(entry)
             for record, base in records(data):
                 display = dict(
+                    file=str(path),
                     id=record["id"],
                     claim=record.get("claim", record.get("name", "")),
                     citations=[],

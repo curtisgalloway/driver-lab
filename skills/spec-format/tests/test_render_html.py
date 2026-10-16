@@ -532,6 +532,30 @@ class AttributionViews(Fixture):
                       'attribution incomplete (1 no notice found)</p>', html)
 
 
+    def derive(self):
+        self.data['facts'].append(yaml.safe_load(inference('d', '#a'))[0])
+        self.data['facts'][-1]['support'][0]['premises'].append(
+            {'states': 'A stated premise.', 'support': [
+                {'class': 'src', 'anchors': [{'repo': 'linux', 'path': 'drivers/x.c',
+                                              'lines': [1, 2], 'symbol': 'S'}]}]})
+
+    def test_derived_fact_shows_attribution_through_premises(self):
+        self.files[0]['attribution'] = {
+            'status': 'recorded', 'names': ['Example Corp'],
+            'evidence': [{'line': 2, 'text': 'Copyright 2020 Example Corp'}]}
+        self.derive()
+        html = self.render()
+        self.assertIn('<p>Source copyright attribution (through premises '
+                      '<code>widgetchip@viewer#a</code>): Example Corp</p>', html)
+        self.assertIn('<p>Source copyright attribution (cited files): '
+                      'attribution incomplete (1 unrecorded)</p>', html)
+
+    def test_derived_fact_without_any_attribution_is_unchanged(self):
+        self.derive()
+        self.assertNotIn('ttribution', self.render())
+
+
+
 class Publishing(Fixture):
     def args(self):
         return SimpleNamespace(root=self.root, context_root=[], public_skill=[], require_verified=None,

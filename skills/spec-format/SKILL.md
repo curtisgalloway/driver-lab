@@ -195,9 +195,11 @@ changes no gate rule.
 A files item of a file may record source copyright attribution: `attribution` with `status`
 `recorded` (plus `names`, `evidence`), `ambiguous` (plus `evidence`) or `none-found`; absence
 means not recorded. It reports the notices the file declares, never authorship. `resolve` prints
-its whole-file scan of each cited file (copy it) and fails a recorded `attribution` that
-disagrees with it; for `ambiguous`, add evidence lines you resolved by hand, each equal to the
-normalized source line. Editing it never stales a verdict.
+its whole-file scan of each cited file (the anchor item's `attribution` copies as is) and fails a
+recorded `attribution` that disagrees with it; a notice the scan cannot parse (or sees mid-line)
+makes the file `ambiguous`. For `ambiguous`, add the continuation lines you read (within 3 lines
+after a scanned notice, each equal to the normalized source line) and list every recognized name
+plus the names you read. Editing it never stales a verdict.
 
 `series` maps unmerged work, never a citation. Keep canonical mailing-list URLs and workable
 retrieval guidance in a note. `tools` is declarative: `via: skill:<name>` names the driver

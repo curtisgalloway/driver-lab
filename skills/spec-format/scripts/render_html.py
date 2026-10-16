@@ -194,9 +194,16 @@ def fact(checker, rec, status, with_status):
     if not speccheck.has_support(data):
         out.append(badge('gap', 'Gap'))
     out.append(support(checker, file, data.get('support', []), notes))
-    cited = attribution.summary(attribution.fact_files(file, data))
-    if cited is not None:
-        out.append('<p>Source copyright attribution (cited files): ' + literal(cited) + '</p>')
+    own_files = attribution.fact_files(file, data)
+    through_ids, through_files = attribution.premise_files(checker, rec)
+    if attribution.summary(own_files) is not None or attribution.summary(through_files):
+        if own_files:
+            out.append('<p>Source copyright attribution (cited files): '
+                       + literal(attribution.summary(own_files, always=True)) + '</p>')
+        if through_ids and through_files:
+            out.append('<p>Source copyright attribution (through premises '
+                       + ', '.join('<code>' + literal(i) + '</code>' for i in through_ids) + '): '
+                       + literal(attribution.summary(through_files, always=True)) + '</p>')
     out.append(badge('origin', file.root.layer + ' · ' + file.root.label))
     for aid in data.get('assumes', []):
         a = file.data['assumptions'][file.assumptions[aid][1]]

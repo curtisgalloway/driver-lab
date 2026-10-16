@@ -374,6 +374,28 @@ class Attribution(unittest.TestCase):
         self.assertLess(out.index("(cited files): Example Corp"),
                         out.index("`widgetchip@root_name#a`"))
 
+    def derived(self):
+        self.data["facts"].append(yaml.safe_load(inference("d", "#a"))[0])
+        self.data["facts"][-1]["support"][0]["premises"].append(
+            {"states": "A stated premise.", "support": [
+                {"class": "src", "anchors": [{"repo": "linux", "path": "drivers/y.c",
+                                              "lines": [1, 2], "symbol": "S"}]}]})
+
+    def test_derived_fact_shows_attribution_through_premises(self):
+        self.files[0]["attribution"] = {
+            "status": "recorded", "names": ["Example Corp"],
+            "evidence": [{"line": 2, "text": "Copyright 2020 Example Corp"}]}
+        self.derived()
+        out = self.render()
+        self.assertIn("- source copyright attribution (through premises "
+                      "`widgetchip@root_name#a`): Example Corp\n", out)
+        self.assertIn("- source copyright attribution (cited files): "
+                      "attribution incomplete \\(1 unrecorded\\)\n", out)
+
+    def test_derived_fact_without_any_attribution_is_unchanged(self):
+        self.derived()
+        self.assertNotIn("ttribution", self.render())
+
     def test_evidence_text_is_literal(self):
         self.files[0]["attribution"] = {
             "status": "ambiguous", "evidence": [{"line": 1, "text": "Copyright *x* | <b>"}]}

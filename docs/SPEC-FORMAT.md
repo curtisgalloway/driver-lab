@@ -504,18 +504,32 @@ What changes from today:
   `attribution`: `status` is `recorded` (with `names` and `evidence`), `ambiguous` (with
   `evidence`) or `none-found` (with neither). Absence means not recorded, the only spelling of
   that; there is no `unrecorded` status. `spec.py resolve` scans the **whole file** at the pinned
-  commit for line-start notices (`SPDX-FileCopyrightText:`, `Copyright`, `(C) 2020`, `©`) after
-  removing one comment leader. Each recognized notice gives one name, verbatim: never split on
-  "and" or commas, never expanded from a collective such as "The Fuchsia Authors". A candidate
-  the scan cannot parse (a holder on the next line, a notice in running text) makes the file
-  `ambiguous`. Nothing is inferred from git history. `resolve` prints the scan on every cited
-  file, and checks a recorded `attribution` against it: `recorded` must match the scan's names
-  and evidence exactly, `none-found` must match a scan that finds no notice, and an `ambiguous`
-  record must keep every scanned evidence item, may add lines a reviewer resolved by hand (each
-  extra item's text must equal the normalized source line), and any `names` must occur verbatim in
-  the evidence. It records the notices a file declares, not a conclusion about who wrote or owns
-  it. The views show it per file and, in each fact's provenance, as a summary over the files the
-  fact's own support cites (not a contrary reading's, and not yet through inference premises).
+  commit. A line-start notice (`SPDX-FileCopyrightText:`, `Copyright`, `copyright (c) 2010`,
+  `(C) Copyright ...`, `©`), after one comment leader is removed, is recognized when it parses:
+  each gives one name, verbatim, never split on "and" or commas, never expanded from a collective
+  such as "The Fuchsia Authors"; years, a leading "by", "All rights reserved" and a trailing
+  `<address>` are dropped. Anything else that looks like a notice (a notice later in a line, a
+  holder on the next line, a template placeholder) makes the file `ambiguous`, so a notice never
+  silently becomes `none-found`. Nothing is inferred from git history. Two limits: notices inside
+  embedded license text count as the file's notices, and a `Copyright` identifier in code makes
+  the file ambiguous (it fails safe). For each resolved, license-checked, non-directory
+  citation, `resolve` prints the scan (once per file in the text output) and attaches a record in
+  the JSON anchor item, `attribution`, that can be copied as is, with the scanned line count
+  beside it. It checks a recorded `attribution` against the scan: `recorded` must match the
+  scan's names and evidence exactly, `none-found` must match a scan that finds no notice, and an
+  `ambiguous` record must keep every scanned evidence item in line order, may add lines a
+  reviewer resolved by hand (each equal to the normalized source line and within 3 lines after a
+  scanned notice), must cover every recognized name (inside a recorded name, as whole words), and
+  every recorded name must occur as whole words in the evidence read as one text. The names of an ambiguous record remain a reviewer's reading that the check
+  bounds but cannot prove. The record summarizes declared notices, not a conclusion about who
+  wrote or owns the code. The views show it per file and, in each fact's provenance, as up to two
+  scoped lines: one over the files the fact's own support cites (not a contrary reading's), and,
+  for a derived fact, one over the files of the facts it rests on through inference premises,
+  recursively (visited set; files de-duplicated by repository URL, commit and path; a premise that
+  does not resolve counts as one unrecorded file). `relates` is not followed: it can be cyclic and
+  a relation is not a derivation. Each line states its own scope, and a file in both scopes counts
+  in both. A driver-wide attribution would need a defined, fully inspected file set, which
+  per-fact summaries do not establish.
 - **Roles replace pin kinds.** `Source pin:`/`Target pin:`/`Impl pin:`/`Ref pin:` lines become
   repos entries with `role`. The license gate reads every entry the same way.
 
@@ -1469,8 +1483,9 @@ are generated; neither is committed or edited (D5). Both carry the same content:
 - `orientation` and other prose under "Context (not facts)";
 - each section's facts in order, each with its generated provenance (support entries with their
   rendered citations, inference premises naming the facts they reference, derivation, TODO,
-  scope, and, when any file the fact cites carries `attribution`, a source copyright attribution
-  summary over those files) and its full fact reference, so a reader can cite it;
+  scope, and, when any file the fact cites or rests on through inference premises carries
+  `attribution`, a source copyright attribution line over the fact's own cited files and a second
+  over the files reached through its premises) and its full fact reference, so a reader can cite it;
 - in a merged view, overlay facts under "Overlay: <layer> (<root>)" sub-headings;
 - with `--with-status`, each fact's verdict, date and freshness;
 - for peripheral specs and reviews, the generated provenance notice, canonical-references table,
@@ -2317,7 +2332,7 @@ left open, also decided by the user on 2026-10-08.
 | D20 | How "no raw HTML" is checked (raised by the first revision) | **Parse with CommonMark**: the checker rejects only what CommonMark treats as raw HTML, inline or block; code spans and code blocks are not HTML; autolinks (`<https://…>`) are allowed, under the link-scheme rule. Replaces the draft's lexical rule | no false rejections of angle brackets in code, at the cost of the checker importing a pinned CommonMark library, used only for this and D22, never for meaning |
 | D21 | Links and images in author text (raised by the first revision) | As drafted: images render as links, never `<img>`; link and autolink schemes limited to `https`, `http`, `mailto` and in-page anchors | no remote content loads from a spec page, and no script URL becomes a link |
 | D22 | Containment (raised by the first revision) | **In the checker too**: headings, unclosed fences, reference definitions, footnotes and nesting deeper than 16 fail author-field checks for the HTML viewer. The Markdown view fences author fields and checks their exact assembled containment (user revision 2026-10-09) | an author learns at check time, before review, not when the published view is built |
-| D42 | Source copyright attribution per cited file (issue #101, 2026-10-15; numbered D42 because D23 is taken in the extension decisions above) | A files-item field `attribution` (`status` `recorded`, `ambiguous` or `none-found`; absence is the only way to say not recorded), set as bookkeeping, checked by `resolve` against a whole-file scan of the notices at the pinned commit; views show a per-fact summary over the fact's own cited files | a reader sees which holders the cited sources declare without opening them, a hand-made reading of an unclear notice stays checkable, and correcting attribution does not stale a verdict on the hardware fact; it summarizes declared notices and concludes nothing about authorship or ownership |
+| D42 | Source copyright attribution per cited file (issue #101, 2026-10-15; numbered D42 because D23 is taken in the extension decisions above) | A files-item field `attribution` (`status` `recorded`, `ambiguous` or `none-found`; absence is the only way to say not recorded), set as bookkeeping, checked by `resolve` against a whole-file scan of the notices at the pinned commit; views show per-fact summaries over the fact's own cited files and, through inference premises only, the files of the facts it rests on | a reader sees which holders the cited sources declare without opening them, a hand-made reading of an unclear notice stays checkable, and correcting attribution does not stale a verdict on the hardware fact; it summarizes declared notices and concludes nothing about authorship or ownership |
 
 ## Risks
 

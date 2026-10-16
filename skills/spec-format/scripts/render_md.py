@@ -208,9 +208,16 @@ def _fact(out, checker, rec, status, with_status):
         out.append("- Gap")
     notes = []
     _support(out, checker, file, data.get("support", []), notes=notes)
-    cited = attribution.summary(attribution.fact_files(file, data))
-    if cited is not None:
-        out.append("- source copyright attribution (cited files): " + escape(cited))
+    own_files = attribution.fact_files(file, data)
+    through_ids, through_files = attribution.premise_files(checker, rec)
+    if attribution.summary(own_files) is not None or attribution.summary(through_files):
+        if own_files:
+            out.append("- source copyright attribution (cited files): "
+                       + escape(attribution.summary(own_files, always=True)))
+        if through_ids and through_files:
+            out.append("- source copyright attribution (through premises "
+                       + ", ".join(code(i) for i in through_ids) + "): "
+                       + escape(attribution.summary(through_files, always=True)))
     for aid in data.get("assumes", []):
         assumption = file.data["assumptions"][file.assumptions[aid][1]]
         out.append("- assumes " + code(aid) + ": " + escape(assumption["text"]))

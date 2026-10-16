@@ -508,9 +508,46 @@ class AttributionTests(GitFixture):
                 status="recorded",
                 names=["Example Corp"],
                 evidence=[dict(line=2, text="Copyright 2020 Example Corp")],
-                lines=3,
             ),
         )
+        self.assertEqual(result["anchors"][0]["attribution_scanned_lines"], 3)
+
+    def test_the_attached_record_validates_against_the_schema(self):
+        import jsonschema
+
+        schema = json.loads(
+            (Path(resolve.__file__).parents[1] / "schema" / "spec.schema.json").read_text()
+        )
+        files_item = schema["$defs"]["repo"]["properties"]["files"]["items"]
+        validator = jsonschema.Draft202012Validator(
+            {"$defs": schema["$defs"], **files_item["properties"]["attribution"]}
+        )
+        for source, status in (
+            ("// SPDX-License-Identifier: MIT\nint x;\nint VALUE = 0x10;\n", "none-found"),
+            ("// SPDX-License-Identifier: MIT\n// Copyright (C) 2010\nint VALUE = 0x10;\n",
+             "ambiguous"),
+            (self.NOTICED, "recorded"),
+        ):
+            with self.subTest(status):
+                (self.repo / "noticed.c").write_text(source)
+                self.git("add", "noticed.c")
+                self.git("commit", "-qm", status)
+                self.entry["commit"] = self.git("rev-parse", "HEAD")
+                self.entry["files"][1]["license_from"] = "notice"
+                code, result = self.run_cli()
+                record = result["anchors"][0]["attribution"]
+                self.assertEqual(record["status"], status, result)
+                self.assertEqual(list(validator.iter_errors(record)), [])
+
+    def test_text_output_prints_the_scan_once_per_file(self):
+        self.data["facts"][0]["support"][0]["anchors"].append(
+            dict(repo="code", path="noticed.c", lines=[2, 2], symbol="Copyright")
+        )
+        self.write()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            spec.main(["show", str(self.path), "--repo", f"code={self.repo}"])
+        self.assertEqual(out.getvalue().count("attribution (scanned"), 1)
 
     def test_wrong_names_is_an_error_at_the_attribution_key(self):
         self.attribute(names=["Other Corp"])

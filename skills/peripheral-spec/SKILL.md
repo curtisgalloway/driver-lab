@@ -60,6 +60,11 @@ or the applicable license file. A tree with files under different licenses needs
 `files` list names every cited path and records `license_from: spdx-line`, `notice` or
 `license-file`. `resolve` checks SPDX lines; notice and license-file confirmation still need
 human reading. Retain required attribution in `notices` and the repository's NOTICE file.
+Also record each cited file's source copyright `attribution` from `resolve`'s scan (the JSON
+anchor item's `attribution`, already in the schema's shape): copy it. For `ambiguous`, read the
+notice, record the names you read in addition to any the scan lists, and add the continuation
+line to `evidence`. Absent means
+not recorded. It is the source's declared attribution, not authorship.
 Both source and target roles are gated. A device-tree citation has the tree's license too.
 Run `check --require-license` before publication, including unused resource entries.
 

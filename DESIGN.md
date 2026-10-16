@@ -61,7 +61,8 @@ What that work teaches about the skills comes back here as changes to them.
 - **Root:** a directory marked by `board-specs.yaml`, beneath which board-spec files are discovered.
 - **Layer:** a root's position in the ordered merge, from public material through local additions.
 - **Frontmatter:** the YAML metadata between `---` lines at the beginning of a Markdown file.
-- **Composition:** resolving a board's component specs and the IP specs its instances name.
+- **Composition:** resolving a board's component specs and the IP and peripheral specs its
+  instances name or that describe it.
 - **Provenance:** the recorded origin of a fact or artifact and the evidence behind it.
 - **Support class:** a structured label identifying evidence, such as a datasheet or observed code.
 - **Anchor:** a citation to a repository-relative file, line range, and usually symbol at a pin.
@@ -142,8 +143,8 @@ peripheral programming specification. The distinction is explicit in
 ### Separate identity, placement, and wiring
 
 A `kind: board` file describes what is fitted and connected on a board. Its `parts` entries name SoC
-and companion-chip specs. An SoC or chip's `instances` rows place reusable IP blocks at concrete
-addresses with interrupts, clocks, and quirks. The IP spec describes the block's programming model
+and companion-chip specs. An SoC or chip's `instances` rows place blocks at concrete addresses
+with interrupts, clocks, and quirks, each naming a reusable IP spec, a peripheral spec, or both. The IP spec describes the block's programming model
 without assuming any particular SoC address. Several boards can share one SoC description, and
 several SoCs can place the same IP description.
 

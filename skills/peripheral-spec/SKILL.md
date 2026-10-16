@@ -102,11 +102,13 @@ Start `<device>.spec.yaml` with SPDX comments matching the destination, `format:
 `kind: peripheral`, `id`, `name`, `resources` and `facts`. Link the spec to the hardware it
 belongs to: `describes: [<soc-or-board-id>]` names the soc, chip or board specs whose block
 this is (the same or an earlier layer), or the SoC's instance row names this spec in
-`peripheral`. The checker warns on a peripheral spec with neither when such specs are read
-with it, since a reader composing the board would never find it. Repository entries have HTTPS URLs,
-full lowercase immutable `commit` values, file licenses and `role: source` or `target`.
-Quote structured hex values in lowercase canonical form (`"0x0"`, never `"0x00"` or `"0xA"`);
-omit unknown width, access or reset rather than guessing them. No Markdown frontmatter or
+`peripheral`. When a soc, chip or board spec is in the same check, the checker warns on a
+peripheral spec with neither, since a reader composing the board would never find it.
+
+Repository entries have HTTPS URLs, full lowercase immutable `commit` values, file licenses
+and `role: source` or `target`. Quote structured hex values in lowercase canonical form
+(`"0x0"`, never `"0x00"` or `"0xA"`); omit unknown width, access or reset rather than guessing
+them. No Markdown frontmatter or
 body surrounds the YAML.
 
 - **Register map**: `section: registers`, `data.register: {name, offset, width, access, reset}`

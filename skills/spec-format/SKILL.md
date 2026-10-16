@@ -62,7 +62,7 @@ Place facts by kind:
 - `board`: wiring, boot media/configuration, console connector/routing, power, headers;
   `parts` composes the SoC and chips.
 - `soc`: addressing, entry contract, core topology, interrupt controller, debug UART placement,
-  timers, clocks/power, GPIO/pinmux, runtime device-tree changes; `instances` places IP blocks.
+  timers, clocks/power, GPIO/pinmux, runtime device-tree changes; `instances` places blocks.
 - `chip`: how the companion is reached, its address window, contents and hand-off state.
 - `ip`: standards, register model/sequences, public variants/errata; no instance addresses.
 - `overlay`: `kind: overlay` and `overlays` name the target; no `id` or `parts` override.
@@ -97,9 +97,11 @@ contested; a resolution records `decided` and, when relevant, the assumption tha
 carries required source-license notices, never source excerpts.
 
 Instances and variants have stable ids and support like facts, verified under those ids.
-Each SoC instance's `ip` must resolve to a spec of kind `ip` in the supplied roots.
-The valid minimal SoC instance list is `instances: []`; omit example rows until their IP
-specs and placement evidence are available.
+Each SoC instance names an `ip` spec (a reusable block), a `peripheral` spec (its programming
+model), or both, and each must resolve to a spec of that kind in the supplied roots.
+The valid minimal SoC instance list is `instances: []`. A block with placement evidence but
+no ip or peripheral spec yet gets no row; record its placement as a gap fact with a `todo`
+until one of those specs exists.
 An instance's `reg` is a canonical hex string such as `"0xfe201000"` (lowercase, no separators
 or leading zeros), or null with a TODO; `irq` may likewise be null with a TODO. SPI/PPI numbers
 and optional INTIDs must agree; extended interrupts name a parent. `clocks: []` is allowed.
@@ -381,7 +383,8 @@ from it. It is read-only: no verdict rule changes, and a TODO stays open until a
 settles it.
 
 `status` prints summaries and freshness even on error. `render --spec` selects one id, not
-its composed parts automatically: render every id needed for the question. `--merged` includes
+its composed parts automatically: render every id needed for the question, peripheral
+specs included. `--merged` includes
 context bases/overlays of selected ids; `--with-status` adds verdicts. Supply one
 `--source-commit ROOT=SHA` per rendered root directory, not per input root
 ([example](#source-commits-name-rendered-roots)), and `--tool-commit SHA` for the tool

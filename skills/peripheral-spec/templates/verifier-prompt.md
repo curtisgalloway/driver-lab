@@ -44,7 +44,9 @@ disagrees with the source. A layout field whose `bits`, `byteOrder` or `bitNumbe
 with the cited document is a FAIL. A wait, poll or handshake step with neither a bound nor a
 `todo` is a FAIL; so is a step whose `op`, `target`, `value`, `until` or `timeout` disagrees
 with the cited source, and a quantity whose unit or levels (tolerance included) disagree with
-the document.
+the document. A fact whose only support is a pinned, machine-readable source its readers may use under
+their root's license (D31, D32) is a duplicate and a FAIL; the `correction` strips it to what
+the source lacks. Driver-code readings and cost-saving summaries are not duplicates.
 
 Check all required subject areas and omissions: databook register organization including
 untouched registers, identity/revision, prerequisites, init/error/power/teardown, layouts,

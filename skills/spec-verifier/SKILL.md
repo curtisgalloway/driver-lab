@@ -233,6 +233,27 @@ guessing at an unchecked result.
   bit-level fields, or carry `todo: {check: document, text: ...}` naming what is left out. A
   bare name is FAIL when the cited source gives the table; propose the
   values (with locator) as the `correction`.
+- **A wait, poll or handshake step must state its bound (#105).** The checker enforces this
+  for `poll` and `waitInterrupt` steps, which need a `timeout` or a `todo`. You enforce it for
+  a step with `action`, which cannot take `timeout`: its `action` text states the bound and
+  tolerance, or its `note` names a `data.quantity` fact that holds them, or it carries
+  `todo: {check: document, ...}` saying the source gives none. A step that waits, polls or
+  completes a handshake with none of these is FAIL. When the cited source gives a bound, the
+  `correction` proposes the bound and tolerance (with locator); when it gives none, the
+  `correction` adds the `todo`. A stated bound or tolerance that disagrees with the source is
+  FAIL as well.
+- **Report a duplicate of a canonical source (D31, D32).** A canonical source is
+  machine-readable, pinned and efficient to use, and its readers may use it under their root's
+  license (a register database, an IP-XACT or SVD file, a device tree binding, a header). The
+  checker is meant to refuse inline data that a declared register source covers, once register
+  sources exist (SPEC-FORMAT unit 5); you report every other fact that only restates such a
+  source. `support` shows it: a fact supported by a document class, or by a source the readers
+  cannot use, is a summary or a stand-in, not a duplicate; one whose only support is a
+  canonical source the readers can use is a duplicate. A reading of driver code, or a summary
+  that saves the reader the cost of reading, is not one. A duplicate is FAIL with a
+  `correction` that strips the fact to what the source lacks (citations, verdicts,
+  `requirement`, `todo`s), or removes it, and replaces it with a reference once the format has
+  one for that source.
 - **Grade citation precision separately.** Set `citation_precision: exact` when the anchors
   or locators identify the evidence for the whole claim closely enough to repeat the reading;
   use `imprecise` for overly broad or incomplete citations and explain how to narrow them.

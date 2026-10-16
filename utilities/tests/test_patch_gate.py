@@ -330,6 +330,77 @@ open(idx, "wb").write(data + hashlib.sha1(data).digest())
     time.sleep(1.5)
     self.assertFalse(os.path.exists(marker))
 
+  def printed_digest(self, out):
+    lines = [l for l in out.splitlines() if l.startswith("worktree digest: ")]
+    self.assertEqual(len(lines), 1, out)
+    return lines[0].split(": ", 1)[1]
+
+  def verify(self, digest, tree=None):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+      code = self.mod.main(["--verify-digest", digest, tree or self.tree])
+    return code, out.getvalue()
+
+  def test_printed_digest_verifies_until_the_worktree_changes(self):
+    # Issue 80: the orchestrator rechecks the scanned state just before committing.
+    self.git("apply", self.patch)
+    code, out = self.gate()
+    self.assertEqual(code, 0, out)
+    digest = self.printed_digest(out)
+    self.assertEqual(self.verify(digest), (0, "ok   worktree digest matches\n"))
+    self.assertEqual(self.verify(digest)[0], 0)
+    self.put("x.py", "print('changed')\n")
+    code, out = self.verify(digest)
+    self.assertEqual(code, 1)
+    self.assertIn("FAIL worktree changed since the gate ran", out)
+
+  def test_staging_after_the_gate_fails_the_recheck(self):
+    self.git("apply", self.patch)
+    code, out = self.gate()
+    self.assertEqual(code, 0, out)
+    self.git("add", "x.py")
+    self.assertEqual(self.verify(self.printed_digest(out))[0], 1)
+
+  def test_failing_gate_prints_no_digest(self):
+    self.write("none.txt", "x.py\n")
+    self.git("apply", self.patch)
+    code, out = self.gate()
+    self.assertEqual(code, 1)
+    self.assertNotIn("worktree digest:", out)
+
+  def test_process_that_leaves_its_group_is_caught_by_the_recheck(self):
+    # Issue 80, limit 1: a child in a new session survives the suite's group kill and edits
+    # the worktree after the gate passed; the recheck sees it.
+    marker, go = os.path.join(self.tmp, "late"), os.path.join(self.tmp, "go")
+    child = self.write("child.py", "import os, time\n"
+                       f"for _ in range(600):\n  if os.path.exists({go!r}): break\n"
+                       "  time.sleep(0.05)\n"
+                       "else:\n  raise SystemExit\n"
+                       "open('README.md', 'a').write('late\\n')\n"
+                       f"open({marker!r}, 'w').close()\n")
+    script = self.write("escape.py", "import subprocess, sys\nsubprocess.Popen("
+                        f"[sys.executable, {child!r}], start_new_session=True)\n")
+    code, out = self.gate("--suite", f"escape={sys.executable} {script}")
+    open(go, "w").close()
+    self.assertEqual(code, 0, out)
+    import time  # pylint: disable=import-outside-toplevel
+    for _ in range(100):
+      if os.path.exists(marker):
+        break
+      time.sleep(0.1)
+    self.assertTrue(os.path.exists(marker))
+    code, out = self.verify(self.printed_digest(out))
+    self.assertEqual(code, 1, out)
+
+  def test_verify_digest_usage_errors(self):
+    repo = os.path.dirname(self.mod.HERE)
+    for argv in (["not-hex", self.tree], ["a" * 64, repo], ["a" * 64],
+                 ["a" * 64, os.path.join(self.tmp, "missing")]):
+      with self.subTest(argv=argv), self.assertRaises(SystemExit) as raised, \
+           contextlib.redirect_stderr(io.StringIO()):
+        self.mod.main(["--verify-digest", *argv])
+      self.assertEqual(raised.exception.code, 2)
+
   def plant(self, module):
     """A top-level MODULE.py in the worktree that leaves a marker outside it if imported."""
     marker = os.path.join(self.tmp, module + ".ran")

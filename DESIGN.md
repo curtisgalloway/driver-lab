@@ -161,7 +161,8 @@ stubs that used to illustrate this were removed, to be regenerated with the curr
 `board-expert` collects roots from its own `specs/`, root pointers in loaded skills, the checkout's
 `board-specs.yaml`, and the user's `~/.config/board-specs/board-specs.yaml`. Markers can point to
 further roots. It does not search the filesystem for markers. Within known roots, `*.spec.yaml` files
-supply the identifiers that resolve `parts`, `instances[].ip`, and overlay targets.
+supply the identifiers that resolve `parts`, `instances[].ip` and `.peripheral`, a peripheral
+spec's `describes`, and overlay targets.
 
 Resolution prefers an explicit spec identifier, then matches names through triggers and aliases.
 Exclusion triggers prevent accidental matches to similarly named hardware. An IP question tied to a

@@ -217,12 +217,19 @@ the route to a root, no nested markers.
 
 Order by layer (`public` < `ip-vendor` < `soc-vendor` < `product` < `local`), then pointer order;
 for the spec repositories use docs, permissive, GPL order. Resolve `parts` recursively, then
-needed `instances[].ip`; overlay every composed id. Added facts retain root/layer and full
+the needed instances' `ip` and `peripheral` specs, and the peripheral specs whose `describes`
+names a composed id; overlay every composed id. Added facts retain root/layer and full
 reference. Resource lists concatenate, later same-name entries replacing earlier ones for the
 reader; scalars follow layer precedence. Citations still resolve in their originating file,
 never against a merged resource replacement. Overlays add facts/relations/conflicts, never
 rewrite base facts. Do not depend on competing overlays within one root to select facts:
 make ids distinct and relationships explicit.
+
+The reader composes; the tools do not compose the same way. `render --merged` renders the one
+id it is given with its overlays and follows no composition link. `render --format atlas`
+places the board's `parts`, the ip and peripheral specs their instances name, the peripheral
+specs whose `describes` names the board or a part, and specs one fact link away (`relates` or
+an inference premise), and lists the specs it left out.
 
 Public layers contain no internal documents/tools/host facts; vendor material stays private.
 Public roots never cite documents marked confidential or NDA, whatever their availability.

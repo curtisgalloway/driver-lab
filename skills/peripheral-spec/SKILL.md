@@ -99,7 +99,11 @@ There are no citation aliases or table-wide evidence: each fact/row carries its 
 ## Record types and requirements
 
 Start `<device>.spec.yaml` with SPDX comments matching the destination, `format: 2`,
-`kind: peripheral`, `id`, `name`, `resources` and `facts`. Repository entries have HTTPS URLs,
+`kind: peripheral`, `id`, `name`, `resources` and `facts`. Link the spec to the hardware it
+belongs to: `describes: [<soc-or-board-id>]` names the soc, chip or board specs whose block
+this is (the same or an earlier layer), or the SoC's instance row names this spec in
+`peripheral`. The checker warns on a peripheral spec with neither when such specs are read
+with it, since a reader composing the board would never find it. Repository entries have HTTPS URLs,
 full lowercase immutable `commit` values, file licenses and `role: source` or `target`.
 Quote structured hex values in lowercase canonical form (`"0x0"`, never `"0x00"` or `"0xA"`);
 omit unknown width, access or reset rather than guessing them. No Markdown frontmatter or

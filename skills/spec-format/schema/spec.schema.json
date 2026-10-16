@@ -12,7 +12,11 @@
     "resources": {"$ref": "#/$defs/resources"},
     "assumptions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/assumption"}},
     "orientation": {"$ref": "#/$defs/text"},
-    "notices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/notice"}}
+    "notices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/notice"}},
+    "resetTypes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/resetType"}},
+    "fieldAccessPolicyDefinitions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fieldAccessPolicyDefinition"}},
+    "enumerationDefinitions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/enumerationDefinition"}},
+    "registerFiles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/registerFile"}}
   },
   "allOf": [
     {
@@ -288,6 +292,18 @@
             }
           }
         }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"enum": ["board", "soc", "chip", "ip", "review"]}}},
+      "then": {
+        "not": {"anyOf": [
+          {"required": ["resetTypes"]},
+          {"required": ["fieldAccessPolicyDefinitions"]},
+          {"required": ["enumerationDefinitions"]},
+          {"required": ["registerFiles"]}
+        ]},
+        "$comment": "message: resetTypes, fieldAccessPolicyDefinitions, enumerationDefinitions and registerFiles belong to a peripheral, an overlay or a facts file, not to this kind"
       }
     }
   ],
@@ -1134,6 +1150,288 @@
         },
         "additionalProperties": false
       },
+      "registryName": {
+        "$comment": "A name in one of a spec's registries (resetTypes, fieldAccessPolicyDefinitions, enumerationDefinitions, registerFiles), as the standard or the document spells it: RW1CS, power-on, link-width.",
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_.-]*(?![\\s\\S])"
+      },
+      "fieldRef": {
+        "$comment": "A field of a register fact in the same file: #<fact id>.<field id>.",
+        "type": "string",
+        "pattern": "^#[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*(?![\\s\\S])"
+      },
+      "quantity": {
+        "$comment": "A measured or specified amount (D27): a UCUM code and IEC 61360 level names. Values are decimal integers (D6 keeps floats out); the unit list selects codes and copies none of UCUM's tables.",
+        "type": "object",
+        "required": [
+          "unit"
+        ],
+        "properties": {
+          "unit": {
+            "enum": [
+              "s",
+              "ms",
+              "us",
+              "ns",
+              "min",
+              "h",
+              "Hz",
+              "kHz",
+              "MHz",
+              "GHz",
+              "V",
+              "mV",
+              "A",
+              "mA",
+              "Cel",
+              "%",
+              "By",
+              "bit"
+            ]
+          },
+          "min": {
+            "type": "integer"
+          },
+          "nom": {
+            "type": "integer"
+          },
+          "typ": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "min"
+                ]
+              },
+              {
+                "required": [
+                  "nom"
+                ]
+              },
+              {
+                "required": [
+                  "typ"
+                ]
+              },
+              {
+                "required": [
+                  "max"
+                ]
+              }
+            ],
+            "$comment": "message: a quantity needs a unit and at least one of min, nom, typ, max"
+          }
+        ]
+      },
+      "timeQuantity": {
+        "$comment": "A quantity in a time unit with no level below 0: a step's timeout, interval and duration.",
+        "allOf": [
+          {
+            "$ref": "#/$defs/quantity"
+          },
+          {
+            "properties": {
+              "unit": {
+                "enum": [
+                  "s",
+                  "ms",
+                  "us",
+                  "ns",
+                  "min",
+                  "h"
+                ],
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "min": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "nom": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "typ": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              },
+              "max": {
+                "minimum": 0,
+                "$comment": "message: a step's timeout, interval and duration are times: unit s, ms, us, ns, min or h, and no level below 0"
+              }
+            }
+          }
+        ]
+      },
+      "stepTarget": {
+        "$comment": "message: a step target is #<fact id> or #<fact id>.<field id> in the same file",
+        "type": "string",
+        "pattern": "^#[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)?(?![\\s\\S])"
+      },
+      "stepValue": {
+        "$comment": "Canonical hex or an enumerated value's name; the checker sorts them out.",
+        "type": "string",
+        "anyOf": [
+          {
+            "$ref": "#/$defs/hex"
+          },
+          {
+            "$ref": "#/$defs/symbol"
+          }
+        ]
+      },
+      "ipxactAccess": {
+        "$comment": "IEEE 1685-2022 accessType, spelled as the standard spells it (D24).",
+        "enum": ["read-only", "write-only", "read-write", "writeOnce", "read-writeOnce", "no-access"]
+      },
+      "modifiedWriteValue": {
+        "enum": ["oneToClear", "oneToSet", "oneToToggle", "zeroToClear", "zeroToSet", "zeroToToggle", "clear", "set", "modify"]
+      },
+      "readAction": {"enum": ["clear", "set", "modify"]},
+      "writeValueConstraint": {
+        "$comment": "message: writeValueConstraint is exactly one of {writeAsRead: true}, {useEnumeratedValues: true} or {minimum, maximum}",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["writeAsRead"],
+            "properties": {"writeAsRead": {"const": true}},
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["useEnumeratedValues"],
+            "properties": {"useEnumeratedValues": {"const": true}},
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["minimum", "maximum"],
+            "properties": {
+              "minimum": {"type": "string", "$ref": "#/$defs/hex"},
+              "maximum": {"type": "string", "$ref": "#/$defs/hex"}
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "enumeratedValue": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {"$ref": "#/$defs/symbol"},
+          "value": {"type": "string", "$ref": "#/$defs/hex"},
+          "description": {"$ref": "#/$defs/text"},
+          "usage": {"enum": ["read", "write", "read-write"]}
+        },
+        "additionalProperties": false
+      },
+      "enumeratedValues": {
+        "type": "array",
+        "minItems": 1,
+        "items": {"$ref": "#/$defs/enumeratedValue"}
+      },
+      "resetValue": {
+        "type": "object",
+        "required": ["value"],
+        "properties": {
+          "value": {"type": "string", "$ref": "#/$defs/hex"},
+          "mask": {"type": "string", "$ref": "#/$defs/hex"},
+          "resetTypeRef": {"$ref": "#/$defs/registryName"}
+        },
+        "additionalProperties": false
+      },
+      "unaffectedBy": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {"$ref": "#/$defs/registryName"}
+      },
+      "fieldArray": {
+        "type": "object",
+        "required": ["dim"],
+        "properties": {
+          "dim": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+          "bitStride": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      },
+      "registerArray": {
+        "type": "object",
+        "required": ["dim", "stride"],
+        "properties": {
+          "dim": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 1}},
+          "stride": {"type": "string", "$ref": "#/$defs/hex"}
+        },
+        "additionalProperties": false
+      },
+      "resetType": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "fieldAccessPolicyDefinition": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "access": {"$ref": "#/$defs/ipxactAccess"},
+          "modifiedWriteValue": {"$ref": "#/$defs/modifiedWriteValue"},
+          "readAction": {"$ref": "#/$defs/readAction"},
+          "writeValueConstraint": {"$ref": "#/$defs/writeValueConstraint"},
+          "unaffectedBy": {"$ref": "#/$defs/unaffectedBy"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "enumerationDefinition": {
+        "type": "object",
+        "required": ["name", "enumeratedValues"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "enumeratedValues": {"$ref": "#/$defs/enumeratedValues"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
+      "registerFile": {
+        "type": "object",
+        "required": ["name", "addressOffset", "range"],
+        "properties": {
+          "name": {"$ref": "#/$defs/registryName"},
+          "description": {"$ref": "#/$defs/text"},
+          "addressOffset": {"type": "string", "$ref": "#/$defs/hex"},
+          "range": {"type": "string", "$ref": "#/$defs/hex"},
+          "array": {"$ref": "#/$defs/registerArray"},
+          "support": {"$ref": "#/$defs/supportList"},
+          "todo": {"$ref": "#/$defs/todo"},
+          "note": {"$ref": "#/$defs/text"}
+        },
+        "additionalProperties": false,
+        "allOf": [{"$ref": "#/$defs/supportRules"}]
+      },
       "register": {
         "type": "object",
         "required": [
@@ -1153,7 +1451,14 @@
             "minimum": 1
           },
           "access": {
+            "$comment": "The six IP-XACT values, and the six legacy short values the checker warns about (LEGACY_ACCESS in peripheral.py).",
             "enum": [
+              "read-only",
+              "write-only",
+              "read-write",
+              "writeOnce",
+              "read-writeOnce",
+              "no-access",
               "ro",
               "wo",
               "rw",
@@ -1162,12 +1467,36 @@
               "rc"
             ]
           },
+          "modifiedWriteValue": {
+            "$ref": "#/$defs/modifiedWriteValue"
+          },
+          "readAction": {
+            "$ref": "#/$defs/readAction"
+          },
           "reset": {
             "type": "string",
             "$ref": "#/$defs/hex"
+          },
+          "array": {
+            "$ref": "#/$defs/registerArray"
+          },
+          "registerFile": {
+            "$ref": "#/$defs/registryName"
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "required": ["access"],
+              "properties": {"access": {"enum": ["ro", "wo", "rw", "w1c", "w1s", "rc"]}}
+            },
+            "then": {
+              "not": {"anyOf": [{"required": ["modifiedWriteValue"]}, {"required": ["readAction"]}]},
+              "$comment": "message: a register with a legacy short access (ro, wo, rw, w1c, w1s, rc) may not also carry modifiedWriteValue or readAction; write the IP-XACT access"
+            }
+          }
+        ]
       },
       "bits": {
         "type": "array",
@@ -1216,6 +1545,59 @@
           },
           "bits": {
             "$ref": "#/$defs/bits"
+          },
+          "access": {
+            "$ref": "#/$defs/ipxactAccess"
+          },
+          "modifiedWriteValue": {
+            "$ref": "#/$defs/modifiedWriteValue"
+          },
+          "readAction": {
+            "$ref": "#/$defs/readAction"
+          },
+          "writeValueConstraint": {
+            "$ref": "#/$defs/writeValueConstraint"
+          },
+          "reserved": {
+            "const": true
+          },
+          "volatile": {
+            "type": "boolean"
+          },
+          "resets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"$ref": "#/$defs/resetValue"}
+          },
+          "enumeratedValues": {
+            "$ref": "#/$defs/enumeratedValues"
+          },
+          "enumerationDefinitionRef": {
+            "$ref": "#/$defs/registryName"
+          },
+          "fieldAccessPolicyDefinitionRef": {
+            "$ref": "#/$defs/registryName"
+          },
+          "aliasOf": {
+            "$ref": "#/$defs/fieldRef"
+          },
+          "array": {
+            "$ref": "#/$defs/fieldArray"
+          },
+          "unaffectedBy": {
+            "$ref": "#/$defs/unaffectedBy"
+          },
+          "initializedBy": {
+            "enum": ["hardware", "firmware"]
+          },
+          "lockedBy": {
+            "type": "object",
+            "required": ["field", "lockedValue"],
+            "properties": {
+              "field": {"$ref": "#/$defs/fieldRef"},
+              "lockedValue": {"type": "string", "$ref": "#/$defs/hex"}
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false,
@@ -1228,6 +1610,23 @@
             },
             "then": {
               "$ref": "#/$defs/supportRules"
+            }
+          },
+          {
+            "not": {"required": ["enumeratedValues", "enumerationDefinitionRef"]},
+            "$comment": "message: a field has its own enumeratedValues or an enumerationDefinitionRef, not both"
+          },
+          {
+            "if": {"required": ["fieldAccessPolicyDefinitionRef"]},
+            "then": {
+              "not": {"anyOf": [
+                {"required": ["access"]},
+                {"required": ["modifiedWriteValue"]},
+                {"required": ["readAction"]},
+                {"required": ["writeValueConstraint"]},
+                {"required": ["unaffectedBy"]}
+              ]},
+              "$comment": "message: a field that names a fieldAccessPolicyDefinitionRef may not also set access, modifiedWriteValue, readAction, writeValueConstraint or unaffectedBy; the policy holds them"
             }
           }
         ]
@@ -1270,6 +1669,15 @@
           "size": {
             "type": "integer",
             "minimum": 1
+          },
+          "bits": {
+            "$ref": "#/$defs/bits"
+          },
+          "enumeratedValues": {
+            "$ref": "#/$defs/enumeratedValues"
+          },
+          "enumerationDefinitionRef": {
+            "$ref": "#/$defs/registryName"
           }
         },
         "additionalProperties": false,
@@ -1283,14 +1691,17 @@
             "then": {
               "$ref": "#/$defs/supportRules"
             }
+          },
+          {
+            "not": {"required": ["enumeratedValues", "enumerationDefinitionRef"]},
+            "$comment": "message: a layout field has its own enumeratedValues or an enumerationDefinitionRef, not both"
           }
         ]
       },
       "step": {
         "type": "object",
         "required": [
-          "id",
-          "action"
+          "id"
         ],
         "properties": {
           "id": {
@@ -1298,6 +1709,74 @@
           },
           "action": {
             "$ref": "#/$defs/text"
+          },
+          "op": {
+            "enum": [
+              "write",
+              "setBits",
+              "clearBits",
+              "read",
+              "poll",
+              "delay",
+              "waitInterrupt"
+            ]
+          },
+          "target": {
+            "$ref": "#/$defs/stepTarget"
+          },
+          "value": {
+            "$ref": "#/$defs/stepValue"
+          },
+          "mask": {
+            "type": "string",
+            "$ref": "#/$defs/hex"
+          },
+          "until": {
+            "type": "object",
+            "properties": {
+              "equals": {
+                "$ref": "#/$defs/stepValue"
+              },
+              "bitsSet": {
+                "type": "string",
+                "$ref": "#/$defs/hex"
+              },
+              "bitsClear": {
+                "type": "string",
+                "$ref": "#/$defs/hex"
+              }
+            },
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": [
+                  "equals"
+                ]
+              },
+              {
+                "required": [
+                  "bitsSet"
+                ]
+              },
+              {
+                "required": [
+                  "bitsClear"
+                ]
+              }
+            ],
+            "$comment": "message: until is exactly one of equals, bitsSet or bitsClear"
+          },
+          "interval": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "timeout": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "duration": {
+            "$ref": "#/$defs/timeQuantity"
+          },
+          "onTimeout": {
+            "$ref": "#/$defs/factId"
           },
           "requirement": {
             "$ref": "#/$defs/requirement"
@@ -1322,6 +1801,528 @@
             },
             "then": {
               "$ref": "#/$defs/supportRules"
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "op"
+              ]
+            },
+            "then": {
+              "not": {
+                "type": "object",
+                "required": [
+                  "action"
+                ]
+              },
+              "$comment": "message: a step with op has no action: the renderer writes its English; explanations go in note (D40)"
+            },
+            "else": {
+              "allOf": [
+                {
+                  "required": [
+                    "action"
+                  ]
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "target"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: target, value, mask, until, interval, timeout, duration and onTimeout belong to a step with op"
+                }
+              ]
+            }
+          },
+          {
+            "dependentRequired": {
+              "onTimeout": [
+                "timeout"
+              ]
+            },
+            "$comment": "message: onTimeout needs a timeout"
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "write"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target",
+                    "value"
+                  ],
+                  "$comment": "message: a write step needs target and value"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a write step takes only target, value besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "setBits"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a setBits step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a setBits step takes only mask, target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "clearBits"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a clearBits step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a clearBits step takes only mask, target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "read"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a read step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a read step takes only target besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "poll"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target",
+                    "until"
+                  ],
+                  "$comment": "message: a poll step needs target and until"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a poll step takes only interval, onTimeout, target, timeout, until besides id, requirement, support, todo and note"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "timeout"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "todo"
+                      ]
+                    }
+                  ],
+                  "$comment": "message: a poll or waitInterrupt step needs a timeout, or a todo saying the source gives none (#105)"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "delay"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "duration"
+                  ],
+                  "$comment": "message: a delay step needs duration"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "target"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "timeout"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "onTimeout"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a delay step takes only duration besides id, requirement, support, todo and note"
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "required": [
+                "op"
+              ],
+              "properties": {
+                "op": {
+                  "const": "waitInterrupt"
+                }
+              }
+            },
+            "then": {
+              "allOf": [
+                {
+                  "required": [
+                    "target"
+                  ],
+                  "$comment": "message: a waitInterrupt step needs target"
+                },
+                {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "mask"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "until"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "interval"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "duration"
+                        ]
+                      }
+                    ]
+                  },
+                  "$comment": "message: a waitInterrupt step takes only onTimeout, target, timeout besides id, requirement, support, todo and note"
+                },
+                {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "timeout"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "todo"
+                      ]
+                    }
+                  ],
+                  "$comment": "message: a poll or waitInterrupt step needs a timeout, or a todo saying the source gives none (#105)"
+                }
+              ]
             }
           }
         ]
@@ -1404,6 +2405,12 @@
             "type": "integer",
             "minimum": 1
           },
+          "byteOrder": {
+            "enum": ["bigEndian", "littleEndian"]
+          },
+          "bitNumbering": {
+            "enum": ["lsb0", "msb0"]
+          },
           "fields": {
             "type": "array",
             "minItems": 1,
@@ -1446,9 +2453,17 @@
           "required": [
             "coverage"
           ]
+        },
+        {
+          "required": [
+            "quantity"
+          ]
         }
       ],
       "properties": {
+        "quantity": {
+          "$ref": "#/$defs/quantity"
+        },
         "register": {
           "$ref": "#/$defs/register"
         },

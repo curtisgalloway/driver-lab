@@ -53,6 +53,13 @@ matching the target repository's license. No frontmatter or Markdown body surrou
 
 Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `peripheral`, `review` and
 `facts`. Peripheral and review specs include `data` payloads, `requirement` and verdict sub-keys.
+Register fields carry IP-XACT properties and the spec-level registries (`resetTypes`,
+`fieldAccessPolicyDefinitions`, `enumerationDefinitions`, `registerFiles`); see
+[SPEC-FORMAT.md](../../docs/SPEC-FORMAT.md#register-fields-ip-xact-properties). Layout fields
+take `bits`, and a layout takes `byteOrder` and `bitNumbering`; see
+[the layouts subsection](../../docs/SPEC-FORMAT.md#layouts-bit-packed-fields-and-byte-order).
+Sequence steps take `op`, and time limits are quantities; see
+[the sequences subsection](../../docs/SPEC-FORMAT.md#sequences-an-operation-per-step).
 Use [peripheral-spec](../peripheral-spec/SKILL.md),
 [reference-driver-review](../reference-driver-review/SKILL.md) and
 [hardware-investigator](../hardware-investigator/SKILL.md) for their authoring procedures.

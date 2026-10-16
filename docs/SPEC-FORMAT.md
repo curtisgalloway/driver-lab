@@ -175,6 +175,7 @@ Keys by kind (closed: any key not listed for the kind is a schema error):
 | `resources` | optional | optional | optional | required | optional | required | required | required |
 | `assumptions`, `orientation`, `notices` | optional | optional | optional | optional | optional | optional | optional | optional |
 | `areas` (per-area confidence) | no | no | no | no | no | optional | optional | no |
+| `resetTypes`, `fieldAccessPolicyDefinitions`, `enumerationDefinitions`, `registerFiles` | no | no | no | no | optional | optional | no | optional |
 
 Ids normalize as today (lowercase, `[a-z0-9-]`, "Tensor G5" is `tensor-g5`). The file name is a
 convention; `id` (or `overlays`) resolves. Every `*.spec.yaml` below a root is a spec, whatever its
@@ -797,7 +798,7 @@ named, hashed, and cited by name and page) is the only shape.
   section: registers
   title: CTRL
   data:
-    register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: rw}
+    register: {name: WIDGET_CTRL, offset: "0x0", width: 32, access: read-write}
     fields:
       - id: en
         name: WIDGET_CTRL_EN
@@ -825,8 +826,10 @@ named, hashed, and cited by name and page) is the only shape.
   with their own support. Editing step `s4` stales only `seq.s4`; editing field `en`'s
   own anchor stales only `reg.en`.
 - Register `width` and `access` are optional when the source does not state them; absence
-  means unknown. `reset` is absent or a canonical hexadecimal value, never null. A field's
-  `requirement` overrides the inherited register requirement.
+  means unknown. `access` takes IP-XACT values (the legacy short values warn); field properties
+  are in [Register fields](#register-fields-ip-xact-properties). `reset` is absent or a
+  canonical hexadecimal value, never null. A field's `requirement` overrides the inherited
+  register requirement.
 - `inventory` compares `data.register.name` and `offset`, and each
   field's `name` and `bits`, with the header at the pin. It no longer guesses names and hex values
   out of prose, so its value-mismatch report becomes exact.
@@ -856,13 +859,17 @@ named, hashed, and cited by name and page) is the only shape.
 
 Each step and each ordering constraint carries its own `requirement` label where it differs from
 the fact's, so "which orderings the datasheet requires, which the driver merely does" is data,
-and the generated verify-on-hardware list collects every `as-implemented` step.
+and the generated verify-on-hardware list collects every `as-implemented` step. A step may instead
+be written as an operation with checked targets and values: see
+[Sequences: an operation per step](#sequences-an-operation-per-step).
 
 ### Data formats, interrupts, DMA, target mapping
 
 `data-formats` facts carry `data.layout` (`name`, `size`, and `fields` shaped like register
-fields with byte offsets); `interrupts` and `dma` facts are ordinary claims with support; `target`
-facts cite repos entries with `role: target`. Per-area confidence is the spec-level `areas` list
+fields with byte offsets, plus the optional `bits`, `byteOrder` and `bitNumbering` described
+under [Layouts](#layouts-bit-packed-fields-and-byte-order)); `interrupts` and `dma` facts are
+ordinary claims with support; `target` facts cite repos entries with `role: target`. Per-area
+confidence is the spec-level `areas` list
 (`{area, level: document-and-code | code-only | inferred, note}`).
 
 ### Review findings
@@ -909,10 +916,15 @@ copies its records into the spec unchanged, ids included.
 
 ## Precise payloads: standard vocabularies (proposed 2026-10-14)
 
-Status: **proposed, awaiting the user's approval.** The choices in the table at the end
-(D23–D41) were made by the user on 2026-10-14 (D34 proposed from the user's note that
-some register tools hold far more than IP-XACT expresses, then accepted); this section turns them into a design. Nothing
-here is built. It reshapes issues
+Status: **approved by the user; units 1-3 are implemented** (register fields, the registries,
+field and register arrays, register files, aliases, the three extensions, and register-level
+`access`; layout `bits`, `byteOrder`, `bitNumbering` and enumerated values on layout fields;
+quantities, `data.quantity`, and sequence steps with `op`, their checks and generated English);
+units 4-5 (the exporter and register sources) are not.
+Originally proposed 2026-10-14. The choices in the table at the end (D23–D41) were made by
+the user on 2026-10-14 (D34 proposed from the user's note that some register tools hold far
+more than IP-XACT expresses, then accepted); this section turns them into a design. Apart
+from units 1-3, nothing here is built. It reshapes issues
 [#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
 layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
 resets, sequence timeouts), and it answers the precision goal behind
@@ -1054,6 +1066,10 @@ them natively can supply them unchanged.
 (`w1c` → `read-write` + `oneToClear`; `w1s` → `read-write` + `oneToSet`; `rc` → `read-only` +
 `readAction: clear`) until `drift --rewrite` migrates the three spec repositories.
 
+A register may also carry `modifiedWriteValue` and `readAction`. Its fields inherit them unless
+they set their own or name a policy. This is how a legacy `w1c`, `w1s` or `rc` register is
+written in IP-XACT form.
+
 ```yaml
 resetTypes:
   - {name: power-on, description: fundamental reset, support: [...]}
@@ -1086,12 +1102,21 @@ facts:
 ```
 
 **Checks:** every enumerated value, reset value, mask and constraint bound fits the field's
-width; names and values are unique within a table; `useEnumeratedValues` needs a table;
+width; names are unique within a table, and so are values among entries whose `usage` overlaps
+(absent means read-write; read and write do not overlap, so one value may carry a read meaning
+and a write meaning); there is one reset entry per reset type; `useEnumeratedValues` needs a
+table;
 `resetTypeRef`, `unaffectedBy` and every `…Ref` resolve; one reset type is never in both
 `resets` and `unaffectedBy` of a field; `minimum <= maximum`; `aliasOf` and `lockedBy`
 name an existing field, and `lockedValue` fits it; an array's elements stay inside the
 register (fields) or inside the register file and do not overlap (`stride` at least the
 register's width in bytes).
+
+**Registry entries** refuse `inference` and `emulated` support, because they cannot name facts,
+and they are not verdict records. Each record that names an entry (a policy, an enumeration, a
+reset type or a register file) has that entry in its basis. The basis part is appended only when
+a record names one, so existing bases are unchanged. `aliasOf` and `lockedBy` resolve within
+the file and do not enter the basis.
 
 **Authoring rule** (#103), in `peripheral-spec` and its subagent prompt: a field, opcode or mask
 whose source gives a table of values or bit assignments gets `enumeratedValues` (or bit-level
@@ -1172,6 +1197,42 @@ document's numbering, so this design takes SystemRDL's `lsb0`/`msb0` for it (D39
 **Checks:** `bits` inside `size × 8`; values fit; under `byteOrder` absent, a multi-byte
 field with `bits` fails. Overlapping fields in one container are a warning, since unions exist.
 
+A synthetic example, a 32-bit big-endian word whose document numbers bits from the least
+significant end:
+
+```yaml
+layout:
+  name: CREDIT_UPDATE
+  size: 4
+  byteOrder: bigEndian
+  bitNumbering: lsb0
+  fields:
+    - {id: indicator, name: INDICATOR, offset: "0x0", size: 4, bits: [31, 31],
+       meaning: zero for a credit update,
+       enumeratedValues: [{name: update, value: "0x0"}, {name: other, value: "0x1"}]}
+    - {id: vc, name: VC, offset: "0x0", size: 4, bits: [28, 30], meaning: virtual channel}
+```
+
+The design left some points open; the checker settles them this way:
+
+1. `bits: [a, b]` is ordered (`a <= b`) in both numberings. Under `msb0`, `a` is the
+   lower-numbered, more significant end, as the cited document writes it.
+2. A "multi-byte field" is one whose `size` is above 1. A one-byte container needs no
+   `byteOrder`.
+3. A layout field without `bits` is the whole container: its enumerated values must fit
+   `size × 8` bits.
+4. The overlap warning covers fields with `bits` in the same container (same `offset` and
+   `size`). Overlap across different containers is not checked.
+5. `byteOrder` and `bitNumbering` may be given on a layout with no `bits` fields. An absent
+   `bitNumbering` reads as `lsb0` but is not filled in.
+6. A layout field's `enumerationDefinitionRef` brings that entry into its fact's basis, as for
+   register fields. Layout fields are not verdict sub-records, so the whole layout fact goes
+   stale when the entry changes.
+
+The generated views add a "Layout fields (generated)" table, shown only when a layout uses
+`bits`, `byteOrder`, `bitNumbering` or enumerated values, and the Markdown headline for a layout
+names its byte order and bit numbering when they are present.
+
 ### Sequences: an operation per step
 
 A step may carry `op`, one of a fixed set, instead of `action`: a step with `op` may not have
@@ -1201,6 +1262,52 @@ steps:
 
 The renderer writes each step's English from `op`, so text and data cannot disagree.
 
+The design left some points open; the checker settles them this way:
+
+1. Each `op` takes the keys in the table and no other operation key. `id`, `requirement`,
+   `support`, `todo` and `note` are allowed on every step. A step without `op` is unchanged: it
+   needs `action` and takes none of `target`, `value`, `mask`, `until`, `interval`, `timeout`,
+   `duration` or `onTimeout`.
+2. A target is `#fact` or `#fact.field` in the same file: a register fact (any `op` but
+   `waitInterrupt`), or an interrupts fact with no field part (`waitInterrupt`). The checker
+   confirms it resolves, but a target is not an edge of the reference graph, so it is not in the
+   basis or the license gate (as `aliasOf` and `lockedBy`).
+3. A `value` or `until.equals` starting with `0x` is canonical hex (D6) that fits the field's
+   width, or the register's width when the target is a register with a `width`. Any other
+   string is an enumerated value's name, and only a field has them: its own `enumeratedValues`
+   or the table its `enumerationDefinitionRef` names. A `write` refuses a `usage: read` name;
+   a `poll` `equals` refuses a `usage: write` name.
+4. `mask`, `until.bitsSet` and `until.bitsClear` must fit the target's width. `setBits` and
+   `clearBits` on a register need `mask`; on a field they refuse it, since the field is the
+   mask.
+5. `onTimeout` needs `timeout`. It is `fail`, which always means fail (so `fail` is not a
+   usable step id there), or the id of a step in the same sequence.
+6. `timeout`, `interval` and `duration` take a time unit (`s`, `ms`, `us`, `ns`, `min`, `h`) and
+   no level below 0.
+7. A wait, poll or handshake step states its bound (#105). The checker enforces it for `poll`
+   and `waitInterrupt`: a `timeout`, or a `todo` saying the source gives none. A step with
+   `action` takes no `timeout`: its `action` states the bound and tolerance, or a
+   `data.quantity` fact holds them and the step's `note` names it, or it carries the `todo`;
+   the verifier enforces that.
+8. The basis needs no code change: the new keys hash in through the fact's `data`, and a
+   supported step is still its own verdict sub-record.
+
+The English the generated views write, with `Q` a quantity written as its present levels in the
+order `min`, `nom`, `typ`, `max` (`min 60 s, nom 60 s, max 90 s`):
+
+| Step | English |
+| --- | --- |
+| `write` | `Write run to #reg-ctrl.mode.` |
+| `setBits` / `clearBits` on a field | `Set #reg-ctrl.en.` / `Clear #reg-ctrl.en.` |
+| `setBits` / `clearBits` on a register | `Set bits 0xf0 of #reg-ctrl.` / `Clear bits 0xf0 of #reg-ctrl.` |
+| `read` | `Read #reg-ctrl.` |
+| `poll` | `Poll #reg-status.ready until it equals 0x1, every nom 10 us; timeout max 10 ms; on timeout, fail.` (also `bits 0x1 are set` / `are clear`) |
+| `delay` | `Wait min 50 us.` |
+| `waitInterrupt` | `Wait for interrupt #irq-done; timeout max 1 s; on timeout, go to step enable.` |
+
+Both views show this line in place of the operation keys (Markdown as `step (generated)`, HTML
+as a column of that name), and the verify-on-hardware list uses it for an `as-implemented` step.
+
 ### Quantities
 
 `$defs.quantity`: `unit` (a UCUM code) and at least one of `min`, `nom`, `typ`, `max` (D27).
@@ -1213,6 +1320,19 @@ which its license forbids modifying. Checks: `min <= nom`, `nom <= max`, `typ` i
 
 Quantities appear in steps, and as `data.quantity` on a fact whose whole claim is one limit
 (the IDE aggregation timer in #105).
+
+The checker settles these points:
+
+1. `data.quantity` is a payload of its own, like `register` or `layout`: it does not combine
+   with them, and its fact keeps its `claim`.
+2. Levels may be negative where the unit allows it (`Cel`); only a step's `timeout`,
+   `interval` and `duration` refuse a level below 0. A quantity needs `unit` and at least one
+   level.
+3. The ordering check reports every violated pair of `min <= nom`, `nom <= max`, `min <= max`,
+   `min <= typ` and `typ <= max`; equal levels pass.
+4. The generated views write a `data.quantity` as one line (`Quantity (generated): min 60 s,
+   nom 60 s, max 90 s.`), not as a JSON dump, and a quantity in a step appears inside that
+   step's English.
 
 ### Export: `spec.py export ipxact`
 

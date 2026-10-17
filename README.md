@@ -129,6 +129,11 @@ schemas, references, composition, license policy, public-root restrictions, stub
 and verification records. Generated Markdown and HTML views present the YAML with provenance
 and per-fact status; edit the YAML, then regenerate the views.
 
+The atlas connection-view extension is described in the
+[design](docs/ATLAS-CONNECTIONS-DESIGN.md) and
+[implementation plan](docs/ATLAS-CONNECTIONS-PLAN.md). The plan distinguishes the
+checked topology format from the graph views still to be delivered.
+
 - **`board-expert`** reads YAML specs. It resolves ids or board/SoC names across declared
   roots, composes and overlays the specs, consults pinned sources and reports full fact
   references with freshness and limitations. An IP question can be tied to a board instance

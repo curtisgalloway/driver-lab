@@ -56,9 +56,9 @@ from pathlib import Path
 LAYERS = ("public", "ip-vendor", "soc-vendor", "product", "local")
 MARKER = "board-specs.yaml"
 SECTIONS = {
-    "board": ("quick-facts", "gotchas"),
-    "soc": ("quick-facts", "gotchas"),
-    "chip": ("quick-facts", "gotchas"),
+    "board": ("quick-facts", "gotchas", "topology"),
+    "soc": ("quick-facts", "gotchas", "topology"),
+    "chip": ("quick-facts", "gotchas", "topology"),
     "ip": ("standards", "programming-model", "variants-quirks", "gotchas"),
     "peripheral": ("identity", "registers", "sequences", "data-formats", "interrupts",
                    "dma", "sub-protocols", "target", "gotchas", "open-questions"),
@@ -228,6 +228,9 @@ def supports(data: dict, base: tuple, _payload=True):
 
 def references(data: dict, base: tuple):
     """Every fact reference a record makes: (kind, reference, path of the value)."""
+    import topology
+
+    yield from topology.references(data, base)
     for entry, at in supports(data, base):
         if entry.get("class") == "inference":
             for j, premise in enumerate(entry.get("premises", [])):
@@ -1192,6 +1195,9 @@ class Checker:
         records.check_structure(self, self.schemas)
         self.check_composition()
         self.check_references()
+        import topology
+
+        topology.check(self)
         records.first_pass(self)  # current FAILs: defects of a root's data, before trust
         self.check_trust()
         records.second_pass(self, self.require_verified)

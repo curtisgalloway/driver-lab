@@ -74,9 +74,37 @@ Place facts by kind:
 - `ip`: standards, register model/sequences, public variants/errata; no instance addresses.
 - `overlay`: `kind: overlay` and `overlays` name the target; no `id` or `parts` override.
 
-Sections are `quick-facts`, `gotchas` for board/SoC/chip; `standards`, `programming-model`,
+Sections are `quick-facts`, `gotchas`, `topology` for board/SoC/chip; `standards`, `programming-model`,
 `variants-quirks`, `gotchas` for IP. The schema admits their union for overlays; `check`
 requires the target's sections. Facts retain reading order within sections.
+
+### Structured topology
+
+Topology means documented hardware resources and their connections. Only board, SoC, chip
+specs and overlays of those actual kinds admit `section: topology`. Each fact still needs
+its normal title, readable claim, evidence or TODO, and verification record. Its `data` holds
+exactly one of `topologyNode`, `connection`, `topologyConfiguration`, `selection`; these payloads
+belong nowhere else. Read [the field contract](../../docs/SPEC-FORMAT.md#structured-topology-contract)
+and the matching schema definitions before authoring them.
+
+A node has named provider/consumer ports for clock, interrupt, power or reset resources.
+Connections reference node facts and name ports separately; ordered provider cells stay raw,
+with no inferred encoding. Optional node `instance`, `rate` and `voltage` references name a
+real instance row or existing quantity facts. Quantities retain their integer values and unit
+codes. Missing resource kinds can be marked with `incompleteKinds`, which requires a document
+TODO explaining the omission even when some connections of that kind are present.
+
+Configurations and selections belong to their explicitly named board, including overlays.
+They document choices, never detected settings or live state. Scope prose does not filter
+applicability. The checker validates consumer slots within each board's admitted owners,
+then follows explicit non-board endpoints; unrelated incoming connections cannot join a view.
+All fact references use the ordinary license, layer, trust and transitive freshness checks.
+Existing instance `irq`/`clocks` remain separate claims with no inferred correspondence.
+
+Current renders keep topology claims/evidence/TODOs readable. The atlas has no Connections
+view yet; typed ports, cells and configuration selection have no dedicated visualization.
+Keep the claim understandable without that visualization. An empty or partially documented
+topology is never evidence that hardware connections are absent.
 
 ## Authoring records
 
@@ -338,8 +366,9 @@ pull-request publishing arrive with the SF2-11 cutover.
 The strict UTF-8/NFC loader resolves only `true`, `false`, `null` and decimal 64-bit integers
 as nonstrings. Dates, hex and versions remain strings. No YAML anchors, aliases, merge keys,
 explicit tags/directives, duplicate/nonstring keys, multiple documents, BOM, invisible/control
-characters (CRLF allowed). Optional lists are absent or nonempty; required empty lists like
-`facts`, SoC `instances`, instance `clocks`, marker `accepts` are allowed.
+characters (CRLF allowed). Optional lists are absent or nonempty, except provider endpoint
+`cells: []` (valid for zero or unknown arity). Required empty lists like `facts`, SoC
+`instances`, instance `clocks`, topology node `ports`, marker `accepts` are allowed.
 
 SF2-4's CommonMark check rejects raw HTML, disallowed links/images, reference definitions,
 footnotes, nesting deeper than 16, headings and unclosed fences in author fields, including

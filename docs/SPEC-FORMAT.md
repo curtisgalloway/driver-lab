@@ -2588,3 +2588,99 @@ RG-T1 rounds:
 | Delta verification by hand, five rounds (RG1) | basis hashes and `status --stale` (D2) |
 | Overlay records skipped; one record path for base and overlay (RG1 V4, RG-T1 T3) | per-file records, checked by key against the file they sit beside |
 | `[DT]` facts take the tree's license (RG1 implementer) | `DT` anchors gated like `src` |
+
+## Structured topology contract
+
+**Terms:** topology is documented hardware resources and their connections; a **port** is a
+named resource input/output on a node; **provider/consumer** are service roles (an interrupt
+controller provides interrupt handling); **specifier cells** are ordered unsigned 32-bit
+integers selecting a provider resource. A **configuration** is a named set of documented board
+choices. These are authored claims, never detected wiring or live state. See the
+[glossary](../GLOSSARY.md) for the repository's other terms.
+
+AT1 implements validation and references, with no Connections visualization yet. Existing
+Markdown, HTML and atlas fact views retain readable claim text, evidence and TODOs; keep the
+claim sufficient to read without inspecting typed fields. Legacy instance `irq` and `clocks`
+remain unchanged, separate information: no provider/port matching or equivalence is inferred.
+
+Only board, SoC, chip specs and overlays resolving to those real kinds admit `section:
+topology`. Its facts retain the ordinary title, claim, support/TODO, scope, conflict, license
+and `.verify.yaml` verdict rules. Each `data` mapping contains exactly one payload below.
+Other payloads are forbidden in this section; topology payloads are forbidden in other
+sections and in IP, peripheral, review and investigator facts files.
+
+| Payload | Fields |
+| --- | --- |
+| `topologyNode` | Required `kind`, `ports` (empty allowed). Optional `instance`, `rate`, `voltage` fact references; optional `incompleteKinds`. |
+| `connection` | Required `kind`, `provider`, `consumer`, `mode`. Optional kind-specific attributes below. |
+| `topologyConfiguration` | Required `board` (a real board spec ID), `name` (single-line text). |
+| `selection` | Required `configuration` and `selects` fact references. |
+
+Node `kind` is one of `device`, `clock-source`, `clock-mux`, `clock-gate`, `clock-divider`,
+`clock-pll`, `power-supply`, `power-domain`, `reset-controller`, `interrupt-controller`,
+`interrupt-nexus`. Optional `instance` must name an actual instance row; two instances of one
+IP remain distinct and multiple sub-block nodes may reference one instance. Standalone
+oscillators, rails and internal blocks need no fabricated instance or register address.
+Optional `rate` and `voltage` name existing `data.quantity` facts, retaining their integer
+`min`/`nom`/`typ`/`max` values and existing unit representation (for example `MHz` or `mV`).
+They are metadata, with no rate calculation, float convention or implicit unit conversion.
+
+Every port has a unique nonempty single-line `name`, `kind` from `clock`, `interrupt`, `power`,
+`reset`, and `role` from `provider`, `consumer`. Only providers may declare `cells`, a
+nonnegative integer arity. A connection endpoint is `{node: "spec#node", port: name}`;
+the provider may additionally carry `cells: [0, 3]`, each value in 0..4294967295. Both nodes
+must resolve to `topologyNode` facts with matching port names, roles and resource kinds.
+Declared arity k requires exactly k values; k=0 allows either omission or `[]`. Unknown arity
+permits omission or a uint32 array and stays unknown. Raw cell values are never decoded.
+
+Connection `kind` uses those four resource kinds; `mode` is `fixed` or `selectable`.
+Additional fields are closed per kind:
+
+| Kind | Optional attributes |
+| --- | --- |
+| `clock` | `selectorValue`: nonnegative integer; `fixedRatio: {mul: 1, div: 2}`: positive integers. |
+| `interrupt` | `space`: nonempty text; `number`: nonnegative integer; `trigger`: `IRQ_TYPE_NONE`, `IRQ_TYPE_EDGE_RISING`, `IRQ_TYPE_EDGE_FALLING`, `IRQ_TYPE_EDGE_BOTH`, `IRQ_TYPE_LEVEL_HIGH`, `IRQ_TYPE_LEVEL_LOW`. |
+| `power` | `domainId`: nonnegative integer; `supplyName`: nonempty text. |
+| `reset` | `resetId`: nonnegative integer; `polarity`: `active-low` or `active-high`. |
+
+Decoded attributes require their own authored evidence like any other part of the claim.
+For interrupts the provider is the controller, the consumer the interrupting device;
+controller cascades use a controller node's upstream consumer port. Shared provider fan-out,
+including a shared interrupt line or reset, is valid. Consumer slots are canonical node fact
+identity plus port name. Within a context each slot has one fixed connection or selectable
+candidates, never multiple fixed connections or a mixture. Fan-in needs explicit intermediate
+nodes and distinct input ports justified by evidence; no combiner is invented.
+
+Configuration facts belong to their `board` ID, including overlays of that board. Selection
+facts belong to the same board and reference a selectable connection admitted to that board's
+topology. Fixed connections cannot be selected. The full configuration fact reference is its
+identity; identical display names do not merge configurations. A configuration can select at
+most one candidate per slot. Identical duplicate selections retain separate provenance and
+are allowed; different candidates are an error with no chosen winner. Adding `conflicts` does
+not waive a structural conflict. Configurations have no inheritance, scope prose is not
+evaluated, and an unselected slot remains unknown. A selected route does not mean enabled
+clock, released reset or observed firmware state.
+
+The reusable `scripts/topology.py` context helper seeds the focus spec and downward `parts`
+closure, instance IP/peripheral targets and peripheral specs whose `describes` names that
+closure. Overlays belong to their target ID. Only the focus board contributes board-owned
+facts; standalone SoC/chip contexts admit no board-owned topology or configurations. An
+already admitted owner's connections can explicitly admit non-board SoC/chip endpoint owners
+and continue through their connections, with disconnected owned nodes retained and cycles
+visited safely. No global incoming-edge scan grows the owner set: an unrelated chip pointing
+at a shared SoC and another board sharing that SoC do not thereby join the focus board.
+Cross-board hardware endpoints and selections of inapplicable connections fail checking.
+Missing references fail checking even at a boundary; nothing is fetched implicitly. A future
+view must also respect existing `--merged` rendering boundaries and author-text safety gates.
+
+Every topology fact reference enters `speccheck.references()` and the ordinary transitive
+license/layer/trust checks and `fact-v1` freshness dependencies. Node contract edits stale
+connections and their selections; editing a connection does not stale its nodes. No hash
+format changes or reverse dependency inference are introduced.
+
+Optional node `incompleteKinds` is a nonempty unique list of resource kinds, requiring
+`todo.check: document` on that fact to explain omissions and source locations. It remains
+meaningful with some connections already populated and appears in ordinary TODO worklists.
+Empty ports and omitted facts are not completeness claims. This is a closed-world authored
+subset, without a DTS parser, cell decoder, source adapter or live-state inference; accessible
+upstream-only areas can remain source links with documented extraction gaps.

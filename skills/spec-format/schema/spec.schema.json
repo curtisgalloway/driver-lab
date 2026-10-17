@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/spec.schema.json",
-  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format, kinds board, soc, chip, ip, overlay, facts, peripheral and review (SF2-7). Design: docs/SPEC-FORMAT.md. Patterns end with (?![\\s\\S]) (nothing follows), never $: in Python's re, which the validator uses, $ also matches before a final newline, so an id \"w\\n\" would pass. The lookahead means end of string in Python and ECMA-262 alike. Optional lists are absent or non-empty: an empty list would be a second spelling of an absent key.",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format, kinds board, soc, chip, ip, overlay, facts, peripheral and review (SF2-7). Design: docs/SPEC-FORMAT.md. Patterns end with (?![\\s\\S]) (nothing follows), never $: in Python's re, which the validator uses, $ also matches before a final newline, so an id \"w\\n\" would pass. The lookahead means end of string in Python and ECMA-262 alike. Optional lists are absent or non-empty, except topology provider endpoint cells (an empty array explicitly carries zero values).",
   "title": "Spec format: a spec or an investigator's facts file",
   "type": "object",
   "required": ["format", "kind", "facts"],
@@ -34,7 +34,9 @@
           "variant_of": {"$ref": "#/$defs/specId"},
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
-            "not": {"anyOf": [{"required": ["data"]}, {"required": ["requirement"]}]}}}
+            "not": {"required": ["requirement"]},
+            "if": {"properties": {"section": {"const": "topology"}}},
+            "else": {"not": {"required": ["data"]}}}}
         }
       }
     },
@@ -51,7 +53,9 @@
           "instances": {"type": "array", "items": {"$ref": "#/$defs/instance"}},
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
-            "not": {"anyOf": [{"required": ["data"]}, {"required": ["requirement"]}]}}}
+            "not": {"required": ["requirement"]},
+            "if": {"properties": {"section": {"const": "topology"}}},
+            "else": {"not": {"required": ["data"]}}}}
         }
       }
     },
@@ -69,7 +73,9 @@
           "instances": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/instance"}},
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
-            "not": {"anyOf": [{"required": ["data"]}, {"required": ["requirement"]}]}}}
+            "not": {"required": ["requirement"]},
+            "if": {"properties": {"section": {"const": "topology"}}},
+            "else": {"not": {"required": ["data"]}}}}
         }
       }
     },
@@ -111,6 +117,7 @@
                 "section": {
                   "enum": [
                       "quick-facts",
+                      "topology",
                       "gotchas",
                       "standards",
                       "programming-model",
@@ -387,36 +394,434 @@
     "idList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
     "parts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/specId"}},
     "textList": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/line"}},
+    "topologyPort": {
+      "type": "object",
+      "required": [
+        "name",
+        "kind",
+        "role"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/line"
+        },
+        "kind": {
+          "enum": [
+            "clock",
+            "interrupt",
+            "power",
+            "reset"
+          ]
+        },
+        "role": {
+          "enum": [
+            "provider",
+            "consumer"
+          ]
+        },
+        "cells": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "consumer"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "cells"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "topologyNode": {
+      "type": "object",
+      "required": [
+        "kind",
+        "ports"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "device",
+            "clock-source",
+            "clock-mux",
+            "clock-gate",
+            "clock-divider",
+            "clock-pll",
+            "power-supply",
+            "power-domain",
+            "reset-controller",
+            "interrupt-controller",
+            "interrupt-nexus"
+          ]
+        },
+        "instance": {
+          "$ref": "#/$defs/factRef"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topologyPort"
+          }
+        },
+        "rate": {
+          "$ref": "#/$defs/factRef"
+        },
+        "voltage": {
+          "$ref": "#/$defs/factRef"
+        },
+        "incompleteKinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "clock",
+              "interrupt",
+              "power",
+              "reset"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "topologyProvider": {
+      "type": "object",
+      "required": [
+        "node",
+        "port"
+      ],
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/factRef"
+        },
+        "port": {
+          "$ref": "#/$defs/line"
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "topologyConsumer": {
+      "type": "object",
+      "required": [
+        "node",
+        "port"
+      ],
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/factRef"
+        },
+        "port": {
+          "$ref": "#/$defs/line"
+        }
+      },
+      "additionalProperties": false
+    },
+    "connection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "provider",
+            "consumer",
+            "mode"
+          ],
+          "properties": {
+            "kind": {
+              "const": "clock"
+            },
+            "provider": {
+              "$ref": "#/$defs/topologyProvider"
+            },
+            "consumer": {
+              "$ref": "#/$defs/topologyConsumer"
+            },
+            "mode": {
+              "enum": [
+                "fixed",
+                "selectable"
+              ]
+            },
+            "selectorValue": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fixedRatio": {
+              "type": "object",
+              "required": [
+                "mul",
+                "div"
+              ],
+              "properties": {
+                "mul": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "div": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "provider",
+            "consumer",
+            "mode"
+          ],
+          "properties": {
+            "kind": {
+              "const": "interrupt"
+            },
+            "provider": {
+              "$ref": "#/$defs/topologyProvider"
+            },
+            "consumer": {
+              "$ref": "#/$defs/topologyConsumer"
+            },
+            "mode": {
+              "enum": [
+                "fixed",
+                "selectable"
+              ]
+            },
+            "space": {
+              "$ref": "#/$defs/text"
+            },
+            "number": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "trigger": {
+              "enum": [
+                "IRQ_TYPE_NONE",
+                "IRQ_TYPE_EDGE_RISING",
+                "IRQ_TYPE_EDGE_FALLING",
+                "IRQ_TYPE_EDGE_BOTH",
+                "IRQ_TYPE_LEVEL_HIGH",
+                "IRQ_TYPE_LEVEL_LOW"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "provider",
+            "consumer",
+            "mode"
+          ],
+          "properties": {
+            "kind": {
+              "const": "power"
+            },
+            "provider": {
+              "$ref": "#/$defs/topologyProvider"
+            },
+            "consumer": {
+              "$ref": "#/$defs/topologyConsumer"
+            },
+            "mode": {
+              "enum": [
+                "fixed",
+                "selectable"
+              ]
+            },
+            "domainId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "supplyName": {
+              "$ref": "#/$defs/text"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "provider",
+            "consumer",
+            "mode"
+          ],
+          "properties": {
+            "kind": {
+              "const": "reset"
+            },
+            "provider": {
+              "$ref": "#/$defs/topologyProvider"
+            },
+            "consumer": {
+              "$ref": "#/$defs/topologyConsumer"
+            },
+            "mode": {
+              "enum": [
+                "fixed",
+                "selectable"
+              ]
+            },
+            "resetId": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "polarity": {
+              "enum": [
+                "active-low",
+                "active-high"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "topologyConfiguration": {
+      "type": "object",
+      "required": [
+        "board",
+        "name"
+      ],
+      "properties": {
+        "board": {
+          "$ref": "#/$defs/specId"
+        },
+        "name": {
+          "$ref": "#/$defs/line"
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "required": [
+        "configuration",
+        "selects"
+      ],
+      "properties": {
+        "configuration": {
+          "$ref": "#/$defs/factRef"
+        },
+        "selects": {
+          "$ref": "#/$defs/factRef"
+        }
+      },
+      "additionalProperties": false
+    },
     "boardSpecFactSections": {
-      "required": ["title"],
-      "properties": {"section": {"enum": ["quick-facts", "gotchas"]}}
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "section": {
+          "enum": [
+            "quick-facts",
+            "gotchas",
+            "topology"
+          ]
+        }
+      }
     },
 
     "fact": {
       "type": "object",
-      "required": ["id", "section"],
+      "required": [
+        "id",
+        "section"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/factId"},
-        "section": {"type": "string"},
-        "title": {"$ref": "#/$defs/line"},
-        "claim": {"$ref": "#/$defs/text"},
-        "support": {"$ref": "#/$defs/supportList"},
-        "todo": {"$ref": "#/$defs/todo"},
+        "id": {
+          "$ref": "#/$defs/factId"
+        },
+        "section": {
+          "type": "string"
+        },
+        "title": {
+          "$ref": "#/$defs/line"
+        },
+        "claim": {
+          "$ref": "#/$defs/text"
+        },
+        "support": {
+          "$ref": "#/$defs/supportList"
+        },
+        "todo": {
+          "$ref": "#/$defs/todo"
+        },
         "assumes": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/assumptionId"}
+          "items": {
+            "$ref": "#/$defs/assumptionId"
+          }
         },
-        "scope": {"$ref": "#/$defs/scope"},
-        "critical": {"$comment": "Omit the key for a fact that is not critical.", "const": true},
-        "relates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/relation"}},
-        "conflicts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/conflict"}},
-        "note": {"$ref": "#/$defs/text"},
-          "data": {"$ref": "#/$defs/payload"},
-          "requirement": {"$ref": "#/$defs/requirement"}
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "critical": {
+          "$comment": "Omit the key for a fact that is not critical.",
+          "const": true
+        },
+        "relates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relation"
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/conflict"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        },
+        "data": {
+          "$ref": "#/$defs/payload"
+        },
+        "requirement": {
+          "$ref": "#/$defs/requirement"
+        }
       },
-      "allOf": [{"$ref": "#/$defs/supportRules"},
+      "allOf": [
+        {
+          "$ref": "#/$defs/supportRules"
+        },
         {
           "if": {
             "required": [
@@ -527,12 +932,212 @@
             }
           }
         },
-        {"if": {"required": ["section"], "properties": {"section": {"const": "findings"}}}, "then": {"required": ["data"], "properties": {"data": {"required": ["finding"]}}}},
-        {"if": {"required": ["data"], "properties": {"data": {"required": ["finding"]}}}, "then": {"properties": {"section": {"const": "findings"}}}},
-        {"if": {"required": ["section"], "properties": {"section": {"const": "correspondence"}}}, "then": {"required": ["data"], "properties": {"data": {"required": ["pair"]}}}},
-        {"if": {"required": ["data"], "properties": {"data": {"required": ["pair"]}}}, "then": {"properties": {"section": {"const": "correspondence"}}}},
-        {"if": {"required": ["section"], "properties": {"section": {"const": "coverage"}}}, "then": {"required": ["data"], "properties": {"data": {"required": ["coverage"]}}}},
-        {"if": {"required": ["data"], "properties": {"data": {"required": ["coverage"]}}}, "then": {"properties": {"section": {"const": "coverage"}}}}],
+        {
+          "if": {
+            "required": [
+              "section"
+            ],
+            "properties": {
+              "section": {
+                "const": "findings"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "finding"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "finding"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "section": {
+                "const": "findings"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "section"
+            ],
+            "properties": {
+              "section": {
+                "const": "correspondence"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "pair"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "pair"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "section": {
+                "const": "correspondence"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "section"
+            ],
+            "properties": {
+              "section": {
+                "const": "coverage"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "coverage"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "required": [
+                  "coverage"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "section": {
+                "const": "coverage"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "section": {
+                "const": "topology"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "topologyNode"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "connection"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "topologyConfiguration"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "selection"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "data": {
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "topologyNode"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "connection"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "topologyConfiguration"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "selection"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
       "unevaluatedProperties": false
     },
 
@@ -2488,6 +3093,26 @@
           "required": [
             "quantity"
           ]
+        },
+        {
+          "required": [
+            "topologyNode"
+          ]
+        },
+        {
+          "required": [
+            "connection"
+          ]
+        },
+        {
+          "required": [
+            "topologyConfiguration"
+          ]
+        },
+        {
+          "required": [
+            "selection"
+          ]
         }
       ],
       "properties": {
@@ -2518,6 +3143,18 @@
         },
         "coverage": {
           "$ref": "#/$defs/coverage"
+        },
+        "topologyNode": {
+          "$ref": "#/$defs/topologyNode"
+        },
+        "connection": {
+          "$ref": "#/$defs/connection"
+        },
+        "topologyConfiguration": {
+          "$ref": "#/$defs/topologyConfiguration"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
         }
       },
       "dependentRequired": {

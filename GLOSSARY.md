@@ -76,6 +76,10 @@ evaluation; add other terms as the documents that use them are updated.
 | Device tree / DTB | A hardware description supplied to a kernel / its compiled binary form. |
 | GPIO / IRQ | General-purpose input/output pin / an interrupt request that signals an event to a processor. |
 | FCS | Ethernet frame check sequence: the error-detection bytes that a capture may include or strip. |
+| MTU | Maximum transmission unit: the largest unit a link carries. Which bytes it counts depends on the layer: an IP MTU counts the IP packet (the Ethernet payload), while some OS frameworks count the whole Ethernet frame including its 14-byte header. |
+| Payload / frame (Ethernet) | The bytes an Ethernet frame carries for the layer above / those bytes plus the Ethernet header and, where counted, the FCS. Distinct from a spec fact's *payload* (its typed `data`). |
+| Head room / tail room | Space a driver asks the OS to reserve before / after a packet in a buffer, for headers or trailers it adds. |
+| OS framework | The operating system's driver interface for a device class (its network-device layer, say): the API a driver reports values to and the documents that define them. |
 | STP / RSTP | Spanning Tree Protocol / Rapid Spanning Tree Protocol: Ethernet switches exchange control frames to prevent loops. A port can have physical carrier while still withholding ordinary traffic. |
 | BPDU | Bridge Protocol Data Unit: a spanning-tree control frame advertising a switch port's role and state, including whether it is learning addresses or forwarding traffic. |
 | ARP | Address Resolution Protocol: the exchange that discovers the Ethernet destination for an IPv4 neighbor before sending ordinary IPv4 traffic. |

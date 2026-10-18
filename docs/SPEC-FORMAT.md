@@ -21,6 +21,9 @@ follows them. Where the body depends on one, it names it (D1–D22).
 - **Spec** — a hardware description an agent reads instead of the original sources: a board, an
   SoC, a companion chip, an IP block (the *board-spec* kinds), one peripheral's programming model
   (a *peripheral spec*), or a driver compared against a reference driver (a *review*).
+- **OS framework** — the operating system's driver interface for a device class, whose interface
+  definitions give each reported value's meaning. **MTU**, frame versus payload, and head or tail
+  room are in the [glossary](../GLOSSARY.md).
 - **YAML** — a text format for structured data (mappings, lists, strings, numbers). **JSON
   Schema** — a standard language for stating what shape a JSON-like document must have (which
   keys, which types, which values); a **validator** is the library that checks a document against
@@ -908,6 +911,20 @@ under [Layouts](#layouts-bit-packed-fields-and-byte-order)); `interrupts` and `d
 ordinary claims with support; `target` facts cite repos entries with `role: target`. Per-area
 confidence is the spec-level `areas` list
 (`{area, level: document-and-code | code-only | inferred, note}`).
+
+**A value the driver reports to the OS framework states its unit and layer (#150).** An MTU or
+frame size, a buffer length, head or tail room, a rate: the `target` fact says what the number
+counts in its unit. For a size or length that means its layer (frame or payload, with or without
+the link header and FCS); a rate says what it counts (bits on the wire, payload bytes). Its
+support includes a `src` citation of the framework's own interface definition for that field,
+from a repos entry with `role: target`. "MTU
+1500" is not a claim a reader can act on: one network framework defines its port MTU as the full
+frame including the 14-byte Ethernet header, so a driver that reported 1500 gave the stack an IP
+MTU of 1486. The fact also states the quantity the framework derives from the value
+("reported MTU 1514, minus the 14-byte Ethernet header, is the IP MTU, 1500"), which is what a
+test of the driver asserts, with a comment citing the interface definition; a test that repeats the literal constant encodes the same reading as the code
+and cannot catch it. When the interface definition does not say, the fact carries
+`todo: {check: source, ...}` naming the field.
 
 ### Review findings
 

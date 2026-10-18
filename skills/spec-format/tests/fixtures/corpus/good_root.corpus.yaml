@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# The corpus ledger for fixtures/check/good_root: test_corpus.py copies that root and installs
+# this file as its corpus.yaml. Every document the root's specs list is here, and every
+# disposition form appears once.
+format: 2
+derivation: Widget SoC TRM, chapter 1 address map (synthetic)
+documents:
+  - {name: widget-trm, title: Widget SoC TRM, access: public, subsystem: soc, disposition: "spec:widgetsoc"}
+  - {name: uart-trm, title: Widget UART TRM, access: public, subsystem: uart, disposition: "spec:widgetuart"}
+  - {name: widget-product-page, title: Widget Board product page, access: public, disposition: "spec:widgetboard"}
+  - {name: widget-errata, title: Widget SoC errata, access: registration, disposition: "planned: after the TRM pass"}
+blocks:
+  - {name: uart0, subsystem: uart, disposition: "spec:widgetsoc#uart0"}
+  - {name: gpu, subsystem: graphics, disposition: "excluded: no public documentation"}
+  - {name: crypto, subsystem: security, disposition: "planned: second lap"}

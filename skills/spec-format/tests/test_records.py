@@ -1499,7 +1499,7 @@ class ReviewRound2(Roots):
             "sha256": ("d" * 64, "stale"),
             "pages": (81, "stale"),
             "page_numbering": ("pdf", "stale"),
-            "access": ("internal", "stale"),
+            "access": ("private", "stale"),
             "cite": (False, "unknown"),  # citing a map-only document: rejected
             "verified": ("2026-10-07", "current"),
             "fetch": ("blocked", "current"),

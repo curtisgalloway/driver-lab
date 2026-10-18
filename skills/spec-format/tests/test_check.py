@@ -764,7 +764,7 @@ class BoardFixtures(unittest.TestCase):
         "markdown.spec.md": ["a Markdown spec (.spec.md) is not read"],
         "instance-dangling.spec.yaml": ["instance 'uart1': ip 'nosuchip' resolves to no spec"],
         "instance-not-ip.spec.yaml": ["instance 'uart1': 'fineboard' is not an ip spec"],
-        "internal-doc.spec.yaml": ["documents entry 'secret-trm': access: internal under a "
+        "private-doc.spec.yaml": ["documents entry 'secret-trm': access: private under a "
                                    "public root"],
         "irq-mismatch.spec.yaml": ["intid 150 does not agree with SPI 121 (INTID 153)"],
         "lines-backwards.spec.yaml": ["lines [9, 4] run backwards"],
@@ -1156,7 +1156,7 @@ class Rules(TempRoots):
 
     def test_public_privacy_only_under_public(self):
         files = {"x.spec.yaml": chip(docs='    - {name: trm, class: databook, title: T, '
-                                          'url: "https://example.invalid/t", access: internal}\n')}
+                                          'url: "https://example.invalid/t", access: private}\n')}
         self.assertEqual(self.one(files)[0], 1)
         self.assertEqual(self.one(files, root_marker=marker(layer="local"))[0], 0)
 

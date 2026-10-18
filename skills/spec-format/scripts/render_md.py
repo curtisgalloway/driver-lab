@@ -551,9 +551,26 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
                 for notice in file.data["notices"]:
                     out.extend([code(notice["repo"] + ":" + notice["path"]), ""])
                     _author(out, notice["text"], "Notice")
+    for root in dict.fromkeys(f.root for f in selected):
+        _coverage(out, root)
     view = "\n".join(out).rstrip() + "\n"
     specmd.check_view(view, out.expected)
     return view
+
+
+def _coverage(out, root):
+    """The root's corpus ledger (#153): counts, then every entry with its disposition."""
+    import corpus
+
+    cov = corpus.coverage(root)
+    if cov is None:
+        return
+    out.heading(2, "Corpus coverage (generated): " + escape(root.label))
+    out.extend([escape(corpus.summary(cov)) + ".", ""])
+    for group in corpus.GROUPS:
+        _table(out, group.capitalize(), [{"name": r["name"], "subsystem": r["subsystem"],
+                                          "state": r["state"], "disposition": r["disposition"]}
+                                         for r in cov[group]["rows"]])
 
 
 def command(api, args):

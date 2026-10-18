@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: <copyright-year> <copyright-holder>
+# SPDX-License-Identifier: <file-license>
+# The corpus ledger: every document and hardware block discovery found, before any spec is
+# written. Each entry gets a disposition: spec:<id>, spec:<id>#<fact>, planned:<note> or
+# excluded:<reason>. Keep a document's name equal to its resources.documents name in the specs.
+format: 2
+derivation: "<block-list-derivation>"
+documents:
+  - {name: board-guide, title: "<board-guide-title>", access: public, subsystem: board, disposition: "spec:<board-id>"}
+  - {name: soc-trm, title: "<soc-trm-title>", access: public, subsystem: soc, disposition: "spec:<soc-id>"}
+  - {name: chip-datasheet, title: "<chip-datasheet-title>", access: public, subsystem: companion, disposition: "spec:<chip-id>"}
+  - {name: ip-databook, title: "<ip-databook-title>", access: public, subsystem: uart, disposition: "spec:<ip-id>"}
+  - {name: ip-standard, title: "<ip-standard-title>", access: public, subsystem: uart, disposition: "spec:<ip-id>"}
+  - {name: soc-errata, title: "<soc-errata-title>", access: registration, subsystem: soc, disposition: "planned: <errata-plan>"}
+blocks:
+  - {name: console-uart, subsystem: uart, disposition: "spec:<soc-id>#console-uart"}
+  - {name: <excluded-block>, subsystem: "<excluded-subsystem>", disposition: "excluded: <excluded-reason>"}

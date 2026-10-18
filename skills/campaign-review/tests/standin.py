@@ -146,7 +146,7 @@ class Standin:
         docs = [
             dict(name=self.ids[key], **{"class": "databook"}, title=self.ids[key],
                  url="https://example.invalid/" + path.name, sha256=digest(path),
-                 access="internal", note="Local fixture: ../sources/" + path.name)
+                 access="private", note="Local fixture: ../sources/" + path.name)
             for key, path in zip(("document", "other-document"), self.documents)
         ]
         claims = [

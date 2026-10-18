@@ -773,6 +773,24 @@ const graph = (() => {
     tb.append(tr);
   }
   t.append(tb); wrap.append(t); host.append(wrap);
+  for (const c of DATA.corpus) {
+    host.append(el('h3', 'cov-h', 'Corpus ledger · ' + shortRoot(c.root)));
+    for (const group of ['documents', 'blocks']) {
+      const n = c[group].counts;
+      host.append(el('div', 'count', group + ': ' + n.spec + ' specified · ' + n.planned + ' planned · ' + n.excluded + ' excluded'));
+      if (!c[group].rows.length) continue;
+      const w = el('div', 'cov-scroll'); const lt = el('table', 'cov');
+      const h = el('tr'); for (const k of ['Name', 'Subsystem', 'Disposition']) h.append(el('th', null, k));
+      const lh = el('thead'); lh.append(h); lt.append(lh);
+      const lb = el('tbody');
+      for (const r of c[group].rows) {
+        const tr = el('tr', 'ledger ' + r.state);
+        tr.append(el('td', null, r.name), el('td', null, r.subsystem), el('td', null, r.disposition));
+        lb.append(tr);
+      }
+      lt.append(lb); w.append(lt); host.append(w);
+    }
+  }
 })();
 
 /* ---------- open items ---------- */

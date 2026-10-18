@@ -38,6 +38,7 @@ the interview checklist. Author and read specs as YAML.
 | `<name>.spec.yaml`, overlay with source/DT evidence | [overlay.spec.yaml](templates/overlay.spec.yaml) |
 | Overlay citing documents only | [docs-root/overlay.spec.yaml](templates/docs-root/overlay.spec.yaml) |
 | Root marker | [board-specs.yaml](templates/board-specs.yaml) |
+| Corpus ledger, `corpus.yaml` beside the marker | [corpus.yaml](templates/corpus.yaml) |
 | Documents-only root marker (`accepts: []`) | [docs-root/board-specs.yaml](templates/docs-root/board-specs.yaml) |
 | `<board>-expert/SKILL.md` | [stub-SKILL.md](templates/stub-SKILL.md) |
 | `<vendor>-board-tools/SKILL.md` | [vendor-board-tools-SKILL.md](templates/vendor-board-tools-SKILL.md) |
@@ -49,7 +50,7 @@ shape for a documents-only root. Source-derived additions use the source overlay
 whose accepts list permits the actual files' licenses. The docs overlay also has no repos.
 Do not add even map-only repos to documents-only templates: `check --require-license` gates
 those too. An internal overlay uses the same YAML shapes in a vendor/local root, with
-`access: internal` on documents and a tool's `via` naming its loaded vendor skill. Do not add
+`access: private` on documents and a tool's `via` naming its loaded vendor skill. Do not add
 `access`/`via` to repo entries or invocation `via` to documents; those fields do not exist.
 
 When creating a spec repository, install and configure the [repository checks](../spec-format/ci/README.md#repository-checks), including both Linux and macOS jobs. Existing repositories keep their own configured copies; template updates do not propagate automatically.
@@ -63,14 +64,21 @@ When creating a spec repository, install and configure the [repository checks](.
    verification now or later. Defaults: research-fill public sources and verify now. Reuse
    existing SoC/chip/IP specs rather than duplicating them. Explain Apache 2.0 as the default
    for a new code project; spec content must match its chosen repository's license.
-2. **Research-fill** by spawning an expert that loads board-expert and applicable vendor skills.
+2. **Ledger first.** Before any spec is written, create the root's `corpus.yaml` from the
+   template and have the expert (or `hardware-investigator`) fill it from discovery: every
+   document found (datasheets, TRMs, application notes, errata, the standards the hardware
+   implements) and every block in the SoC's own address map or TRM chapter list, not only the
+   blocks the bring-up path touches. Record how the block list was derived in `derivation`.
+   Each entry gets a disposition (`spec:<id>`, `spec:<id>#<fact>`, `planned:<note>`,
+   `excluded:<reason>`); excluding a block is fine, leaving it unlisted is not.
+3. **Research-fill** by spawning an expert that loads board-expert and applicable vendor skills.
    Ask for YAML fact records (`id`, `section`, `title`, `claim`, `support`, TODO as needed),
    resource entries with immutable commits/doc hashes, and supported instances/variants: an
    `instances:` row for every MMIO block that a document, device tree or source gives a base
    address for, naming its `ip` spec, its `peripheral` spec, or both.
    The expert manages fetching and its cache. A skeleton request or unavailable source gets
    explicit gap records with observable TODO methods; do not fabricate a citation to fill a form.
-3. **Write YAML**, replacing every template placeholder with a real value, removing irrelevant
+4. **Write YAML**, replacing every template placeholder with a real value, removing irrelevant
    examples and researching or explicitly keeping gaps. Replace SPDX header placeholders with
    the copyright year/holder and the target root's declared license, including documents-only
    markers; never leave an Apache-2.0 header in a CC-BY root. Preserve stable fact ids; every
@@ -81,7 +89,7 @@ When creating a spec repository, install and configure the [repository checks](.
    license and may require a more restrictive root. Cite DT source (`.dts`/`.dtsi`) at a pinned
    commit; a claim whose only source is a binary blob is a gap until decompiled text is
    published at a pin. Mark critical facts for two readers.
-4. **Write the marker/stub/vendor skill** if requested. All root marker policy fields are
+5. **Write the marker/stub/vendor skill** if requested. All root marker policy fields are
    required, even outside a published repository. Expand any root pointers explicitly for
    commands: skill pointers are relative to the checkout or absolute; marker `roots` entries
    are relative to that marker file or absolute. YAML files start with SPDX comments;
@@ -89,25 +97,26 @@ When creating a spec repository, install and configure the [repository checks](.
    Keep private document/bench details in private overlays. Source-license notices belong
    in `notices`, not code excerpts. A stub keeps “Board expert for” and “A stub over the
    `<id>` board spec” in its description, a `spec: <id>` line in its body, and no facts.
-5. **Register** a new stub where the target repository requires; inspect its current README
+6. **Register** a new stub where the target repository requires; inspect its current README
    and plugin metadata rather than assuming an obsolete registration script exists. Spec
    files need no separate registry: they are discovered under the chosen roots. Follow the
    target tree's review process; do not change installed agent configuration unasked.
-6. **Check** with the contract's pinned environment:
+7. **Check** with the contract's pinned environment:
    `spec.py validate <file>... --root <root>` for shape, then
    `spec.py check <new root>... --context-root <dependency root>... --require-license
-   --stubs-from <skills dir>`. Include every dependency, and check any other changed roots
+   --stubs-from <skills dir>`, and `spec.py corpus <new root>... --context-root <dependency
+   root>...` for the ledger's coverage. Include every dependency, and check any other changed roots
    as checked roots. Run `spec.py resolve <file>... --root <root> --repo NAME=CHECKOUT
    --docs-dir <documents dir>` when bytes are available. Confirm anchors ran, not merely
    exit 0; skips and unrepeatable searches remain limits. Render every relevant id using
    `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md` and inspect it, then the same with `--format html` (the viewer,
    which repeats the containment checks); both are on main.
-7. **Verify** by following [spec-verifier's procedure](../spec-verifier/SKILL.md).
+8. **Verify** by following [spec-verifier's procedure](../spec-verifier/SKILL.md).
    If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.
-8. **Report** files produced, resolved composition, record status from `spec.py status`, gaps
-   and review needs. If new stubs require an installation sync, remind the user to run it;
+9. **Report** files produced, ledger coverage (specified, planned, excluded), resolved
+   composition, record status from `spec.py status`, gaps and review needs. If new stubs require an installation sync, remind the user to run it;
    do not reconfigure the harness. Follow the repo's commit/push rules.
 
 ## Filling guidance

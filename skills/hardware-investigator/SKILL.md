@@ -125,6 +125,16 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
    facts' second readers. Re-pinning uses peripheral-spec's `spec.py drift` procedure, never
    a silent replacement of the commit.
 
+## The corpus ledger
+
+When the task is discovery for a root (what documents exist, which blocks the hardware has),
+fill the root's `corpus.yaml` ([spec-format](../spec-format/SKILL.md#corpus-ledger)) before
+any spec is written: one entry per document and per block, from the full document set and the
+SoC's own address map or chapter list, not only what a driver touches. Use `planned:<note>`
+when nothing has decided yet, and record the block list's source in `derivation`. When a
+single-question investigation meets a document or block the ledger lacks, return it as a
+proposed ledger entry in the report; the caller adds it.
+
 ## The facts file
 
 Use `<answer>.facts.yaml`, `format: 2`, `kind: facts`, `resources` and `facts`, with SPDX

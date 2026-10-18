@@ -53,6 +53,10 @@ The workflow initially has no context roots. For each required context, add an
 separate path outside `specs/`. Append that checkout's `specs/` path to **all four** `checks.sh`
 invocations, in the table's order. Existing hardware-specs checks use context repositories'
 `main` refs so new spec data is checked together; the executable driver-lab tool stays pinned.
+Set `REQUIRE_CORPUS=1` on the check step once the root keeps a corpus ledger
+(`specs/corpus.yaml`, [spec-format](../SKILL.md#corpus-ledger)): the step then also runs
+`spec.py corpus`, which fails when the ledger is missing. Without it, `check` still checks a
+ledger that exists, but a root without one passes.
 Keep `RESOLVE_SRC=1` on both resolve and self-test steps. It fetches cited source revisions;
 the self-test proves a valid anchor resolves and a deliberately invalid anchor is rejected.
 

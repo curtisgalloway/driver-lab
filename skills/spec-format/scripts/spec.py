@@ -41,6 +41,7 @@ REQUIREMENTS = SKILL_DIR / "requirements.txt"
 SCHEMA_BASE = "https://github.com/curtisgalloway/driver-lab/spec-format/2/"
 EXTENSION_URN = "urn:driver-lab:spec-format:2:extension:source-observed"
 MARKER = "board-specs.yaml"
+CORPUS = "corpus.yaml"
 
 # Distribution name -> import name. The three libraries the spec format is built on (D8, D9, D20);
 # every spec.py subcommand runs under the same pinned set.
@@ -65,6 +66,8 @@ description: Drive spec.py, the spec format tool (validate a file against its sc
     python3 skills/spec-format/scripts/spec.py todo <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--check hardware|document|source]
         [--json]
+    python3 skills/spec-format/scripts/spec.py corpus <root>... [--context-root <dir>]...
+        [--require-license] [--public-skill <name>]... [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
         [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
         [--tool-commit <40-hex>] --format md|html|atlas [--json]
@@ -82,9 +85,9 @@ Run it in a venv made with
 
 The file name chooses the schema: `*.spec.yaml` and `*.facts.yaml` (spec.schema.json; a facts
 file holds `kind: facts` and a spec file any other kind), `*.verify.yaml` (verify.schema.json),
-`board-specs.yaml` (root.schema.json). `--root <dir>` reads `<dir>/board-specs.yaml` and loads
-the `source-observed` schema fragment it names (D15); without it, a `source-observed` support
-entry is refused.
+`board-specs.yaml` (root.schema.json), `corpus.yaml` (corpus.schema.json). `--root <dir>`
+reads `<dir>/board-specs.yaml` and loads the `source-observed` schema fragment it names (D15);
+without it, a `source-observed` support entry is refused.
 
 Output: one `path:line:column: message` per finding, then a summary line. `--json` prints one
 object, always: `{"ok": bool, "files": [{"path", "schema", "valid"}], "findings": [{"path",
@@ -115,6 +118,15 @@ the structural check succeeds; without the flag, checks make no heading requests
 The existing explorer fetch limit, time/response limits and optional `GITHUB_TOKEN`
 or `GH_TOKEN` authentication apply. Wiki pages are checked at their current content;
 they are not immutable Git pins.
+
+`corpus` runs `check`, then reports each checked root's corpus ledger (`corpus.yaml` beside
+the marker, corpus.schema.json): how many documents and blocks are specified, planned and
+excluded, and every one not specified, with its disposition. A checked root with no ledger is
+an error. `check` itself checks a ledger wherever one exists: a `spec:<id>` or
+`spec:<id>#<fact>` disposition resolves in the ledger's layer or an earlier one, a document's
+spec lists that document, every document a spec of the root lists is in the ledger (same
+`sha256` when both give one), no name is listed twice, and under a `public` layer no entry is
+`access: private`. Ledger errors fail the run but leave the root trusted.
 
 Verification records: `<root>/resources/<name>.verify.yaml` belongs to `<name>.spec.yaml` (any
 directory of the root); its `spec` and `spec_file` name that file, every verdict key names one of
@@ -428,19 +440,21 @@ def schema_kind(path: Path) -> str:
     name = path.name
     if name == MARKER:
         return "root"
+    if name == CORPUS:
+        return "corpus"
     if name.endswith(".verify.yaml"):
         return "verify"
     if name.endswith(".spec.yaml") or name.endswith(".facts.yaml"):
         return "spec"
     raise Usage(
         f"{path}: cannot tell which schema applies; name the file *.spec.yaml, *.facts.yaml, "
-        f"*.verify.yaml or {MARKER}"
+        f"*.verify.yaml, {MARKER} or {CORPUS}"
     )
 
 
 def load_schemas() -> dict[str, dict]:
     schemas = {}
-    for kind in ("spec", "root", "verify"):
+    for kind in ("spec", "root", "verify", "corpus"):
         path = SCHEMA_DIR / f"{kind}.schema.json"
         try:
             schemas[kind] = _strict_json(path)
@@ -939,6 +953,47 @@ def cmd_todo(args) -> tuple[int, dict]:
     }
 
 
+def cmd_corpus(args) -> tuple[int, dict]:
+    import corpus
+    import speccheck
+
+    checker = _run_check(args)
+    roots = []
+    for r in checker.roots:
+        if r.context:
+            continue
+        if r.corpus_path is None:
+            checker.findings.append(speccheck.Finding(
+                str(r.given / CORPUS), 1, 1, f"root {r.label} has no corpus ledger: every "
+                                             f"document and block it considered needs a "
+                                             f"recorded disposition (#153)"))
+        ledger = "missing" if r.corpus_path is None else "ok" if r.corpus else "invalid"
+        roots.append({"path": str(r.given), "name": r.name, "ledger": ledger,
+                      "coverage": corpus.coverage(r)})
+    ordered = _ordered(checker.findings)
+    errors = sum(1 for f in ordered if f.level == "error")
+    warnings = len(ordered) - errors
+    text = []
+    for r in roots:
+        cov = r["coverage"]
+        text.append(f"{r['name'] or r['path']}: " + (corpus.summary(cov) if cov else
+                                                      f"{r['ledger']} ledger"))
+        for group in corpus.GROUPS if cov else ():
+            for row in cov[group]["rows"]:
+                if row["state"] != "spec":
+                    text.append(f"  {group[:-1]} {row['name']}: {row['disposition']}")
+    text += [str(f) for f in ordered]
+    text.append(f"{len(roots)} root(s): {errors} error(s), {warnings} warning(s)")
+    return (EXIT_INVALID if errors else EXIT_OK), {
+        "ok": not errors,
+        "roots": roots,
+        "errors": errors,
+        "warnings": warnings,
+        "findings": [f.as_dict() for f in ordered],
+        "_text": text,
+    }
+
+
 def cmd_validate(args) -> tuple[int, dict]:
     for p in args.files:
         if not p.is_file():
@@ -1041,6 +1096,15 @@ def build_parser() -> argparse.ArgumentParser:
     td.add_argument("--check", choices=("hardware", "document", "source"),
                     help="only TODOs with this todo.check")
     td.add_argument("--json", action="store_true", help="one JSON object on stdout")
+    co = sub.add_parser("corpus", help="each root's corpus ledger: coverage, and the gate",
+                        allow_abbrev=False)
+    co.add_argument("roots", nargs="+", type=Path, help="spec root directories")
+    co.add_argument("--context-root", action="append", default=[], type=Path,
+                    help="a further root read so spec: dispositions resolve")
+    co.add_argument("--require-license", action="store_true",
+                    help="as for check (it decides which roots are trusted)")
+    co.add_argument("--public-skill", action="append", default=[], help="as for check")
+    co.add_argument("--json", action="store_true", help="one JSON object on stdout")
     rd = sub.add_parser("render", help="generate a Markdown view or HTML viewer", allow_abbrev=False)
     rd.add_argument("roots", nargs="+", type=Path, help="spec root directories")
     rd.add_argument("--context-root", action="append", default=[], type=Path)
@@ -1073,6 +1137,11 @@ def _failure(kind: str, messages: list[str], command: str | None = None,
     if command == "status":
         return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
                            "warnings": 0, "specs": [],
+                           "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
+                                         "message": m} for m in messages]}, sort_keys=True)
+    if command == "corpus":
+        return json.dumps({"ok": False, "error": kind, "roots": [], "errors": len(messages),
+                           "warnings": 0,
                            "findings": [{"path": "", "line": 0, "column": 0, "level": "error",
                                          "message": m} for m in messages]}, sort_keys=True)
     if command == "todo":
@@ -1123,7 +1192,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command is None:
         return fail("usage", EXIT_USAGE,
-                    ["name a subcommand: validate, check, status, todo, render, resolve, show, drift, inventory"])
+                    ["name a subcommand: validate, check, status, todo, corpus, render, resolve, show, drift, inventory"])
 
     try:
         problems = check_dependencies()
@@ -1147,7 +1216,8 @@ def main(argv: list[str] | None = None) -> int:
             return render_html if fmt == "html" else render_md
 
         handler = getattr(args, "handler", None) or {
-            "check": cmd_check, "status": cmd_status, "todo": cmd_todo, "validate": cmd_validate,
+            "check": cmd_check, "status": cmd_status, "todo": cmd_todo, "corpus": cmd_corpus,
+            "validate": cmd_validate,
             "render": lambda a: renderer(a.format).command(sys.modules[__name__], a)}[args.command]
         code, result = handler(args)
     except Usage as exc:
@@ -1163,7 +1233,8 @@ def main(argv: list[str] | None = None) -> int:
     text = result.pop("_text")
     if args.json:
         print(json.dumps(result, sort_keys=True))
-    elif args.command in ("check", "status", "todo", "render") or hasattr(args, "handler"):
+    elif (args.command in ("check", "status", "todo", "corpus", "render")
+          or hasattr(args, "handler")):
         for line in text:
             # resolve, show and drift escape their own lines (resolve.display_line).
             if (args.command == "render" and code == EXIT_OK) or hasattr(args, "handler"):

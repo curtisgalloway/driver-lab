@@ -28,8 +28,11 @@ already-parsed data and never over prose:
   entry whose license the file's root accepts, and every fact reference reaches, through its
   target's citations and references followed transitively, only repos entries the citing root
   accepts; with --require-license, also every repos entry no anchor or notice names;
-- under a `public` layer: no `access: internal`, no tool `via:` a skill not named with
+- under a `public` layer: no `access: private`, no tool `via:` a skill not named with
   --public-skill; anywhere: no unsubstituted template placeholder (`<...>` outside code);
+- the corpus ledger (`corpus.yaml` beside the marker, corpus.py, #153): every `spec:`
+  disposition resolves; every document a spec of the root lists is in the ledger, with the same
+  `sha256` when both give one; no name twice; no `access: private` entry under a `public` layer;
 - stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
@@ -55,6 +58,7 @@ from pathlib import Path
 
 LAYERS = ("public", "ip-vendor", "soc-vendor", "product", "local")
 MARKER = "board-specs.yaml"
+CORPUS = "corpus.yaml"
 SECTIONS = {
     "board": ("quick-facts", "gotchas", "topology"),
     "soc": ("quick-facts", "gotchas", "topology"),
@@ -136,6 +140,8 @@ class Root:
     files: list = dataclasses.field(default_factory=list)
     spec_paths: list = dataclasses.field(default_factory=list)  # every *.spec.yaml found
     record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
+    corpus_path: Path | None = None  # corpus.yaml beside the marker (corpus.py, #153)
+    corpus: object = None  # its Loaded, when it validates
     # Every error-severity finding its own check produced, before context downgrading, as a
     # (location, message) pair. A root with any is untrusted: no reference may rest on it (user
     # decision, 2026-10-08).
@@ -290,19 +296,21 @@ class Checker:
     # --- findings ----------------------------------------------------------------------------
 
     def add(self, where, path: tuple, message: str, *, level="error", key=False,
-            downgrade=True):
+            downgrade=True, trust=True):
         """A finding at a value (or its key) of a spec file, or at line 1 of a plain path.
 
         where is a SpecFile, or (Path, Root, Loaded-or-None). A finding in a context root's own
         file is a warning, unless downgrade is False: a condition of the run's inputs that
-        could change what a checked root's references resolve to stays an error."""
+        could change what a checked root's references resolve to stays an error. trust=False keeps
+        an error that says nothing about the root's facts (the corpus ledger's bookkeeping) from
+        making the root untrusted."""
         if isinstance(where, SpecFile):
             file, root, loaded = where.path, where.root, where.loaded
         else:
             file, root, loaded = where
         mark = loaded.mark(path, key=key) if loaded is not None else None
         line, column = (mark.line, mark.column) if mark else (1, 1)
-        if root is not None and level == "error":
+        if root is not None and level == "error" and trust:
             root.untrusted.append((f"{file}:{line}:{column}", message))
         if root is not None and root.context and downgrade:
             level, message = "warning", f"context root: {message}"
@@ -361,6 +369,8 @@ class Checker:
             root.spec_paths = files
             for path in files:
                 self.load_spec(root, path, schemas)
+            if root.corpus_path is not None:
+                self.load_corpus(root, schemas)
 
     def read_marker(self, root: Root, schemas):
         marker = root.given / MARKER
@@ -422,6 +432,19 @@ class Checker:
                 if name == MARKER and Path(top) != root.given:
                     self.add((path, root, None), (), f"a nested {MARKER} inside root "
                                                      f"{root.label}: one root, one marker")
+                elif name == CORPUS:
+                    if Path(top) == root.given:
+                        root.corpus_path = path
+                    else:
+                        self.add((path, root, None), (), f"a corpus ledger lives beside the "
+                                                         f"root's {MARKER}: move it there",
+                                 trust=False)
+                elif lower.startswith("corpus.") or lower == "corpus":
+                    # corpus.yml, a case variant, a backup: a ledger discovery passes over
+                    # would leave the root unscoped without a word
+                    self.add((path, root, None), (), f"not read as a corpus ledger: name it "
+                                                     f"{CORPUS} beside the root's {MARKER}, or "
+                                                     f"move it out of the root", trust=False)
                 elif name.endswith(".spec.yaml"):
                     found.append(path)
                 elif name.endswith(".verify.yaml"):
@@ -467,6 +490,19 @@ class Checker:
         f = SpecFile(path, root, loaded, loaded.data)  # kind facts fails validation by its name
         root.files.append(f)
         self.files.append(f)
+
+    def load_corpus(self, root: Root, schemas):
+        """The ledger's schema findings are errors, but they leave the root trusted: the
+        ledger records scope, not facts a reference could rest on."""
+        raw = []
+        ok, _, loaded = self.api.validate_file(root.corpus_path, schemas, None, raw)
+        for f in raw:
+            level, message = "error", f.message
+            if root.context:
+                level, message = "warning", f"context root: {message}"
+            self.findings.append(Finding(f.path, f.line, f.column, message, level))
+        if ok:
+            root.corpus = loaded
 
     # --- per file ----------------------------------------------------------------------------
 
@@ -669,9 +705,9 @@ class Checker:
         for group, entries in f.data.get("resources", {}).items():
             for i, entry in enumerate(entries):
                 label = entry.get("name") or entry.get("title")
-                if entry.get("access") == "internal":
+                if entry.get("access") == "private":
                     self.add(f, ("resources", group, i, "access"),
-                             f"{group} entry {label!r}: access: internal under a public root")
+                             f"{group} entry {label!r}: access: private under a public root")
                 via = entry.get("via") if group == "tools" else None
                 if via is not None and via[len("skill:"):] not in self.public_skills:
                     self.add(f, ("resources", group, i, "via"),
@@ -1198,6 +1234,9 @@ class Checker:
         import topology
 
         topology.check(self)
+        import corpus
+
+        corpus.check(self)
         records.first_pass(self)  # current FAILs: defects of a root's data, before trust
         self.check_trust()
         records.second_pass(self, self.require_verified)

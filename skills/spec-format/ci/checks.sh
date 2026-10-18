@@ -10,7 +10,9 @@
 #
 # Steps:
 #   check      spec.py check specs (further roots as --context-root) --require-license
-#              --require-verified <mode>: nothing lands unverified or with a stale record
+#              --require-verified <mode>: nothing lands unverified or with a stale record;
+#              with REQUIRE_CORPUS=1, also spec.py corpus specs: the root must keep a corpus
+#              ledger (specs/corpus.yaml), every document and block with a disposition
 #   resolve    spec.py resolve on every spec under specs/, so each pinned repository a spec
 #              cites is fetched and its src and DT anchors and per-file licenses are checked
 #              (RESOLVE_SRC=1 only, below); specs without repos entries resolve nothing
@@ -167,7 +169,11 @@ spec() {
 
 check_specs() {
   echo "== spec.py check specs ${ctx[*]+${ctx[*]} }--require-license --require-verified $mode"
-  spec check specs ${ctx[@]+"${ctx[@]}"} --require-license --require-verified "$mode"
+  spec check specs ${ctx[@]+"${ctx[@]}"} --require-license --require-verified "$mode" || return
+  if [ "${REQUIRE_CORPUS:-0}" = 1 ]; then
+    echo "== spec.py corpus specs ${ctx[*]+${ctx[*]} }--require-license"
+    spec corpus specs ${ctx[@]+"${ctx[@]}"} --require-license
+  fi
 }
 
 check_resolve() {

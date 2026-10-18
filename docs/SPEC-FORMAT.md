@@ -488,7 +488,7 @@ resources:
       sha256: 15463e9ac6c82114378b4dc7cee1fb4eaa545f4b5073af4bf8a57d22b9403c52
       pages: 59
       page_numbering: printed               # printed | pdf; offset when they differ
-      access: public                        # public | internal
+      access: public                        # public | registration | members-only | private
       verified: 2026-10-07
       fetch: ok                             # ok | blocked | truncated | partial
   repos:
@@ -620,6 +620,50 @@ the license split carry over. Restated for the spec format:
   unreadable, every root-qualified reference fails. `parts`, `instances[].ip`,
   `instances[].peripheral` and `describes` into another root are composition, not a fact
   resting on a source, and are not gated.
+
+### The corpus ledger (#153)
+
+Scope taken from the bring-up path reaches only hardware that already has a driver; the
+security blocks, the fabric, the memory controller and the coprocessors a driver does not touch
+go unnoticed rather than excluded. A root's **corpus ledger**, `corpus.yaml` beside its
+`board-specs.yaml` (`schema/corpus.schema.json`), lists every document and hardware block
+discovery found, and gives each one a disposition, so leaving one out is a recorded decision:
+
+```yaml
+format: 2
+derivation: RK3588 TRM part 1, table 1-1 (address map)   # how the block list was made
+documents:
+  - {name: rk3588-trm-part1, title: RK3588 TRM Part 1, access: registration,
+     subsystem: soc, disposition: "spec:rk3588"}
+  - {name: rk3588-errata, title: RK3588 errata, access: private,
+     disposition: "excluded: not published"}
+blocks:
+  - {name: uart2, subsystem: uart, disposition: "spec:rk3588#uart2"}
+  - {name: npu, subsystem: npu, disposition: "planned: second lap"}
+  - {name: crypto, subsystem: security, disposition: "excluded: no public register map"}
+```
+
+A disposition is `spec:<id>`, `spec:<id>#<fact>` (a block a spec covers as one record, such as
+an instance row), `planned:<note>` or `excluded:<reason>`; the note and reason are required.
+A ledger is optional for `spec.py check`; where one exists, `check` requires every `spec:`
+disposition to resolve to a spec (and fact, overlays included) in the ledger's layer or an
+earlier one, a document's `spec:` disposition to name a spec that lists that document, every
+document a spec of the root lists in `resources.documents` to be in the ledger (with the same
+`sha256` when both give one), no name twice, and under a `public` layer no `access: private`
+entry. A file beside the marker named like a ledger but not `corpus.yaml` exactly
+(`corpus.yml`, `Corpus.yaml`, a backup) is an error. Ledger findings are errors but do not make
+the root untrusted: the ledger records scope, not facts a reference could rest on, so one
+missing entry never fails every reference into the root. The exception is a `sha256` that
+differs between the ledger and a spec: the spec may cite other bytes, so that error makes the
+root untrusted like any fact defect (user decision, 2026-10-18). `spec.py corpus <root>...` runs the
+same check, fails a checked root that has no ledger, and prints the coverage: documents and
+blocks specified, planned and excluded, and every one not specified with its disposition. A
+spec repository's `scripts/checks.sh check` runs it too when `REQUIRE_CORPUS=1`. The
+Markdown view and the atlas show the same table. `board-spec-scaffold` creates the ledger,
+`hardware-investigator` fills it during discovery, before any spec is written, and
+`campaign-review` reports coverage from it.
+
+Requiring every block to be specified is not the goal: `excluded:<reason>` is a valid outcome.
 
 ## Verification records
 
@@ -1458,7 +1502,8 @@ Each is one session and one pull request, in this order:
 | License gate (SPDX expression logic), direct and transitive | | yes | |
 | `parts`, `overlays`, `variant_of`, `instances[].ip`, `instances[].peripheral`, `describes` resolve, to the right kind; stubs resolve | | yes | |
 | A peripheral spec no `describes` or instance row composes, beside a soc, chip or board (warning, D44) | | yes | |
-| Public-layer privacy (`access: internal`, `via:` to a private skill) | | yes | |
+| Public-layer privacy (`access: private`, `via:` to a private skill) | | yes | |
+| Corpus ledger: a disposition per entry; `spec:` dispositions resolve; every listed document in the ledger, `sha256` agreeing; ledger required by `spec.py corpus` (#153) | disposition | yes | |
 | Template placeholders left in: `<`, a letter, then letters, digits, spaces, `-` or `_`, then `>`, outside code (`<linux/of.h>`, `<a@b>` and URLs are not placeholders; SF2-2 review) | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |
 | Markdown view and viewer build, every claim self-contained (publish step, D5) | | yes (`render`) | |

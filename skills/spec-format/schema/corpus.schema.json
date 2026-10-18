@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/corpus.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The corpus ledger, corpus.yaml beside a root's board-specs.yaml (#153): every document and hardware block found in discovery, each with a recorded disposition.",
+  "title": "Spec format: corpus ledger (corpus.yaml)",
+  "type": "object",
+  "required": ["format", "documents", "blocks"],
+  "properties": {
+    "format": {"const": 2},
+    "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
+    "blocks": {"type": "array", "items": {"$ref": "#/$defs/block"}},
+    "derivation": {
+      "$comment": "How the block list was derived (an address-map table, a device tree, a register import), so it can be regenerated.",
+      "$ref": "spec.schema.json#/$defs/text"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "document": {
+      "type": "object",
+      "required": ["name", "title", "access", "disposition"],
+      "properties": {
+        "name": {"$comment": "The name specs give it in resources.documents.", "$ref": "spec.schema.json#/$defs/name"},
+        "title": {"$ref": "spec.schema.json#/$defs/line"},
+        "sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
+        "access": {"$ref": "spec.schema.json#/$defs/access"},
+        "subsystem": {"$ref": "spec.schema.json#/$defs/line"},
+        "disposition": {"$ref": "#/$defs/disposition"},
+        "note": {"$ref": "spec.schema.json#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+    "block": {
+      "type": "object",
+      "required": ["name", "disposition"],
+      "properties": {
+        "name": {"$ref": "spec.schema.json#/$defs/name"},
+        "title": {"$ref": "spec.schema.json#/$defs/line"},
+        "subsystem": {"$ref": "spec.schema.json#/$defs/line"},
+        "disposition": {"$ref": "#/$defs/disposition"},
+        "note": {"$ref": "spec.schema.json#/$defs/text"}
+      },
+      "additionalProperties": false
+    },
+    "disposition": {
+      "$comment": "message: a disposition is spec:<id>, spec:<id>#<fact>, planned:<note> or excluded:<reason>",
+      "type": "string",
+      "pattern": "^(spec:[a-z0-9][a-z0-9-]*(#[a-z0-9][a-z0-9-]*)?|planned:\\s*\\S[^\\n]*|excluded:\\s*\\S[^\\n]*)(?![\\s\\S])"
+    }
+  }
+}

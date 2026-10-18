@@ -37,7 +37,7 @@ VALUES = {
     'driver-first': '4', 'driver-last': '6', 'driver-symbol': 'fixture_init',
     'uart-instance': 'uart0', 'uart-base': '0x1000', 'uart-spi': '7',
     'uart-intid': '39', 'uart-clock': 'uartclk', 'uart-page': '12',
-    'addressing-page': '4',
+    'addressing-page': '4', 'excluded-block': 'fixture-gpu',
 }
 
 
@@ -105,7 +105,7 @@ class ScaffoldTemplates(unittest.TestCase):
         self.assertEqual({str(p.relative_to(TEMPLATES)) for p in paths}, {
             'board.spec.yaml', 'soc.spec.yaml', 'chip.spec.yaml', 'ip.spec.yaml',
             'overlay.spec.yaml', 'board-specs.yaml', 'docs-root/board-specs.yaml',
-            'docs-root/overlay.spec.yaml',
+            'docs-root/overlay.spec.yaml', 'corpus.yaml',
         })
         for template in paths:
             with self.subTest(template=template.relative_to(TEMPLATES)):
@@ -120,7 +120,7 @@ class ScaffoldTemplates(unittest.TestCase):
 
     def test_every_template_header_uses_the_chosen_license(self):
         paths = sorted(p for p in TEMPLATES.rglob('*') if p.is_file())
-        self.assertEqual(len(paths), 10)
+        self.assertEqual(len(paths), 11)
         for template in paths:
             header = '\n'.join(line for line in template.read_text().splitlines()
                                if 'SPDX-' in line)
@@ -143,6 +143,15 @@ class ScaffoldTemplates(unittest.TestCase):
         self.assertEqual(result['specs'], 6)
         self.assertFalse([f for f in result['findings'] if f['level'] == 'error'])
         self.assertTrue(result['verification']['unverified'])
+
+    def test_corpus_template_covers_the_documents_only_root(self):
+        docs, _, extra = self.composition()
+        self.write('corpus.yaml', docs / 'corpus.yaml')
+        code, result, err = run('corpus', docs, '--context-root', extra, '--require-license')
+        self.assertEqual(code, 0, (result, err))
+        cov = result['roots'][0]['coverage']
+        self.assertEqual(cov['documents']['counts'], {'spec': 5, 'planned': 1, 'excluded': 0})
+        self.assertEqual(cov['blocks']['counts'], {'spec': 1, 'planned': 0, 'excluded': 1})
 
     def test_soc_template_accepts_the_minimal_instances_list(self):
         docs, source, extra = self.composition()

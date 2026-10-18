@@ -29,6 +29,12 @@ repository. It needs PyYAML and supports --json; it reads no private store and r
 no guests. Also run that repository's privacy check. Independent review should
 trace the entries to the evidence, not treat schema validation as proof.
 
+When the campaign's specs live in a root with a corpus ledger, run spec-format's
+`spec.py corpus <root>...` and keep its report with the review artifact. Report coverage
+(documents and blocks specified, planned, excluded), list `planned` entries as candidate
+work, and flag an `excluded` reason a reviewer would not accept. A root with no ledger is
+reported as unscoped, not as covered.
+
 At the start of each orchestrator session and whenever a known input changes
 (such as a package upgrade or manual edition), refresh applicable sources locally
 with scripts/pinned_file_adapter.py REGISTRY ID --write --json, then run

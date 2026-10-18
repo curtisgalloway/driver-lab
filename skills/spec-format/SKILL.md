@@ -254,7 +254,9 @@ plus the names you read. Editing it never stales a verdict.
 retrieval guidance in a note. `tools` is declarative: `via: skill:<name>` names the driver
 skill. Fetch-method strings (`fetch_via`, retrieval `via`) are prose, never commands. Internal
 access goes through a loaded vendor skill declared among tools: documents and repos have no
-invocation `via` field. A document may have `access: internal`; repos have no `access` field.
+invocation `via` field. A document may have `access`: `public`, `registration` (free sign-up), `members-only` (a
+standards body's or vendor's members), or `private` (not published; never under a `public`
+layer); repos have no `access` field.
 
 The marker requires `format: 2`, `name`, `layer`, `license`, `accepts`. Accepts holds single
 SPDX identifiers, not expressions; `[]` means documents only. The gate accepts `A OR B` when
@@ -297,6 +299,23 @@ A reference may rest only on a root that checks clean. Context findings print as
 but any underlying root error makes it untrusted; references into it fail transitively.
 While any marker is unreadable, all root-qualified references fail. Repair root errors before
 using their facts as verified evidence.
+
+### Corpus ledger
+
+`corpus.yaml` beside a root's marker ([schema](schema/corpus.schema.json)) lists every document
+and hardware block discovery found, each with a `disposition`: `spec:<id>`, `spec:<id>#<fact>`
+(a block one record covers), `planned:<note>` or `excluded:<reason>`. Documents carry `name`
+(the name specs use in `resources.documents`), `title`, `access`, optional `sha256` and
+`subsystem`; blocks carry `name`, optional `title` and `subsystem`. `derivation` says how the
+block list was made (an address-map table, a device tree), so it can be regenerated. Where a
+ledger exists, `check` requires `spec:` dispositions to resolve in the ledger's layer or an
+earlier one (overlay facts count), a document's spec to list that document, every document a
+spec of the root lists to be in the ledger with an agreeing `sha256`, no name twice, no
+`access: private` under a `public` layer, and no misnamed ledger (`corpus.yml`). Ledger errors
+fail the check but leave the root trusted, so references into it still resolve; a `sha256`
+mismatch is the exception and makes the root untrusted. `spec.py corpus`
+also fails a checked root with no ledger and prints its coverage; the repository checks run it
+under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 
 ## Records and freshness
 
@@ -399,6 +418,8 @@ spec.py status <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stale] [--json]
 spec.py todo <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--check hardware|document|source] [--json]
+spec.py corpus <root>... [--context-root <dir>]... [--require-license]
+    [--public-skill <name>]... [--json]
 spec.py render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
     [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html [--json]
@@ -409,7 +430,7 @@ spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
 ```
 
-Availability: validate/check/status are SF2-1–3; `todo` follows them (issue 112); Markdown render is SF2-4; HTML render and the
+Availability: validate/check/status are SF2-1–3; `todo` (issue 112) and `corpus` (issue 153) follow them; Markdown render is SF2-4; HTML render and the
 publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a.
 All are on main.
 

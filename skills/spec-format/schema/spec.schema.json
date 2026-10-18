@@ -1625,6 +1625,11 @@
 
     "fetch": {"enum": ["ok", "blocked", "truncated", "partial"]},
 
+    "access": {
+      "$comment": "message: access is public, registration, members-only or private (internal was renamed private)",
+      "enum": ["public", "registration", "members-only", "private"]
+    },
+
     "document": {
       "type": "object",
       "required": ["name", "class", "title", "url"],
@@ -1648,7 +1653,7 @@
         "sha256": {"$ref": "#/$defs/sha256"},
         "pages": {"type": "integer", "minimum": 1},
         "page_numbering": {"enum": ["printed", "pdf"]},
-        "access": {"enum": ["public", "internal"]},
+        "access": {"$ref": "#/$defs/access"},
         "cite": {"$comment": "A map-only document: citing it is an error. Omit the key otherwise.", "const": false},
         "verified": {"$ref": "#/$defs/date"},
         "fetch": {"$ref": "#/$defs/fetch"},

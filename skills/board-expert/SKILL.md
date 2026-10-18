@@ -101,7 +101,7 @@ independent work and return Needs decision; the orchestrator asks the user.
   relying on bytes. `spec.py resolve <file> --docs-dir <dir>` expects files named by document
   name, not an arbitrary PDF filename. Source code is the map and implementation evidence.
 - **Tools/internal access**: load the skill named by a `resources.tools[].via` entry and follow
-  its invocation/access rules. Internal documents may set `access: internal`; source and
+  its invocation/access rules. Internal documents set `access: private`; source and
   document entries have no invocation `via` field. If the vendor skill is absent, say what is
   unavailable and use a named public proxy if applicable. Never guess internal endpoints.
 - **Evidence display**: `spec.py show <file>...` with the same resolver options places claims

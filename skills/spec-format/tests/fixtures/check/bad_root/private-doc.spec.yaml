@@ -1,15 +1,15 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-# Defect: an internal document under a public root.
+# Defect: a private document under a public root.
 format: 2
 kind: chip
-id: internal-doc
-name: Internal-Doc
-triggers: [internal-doc]
+id: private-doc
+name: Private-Doc
+triggers: [private-doc]
 resources:
   documents:
     - {name: widget-trm, class: databook, title: Widget TRM v1.0, url: "https://example.invalid/widget-trm.pdf", pages: 80}
-    - {name: secret-trm, class: databook, title: Secret TRM, url: "https://example.invalid/secret", access: internal}
+    - {name: secret-trm, class: databook, title: Secret TRM, url: "https://example.invalid/secret", access: private}
 facts:
   - id: reset-time
     section: quick-facts

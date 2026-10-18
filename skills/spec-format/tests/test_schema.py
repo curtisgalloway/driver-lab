@@ -863,7 +863,7 @@ class Resources(Validator):
 
     def test_documents(self):
         self.assert_valid(with_document(cite=False, sha256=SHA, pages=1, page_numbering="pdf",
-                                        access="internal", fetch="partial", commit=COMMIT,
+                                        access="private", fetch="partial", commit=COMMIT,
                                         retrieval=[{"url": "https://example.invalid/x"}]))
         cases = [
             ("class src", document(**{"class": "src"}), "is not one of"),

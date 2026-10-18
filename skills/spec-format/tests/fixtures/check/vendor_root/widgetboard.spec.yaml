@@ -5,7 +5,7 @@ kind: overlay
 overlays: widgetboard
 resources:
   documents:
-    - {name: errata, class: databook, title: Widget Board internal errata, url: "https://intranet.example.invalid/errata", access: internal}
+    - {name: errata, class: databook, title: Widget Board internal errata, url: "https://intranet.example.invalid/errata", access: private}
   tools:
     - {kind: bench, name: lab-widget-1, via: "skill:acme-board-tools"}
 facts:

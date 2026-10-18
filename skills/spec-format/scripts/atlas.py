@@ -188,7 +188,20 @@ def data(checker, spec_id, *, merged=False, source_commit=None, tool_commit=None
         'instances': instances, 'roots': list(roots.values()),
         'outside_links': sum(x.pop('outside') for x in facts), 'row_links': row_links,
         'unplaced': _unplaced(checker, placed), 'tool_commit': tool_commit or '',
+        'corpus': _corpus(chosen),
     }
+
+
+def _corpus(chosen):
+    """Each rendered (non-context) root's corpus ledger coverage (#153), in root order."""
+    import corpus
+
+    out = []
+    for root in sorted({f.root for f in chosen if not f.root.context}, key=lambda r: r.order):
+        cov = corpus.coverage(root)
+        if cov is not None:
+            out.append({'root': root.label, **cov})
+    return out
 
 
 def _unplaced(checker, placed):

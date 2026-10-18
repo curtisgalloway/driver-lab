@@ -6,7 +6,7 @@ kind: overlay
 overlays: widgetchip
 resources:
   documents:
-    - {name: errata, class: databook, title: Widget errata, url: "https://example.invalid/errata.pdf", access: internal}
+    - {name: errata, class: databook, title: Widget errata, url: "https://example.invalid/errata.pdf", access: private}
 facts:
   - id: errata
     section: gotchas

@@ -28,6 +28,8 @@ any actionable claim to evidence at the recorded revision.
 - **Anchor / locator**: a source path and lines or search scope / a place in a named document.
 - **Pin / role**: a repository's full commit and file license / its use as `source` or `target`.
 - **Requirement**: why behavior is needed, distinct from a verification verdict.
+- **OS framework**: the OS's driver interface for a device class; MTU, frame versus payload and
+  head or tail room are in the glossary.
 
 See the [glossary](../../GLOSSARY.md) and [spec-format contract](../spec-format/SKILL.md).
 Read the `peripheral` branch and payload definitions of the
@@ -167,6 +169,15 @@ body surrounds the YAML.
   `open-questions`. Cover routing, ack/clear semantics, coherency and address translation,
   revision limits and target protocols/binding/packaging. Use `areas` for per-area confidence
   (`document-and-code`, `code-only`, `inferred`).
+- **Values reported to the OS framework (#150)**: every value the driver hands the framework
+  (MTU or frame size, buffer lengths, head and tail room, rates) is a `target` fact that states
+  its unit, the layer of a size (frame or payload, with or without header and FCS) or what a rate
+  counts, and a `src` citation of the framework's interface definition of that field (`role:
+  target`). It also states the quantity the framework derives from it, such as "reported MTU
+  1514, minus the 14-byte Ethernet header, is the IP MTU, 1500". A driver test asserts that derived quantity, with a comment citing the
+  interface definition; asserting the literal constant again only repeats the code's reading.
+  An undefined field gets `todo: {check: source, ...}`. See
+  [SPEC-FORMAT](../../docs/SPEC-FORMAT.md#data-formats-interrupts-dma-target-mapping).
 
 Set `requirement` for behavior and steps: `hw-required` needs document-class support that
 actually states the requirement; `comment-explained` attributes the code's explanation;

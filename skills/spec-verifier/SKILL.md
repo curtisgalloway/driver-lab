@@ -242,6 +242,14 @@ guessing at an unchecked result.
   `correction` proposes the bound and tolerance (with locator); when it gives none, the
   `correction` adds the `todo`. A stated bound or tolerance that disagrees with the source is
   FAIL as well.
+- **A value reported to the OS framework must state its layer (#150).** For each `target` fact
+  that gives a value the driver reports (MTU or frame size, buffer lengths, head or tail room,
+  rates), open the framework's interface definition of that field and compare its meaning with
+  the claim and with how the driver uses the value. A claim that gives a number without its unit,
+  without the layer of a size (frame or payload, with or without header and FCS) or what a rate
+  counts, or without citing the interface
+  definition or a `todo` for it, is FAIL, and the `correction` names the layer the definition
+  gives. A layer that disagrees with the definition is FAIL as well.
 - **Report a duplicate of a canonical source (D31, D32).** A canonical source is
   machine-readable, pinned and efficient to use, and its readers may use it under their root's
   license (a register database, an IP-XACT or SVD file, a device tree binding, a header). The

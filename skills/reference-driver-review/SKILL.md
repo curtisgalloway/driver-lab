@@ -117,6 +117,12 @@ anchor; the verifier must still establish the claimed absence on the reference s
   traits or defaults, dispatcher or match filters, the callback, driver selection and
   initialization. Reading a callback does not show that it runs. Record positive and negative
   selection conditions (a match string, a disabled flag) as facts with `src` support.
+- **Values reported to the OS framework (#150)**: for each value the implementation hands the
+  framework (MTU or frame size, buffer lengths, head and tail room, rates), read the framework's
+  interface definition of that field and compare its unit and layer with what the driver
+  computes. A mismatch is a finding. So is a test that asserts the literal constant instead of
+  the quantity the framework derives from it (reported MTU minus the Ethernet header equals the
+  IP MTU).
 - **Coverage**: `section: coverage`, `data.coverage: {area, compared, read, reason}`.
   State what was read even for zero-finding areas. Cover constants, sequencing/timing,
   interrupts, DMA/layouts, error/recovery, power, errata and sub-protocols, or give reasons

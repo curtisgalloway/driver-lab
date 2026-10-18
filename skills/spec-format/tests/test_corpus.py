@@ -202,6 +202,22 @@ class CorpusTest(unittest.TestCase):
         self.edit(self.ledger, "format: 2\n", "format: 2\nextra: key\n")
         self.assertEqual(untrusted(), [])  # a ledger the schema refuses
 
+    def test_sha256_mismatch_makes_the_root_untrusted(self):
+        import types
+
+        import speccheck
+
+        self.edit(self.ledger, "title: Widget SoC TRM, access",
+                  f"title: Widget SoC TRM, sha256: {'a' * 64}, access")
+        self.edit(self.root / "widgetsoc.spec.yaml", "pages: 120}",
+                  f"pages: 120, sha256: {'b' * 64}}}")
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        checker = speccheck.check(api, spec_cli.load_schemas(), [self.root],
+                                  public_skills=["widget-board-tools"])
+        [(_, message)] = checker.roots[0].untrusted
+        self.assertIn("sha256 differs from the corpus ledger's", message)
+
     def test_sha256_disagrees(self):
         a, b = "a" * 64, "b" * 64
         self.edit(self.ledger, "title: Widget SoC TRM, access",

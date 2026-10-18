@@ -11,8 +11,9 @@ a `spec:` disposition resolves to a spec (and fact; overlays included) in this r
 or an earlier one, and a document's spec lists that document; every document a spec of the
 root lists in `resources.documents` is in the ledger, with the same `sha256` when both give
 one; no name twice in a group; no `access: private` entry under a `public` layer; no
-unsubstituted template placeholder. These are errors, but they leave the root trusted: the
-ledger records scope, not facts, so a reference into the root does not fail over it.
+unsubstituted template placeholder. These are errors, but all except the `sha256` mismatch
+leave the root trusted: the ledger records scope, not facts, so a reference into the root does
+not fail over it. A `sha256` mismatch says a spec may cite other bytes, so it does.
 `spec.py corpus` also fails a checked root that has no ledger, and prints its coverage.
 """
 
@@ -72,8 +73,11 @@ def _check_root(checker, root):
                                          f"ledger ({root.corpus_path.name}): add it with a "
                                          f"disposition")
             elif "sha256" in entry and "sha256" in listed and entry["sha256"] != listed["sha256"]:
-                add(f, path + ("sha256",), f"documents entry {name!r}: sha256 differs from the "
-                                           f"corpus ledger's; one of them names other bytes")
+                # the one ledger finding about facts: the spec may cite other bytes than the
+                # ledger recorded, so this error makes the root untrusted (user decision)
+                checker.add(f, path + ("sha256",), f"documents entry {name!r}: sha256 differs "
+                                                   f"from the corpus ledger's; one of them "
+                                                   f"names other bytes")
 
 
 def _disposition(checker, root, group, entry) -> str | None:

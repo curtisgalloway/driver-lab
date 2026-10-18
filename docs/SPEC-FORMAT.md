@@ -653,7 +653,9 @@ document a spec of the root lists in `resources.documents` to be in the ledger (
 entry. A file beside the marker named like a ledger but not `corpus.yaml` exactly
 (`corpus.yml`, `Corpus.yaml`, a backup) is an error. Ledger findings are errors but do not make
 the root untrusted: the ledger records scope, not facts a reference could rest on, so one
-missing entry never fails every reference into the root. `spec.py corpus <root>...` runs the
+missing entry never fails every reference into the root. The exception is a `sha256` that
+differs between the ledger and a spec: the spec may cite other bytes, so that error makes the
+root untrusted like any fact defect (user decision, 2026-10-18). `spec.py corpus <root>...` runs the
 same check, fails a checked root that has no ledger, and prints the coverage: documents and
 blocks specified, planned and excluded, and every one not specified with its disposition. A
 spec repository's `scripts/checks.sh check` runs it too when `REQUIRE_CORPUS=1`. The

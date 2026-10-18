@@ -312,7 +312,8 @@ ledger exists, `check` requires `spec:` dispositions to resolve in the ledger's 
 earlier one (overlay facts count), a document's spec to list that document, every document a
 spec of the root lists to be in the ledger with an agreeing `sha256`, no name twice, no
 `access: private` under a `public` layer, and no misnamed ledger (`corpus.yml`). Ledger errors
-fail the check but leave the root trusted: references into it still resolve. `spec.py corpus`
+fail the check but leave the root trusted, so references into it still resolve; a `sha256`
+mismatch is the exception and makes the root untrusted. `spec.py corpus`
 also fails a checked root with no ledger and prints its coverage; the repository checks run it
 under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 

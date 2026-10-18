@@ -126,7 +126,8 @@ an error. `check` itself checks a ledger wherever one exists: a `spec:<id>` or
 `spec:<id>#<fact>` disposition resolves in the ledger's layer or an earlier one, a document's
 spec lists that document, every document a spec of the root lists is in the ledger (same
 `sha256` when both give one), no name is listed twice, and under a `public` layer no entry is
-`access: private`. Ledger errors fail the run but leave the root trusted.
+`access: private`. Ledger errors fail the run but leave the root trusted, except a `sha256`
+mismatch, which may mean a spec cites other bytes.
 
 Verification records: `<root>/resources/<name>.verify.yaml` belongs to `<name>.spec.yaml` (any
 directory of the root); its `spec` and `spec_file` name that file, every verdict key names one of

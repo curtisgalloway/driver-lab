@@ -80,6 +80,19 @@ in your internal skills repository, and fill in:
 The skill's description must say it is internal and must name the vendor, so the harness's skill
 matching offers it for your boards and never installs it elsewhere.
 
+**Point at specs; never restate them.** The vendor skill, and any domain expert stubs you add
+for one SoC, carry procedure and pointers only. An address, instance number, address range or
+register name written in their prose is read as authoritative by the agent and checked by
+nothing: one comparison of hand-written domain agents found a subsystem base that was really a
+controller inside it, two instance numbers swapped and two overlapping address ranges, all
+contradicted by the agents' own reference material. Put such facts in an overlay spec. Generate
+domain stubs from a manifest with `board-spec-scaffold/scripts/stubgen.py`, give each a
+`split:` line saying which questions go to it rather than to the board expert, and run
+`spec.py check --stubs-from <skills dir>` in your repository's checks. For agent files, run
+driver-lab's `python3 <driver-lab>/utilities/check-no-hardware-facts.py <agent file>...` with
+explicit paths: with none, it checks driver-lab's own files. A line that must show a value as an example carries
+`hw-fact-ok: <reason>`.
+
 ## 4. Wrap a tool
 
 A tool is declared in the overlay and driven by a skill. The overlay says the tool exists:

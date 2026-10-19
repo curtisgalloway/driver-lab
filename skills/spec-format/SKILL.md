@@ -456,7 +456,10 @@ All are on main.
 `validate` checks shape only; `--root` loads extensions. `check` adds names, composition,
 references, license/trust and records. `--context-root` supplies dependencies without enforcing
 their freshness policy; it cannot overlap checked roots. `--public-skill` allows a named public
-tool skill; stub options verify thin expert skills' ids.
+tool skill; stub options verify thin expert skills: each `spec:` id and `instance:
+<spec>#<row>` resolves, the prose holds no hex literal or register-style name (a line with
+`hw-fact-ok: <reason>` passes), no two stubs share a name, and two stubs entering through one
+spec without a `split:` line naming the other is a warning.
 
 `check --resolve-headings` is an opt-in network check for document `heading:` locators.
 It reuses the explorer's heading-anchor resolver, fetching each GitHub blob pinned to

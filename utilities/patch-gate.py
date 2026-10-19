@@ -97,7 +97,7 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 # git reports as changed or how it diffs it.
 GATE_INPUTS = re.compile(
     r"utilities/(check-[^/]*|patch-gate|codex-implement|codex-review)\.py|"
-    r"skills/spec-format/requirements\.txt|"
+    r"skills/spec-format/requirements\.txt|skills/spec-format/scripts/prosefacts\.py|"
     r"\.github/.*|(.*/)?\.git(ignore|attributes|modules)", re.DOTALL)
 # A changed path holding a control character is refused outright rather than matched.
 ODD_PATH = re.compile(r"[\x00-\x1f\x7f]")

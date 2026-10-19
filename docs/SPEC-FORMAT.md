@@ -665,6 +665,24 @@ Markdown view and the atlas show the same table. `board-spec-scaffold` creates t
 
 Requiring every block to be specified is not the goal: `excluded:<reason>` is a valid outcome.
 
+### Stubs and domain experts point at specs (#156)
+
+Large SoCs push toward several domain-specific expert agents (USB, storage, display, power,
+security) beside one board expert. Written by hand, their prompts pick up hardware facts (base
+addresses, instance numbers, address-map ranges) that no checker reads and the agent treats as
+authoritative. `board-spec-scaffold/scripts/stubgen.py` generates domain stubs from one
+`domains.yaml` manifest: each stub carries `spec:` lines for its entry specs, `instance:
+<spec>#<row>` lines, a `split:` line saying which questions go to it rather than another
+expert, the skills to preload and an optional output profile, and nothing else.
+`spec.py check --stubs-from` resolves the `spec:` and `instance:` lines, refuses hex literals
+and register-style names in stub prose (`scripts/prosefacts.py`; a line with
+`hw-fact-ok: <reason>` passes), refuses two stubs with one name across the installed skills
+directories, and warns when two stubs enter through one spec and neither's `split:` line names
+the other. `utilities/check-no-hardware-facts.py` applies the same prose rules to agent files
+(driver-lab's own by default; another repository passes its files as arguments). The rules
+miss hex without `0x`, decimal addresses, instance numbers written in words and register names
+without an underscore, so review still reads stub prose.
+
 ### Document indexes (#155)
 
 When a question falls outside every fact, an agent either searches a multi-thousand-page PDF

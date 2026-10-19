@@ -4,6 +4,7 @@
 //! Consolidated Rust library and CLI dispatcher for `driver-lab`.
 
 pub mod diagnostic;
+pub mod records;
 
 pub mod index;
 pub mod model;
@@ -182,7 +183,11 @@ pub struct CheckArgs {
     pub resolve_headings: bool,
     /// Require verification mode (`pr` or `main`).
     #[arg(long = "require-verified", value_name = "MODE")]
+    #[arg(value_parser = ["pr", "main"])]
     pub require_verified: Option<String>,
+    /// Public skill names for skill containment checks.
+    #[arg(long = "public-skill", value_name = "SKILL")]
+    pub public_skills: Vec<String>,
 }
 
 /// Arguments for `driver-lab resolve`.
@@ -240,6 +245,12 @@ pub struct StatusArgs {
     /// Exit `0` even when facts are `unverified` or `needs-second-reader` (`BF-ARM-21`).
     #[arg(long = "no-fail-on-pending")]
     pub no_fail_on_pending: bool,
+    /// Show only facts whose status is not `current` or that need a second reader.
+    #[arg(long = "stale")]
+    pub stale: bool,
+    /// Public skill names for skill containment checks.
+    #[arg(long = "public-skill", value_name = "SKILL")]
+    pub public_skills: Vec<String>,
 }
 
 /// Arguments for `driver-lab todo`.
@@ -551,8 +562,86 @@ where
         Command::PinnedFileAdapter(args) => run_pinned_file_adapter_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
         Command::Campaign(campaign_args) => campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr),
+        Command::Check(check_args) => run_check_cmd(&cli, check_args, stdout, stderr),
+        Command::Status(status_args) => run_status_cmd(&cli, status_args, stdout, stderr),
         other => run_stub_subcommand(&cli, other, stdout, stderr),
     }
+}
+
+fn run_check_cmd(
+    cli: &Cli,
+    args: &CheckArgs,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let mut roots = args.targets.clone();
+    if let Some(ref r) = args.root {
+        if !roots.contains(r) {
+            roots.push(r.clone());
+        }
+    }
+    let public_skills: std::collections::HashSet<String> =
+        args.public_skills.iter().cloned().collect();
+    let report = records::check_roots(
+        &roots,
+        &args.context_roots,
+        args.require_license,
+        &public_skills,
+        args.require_verified.clone(),
+    );
+    if cli.json {
+        let _ = writeln!(stdout, "{}", serde_json::to_string(&report).unwrap_or_default());
+    } else if report.error.is_some() {
+        let msg = report
+            .findings
+            .first()
+            .map(|f| f.message.as_str())
+            .unwrap_or("error");
+        let _ = writeln!(stderr, "error: {msg}");
+    } else {
+        for line in &report.text_lines {
+            let _ = writeln!(stdout, "{line}");
+        }
+    }
+    report.exit_code
+}
+
+fn run_status_cmd(
+    cli: &Cli,
+    args: &StatusArgs,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let mut roots = args.targets.clone();
+    if let Some(ref r) = args.root {
+        if !roots.contains(r) {
+            roots.push(r.clone());
+        }
+    }
+    let public_skills: std::collections::HashSet<String> =
+        args.public_skills.iter().cloned().collect();
+    let report = records::status_roots(
+        &roots,
+        &args.context_roots,
+        args.require_license,
+        &public_skills,
+        args.stale,
+    );
+    if cli.json {
+        let _ = writeln!(stdout, "{}", serde_json::to_string(&report).unwrap_or_default());
+    } else if report.error.is_some() {
+        let msg = report
+            .findings
+            .first()
+            .map(|f| f.message.as_str())
+            .unwrap_or("error");
+        let _ = writeln!(stderr, "error: {msg}");
+    } else {
+        for line in &report.text_lines {
+            let _ = writeln!(stdout, "{line}");
+        }
+    }
+    report.exit_code
 }
 
 

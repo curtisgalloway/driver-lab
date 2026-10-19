@@ -4,11 +4,15 @@
 //! Consolidated Rust library and CLI dispatcher for `driver-lab`.
 
 pub mod diagnostic;
+
 pub mod index;
 pub mod pdf;
 pub mod sandbox;
 pub mod spdx;
 pub mod yaml_strict;
+pub mod author;
+pub mod verify_flow;
+
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use diagnostic::{DiagnosticEnvelope, EXIT_OK, EXIT_SANDBOX_ERROR, EXIT_USAGE_ERROR};
@@ -493,48 +497,22 @@ where
 
     // Note: `ScratchResolver` is constructed lazily (`ENV-1`, `ENV-2`); zero filesystem writes occur
     // unless a subcommand explicitly requests scratch space via `scratch.ensure_dir()`.
+
     let scratch = cli.scratch_resolver();
 
     match command {
         Command::Index(idx_args) => run_index_cmd(&cli, idx_args, &scratch, stdout, stderr),
         Command::LicenseGate(gate_args) => run_license_gate_cmd(&cli, gate_args, stdout, stderr),
+        Command::Resource(res_args) => author::run_resource_cmd(res_args, &scratch, stdout, stderr),
+        Command::Assemble(asm_args) => author::run_assemble_cmd(asm_args, &scratch, stdout, stderr),
+        Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
+
         other => run_stub_subcommand(&cli, other, stdout, stderr),
     }
 }
 
-fn run_index_cmd(
-    cli: &Cli,
-    args: &IndexArgs,
-    scratch: &ScratchResolver,
-    stdout: &mut dyn Write,
-    stderr: &mut dyn Write,
-) -> i32 {
-    let outcome = index::run_index_command_with_out(
-        &args.doc_id,
-        &args.root,
-        &args.docs_dir,
-        args.out.as_deref(),
-        scratch,
-    );
-    let code = outcome.exit_code.code();
-    if cli.json {
-        let val = outcome.to_json_value();
-        let _ = writeln!(
-            stdout,
-            "{}",
-            serde_json::to_string_pretty(&val).unwrap_or_else(|_| val.to_string())
-        );
-    } else if outcome.ok {
-        for line in &outcome.text {
-            let _ = writeln!(stdout, "{line}");
-        }
-    } else {
-        for line in &outcome.text {
-            let _ = writeln!(stderr, "{line}");
-        }
-    }
-    code
-}
+
+
 
 fn run_license_gate_cmd(
     cli: &Cli,
@@ -632,4 +610,37 @@ fn run_stub_subcommand(
         let _ = writeln!(stderr, "error: {msg}");
     }
     EXIT_SANDBOX_ERROR
+}
+fn run_index_cmd(
+    cli: &Cli,
+    args: &IndexArgs,
+    scratch: &ScratchResolver,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let outcome = index::run_index_command_with_out(
+        &args.doc_id,
+        &args.root,
+        &args.docs_dir,
+        args.out.as_deref(),
+        scratch,
+    );
+    let code = outcome.exit_code.code();
+    if cli.json {
+        let val = outcome.to_json_value();
+        let _ = writeln!(
+            stdout,
+            "{}",
+            serde_json::to_string_pretty(&val).unwrap_or_else(|_| val.to_string())
+        );
+    } else if outcome.ok {
+        for line in &outcome.text {
+            let _ = writeln!(stdout, "{line}");
+        }
+    } else {
+        for line in &outcome.text {
+            let _ = writeln!(stderr, "{line}");
+        }
+    }
+    code
 }

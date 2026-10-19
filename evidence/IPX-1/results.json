@@ -1,0 +1,324 @@
+[
+ {
+  "fixture": "access-policies.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [],
+  "added": [
+   "<ipxact:reserved>0</ipxact:reserved>"
+  ]
+ },
+ {
+  "fixture": "bad-access-enum.xml",
+  "xsd_valid": false,
+  "xsd_error": "value must be one of ['read-only', 'write-only', 'read-write', 'writeOnce', 'read-writeOnce', 'no-access']",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": false,
+  "roundtrip_equal": false,
+  "removed": [],
+  "added": [
+   "<ipxact:reserved>0</ipxact:reserved>"
+  ]
+ },
+ {
+  "fixture": "bad-missing-bitwidth.xml",
+  "xsd_valid": false,
+  "xsd_error": "The content of element 'ipxact:field' is not complete. Tag ('ipxact:fieldDefinitionRef' | 'ipxact:bitWidth' | 'ipxact:aliasOf') expected.",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": false,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "bad-mwv-enum.xml",
+  "xsd_valid": false,
+  "xsd_error": "value must be one of ['oneToClear', 'oneToSet', 'oneToToggle', 'zeroToClear', 'zeroToSet', 'zeroToToggle', 'clear', 'set', 'modify']",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": false,
+  "roundtrip_equal": false,
+  "removed": [],
+  "added": [
+   "<ipxact:reserved>0</ipxact:reserved>"
+  ]
+ },
+ {
+  "fixture": "bad-name-pattern.xml",
+  "xsd_valid": false,
+  "xsd_error": "value doesn't match any pattern of ['\\\\i\\\\c*']",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": false,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "bad-offset-expression.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "enumerations.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "explicit-attribute-defaults.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:addressBlock misalignmentAllowed=\"true\">",
+   "<ipxact:enumeratedValue usage=\"read-write\">"
+  ],
+  "added": [
+   "<ipxact:addressBlock>",
+   "<ipxact:enumeratedValue>"
+  ]
+ },
+ {
+  "fixture": "explicit-properties.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:volatile>false</ipxact:volatile>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "field-alias.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "field-array.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "full.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:register>",
+   "<ipxact:name>CTRL</ipxact:name>",
+   "<ipxact:addressOffset>'h0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:volatile>false</ipxact:volatile>",
+   "<ipxact:accessPolicies>",
+   "<ipxact:accessPolicy>",
+   "<ipxact:access>read-write</ipxact:access>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "mixed-order.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:name>A</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:register>",
+   "<ipxact:name>A</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:field>",
+   "<ipxact:name>F</ipxact:name>"
+  ],
+  "added": [
+   "<ipxact:name>B</ipxact:name>",
+   "<ipxact:addressOffset>'h200</ipxact:addressOffset>"
+  ]
+ },
+ {
+  "fixture": "nested-extensions.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "omitted-properties.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "one-register.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "policy-reference.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [],
+  "added": [
+   "<ipxact:reserved>0</ipxact:reserved>"
+  ]
+ },
+ {
+  "fixture": "register-array-2d.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "register-file.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:register>",
+   "<ipxact:name>R</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:field>",
+   "<ipxact:name>F</ipxact:name>",
+   "<ipxact:bitOffset>0</ipxact:bitOffset>",
+   "<ipxact:bitWidth>32</ipxact:bitWidth>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "register-level-access.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "resets.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ },
+ {
+  "fixture": "three-registers.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:register>",
+   "<ipxact:name>A</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:field>",
+   "<ipxact:name>F</ipxact:name>",
+   "<ipxact:bitOffset>0</ipxact:bitOffset>",
+   "<ipxact:bitWidth>32</ipxact:bitWidth>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "two-register-files.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:name>CH</ipxact:name>",
+   "<ipxact:addressOffset>'h100</ipxact:addressOffset>",
+   "<ipxact:range>'h20</ipxact:range>",
+   "<ipxact:register>",
+   "<ipxact:name>R</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:field>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "two-registers.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": false,
+  "removed": [
+   "<ipxact:register>",
+   "<ipxact:name>A</ipxact:name>",
+   "<ipxact:addressOffset>0</ipxact:addressOffset>",
+   "<ipxact:size>32</ipxact:size>",
+   "<ipxact:field>",
+   "<ipxact:name>F</ipxact:name>",
+   "<ipxact:bitOffset>0</ipxact:bitOffset>",
+   "<ipxact:bitWidth>32</ipxact:bitWidth>"
+  ],
+  "added": []
+ },
+ {
+  "fixture": "vendor-extensions.xml",
+  "xsd_valid": true,
+  "xsd_error": "",
+  "parsed": true,
+  "parse_messages": [],
+  "export_xsd_valid": true,
+  "roundtrip_equal": true
+ }
+]

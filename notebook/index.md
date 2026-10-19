@@ -31,6 +31,12 @@ one unit's append-only notes; see the [glossary](../GLOSSARY.md) (lab notebook, 
 
 ## Chapters
 
+### [IPX-1 — topwrap-ipxact-parser evaluation](IPX-1.md)
+Entries: 2026-10-19T01:45Z through 2026-10-19T02:20Z
+Outcome: complete; reject for now ([evidence](../evidence/IPX-1.md)). The bindings keep only the
+last register (and register file) of a block and export the loss as valid XML; units 4 and 5 use
+xmlschema alone.
+
 ### [SF2-9 — Peripheral, review and investigator skills in format 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-9.md)
 Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:17:58-07:00
 Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-9.md)); one review round with no blocker and a clean

@@ -1,0 +1,347 @@
+{
+ "registers in full.xml": {
+  "source": [
+   "CTRL",
+   "DATA"
+  ],
+  "xmlschema": [
+   "CTRL",
+   "DATA"
+  ],
+  "bindings": [
+   "DATA"
+  ]
+ },
+ "registers in full.xml's register file": {
+  "xmlschema": [
+   "CFG"
+  ],
+  "bindings registerData": []
+ },
+ "register files in two-register-files.xml": {
+  "xmlschema": [
+   "CH",
+   "CH2"
+  ],
+  "bindings": [
+   "CH2"
+  ]
+ },
+ "register and register-file order in mixed-order.xml": {
+  "source": [
+   [
+    "register",
+    "A"
+   ],
+   [
+    "registerFile",
+    "RF"
+   ],
+   [
+    "register",
+    "B"
+   ]
+  ],
+  "bindings": [
+   [
+    "register",
+    "B"
+   ],
+   [
+    "registerFile",
+    "RF"
+   ]
+  ]
+ },
+ "explicit volatile false": {
+  "xmlschema": false
+ },
+ "access policy": {
+  "xmlschema keys": [
+   "ipxact:access",
+   "ipxact:modifiedWriteValue",
+   "ipxact:readAction",
+   "ipxact:writeValueConstraint"
+  ],
+  "bindings reserved right after parse": "<ipxact:unsignedBitExpression>0</ipxact:unsignedBitExpression>\n"
+ },
+ "attributes: decoded versus source (fixtures that differ)": {
+  "access-policies.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "bad-offset-expression.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "enumerations.xml": {
+   "source": [
+    [
+     "usage",
+     "read"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ],
+    [
+     "usage",
+     "read-write"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "explicit-properties.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "field-alias.xml": {
+   "source": [
+    [
+     "fieldRef",
+     "A"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "field-array.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "full.xml": {
+   "source": [
+    [
+     "resetTypeRef",
+     "SOFT"
+    ],
+    [
+     "usage",
+     "write"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ],
+    [
+     "usage",
+     "read-write"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "mixed-order.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "nested-extensions.xml": {
+   "source": [
+    [
+     "kind",
+     "read"
+    ],
+    [
+     "ref",
+     "r.err"
+    ],
+    [
+     "ref",
+     "r.irq"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "omitted-properties.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "one-register.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "policy-reference.xml": {
+   "source": [
+    [
+     "library",
+     "fixtures"
+    ],
+    [
+     "name",
+     "widget-defs"
+    ],
+    [
+     "typeDefinitions",
+     "defs"
+    ],
+    [
+     "vendor",
+     "example.invalid"
+    ],
+    [
+     "version",
+     "1.0"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "register-array-2d.xml": {
+   "source": [
+    [
+     "indexVar",
+     "j"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "register-file.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "register-level-access.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "resets.xml": {
+   "source": [
+    [
+     "resetTypeRef",
+     "SOFT"
+    ]
+   ],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "three-registers.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "two-register-files.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "two-registers.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  },
+  "vendor-extensions.xml": {
+   "source": [],
+   "added by to_dict defaults": [
+    [
+     "misalignmentAllowed",
+     "true"
+    ]
+   ],
+   "differs with use_defaults=False": false
+  }
+ },
+ "schema-invalid fixtures the decoder refuses": [
+  "bad-access-enum.xml",
+  "bad-missing-bitwidth.xml",
+  "bad-mwv-enum.xml",
+  "bad-name-pattern.xml"
+ ]
+}

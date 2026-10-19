@@ -119,6 +119,24 @@ class StubScope(unittest.TestCase):
         self.assertEqual(len(warned), 2, warned)
         self.assertTrue(any("'rpi-storage'" in m and "'rpi-usb'" in m for m in warned), warned)
 
+    def test_duplicate_agent_names_across_installed_roots(self):
+        agent = "---\nname: usb-expert-agent\ndescription: An agent.\n---\nPoint at specs.\n"
+        other = pathlib.Path(self._tmp.name) / "other" / "skills"
+        other.mkdir(parents=True)
+        for base in (self.skills.parent, other.parent):
+            (base / "agents").mkdir(exist_ok=True)
+            (base / "agents" / "usb.md").write_text(agent, encoding="utf-8")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = spec_cli.main(["check", "--json", str(GOOD), "--public-skill",
+                                  "widget-board-tools", "--stubs-from", str(self.skills),
+                                  "--stubs-from", str(other)])
+        found = [f["message"] for f in json.loads(out.getvalue())["findings"]
+                 if "agent name" in f["message"]]
+        self.assertEqual(code, 1)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("'usb-expert-agent' is also the name of", found[0])
+
     def test_shared_entry_spec_needs_a_split(self):
         self.put("usb-expert", stub("usb-expert", ""))
         self.put("storage-expert", stub("storage-expert", ""))

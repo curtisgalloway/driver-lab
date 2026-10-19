@@ -22,7 +22,7 @@ from __future__ import annotations
 import re
 
 GROUPS = ("documents", "blocks")
-STATES = ("spec", "planned", "excluded")
+STATES = ("spec", "planned", "excluded", "unresolved")
 SPEC = re.compile(r"spec:([a-z0-9][a-z0-9-]*)(?:#([a-z0-9][a-z0-9-]*))?")
 
 
@@ -58,6 +58,8 @@ def _check_root(checker, root):
                 continue
             seen[name] = entry
             why = _disposition(checker, root, group, entry)
+            if why and state(entry["disposition"]) == "spec":
+                root.corpus_unresolved.add((group, name))
             if why:
                 add(where, (group, i, "disposition"),
                     f"disposition {entry['disposition']!r}: {why}")
@@ -72,7 +74,12 @@ def _check_root(checker, root):
                 add(f, path + ("name",), f"documents entry {name!r} is not in the root's corpus "
                                          f"ledger ({root.corpus_path.name}): add it with a "
                                          f"disposition")
-            elif "sha256" in entry and "sha256" in listed and entry["sha256"] != listed["sha256"]:
+                continue
+            if "access" in entry and entry["access"] != listed["access"]:
+                add(f, path + ("access",), f"documents entry {name!r}: access "
+                                           f"{entry['access']} differs from the corpus "
+                                           f"ledger's {listed['access']}")
+            if "sha256" in entry and "sha256" in listed and entry["sha256"] != listed["sha256"]:
                 # the one ledger finding about facts: the spec may cite other bytes than the
                 # ledger recorded, so this error makes the root untrusted (user decision)
                 checker.add(f, path + ("sha256",), f"documents entry {name!r}: sha256 differs "
@@ -122,7 +129,10 @@ def coverage(root) -> dict | None:
     out = {}
     for group in GROUPS:
         rows = [{"name": e["name"], "title": e.get("title", ""),
-                 "subsystem": e.get("subsystem", ""), "state": state(e["disposition"]),
+                 "subsystem": e.get("subsystem", ""),
+                 # a spec: disposition the check could not resolve is not specified
+                 "state": ("unresolved" if (group, e["name"]) in root.corpus_unresolved
+                           else state(e["disposition"])),
                  "disposition": e["disposition"]}
                 for e in root.corpus.data[group]]
         counts = {s: sum(1 for r in rows if r["state"] == s) for s in STATES}
@@ -132,5 +142,6 @@ def coverage(root) -> dict | None:
 
 def summary(cov: dict) -> str:
     """One line: `documents 3 spec, 1 planned, 2 excluded; blocks ...`."""
-    return "; ".join(f"{group} " + ", ".join(f"{cov[group]['counts'][s]} {s}" for s in STATES)
+    return "; ".join(f"{group} " + ", ".join(f"{cov[group]['counts'][s]} {s}" for s in STATES
+                                          if s != "unresolved" or cov[group]["counts"][s])
                      for group in GROUPS)

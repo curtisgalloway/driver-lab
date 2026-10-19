@@ -4,6 +4,7 @@ description: >-
   Domain expert for <title>: <description>. A stub over the <entry-ids> spec(s):
   board-expert does the work.
 ---
+<!-- stubgen: <board> -->
 
 <!--
 SPDX-FileCopyrightText: <copyright-year> <copyright-holder>

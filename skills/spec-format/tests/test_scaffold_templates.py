@@ -150,8 +150,10 @@ class ScaffoldTemplates(unittest.TestCase):
         code, result, err = run('corpus', docs, '--context-root', extra, '--require-license')
         self.assertEqual(code, 0, (result, err))
         cov = result['roots'][0]['coverage']
-        self.assertEqual(cov['documents']['counts'], {'spec': 5, 'planned': 1, 'excluded': 0})
-        self.assertEqual(cov['blocks']['counts'], {'spec': 1, 'planned': 0, 'excluded': 1})
+        self.assertEqual(cov['documents']['counts'], {'spec': 5, 'planned': 1, 'excluded': 0,
+                                                              'unresolved': 0})
+        self.assertEqual(cov['blocks']['counts'], {'spec': 1, 'planned': 0, 'excluded': 1,
+                                                           'unresolved': 0})
 
     def stubgen(self, *argv):
         import subprocess
@@ -206,6 +208,59 @@ class ScaffoldTemplates(unittest.TestCase):
         usb = (skills / 'fixture-board-usb-expert' / 'SKILL.md').read_text()
         self.assertIn('USB host <entry-lines> <board>, xHCI', usb)
         self.assertEqual(usb.count('`spec: fixture-soc`'), 1)
+
+    def test_stubgen_reports_orphans_and_specific_errors(self):
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        skills = self.tmp / 'skills'
+        self.assertEqual(self.stubgen(manifest, '--out', skills).returncode, 0)
+        self.assertFalse(list(skills.rglob('*.tmp')))  # nothing left from the atomic write
+        text = manifest.read_text()
+        start = text.index('  - name: fixture-board-storage-expert')
+        manifest.write_text(text[:start])
+        for argv in ((), ('--check',)):
+            proc = self.stubgen(manifest, '--out', skills, *argv)
+            self.assertEqual(proc.returncode, 1, (argv, proc.stdout, proc.stderr))
+            self.assertIn('fixture-board-storage-expert/SKILL.md: orphan', proc.stderr)
+        self.assertTrue((skills / 'fixture-board-storage-expert' / 'SKILL.md').exists())
+        manifest.write_text(text.replace('format: 2', 'format: 2\nextra: 1'))
+        proc = self.stubgen(manifest, '--out', skills)
+        self.assertIn("unknown top-level key(s) ['extra']", proc.stderr)
+        manifest.write_text('- a list\n')
+        self.assertIn('a mapping, not a list', self.stubgen(manifest, '--out', skills).stderr)
+
+    def test_hand_written_stub_is_not_an_orphan(self):
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        skills = self.tmp / 'skills'
+        self.assertEqual(self.stubgen(manifest, '--out', skills).returncode, 0)
+        hand = skills / 'hand-written' / 'SKILL.md'
+        hand.parent.mkdir()
+        hand.write_text('---\nname: hand-written\ndescription: x\n---\n\nThis scopes it to '
+                        'one domain of the `fixture-board` board.\n')
+        proc = self.stubgen(manifest, '--out', skills, '--check')
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn('orphan', proc.stderr)
+
+    def test_stubgen_writes_with_the_umask_mode(self):
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        skills = self.tmp / 'skills'
+        old = os.umask(0o022)
+        try:
+            self.assertEqual(self.stubgen(manifest, '--out', skills).returncode, 0)
+        finally:
+            os.umask(old)
+        for path in skills.glob('*/SKILL.md'):
+            self.assertEqual(path.stat().st_mode & 0o777, 0o644, path)
+
+    def test_stubgen_without_pyyaml_says_so(self):
+        import subprocess
+
+        script = TEMPLATES.parent / 'scripts' / 'stubgen.py'
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        proc = subprocess.run([sys.executable, '-I', '-S', str(script), str(manifest),
+                               '--out', str(self.tmp / 'skills')], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertNotIn('Traceback', proc.stderr)
+        self.assertIn('is not installed', proc.stderr)
 
     def test_soc_template_accepts_the_minimal_instances_list(self):
         docs, source, extra = self.composition()

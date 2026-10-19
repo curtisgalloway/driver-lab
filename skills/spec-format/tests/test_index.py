@@ -223,6 +223,75 @@ class IndexTest(unittest.TestCase):
         code, _ = self.index()
         self.assertEqual(code, 2)
 
+    def test_markdown_titles_are_plain_text(self):
+        text = "# The **bold** [link](https://example.invalid/x) and `code`\n\nbody\r\nmore\x0cstill\n"
+        self.install(text.encode())
+        _, result = self.index()
+        import specload
+
+        data = specload.load_strict(pathlib.Path(result["path"]))
+        self.assertEqual(data["sections"][0]["title"], "The bold link and code")
+        self.assertEqual(data["lines"], 4)  # \x0c is not a line break to markdown-it
+
+    def test_quantities_are_not_section_numbers(self):
+        outline = (("12 MHz clock", 0, ()), ("64 bit mode", 1, ()), ("3 Registers", 2, ()),
+                   ("4.2 Reset", 3, ()))
+        self.install(pdf(outline=outline), pages=120)
+        _, result = self.index()
+        import specload
+
+        got = {s["title"]: s.get("number")
+               for s in specload.load_strict(pathlib.Path(result["path"]))["sections"]}
+        self.assertEqual(got, {"12 MHz clock": None, "64 bit mode": None, "3 Registers": "3",
+                               "4.2 Reset": "4.2"})
+        import index as index_mod
+
+        def number(title):
+            return index_mod.section(title, 1, (1, 2), "lines").get("number")
+
+        for title in ("12 MHz clock", "64 bit mode", "8 x USB", "5 V supply", "100 % duty",
+                      "3 mA load", "2 KiB buffer", "9 ns setup", "4 Mbps link", "7 V."):
+            self.assertIsNone(number(title), title)
+        for title in ("1 A Note on Errata", "3 A Brief Overview", "2 B Channel",
+                      "4 V Series Boards", "2 Pins", "2 Pin Description", "3 Port Description",
+                      "4 Channels",
+                      "2 A/D Converter", "5 V-Bus", "6 S-Parameters", "7 X-Bar",
+                      "1 Introduction"):
+            self.assertEqual(number(title), title.split()[0], title)
+
+    def test_markdown_line_count_ignores_a_trailing_break(self):
+        import index as index_mod
+
+        for text, lines in (("# A\r\nb\r\n", 2), ("# A\nb", 2), ("# A\rb\r", 2)):
+            self.assertEqual(index_mod.from_markdown(text.encode())["lines"], lines, repr(text))
+
+    def test_children_of_an_item_without_a_place_keep_its_level(self):
+        """An outline item pointing outside the file (no page) is skipped; its children take its
+        level instead of nesting under the item before it."""
+        from unittest import mock
+
+        class Item:
+            def __init__(self, title, page):
+                self.title, self.page = title, page
+
+        class Reader:
+            pages = [None] * 20
+            outline = [Item("1 Intro", 0), Item("Web resources", None),
+                       [Item("Datasheet portal", 4), Item("Errata", 6)], Item("2 Body", 9)]
+
+            def __init__(self, _):
+                pass
+
+            def get_destination_page_number(self, item):
+                return item.page
+
+        import pypdf
+
+        with mock.patch.object(pypdf, "PdfReader", Reader):
+            got = [(s["title"], s["level"]) for s in index_mod.from_pdf(b"%PDF-")["sections"]]
+        self.assertEqual(got, [("1 Intro", 1), ("Datasheet portal", 1), ("Errata", 1),
+                               ("2 Body", 1)])
+
     # --- refusals ----------------------------------------------------------------------------
 
     def test_refuses_bytes_with_another_hash(self):
@@ -326,6 +395,26 @@ class IndexTest(unittest.TestCase):
                                                'page: "\u00b2"'))
         code, result = run("render", self.root, *SKILL, "--format", "md")
         self.assertEqual(code, 0, result)
+
+    def test_second_index_for_a_document_warns_and_is_not_shown(self):
+        self.install(pdf(), pages=120)
+        self.index()
+        src = self.root / "index" / "widget-trm.index.yaml"
+        (self.root / "index" / "copy.index.yaml").write_text(src.read_text())
+        code, result = run("check", self.root, *SKILL)
+        self.assertEqual(code, 0, result)
+        self.assertIn("a second index for document 'widget-trm'", " ".join(self.warnings(result)))
+        code, view = run("render", self.root, *SKILL, "--format", "md")
+        self.assertEqual(view["markdown"].count("Document index (generated): widget\\-trm"), 1)
+
+    def test_a_single_misnamed_index_is_still_shown(self):
+        self.install(pdf(), pages=120)
+        self.index()
+        index_dir = self.root / "index"
+        (index_dir / "widget-trm.index.yaml").rename(index_dir / "copy.index.yaml")
+        code, view = run("render", self.root, *SKILL, "--format", "md")
+        self.assertEqual(code, 0, view)
+        self.assertEqual(view["markdown"].count("Document index (generated): widget\\-trm"), 1)
 
     def test_misplaced_index_is_an_error_that_keeps_trust(self):
         self.install(pdf(), pages=120)

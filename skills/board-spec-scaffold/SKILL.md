@@ -101,8 +101,11 @@ When creating a spec repository, install and configure the [repository checks](.
    For several domain experts on one SoC, write a `domains.yaml` manifest (name, description
    with the delegation triggers, entry spec ids, instance rows, skills to preload, a `split:`
    from the other experts, an optional output profile) and run
-   `python3 scripts/stubgen.py domains.yaml --out <skills dir>`; rerun it after editing the
-   manifest, and run it with `--check` in CI so hand edits are caught. No addresses, instance
+   `<spec-format python> scripts/stubgen.py domains.yaml --out <skills dir>`, using the Python
+   of spec-format's pinned environment; rerun it after editing the
+   manifest, and run it with `--check` in CI so hand edits are caught. In both modes it reports,
+   and exits 1 for, an orphan (a stub with this board's `<!-- stubgen: <board> -->` marker that
+   the manifest no longer lists) and never deletes it. No addresses, instance
    numbers or register names in any stub text: name spec ids.
 6. **Register** a new stub where the target repository requires; inspect its current README
    and plugin metadata rather than assuming an obsolete registration script exists. Spec

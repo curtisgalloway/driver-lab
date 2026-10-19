@@ -40,7 +40,8 @@ already-parsed data and never over prose:
 - stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves, and each
   `instance: <spec>#<row>` an instance row; no hex literal or register-style name in its prose
   (prosefacts.py, #156); no two stubs share a name; two stubs entering through one spec without
-  a `split:` line naming the other is a warning;
+  a `split:` line naming the other is a warning; no two agent files share a name across the
+  `agents/` directories beside the `--stubs-from` directories;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
   current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts, a current
@@ -153,6 +154,7 @@ class Root:
     record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
     corpus_path: Path | None = None  # corpus.yaml beside the marker (corpus.py, #153)
     corpus: object = None  # its Loaded, when it validates
+    corpus_unresolved: set = dataclasses.field(default_factory=set)  # (group, name)
     index_paths: list = dataclasses.field(default_factory=list)  # index/*.index.yaml (#155)
     indexes: list = dataclasses.field(default_factory=list)  # (path, Loaded) of the valid ones
     # Every error-severity finding its own check produced, before context downgrading, as a
@@ -1289,6 +1291,27 @@ class Checker:
             for spec_id in dict.fromkeys(m.group(1) for m in specs):
                 claims.setdefault(spec_id, []).append((name, path, splits))
         self.check_overlap(claims)
+        self.check_agent_names(stubs_from)
+
+    def check_agent_names(self, stubs_from: list[Path]):
+        """Agent definitions beside each installed skills directory (a plugin's `agents/`):
+        two with one name across the installed roots are an error, as for stubs (#156). An
+        agent and a skill may share a name; they are different kinds."""
+        seen: dict = {}
+        dirs = dict.fromkeys((d.parent / "agents").resolve() for d in stubs_from
+                             if (d.parent / "agents").is_dir())
+        for folder in dirs:
+            for path in sorted(folder.glob("*.md")):
+                front = FRONTMATTER.match(path.read_text(encoding="utf-8"))
+                found = STUB_NAME.search(front.group(1)) if front else None
+                if found is None:
+                    continue
+                name = found.group(1)
+                if name in seen:
+                    self.findings.append(Finding(
+                        str(path), 1, 1, f"agent name {name!r} is also the name of "
+                        f"{seen[name]}: installed agents need distinct names"))
+                seen.setdefault(name, path)
 
     def check_overlap(self, claims: dict):
         """Two stubs entering through one spec need a stated split: a `split:` line in either

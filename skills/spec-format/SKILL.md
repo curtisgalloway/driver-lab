@@ -310,10 +310,11 @@ and hardware block discovery found, each with a `disposition`: `spec:<id>`, `spe
 block list was made (an address-map table, a device tree), so it can be regenerated. Where a
 ledger exists, `check` requires `spec:` dispositions to resolve in the ledger's layer or an
 earlier one (overlay facts count), a document's spec to list that document, every document a
-spec of the root lists to be in the ledger with an agreeing `sha256`, no name twice, no
+spec of the root lists to be in the ledger with an agreeing `access` and `sha256`, no name twice, no
 `access: private` under a `public` layer, and no misnamed ledger (`corpus.yml`). Ledger errors
 fail the check but leave the root trusted, so references into it still resolve; a `sha256`
-mismatch is the exception and makes the root untrusted. `spec.py corpus`
+mismatch is the exception and makes the root untrusted. A `spec:` disposition that does not
+resolve counts as `unresolved`, not specified. `spec.py corpus`
 also fails a checked root with no ledger and prints its coverage; the repository checks run it
 under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 
@@ -321,8 +322,9 @@ under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is no
 
 `spec.py index <document> --root <root> --docs-dir <dir>` writes
 `<root>/index/<document>.index.yaml` ([schema](schema/index.schema.json)) from `<dir>/<document>`:
-each section's `number` (when its title starts with one), `title`, `level` and `pages` (a PDF's
-outline, PDF page numbers) or `lines` (a Markdown file's headings), and the document's
+each section's `number` (when its title starts with one; a lone number followed by a unit, as
+in `12 MHz clock`, is a quantity, not a number), `title` (plain text for Markdown), `level`
+and `pages` (a PDF's outline, PDF page numbers) or `lines` (a Markdown file's headings), and the document's
 `sha256`. A PDF range ends on the page the next section at its level or above starts on, that
 page included; parents cover their children. It refuses bytes that do not hash to the
 registry's `sha256`, a document no spec of the root lists or that has no `sha256`, a PDF with no
@@ -332,7 +334,8 @@ documents cannot. `check` validates each index (a malformed, misplaced or misnam
 error that leaves the root trusted) and warns when its `sha256` or page count is not the
 registry's, the registry records no `sha256`, or no spec lists its document. Views list each index's sections with the facts citing them (by
 `section` number or prefix, `heading` title, or page when `page_numbering: pdf`); a section with
-none is not yet covered. board-expert answers a question no fact covers from the indexed pages
+none is not yet covered. One index per document is shown, the canonically named one preferred.
+board-expert answers a question no fact covers from the indexed pages
 as `unverified (doc-read)`, never as a fact.
 
 ## Records and freshness
@@ -458,8 +461,11 @@ references, license/trust and records. `--context-root` supplies dependencies wi
 their freshness policy; it cannot overlap checked roots. `--public-skill` allows a named public
 tool skill; stub options verify thin expert skills: each `spec:` id and `instance:
 <spec>#<row>` resolves, the prose holds no hex literal or register-style name (a line with
-`hw-fact-ok: <reason>` passes), no two stubs share a name, and two stubs entering through one
-spec without a `split:` line naming the other is a warning.
+`hw-fact-ok: <reason>` passes), no two stubs share a name (nor two agent files across the `agents/` directories beside the
+`--stubs-from` directories), and two stubs entering through one
+spec without a `split:` line naming the other is a warning. stubgen reports, and exits 1 for,
+orphans (stubs with this board's `<!-- stubgen: <board> -->` marker that the manifest no longer
+lists) in both modes, and never deletes them.
 
 `check --resolve-headings` is an opt-in network check for document `heading:` locators.
 It reuses the explorer's heading-anchor resolver, fetching each GitHub blob pinned to

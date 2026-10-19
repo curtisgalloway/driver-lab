@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+      DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+    steps:
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Ensure Rust target is installed
+        run: rustup target add "${{ matrix.target }}"
+
+      - name: Build driver-lab release binary
+        run: |
+          cargo build --release --locked --target "${{ matrix.target }}"
+          "target/${{ matrix.target }}/release/driver-lab" --version | grep -F "${{ env.DRIVER_LAB_TOOL_COMMIT }}"
+
+      - name: Package binary and SHA-256 checksum
+        run: |
+          mkdir -p dist
+          staging="dist/driver-lab-${{ matrix.target }}"
+          mkdir -p "$staging"
+          cp "target/${{ matrix.target }}/release/driver-lab" "$staging/driver-lab"
+          cp LICENSE "$staging/LICENSE"
+          tar -C dist -czf "dist/driver-lab-${{ matrix.target }}.tar.gz" "driver-lab-${{ matrix.target }}"
+          rm -rf "$staging"
+          (
+            cd dist
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "driver-lab-${{ matrix.target }}.tar.gz" > "driver-lab-${{ matrix.target }}.tar.gz.sha256"
+            else
+              shasum -a 256 "driver-lab-${{ matrix.target }}.tar.gz" > "driver-lab-${{ matrix.target }}.tar.gz.sha256"
+            fi
+          )
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: driver-lab-${{ matrix.target }}
+          path: |
+            dist/driver-lab-${{ matrix.target }}.tar.gz
+            dist/driver-lab-${{ matrix.target }}.tar.gz.sha256
+          if-no-files-found: error

@@ -100,10 +100,12 @@ Layout, decided by the user on 2026-10-18:
   when the first spec of the category is written.
 
 Each of these is a documents-only root like `hardware-specs-docs` (`accepts: []`, `[doc:]`
-citations only). Proposed, not yet decided: the license (CC-BY-4.0, as `hardware-specs-docs`)
-and the repository names, `hardware-specs-<vendor>`, `hardware-specs-<standard>` and
-`hardware-specs-<category>` (`hardware-specs-arm`, `hardware-specs-usb`,
-`hardware-specs-low-speed-bus`); each is created only on the user's go-ahead.
+citations only), licensed CC-BY-4.0 as `hardware-specs-docs` is, and named
+`hardware-specs-<vendor>`, `hardware-specs-<standard>` or `hardware-specs-<category>`
+(`hardware-specs-arm`, `hardware-specs-usb`, `hardware-specs-low-speed-bus`). Each is created
+only on the user's go-ahead. Created so far:
+[`hardware-specs-usb`](https://github.com/curtisgalloway/hardware-specs-usb) (2026-10-18).
+The others are still proposals.
 
 What a public root may cite, by the document's `access` class (`spec.py check` enforces the
 `members-only` and `private` rows; the others are conventions):

@@ -3,17 +3,22 @@
 
 //! Consolidated Rust library and CLI dispatcher for `driver-lab`.
 
+pub mod corpus;
 pub mod diagnostic;
-pub mod records;
-
 pub mod index;
 pub mod model;
 pub mod pdf;
+pub mod peripheral;
 pub mod prosefacts;
+pub mod records;
 pub mod sandbox;
 pub mod schema;
 pub mod spdx;
+pub mod speccheck;
 pub mod specmd;
+pub mod stubgen;
+pub mod topology;
+pub mod worklist;
 pub mod yaml_strict;
 pub mod campaign;
 pub mod author;
@@ -171,7 +176,10 @@ pub struct CheckArgs {
     pub context_roots: Vec<PathBuf>,
     /// Directory containing generated domain stub `SKILL.md` files.
     #[arg(long = "stubs-from", value_name = "DIR")]
-    pub stubs_from: Option<PathBuf>,
+    pub stubs_from: Vec<PathBuf>,
+    /// Explicit domain stub `SKILL.md` file(s) to check.
+    #[arg(long = "stub", value_name = "FILE")]
+    pub stubs: Vec<PathBuf>,
     /// Require every cited source repository license to be accepted by the root.
     #[arg(long = "require-license")]
     pub require_license: bool,
@@ -248,6 +256,9 @@ pub struct StatusArgs {
     /// Show only facts whose status is not `current` or that need a second reader.
     #[arg(long = "stale")]
     pub stale: bool,
+    /// Restrict output to one spec id or `id@root`.
+    #[arg(long = "spec", value_name = "SPEC")]
+    pub spec: Option<String>,
     /// Public skill names for skill containment checks.
     #[arg(long = "public-skill", value_name = "SKILL")]
     pub public_skills: Vec<String>,
@@ -267,6 +278,15 @@ pub struct TodoArgs {
     /// Require license compatibility check.
     #[arg(long = "require-license")]
     pub require_license: bool,
+    /// Public skill names for skill containment checks.
+    #[arg(long = "public-skill", value_name = "SKILL")]
+    pub public_skills: Vec<String>,
+    /// Filter by todo check kind (`hardware`, `doc`, `code`, `driver`).
+    #[arg(long = "check", value_name = "KIND")]
+    pub check: Option<String>,
+    /// Restrict output to one spec id or `id@root`.
+    #[arg(long = "spec", value_name = "SPEC")]
+    pub spec: Option<String>,
 }
 
 /// Arguments for `driver-lab corpus`.
@@ -283,6 +303,12 @@ pub struct CorpusArgs {
     /// Local directory containing downloaded reference documents.
     #[arg(long = "docs-dir", value_name = "DIR")]
     pub docs_dir: Option<PathBuf>,
+    /// Require license compatibility check.
+    #[arg(long = "require-license")]
+    pub require_license: bool,
+    /// Public skill names for skill containment checks.
+    #[arg(long = "public-skill", value_name = "SKILL")]
+    pub public_skills: Vec<String>,
 }
 
 /// Arguments for `driver-lab render`.
@@ -562,86 +588,13 @@ where
         Command::PinnedFileAdapter(args) => run_pinned_file_adapter_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
         Command::Campaign(campaign_args) => campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr),
-        Command::Check(check_args) => run_check_cmd(&cli, check_args, stdout, stderr),
-        Command::Status(status_args) => run_status_cmd(&cli, status_args, stdout, stderr),
+        Command::Check(check_args) => speccheck::run_check_cmd(&cli, check_args, stdout, stderr),
+        Command::Status(status_args) => worklist::run_status_cmd(&cli, status_args, stdout, stderr),
+        Command::Todo(todo_args) => worklist::run_todo_cmd(&cli, todo_args, stdout, stderr),
+        Command::Corpus(corpus_args) => corpus::run_corpus_cmd(&cli, corpus_args, stdout, stderr),
+        Command::Stubgen(stub_args) => stubgen::run_stubgen_cmd(&cli, stub_args, stdout, stderr),
         other => run_stub_subcommand(&cli, other, stdout, stderr),
     }
-}
-
-fn run_check_cmd(
-    cli: &Cli,
-    args: &CheckArgs,
-    stdout: &mut dyn Write,
-    stderr: &mut dyn Write,
-) -> i32 {
-    let mut roots = args.targets.clone();
-    if let Some(ref r) = args.root {
-        if !roots.contains(r) {
-            roots.push(r.clone());
-        }
-    }
-    let public_skills: std::collections::HashSet<String> =
-        args.public_skills.iter().cloned().collect();
-    let report = records::check_roots(
-        &roots,
-        &args.context_roots,
-        args.require_license,
-        &public_skills,
-        args.require_verified.clone(),
-    );
-    if cli.json {
-        let _ = writeln!(stdout, "{}", serde_json::to_string(&report).unwrap_or_default());
-    } else if report.error.is_some() {
-        let msg = report
-            .findings
-            .first()
-            .map(|f| f.message.as_str())
-            .unwrap_or("error");
-        let _ = writeln!(stderr, "error: {msg}");
-    } else {
-        for line in &report.text_lines {
-            let _ = writeln!(stdout, "{line}");
-        }
-    }
-    report.exit_code
-}
-
-fn run_status_cmd(
-    cli: &Cli,
-    args: &StatusArgs,
-    stdout: &mut dyn Write,
-    stderr: &mut dyn Write,
-) -> i32 {
-    let mut roots = args.targets.clone();
-    if let Some(ref r) = args.root {
-        if !roots.contains(r) {
-            roots.push(r.clone());
-        }
-    }
-    let public_skills: std::collections::HashSet<String> =
-        args.public_skills.iter().cloned().collect();
-    let report = records::status_roots(
-        &roots,
-        &args.context_roots,
-        args.require_license,
-        &public_skills,
-        args.stale,
-    );
-    if cli.json {
-        let _ = writeln!(stdout, "{}", serde_json::to_string(&report).unwrap_or_default());
-    } else if report.error.is_some() {
-        let msg = report
-            .findings
-            .first()
-            .map(|f| f.message.as_str())
-            .unwrap_or("error");
-        let _ = writeln!(stderr, "error: {msg}");
-    } else {
-        for line in &report.text_lines {
-            let _ = writeln!(stdout, "{line}");
-        }
-    }
-    report.exit_code
 }
 
 

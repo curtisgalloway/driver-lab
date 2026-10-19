@@ -16,7 +16,8 @@ stubs hold procedure and pointers only, and stay consistent because one manifest
 The manifest is read with spec-format's strict loader. A field holding a hex literal or a
 register-style name is refused (spec-format/scripts/prosefacts.py), as is a domain name used
 twice. `--check` writes nothing and exits 1 when a stub on disk differs from what the manifest
-makes. Then run `spec.py check <roots>... --stubs-from <out>`: it resolves the spec and instance
+makes. Either mode reports, and exits 1 for, an orphan: a stub of this board the manifest no
+longer lists (never deleted). Stubs are written beside their target and renamed over it. Then run `spec.py check <roots>... --stubs-from <out>`: it resolves the spec and instance
 lines, lints the prose and warns when two stubs share an entry spec with no stated split.
 
 Exit 0 written or current / 1 a refusal or a stale stub / 2 usage.
@@ -25,8 +26,10 @@ Exit 0 written or current / 1 a refusal or a stale stub / 2 usage.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -44,7 +47,11 @@ class Refused(Exception):
 
 def load(path: Path) -> dict:
     sys.path.insert(0, str(SPEC_FORMAT))
-    import specload
+    try:
+        import specload
+    except ImportError as exc:
+        raise Refused(f"cannot load the manifest: {exc.name or exc} is not installed (run "
+                      f"stubgen.py with the Python of spec-format's pinned environment)") from None
 
     try:
         data = specload.load_strict(path)
@@ -63,8 +70,13 @@ def render(manifest: dict) -> dict[str, str]:
     """name -> SKILL.md text for every domain; Refused on the first problem."""
     import prosefacts
 
-    if not isinstance(manifest, dict) or set(manifest) - TOP or manifest.get("format") != 2:
-        raise Refused(f"the manifest is a mapping with format: 2 and only {sorted(TOP)}")
+    if not isinstance(manifest, dict):
+        raise Refused(f"the manifest is a mapping, not a {type(manifest).__name__}")
+    unknown = sorted(set(manifest) - TOP)
+    if unknown:
+        raise Refused(f"unknown top-level key(s) {unknown}; the keys are {sorted(TOP)}")
+    if manifest.get("format") != 2:
+        raise Refused("format: 2 is required")
     board = manifest.get("board")
     if not isinstance(board, str) or not NAME.fullmatch(board):
         raise Refused("board: a spec id")
@@ -131,7 +143,8 @@ def main(argv=None) -> int:
     parser.add_argument("--check", action="store_true", help="write nothing; exit 1 if stale")
     args = parser.parse_args(argv)
     try:
-        stubs = render(load(args.manifest))
+        manifest = load(args.manifest)
+        stubs = render(manifest)
     except Refused as exc:
         print(f"{args.manifest}: {exc}", file=sys.stderr)
         return 1
@@ -153,8 +166,27 @@ def main(argv=None) -> int:
             print(f"{path}: a symbolic link; not written", file=sys.stderr)
             return 1
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        umask = os.umask(0)
+        os.umask(umask)
+        # beside it, then renamed over it: an interrupted run never leaves half a stub
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".SKILL.", suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(text)
+                os.fchmod(fh.fileno(), 0o666 & ~umask)  # mkstemp makes 0600; a write gets this
+            os.replace(tmp, path)
+        except BaseException:
+            Path(tmp).unlink(missing_ok=True)
+            raise
         print(f"{path}: written")
+    # a stub this board's manifest once made but no longer lists: never deleted, always reported
+    mark = f"<!-- stubgen: {manifest['board']} -->"
+    for path in sorted(args.out.glob("*/SKILL.md")) if args.out.is_dir() else []:
+        if (path.parent.name not in stubs
+                and mark in path.read_text(encoding="utf-8").splitlines()):
+            print(f"{path}: orphan, not in the manifest; remove it or add it back",
+                  file=sys.stderr)
+            stale += 1
     return 1 if stale else 0
 
 

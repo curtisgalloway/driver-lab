@@ -649,11 +649,12 @@ A ledger is optional for `spec.py check`; where one exists, `check` requires eve
 disposition to resolve to a spec (and fact, overlays included) in the ledger's layer or an
 earlier one, a document's `spec:` disposition to name a spec that lists that document, every
 document a spec of the root lists in `resources.documents` to be in the ledger (with the same
-`sha256` when both give one), no name twice, and under a `public` layer no `access: private`
+`access`, and the same `sha256` when both give one), no name twice, and under a `public` layer no `access: private`
 entry. A file beside the marker named like a ledger but not `corpus.yaml` exactly
 (`corpus.yml`, `Corpus.yaml`, a backup) is an error. Ledger findings are errors but do not make
 the root untrusted: the ledger records scope, not facts a reference could rest on, so one
-missing entry never fails every reference into the root. The exception is a `sha256` that
+missing entry never fails every reference into the root. A `spec:` disposition that does not resolve is
+counted as `unresolved` in the coverage, not as specified. The exception is a `sha256` that
 differs between the ledger and a spec: the spec may cite other bytes, so that error makes the
 root untrusted like any fact defect (user decision, 2026-10-18). `spec.py corpus <root>...` runs the
 same check, fails a checked root that has no ledger, and prints the coverage: documents and
@@ -677,11 +678,15 @@ expert, the skills to preload and an optional output profile, and nothing else.
 `spec.py check --stubs-from` resolves the `spec:` and `instance:` lines, refuses hex literals
 and register-style names in stub prose (`scripts/prosefacts.py`; a line with
 `hw-fact-ok: <reason>` passes), refuses two stubs with one name across the installed skills
-directories, and warns when two stubs enter through one spec and neither's `split:` line names
+directories, refuses agent files with one name across the `agents/` directories beside the
+`--stubs-from` directories, and warns when two stubs enter through one spec and neither's `split:` line names
 the other. `utilities/check-no-hardware-facts.py` applies the same prose rules to agent files
 (driver-lab's own by default; another repository passes its files as arguments). The rules
 miss hex without `0x`, decimal addresses, instance numbers written in words and register names
-without an underscore, so review still reads stub prose.
+without an underscore, so review still reads stub prose. In both modes stubgen reports, and
+exits 1 for, an orphan: a stub carrying this board's `<!-- stubgen: <board> -->` marker that the
+manifest no longer lists. It never deletes one, and a hand-written stub without the marker is
+never an orphan.
 
 ### Document indexes (#155)
 
@@ -709,7 +714,9 @@ A PDF section's range runs to the page where the next section at its level or ab
 that page included, since a section may end part-way down it; a parent's range covers its
 children's even when the outline lists pages out of order. Titles are normalized to NFC, and
 characters the strict loader refuses (controls, invisible and bidirectional formatting,
-private use) become spaces. The tool writes beside the target and renames over it, and refuses
+private use) become spaces. A lone leading number followed by a unit (`12 MHz clock`,
+`64 bit mode`, `5 V supply`) is a quantity, not a section number; Markdown titles are plain
+text (emphasis, links and code marks removed). The tool writes beside the target and renames over it, and refuses
 an `index/` directory or target reached through a symbolic link.
 The tool hashes the bytes and refuses any that are not the registry's `sha256`, so an index
 always names the bytes it describes; a PDF without an outline is refused rather than indexed
@@ -721,7 +728,8 @@ documents that cannot be redistributed stay in the local cache. PDF outlines are
 The Markdown view, the viewer and the atlas list each index's sections and the facts that cite
 each one (a `section` locator at or under the section's number, a `heading` equal to its title,
 or a page within its range when the document's `page_numbering` is `pdf`), so uncovered
-sections are visible.
+sections are visible. A document with several indexes shows one: the canonically named
+`<document>.index.yaml` if there is one, else the first by file name.
 
 board-expert uses an index only when no composed fact covers the question: it reads the
 indexed pages, labels the answer `unverified (doc-read)` with document, revision and locator,

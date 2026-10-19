@@ -52,10 +52,20 @@ def title(text: str) -> str:
     return unicodedata.normalize("NFC", " ".join(text.split()))
 
 
+# measurement units only, case-sensitive ("5 V supply" is a quantity, "2 Pins" a section)
+# A one-letter unit (V, A, B, s) counts only before a lower-case word, the end or punctuation:
+# "5 V supply" is a quantity, "1 A Note on Errata" and "4 V Series Boards" are chapters.
+UNIT = re.compile(r"(?:(?:[kMG]Hz|Hz|[mu\u00b5]V|[mu\u00b5]A|[kKMG]i?B|bits?|bytes?|[kKMG]bps|"
+                  r"[mun\u00b5p]s|%|x)(?=\s|$|[,.;:)])"
+                  r"|[VABs](?=\s+[a-z]|\s*$|[,.;:)]))")
+
+
 def section(name: str, level: int, rng: tuple, key: str) -> dict:
     out = {}
     m = NUMBER.match(name)
-    if m:
+    # a lone number followed by a unit ("12 MHz clock", "64 bit mode") is a quantity, not a
+    # section number; a dotted number ("6.1") always is one
+    if m and ("." in m.group(1) or not UNIT.match(name[m.end(1):].lstrip())):
         out["number"] = m.group(1)
     out.update({"title": name, "level": level, key: list(rng)})
     return out
@@ -72,15 +82,18 @@ def from_pdf(data: bytes) -> dict:
         flat = []
 
         def walk(items, level):
+            skipped = False  # the item before a child list had no place in this file
             for item in items:
                 if isinstance(item, list):
-                    walk(item, level + 1)
+                    # children of a skipped item take its level, rather than nesting under
+                    # the item before it, which is not their parent
+                    walk(item, level if skipped else level + 1)
                     continue
                 page = reader.get_destination_page_number(item)
                 name = title(getattr(item, "title", "") or "")
-                if page is None or page < 0 or not name:
-                    continue  # an external or broken destination: not a place in this file
-                flat.append((name, level, page + 1))
+                skipped = page is None or page < 0 or not name
+                if not skipped:  # an external or broken destination: not a place in this file
+                    flat.append((name, level, page + 1))
 
         walk(reader.outline, 1)
     except NotIndexable:
@@ -116,12 +129,15 @@ def from_markdown(data: bytes) -> dict:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
         raise NotIndexable("neither a PDF nor UTF-8 Markdown") from None
-    count = max(1, len(text.splitlines()))
+    # markdown-it counts lines on \r\n, \r and \n only (not the other separators
+    # str.splitlines knows), so its heading lines and this count agree; a trailing break ends
+    # the last line rather than starting another
+    count = max(1, len(re.split(r"\r\n|\r|\n", re.sub(r"(?:\r\n|\r|\n)\Z", "", text))))
     tokens = MarkdownIt("commonmark").parse(text)
     heads = []
     for i, tok in enumerate(tokens):
         if tok.type == "heading_open" and tok.map:
-            name = title(tokens[i + 1].content)
+            name = title(plain(tokens[i + 1]))
             if name:
                 heads.append((name, int(tok.tag[1:]), tok.map[0] + 1))
     if not heads:
@@ -135,6 +151,20 @@ def from_markdown(data: bytes) -> dict:
                 break
         sections.append(section(name, level, (first, max(first, last)), "lines"))
     return {"source": "markdown", "lines": count, "sections": sections}
+
+
+def plain(inline) -> str:
+    """A heading's text without its markup: emphasis marks dropped, link text kept and its URL
+    dropped, code spans as their content."""
+    parts = []
+    for child in inline.children or []:
+        if child.type in ("text", "code_inline"):
+            parts.append(child.content)
+        elif child.type in ("softbreak", "hardbreak"):
+            parts.append(" ")
+        elif child.type == "image":
+            parts.append(child.content)
+    return "".join(parts) if inline.children else inline.content
 
 
 def build(name: str, data: bytes) -> dict:
@@ -252,6 +282,15 @@ def _run(args):
 
 def check(checker):
     for root in checker.roots:
+        seen = {}
+        for path, loaded in root.indexes:
+            name = loaded.data["document"]
+            if name in seen:
+                checker.add((path, root, loaded), ("document",),
+                            f"a second index for document {name!r} (the first is "
+                            f"{seen[name].name}): keep one, named {name}{SUFFIX}",
+                            level="warning")
+            seen.setdefault(name, path)
         for path, loaded in root.indexes:
             data = loaded.data
             name = data["document"]
@@ -290,9 +329,14 @@ def links(root) -> list[dict]:
     import speccheck
 
     out = []
-    for path, loaded in sorted(root.indexes, key=lambda x: x[1].data["document"]):
+    chosen = {}  # document -> (path, loaded): the canonical index, else the first by path name
+    for path, loaded in sorted(root.indexes, key=lambda x: (x[1].data["document"], x[0].name)):
+        name = loaded.data["document"]
+        if name not in chosen or (path.name == name + SUFFIX
+                                  and chosen[name][0].name != name + SUFFIX):
+            chosen[name] = (path, loaded)  # misnamed copies lose (check warns about them)
+    for name, (path, loaded) in sorted(chosen.items()):
         data = loaded.data
-        name = data["document"]
         cites = []  # (fact full id, locator, pdf-numbered)
         for f in root.files:
             doc = f.documents.get(name, (None,))[0]

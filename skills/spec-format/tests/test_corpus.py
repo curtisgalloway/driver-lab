@@ -78,8 +78,10 @@ class CorpusTest(unittest.TestCase):
         code, result = run("corpus", self.root, *SKILL)
         self.assertEqual((code, errors(result)), (0, []))
         cov = result["roots"][0]["coverage"]
-        self.assertEqual(cov["documents"]["counts"], {"spec": 3, "planned": 1, "excluded": 0})
-        self.assertEqual(cov["blocks"]["counts"], {"spec": 1, "planned": 1, "excluded": 1})
+        self.assertEqual(cov["documents"]["counts"], {"spec": 3, "planned": 1, "excluded": 0,
+                                                              "unresolved": 0})
+        self.assertEqual(cov["blocks"]["counts"], {"spec": 1, "planned": 1, "excluded": 1,
+                                                           "unresolved": 0})
 
     def test_root_without_ledger_passes_check(self):
         self.ledger.unlink()
@@ -218,12 +220,56 @@ class CorpusTest(unittest.TestCase):
         [(_, message)] = checker.roots[0].untrusted
         self.assertIn("sha256 differs from the corpus ledger's", message)
 
+    def test_unresolved_spec_disposition_is_not_counted_as_specified(self):
+        import types
+
+        import corpus
+        import speccheck
+
+        self.edit(self.ledger, '"spec:widgetsoc#uart0"', '"spec:widgetsoc#uart9"')
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        checker = speccheck.check(api, spec_cli.load_schemas(), [self.root],
+                                  public_skills=["widget-board-tools"])
+        cov = corpus.coverage(checker.roots[0])
+        self.assertEqual(cov["blocks"]["counts"],
+                         {"spec": 0, "planned": 1, "excluded": 1, "unresolved": 1})
+        self.assertIn("1 unresolved", corpus.summary(cov))
+
+    def test_access_disagrees(self):
+        self.edit(self.root / "ip" / "widgetuart.spec.yaml", "access: public}",
+                  "access: registration}")
+        self.assert_one_error("access registration differs from the corpus ledger's public")
+
     def test_sha256_disagrees(self):
         a, b = "a" * 64, "b" * 64
         self.edit(self.ledger, "title: Widget SoC TRM, access",
                   f"title: Widget SoC TRM, sha256: {a}, access")
         self.edit(self.root / "widgetsoc.spec.yaml", "pages: 120}", f"pages: 120, sha256: {b}}}")
         self.assert_one_error("sha256 differs from the corpus ledger's")
+
+    def test_access_and_sha256_both_disagree(self):
+        import types
+
+        import speccheck
+
+        a, b = "a" * 64, "b" * 64
+        self.edit(self.root / "widgetsoc.spec.yaml", "pages: 120}", f"pages: 120, sha256: {b}}}")
+        self.edit(self.ledger, "title: Widget SoC TRM, access",
+                  f"title: Widget SoC TRM, sha256: {a}, access")
+        self.edit(self.root / "ip" / "widgetuart.spec.yaml", "access: public}",
+                  "access: registration}")
+        code, result = self.check()
+        found = errors(result)
+        self.assertEqual(code, 1, found)
+        self.assertEqual(len(found), 2, found)
+        self.assertTrue(any("access registration differs" in m for m in found), found)
+        self.assertTrue(any("sha256 differs" in m for m in found), found)
+        api = types.SimpleNamespace(validate_file=spec_cli.validate_file,
+                                    load_extension=spec_cli.load_extension)
+        checker = speccheck.check(api, spec_cli.load_schemas(), [self.root],
+                                  public_skills=["widget-board-tools"])
+        self.assertTrue(checker.roots[0].untrusted)
 
     def test_sha256_agrees(self):
         a = "a" * 64
@@ -288,7 +334,8 @@ class CorpusTest(unittest.TestCase):
         payload = atlas.data(checker, "widgetboard")
         [entry] = payload["corpus"]
         self.assertEqual(entry["root"], "good")
-        self.assertEqual(entry["blocks"]["counts"], {"spec": 1, "planned": 1, "excluded": 1})
+        self.assertEqual(entry["blocks"]["counts"], {"spec": 1, "planned": 1, "excluded": 1,
+                                                           "unresolved": 0})
         self.assertEqual([r["name"] for r in entry["documents"]["rows"]],
                          ["widget-trm", "uart-trm", "widget-product-page", "widget-errata"])
 

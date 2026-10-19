@@ -196,6 +196,34 @@ def run_store(cfg, data):
   return store
 
 
+def trusted_path(cfg, label, value, is_dir=False, check_overlap=True):
+  """Validate a configured host binary or directory path; exit 3 on any violation."""
+  if not isinstance(value, str) or not value:
+    fail(f"{label} in {cfg} must be a non-empty string: {value!r}", 3)
+  if not value.startswith("/"):
+    fail(f"{label} in {cfg} must be an absolute path: {value!r}", 3)
+  path = os.path.realpath(value)
+  try:
+    st = os.stat(path)
+  except OSError as exc:
+    fail(f"{label} {path} is missing: {exc}", 3)
+  if is_dir:
+    if not stat.S_ISDIR(st.st_mode):
+      fail(f"{label} {path} is not a directory", 3)
+  else:
+    if not stat.S_ISREG(st.st_mode) or not os.access(path, os.X_OK):
+      fail(f"{label} {path} is not an executable file", 3)
+  if st.st_uid not in (os.getuid(), 0):
+    fail(f"{label} {path} is owned by neither you nor root", 3)
+  if st.st_mode & 0o022:
+    fail(f"{label} {path} is writable by group or others", 3)
+  if check_overlap:
+    parent = os.path.realpath(scratch_parent())
+    if under(path, parent) or under(parent, path):
+      fail(f"{label} {path} overlaps the Codex scratch parent {parent}", 3)
+  return path
+
+
 def codex_binary(cfg, data):
   """The resolved Codex executable named by `codex` in the config file; exit 3 otherwise."""
   value = data.get("codex")
@@ -203,18 +231,91 @@ def codex_binary(cfg, data):
     fail(f"codex is not set in {cfg}; add codex = \"<absolute path to the codex binary>\"", 3)
   if not value.startswith("/"):
     fail(f"codex in {cfg} must be an absolute path: {value!r}", 3)
-  path = os.path.realpath(value)
+  return trusted_path(cfg, "codex binary", value, is_dir=False)
+
+
+def infer_rustup_toolchain(rust_toolchain_bin):
+  """Infer the toolchain name when rust_toolchain_bin is .../toolchains/<name>/bin."""
+  if not rust_toolchain_bin or os.path.basename(rust_toolchain_bin) != "bin":
+    return None
+  toolchain_dir = os.path.dirname(rust_toolchain_bin)
+  if os.path.basename(os.path.dirname(toolchain_dir)) != "toolchains":
+    return None
+  candidate = os.path.basename(toolchain_dir)
+  return candidate if NAME.fullmatch(candidate) else None
+
+
+def verify_tool_commit(binary, expected_commit):
+  """Verify `driver-lab --version` reports expected_commit (and never 'unknown'); exit 3 on mismatch."""
   try:
-    st = os.stat(path)
+    proc = subprocess.run([binary, "--version"], stdin=subprocess.DEVNULL, capture_output=True,
+                          text=True, env={"PATH": SYSTEM_PATH, "HOME": home(), "LANG": "C.UTF-8"},
+                          check=False)
   except OSError as exc:
-    fail(f"codex binary {path} is missing: {exc}", 3)
-  if not stat.S_ISREG(st.st_mode) or not os.access(path, os.X_OK):
-    fail(f"codex binary {path} is not an executable file", 3)
-  if st.st_uid not in (os.getuid(), 0):
-    fail(f"codex binary {path} is owned by neither you nor root", 3)
-  if st.st_mode & 0o022:
-    fail(f"codex binary {path} is writable by group or others", 3)
-  return path
+    fail(f"cannot run driver_lab_binary {binary}: {exc}", 3)
+  if proc.returncode != 0:
+    fail(f"driver_lab_binary {binary} --version failed (exit {proc.returncode})", 3)
+  out = proc.stdout.strip()
+  match = re.search(r"\(([0-9a-f]{40}|unknown)\)", out)
+  actual = match.group(1) if match else out
+  if actual == "unknown" or actual != expected_commit:
+    fail(f"driver_lab_binary {binary} commit mismatch: expected {expected_commit}, got {out!r}", 3)
+
+
+def rust_config(cfg, data, base=None):
+  """Validate optional Rust/Cargo/driver-lab keys from config.toml."""
+  rust_bin = None
+  if "rust_toolchain_bin" in data and data["rust_toolchain_bin"] is not None:
+    rust_bin = trusted_path(cfg, "rust_toolchain_bin", data["rust_toolchain_bin"], is_dir=True)
+  vendor_dir = None
+  if "cargo_vendor_dir" in data and data["cargo_vendor_dir"] is not None:
+    vendor_dir = trusted_path(cfg, "cargo_vendor_dir", data["cargo_vendor_dir"], is_dir=True)
+    repo_real = os.path.realpath(REPO)
+    if under(vendor_dir, repo_real):
+      fail(f"cargo_vendor_dir {vendor_dir} must be outside the repository {repo_real}", 3)
+  driver_lab = None
+  if "driver_lab_binary" in data and data["driver_lab_binary"] is not None:
+    driver_lab = trusted_path(cfg, "driver_lab_binary", data["driver_lab_binary"], is_dir=False)
+  rustup_toolchain = None
+  if "rustup_toolchain" in data and data["rustup_toolchain"] is not None:
+    tc_name = data["rustup_toolchain"]
+    if not isinstance(tc_name, str) or not NAME.fullmatch(tc_name):
+      fail(f"rustup_toolchain in {cfg} is not a valid toolchain name: {tc_name!r}", 3)
+    rustup_toolchain = tc_name
+  elif rust_bin:
+    rustup_toolchain = infer_rustup_toolchain(rust_bin)
+  tool_commit = None
+  if "tool_commit" in data and data["tool_commit"] is not None:
+    tc = data["tool_commit"]
+    if not isinstance(tc, str) or not (tc == "BASE" or COMMIT.fullmatch(tc)):
+      fail(f"tool_commit in {cfg} must be a full 40-hex commit (or 'BASE'): {tc!r}", 3)
+    if driver_lab is None:
+      fail(f"tool_commit in {cfg} requires driver_lab_binary to be set", 3)
+    tool_commit = base if (tc == "BASE" and base) else tc
+    if COMMIT.fullmatch(tool_commit):
+      verify_tool_commit(driver_lab, tool_commit)
+  return {
+      "rust_toolchain_bin": rust_bin,
+      "cargo_vendor_dir": vendor_dir,
+      "driver_lab_binary": driver_lab,
+      "rustup_toolchain": rustup_toolchain,
+      "tool_commit": tool_commit,
+  }
+
+
+def write_cargo_config(cargo_home, vendor_dir):
+  """Write an offline Cargo config.toml pointing crates-io at the read-only vendor_dir."""
+  os.makedirs(cargo_home, mode=0o700, exist_ok=True)
+  cfg_path = os.path.join(cargo_home, "config.toml")
+  content = (
+      '[source.crates-io]\n'
+      'replace-with = "vendored-sources"\n\n'
+      '[source.vendored-sources]\n'
+      f'directory = "{vendor_dir}"\n'
+  )
+  with open(cfg_path, "w", encoding="utf-8") as out:
+    out.write(content)
+  return cfg_path
 
 
 def git_env():
@@ -615,14 +716,44 @@ def stop(proc):
       continue
 
 
-def child_env(codex, tmp):
+def child_env(codex, tmp, rust=None, has_cargo_toml=False):
   h = home()
-  return {
+  rust = rust or {}
+  rust_bin = rust.get("rust_toolchain_bin")
+  vendor_dir = rust.get("cargo_vendor_dir")
+  driver_lab = rust.get("driver_lab_binary")
+  rustup_toolchain = rust.get("rustup_toolchain")
+  if not rustup_toolchain and rust_bin:
+    rustup_toolchain = infer_rustup_toolchain(rust_bin)
+  path_parts = []
+  if rust_bin:
+    path_parts.append(rust_bin)
+  path_parts.extend([SYSTEM_PATH, os.path.dirname(codex)])
+  if driver_lab:
+    dl_dir = os.path.dirname(driver_lab)
+    if dl_dir not in path_parts:
+      path_parts.append(dl_dir)
+  env = {
       "HOME": h, "CODEX_HOME": os.path.join(h, ".codex"),
-      "PATH": SYSTEM_PATH + ":" + os.path.dirname(codex),
+      "PATH": ":".join(path_parts),
       "TMPDIR": tmp, "TEMP": tmp, "TMP": tmp, "LANG": "C.UTF-8",
       "PYTHONDONTWRITEBYTECODE": "1", "UV_CACHE_DIR": os.path.join(tmp, "uv-cache"),
   }
+  if rust_bin or vendor_dir or has_cargo_toml:
+    cargo_target = os.path.join(tmp, "cargo-target")
+    cargo_home = os.path.join(tmp, "cargo-home")
+    env["CARGO_TARGET_DIR"] = cargo_target
+    env["CARGO_HOME"] = cargo_home
+    env["CARGO_NET_OFFLINE"] = "true"
+    if rustup_toolchain:
+      env["RUSTUP_TOOLCHAIN"] = rustup_toolchain
+    if os.path.isdir(tmp):
+      os.makedirs(cargo_target, mode=0o700, exist_ok=True)
+      if vendor_dir:
+        write_cargo_config(cargo_home, vendor_dir)
+      else:
+        os.makedirs(cargo_home, mode=0o700, exist_ok=True)
+  return env
 
 
 def command(codex, base, work, brief, last):
@@ -681,10 +812,11 @@ def prepare(base, run_dir, brief, when):
       fail(f"output path already exists: {path}")
   check_base(base)
   codex = codex_binary(cfg, data)
-  return base, brief, codex, outputs
+  rust = rust_config(cfg, data, base)
+  return base, brief, codex, outputs, rust
 
 
-def run(base, brief, codex, outputs):
+def run(base, brief, codex, outputs, rust=None):
   parent = check_parent(True)
   run_dir = os.path.dirname(outputs["log"])
   try:
@@ -701,6 +833,7 @@ def run(base, brief, codex, outputs):
       os.mkdir(path, 0o700)
     entries = export(base)
     extract(entries, work)
+    env = child_env(codex, tmp, rust=rust, has_cargo_toml=("Cargo.toml" in entries))
     print(f"log: {outputs['log']}\nlast message: {outputs['last']}", flush=True)
     log_fd = os.open(name["log"], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600,
                      dir_fd=run_fd)
@@ -708,7 +841,7 @@ def run(base, brief, codex, outputs):
       try:
         proc = subprocess.Popen(command(codex, base, work, brief, staged),
                                 stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
-                                env=child_env(codex, tmp), cwd=work, start_new_session=True)
+                                env=env, cwd=work, start_new_session=True)
       except OSError as exc:
         raise LaunchError(f"cannot start {codex}: {exc}") from exc
       try:
@@ -756,13 +889,13 @@ def main(argv):
   args = [a for a in argv if a != "--dry-run"]
   if len(args) != 3:
     fail("usage: python3 -I codex-implement.py BASE RUN_DIR BRIEF [--dry-run]")
-  base, brief, codex, outputs = prepare(*args, stamp())
+  base, brief, codex, outputs, rust = prepare(*args, stamp())
   if dry:
     check_parent(False)
     print(command(codex, base, "<scratch>/work", brief, "<scratch>/out/last-message.md"))
-    print(child_env(codex, "<scratch>/tmp"))
+    print(child_env(codex, "<scratch>/tmp", rust=rust))
     return 0
-  return run(base, brief, codex, outputs)
+  return run(base, brief, codex, outputs, rust=rust)
 
 
 if __name__ == "__main__":

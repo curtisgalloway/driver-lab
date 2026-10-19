@@ -11,10 +11,11 @@ reference material. Facts belong in specs, where `spec.py check` and `spec-verif
 agent and stub prose points at the specs.
 
 Scope, by default: every tracked `agents/*.md`, and every tracked `SKILL.md` whose front matter
-calls it a stub (`stub over`). `spec.py check --stubs-from` runs the same rules on the stubs a
-spec repository installs; this check covers the agent files it never reads. The rules are
-spec-format's (skills/spec-format/scripts/prosefacts.py): a hex literal of two or more digits,
-or an upper-case underscore name. A line carrying `hw-fact-ok: <reason>` passes.
+calls it a stub (`stub over`). `driver-lab check --stubs-from` runs the same rules on the stubs a
+spec repository installs; this check covers the agent files it never reads: a hex literal of two
+or more digits (`0x7e20`, `0xFE201000`, also in code spans), or an upper-case underscore name
+with an optional `n` or `x` index suffix (`UART_CTRL`, `GICD_CTLR`, `GICD_ITARGETSRn`, excluding
+shell variables like `$NAME` or `${NAME}`). A line carrying `hw-fact-ok: <reason>` passes.
 
 Exit 0 clean / 1 findings / 2 error.
 """
@@ -22,22 +23,45 @@ Exit 0 clean / 1 findings / 2 error.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import re
 import subprocess
 import sys
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PROSEFACTS = ROOT / "skills" / "spec-format" / "scripts" / "prosefacts.py"
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
+HEX = re.compile(r"(?<![0-9A-Za-z_])0[xX][0-9A-Fa-f]{2,}(?:_[0-9A-Fa-f]+)*(?![0-9A-Za-z_])")
+REGISTER = re.compile(r"(?<![0-9A-Za-z_$-])[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+[nx]?"
+                      r"(?![0-9A-Za-z_-])")
+SHELL_VAR = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}")
+OPT_OUT = "hw-fact-ok:"
+
+
+def findings(text: str) -> list[tuple[int, int, str]]:
+    """(1-based line, 1-based column, what) for each likely hardware fact in the text."""
+    out = []
+    for n, line in enumerate(text.split("\n"), 1):
+        if OPT_OUT in line:
+            continue
+        for m in HEX.finditer(line):
+            out.append((n, m.start() + 1, f"hex literal {m.group(0)!r}"))
+        blanked = SHELL_VAR.sub(lambda m: " " * len(m.group(0)), line)
+        for m in REGISTER.finditer(blanked):
+            out.append((n, m.start() + 1, f"register-style name {m.group(0)!r}"))
+    return sorted(out)
+
+
+def message(what: str) -> str:
+    return (f"{what} in prose no checker reads: put the fact in a spec and point at it, or mark "
+            f"an intentional example with `{OPT_OUT} <reason>` on the line")
 
 
 def rules():
-    spec = importlib.util.spec_from_file_location("_prosefacts", PROSEFACTS)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return types.SimpleNamespace(
+        HEX=HEX, REGISTER=REGISTER, SHELL_VAR=SHELL_VAR, OPT_OUT=OPT_OUT,
+        findings=findings, message=message,
+    )
 
 
 def in_scope(path: str, text: str) -> bool:

@@ -457,6 +457,88 @@ open(idx, "wb").write(data + hashlib.sha1(data).digest())
       self.mod.main([self.patch, self.tree, "--refused", self.refused, "--suite", "nocommand"])
     self.assertEqual(raised.exception.code, 2)
 
+  def test_rust_and_conformance_paths_are_gate_inputs(self):
+    paths = [
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        ".cargo/config.toml",
+        "tests/conformance/cases.json",
+        "tests/conformance/prosefacts.json",
+        "evals/requirements.txt",
+    ]
+    for path in paths:
+      with self.subTest(path=path):
+        self.assertEqual(self.mod.touched_gate_inputs([path]), [path])
+
+  def test_rust_risky_patterns_detected(self):
+    patch = "\n".join([
+        "+++ b/src/lib.rs",
+        "+use std::process::Command;",
+        "+use std::net::TcpStream;",
+        "+unsafe { ptr.read() }",
+        '+const B: &[u8] = include_bytes!("a.bin");',
+        '+let v = env!("PATH");',
+        "+let unsafe_identifier = 1;",
+    ])
+    hits = [line for _, line in self.mod.risky_hits(patch)]
+    self.assertEqual(hits, [
+        "+use std::process::Command;",
+        "+use std::net::TcpStream;",
+        "+unsafe { ptr.read() }",
+        '+const B: &[u8] = include_bytes!("a.bin");',
+        '+let v = env!("PATH");',
+    ])
+
+  def test_cargo_suite_runs_with_external_target_and_preserves_worktree_digest(self):
+    self.put("Cargo.toml", '[package]\nname = "dummy"\nversion = "0.1.0"\nedition = "2021"\n')
+    self.put("utilities/tests/test_ok.py",
+             "import unittest\nclass T(unittest.TestCase):\n  def test_ok(self):\n    pass\n")
+    self.git("add", "Cargo.toml", "utilities/tests/test_ok.py")
+    self.git("-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-q", "-m", "c")
+    suites = dict(self.mod.default_suites(self.tree))
+    self.assertEqual(suites["cargo"], ["cargo", "test", "--locked", "--offline"])
+
+    # Fake `cargo` writes build artifacts to $CARGO_TARGET_DIR and checks $CARGO_NET_OFFLINE=true.
+    fake_bin = os.path.join(self.tmp, "fake-cargo-bin")
+    os.mkdir(fake_bin)
+    env_record = os.path.join(self.tmp, "cargo-env.txt")
+    fake_cargo = os.path.join(fake_bin, "cargo")
+    with open(fake_cargo, "w", encoding="utf-8") as f:
+      f.write(
+          "#!/bin/sh\n"
+          f'printf "ARGS=%s\\nTARGET=%s\\nHOME=%s\\nOFFLINE=%s\\n" "$*" "$CARGO_TARGET_DIR" "$CARGO_HOME" "$CARGO_NET_OFFLINE" > "{env_record}"\n'
+          'mkdir -p "$CARGO_TARGET_DIR/debug" && echo artifact > "$CARGO_TARGET_DIR/debug/deps"\n'
+          'mkdir -p "$CARGO_HOME" && echo cache > "$CARGO_HOME/cache"\n'
+          'echo "test result: ok. 3 passed; 0 failed"\n'
+      )
+    os.chmod(fake_cargo, 0o755)
+    vendor_dir = os.path.join(self.tmp, "vendor")
+    os.mkdir(vendor_dir)
+
+    self.git("apply", self.patch)
+    old_env = os.environ.copy()
+    try:
+      os.environ["PATH"] = fake_bin + os.pathsep + old_env.get("PATH", "")
+      os.environ["DRIVER_LAB_CARGO_VENDOR"] = vendor_dir
+      out = io.StringIO()
+      with contextlib.redirect_stdout(out):
+        code = self.mod.main([self.patch, self.tree, "--refused", self.refused, "--reuse-venv",
+                              "--no-default-suites",
+                              "--suite", "cargo=cargo test --locked --offline"])
+    finally:
+      os.environ.clear()
+      os.environ.update(old_env)
+    output = out.getvalue()
+    self.assertEqual(code, 0, output)
+    self.assertIn("ok   cargo (exit 0): test result: ok. 3 passed; 0 failed", output)
+    self.assertFalse(os.path.exists(os.path.join(self.tree, "target")))
+    with open(env_record, encoding="utf-8") as f:
+      recorded = f.read()
+    self.assertIn("ARGS=test --locked --offline", recorded)
+    self.assertIn("OFFLINE=true", recorded)
+    self.assertNotIn(self.tree, recorded)
+
 
 if __name__ == "__main__":
   unittest.main()

@@ -30,6 +30,7 @@ Exit codes: 0 Codex ran and exited 0; 1 Codex exited non-zero; 2 usage or valida
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -70,6 +71,33 @@ def in_git_tree(path):
     probe = parent
 
 
+def child_env(mode, target, base_env=None):
+  """Return the child environment for mode, setting TMPDIR=<REVIEW_DIR>/tmp in net mode."""
+  env = dict(os.environ if base_env is None else base_env)
+  if mode == "net":
+    net_tmp = os.path.join(target, "tmp")
+    env["TMPDIR"] = net_tmp
+  return env
+
+
+def ensure_net_tmp(target):
+  """Create <REVIEW_DIR>/tmp safely without following a symlink."""
+  net_tmp = os.path.join(target, "tmp")
+  try:
+    os.mkdir(net_tmp, 0o700)
+  except FileExistsError:
+    pass
+  except OSError as exc:
+    fail(f"cannot create net scratch directory {net_tmp}: {exc}")
+  try:
+    st = os.lstat(net_tmp)
+  except OSError as exc:
+    fail(f"cannot stat net scratch directory {net_tmp}: {exc}")
+  if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+    fail(f"net scratch directory is a symlink or not a directory: {net_tmp}")
+  return net_tmp
+
+
 def build(mode, target, brief, log):
   tmp = os.path.realpath(tempfile.gettempdir())
   target = clean_path(target, "target directory")
@@ -96,6 +124,9 @@ def build(mode, target, brief, log):
       fail(f"net REVIEW_DIR may not be inside a git work tree: {target}")
     if not under(brief, target):
       fail(f"net BRIEF must be inside REVIEW_DIR: {brief}")
+    net_tmp = os.path.join(target, "tmp")
+    if os.path.lexists(net_tmp) and (os.path.islink(net_tmp) or not os.path.isdir(net_tmp)):
+      fail(f"net scratch directory is a symlink or not a directory: {net_tmp}")
     flags = [
         "--sandbox", "workspace-write",
         "-c", "sandbox_workspace_write.network_access=true",
@@ -111,20 +142,25 @@ def main(argv):
   args = [a for a in argv if a != "--dry-run"]
   if len(args) != 4 or args[0] not in ("ro", "net"):
     fail("usage: codex-review.py ro|net TARGET BRIEF LOG [--dry-run]")
-  cmd, log = build(*args)
+  mode, target, brief, log_arg = args
+  cmd, log = build(mode, target, brief, log_arg)
   if dry:
     print(cmd)
     return 0
   if shutil.which("codex") is None:
     print("codex-review: codex is not installed", file=sys.stderr)
     return 3
+  resolved_target = cmd[cmd.index("--cd") + 1]
+  if mode == "net":
+    ensure_net_tmp(resolved_target)
+  env = child_env(mode, resolved_target)
   try:
     fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
   except OSError as exc:
     fail(f"cannot open LOG without following links: {exc}")
   with os.fdopen(fd, "w", encoding="utf-8") as out:
     proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT,
-                          check=False)
+                          env=env, check=False)
   return 0 if proc.returncode == 0 else 1
 
 

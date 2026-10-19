@@ -47,6 +47,11 @@ references. It may cite less restrictive repositories, never more restrictive on
 | `hardware-specs-permissive` | Apache-2.0, plus required source notices | Public documents and accepted BSD, ISC, 0BSD, MIT, Apache or permissively dual-licensed source |
 | `hardware-specs-gpl` | GPL-2.0-only | The above plus accepted GPL-2.0-only or GPL-2.0-or-later source |
 
+Generic facts of a public standard (a register interface, capability structures, protocol
+behavior) go in that standard's documents-only repository where one exists, such as `hardware-specs-usb`
+for the USB family (CC-BY-4.0, `accepts: []`), and a peripheral spec composes them rather than
+restating them ([LICENSE-SPLIT.md](../../docs/LICENSE-SPLIT.md#standards-and-architecture-specs-154)).
+
 The spec root marker requires `format: 2`, `layer`, `name`, `license` and `accepts`.
 `layer` is its merge position (`public`, `ip-vendor`, `soc-vendor`, `product` or `local`);
 `name` is the stable root identifier used in cross-root fact references.

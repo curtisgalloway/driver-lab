@@ -31,7 +31,10 @@ Full definitions are in the [glossary](GLOSSARY.md).
   sources it anchors to, and each repository's CI runs a check (the license gate) that fails a
   spec citing a source the repository does not accept. The three repositories are
   `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`; see the
-  [license-split design](docs/LICENSE-SPLIT.md).
+  [license-split design](docs/LICENSE-SPLIT.md). Generic facts of public standards live in
+  documents-only standards repositories that board and SoC specs compose; the first is
+  [`hardware-specs-usb`](https://github.com/curtisgalloway/hardware-specs-usb) (USB, xHCI,
+  Type-C, PD, TCPCI).
 - **Every claim is checkable.** AI-written documentation is only as good as its checks. Every
   fact in a published spec carries an anchor, a checker resolves every anchor at its pinned
   commit, and an independent verifier re-derives the claims from the cited lines. A reader can

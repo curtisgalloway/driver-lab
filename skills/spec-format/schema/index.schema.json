@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/index.schema.json",
+  "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. A document's section index, <root>/index/<name>.index.yaml, written by spec.py index (#155): headings and locators only, never document text, pinned to the document bytes by sha256.",
+  "title": "Spec format: document section index (<name>.index.yaml)",
+  "type": "object",
+  "required": ["format", "document", "sha256", "source", "sections"],
+  "properties": {
+    "format": {"const": 2},
+    "document": {"$comment": "The resources.documents name the index belongs to.", "$ref": "spec.schema.json#/$defs/name"},
+    "sha256": {"$ref": "spec.schema.json#/$defs/sha256"},
+    "source": {"enum": ["pdf", "markdown"]},
+    "pages": {"$comment": "PDF only: the page count; section pages are PDF page numbers.", "type": "integer", "minimum": 1},
+    "lines": {"$comment": "Markdown only: the line count.", "type": "integer", "minimum": 1},
+    "sections": {"type": "array", "items": {"$ref": "#/$defs/section"}}
+  },
+  "allOf": [
+    {"if": {"properties": {"source": {"const": "pdf"}}},
+     "then": {"required": ["pages"], "not": {"required": ["lines"]},
+              "properties": {"sections": {"items": {"required": ["pages"]}}}}},
+    {"if": {"properties": {"source": {"const": "markdown"}}},
+     "then": {"required": ["lines"], "not": {"required": ["pages"]},
+              "properties": {"sections": {"items": {"required": ["lines"]}}}}}
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "section": {
+      "type": "object",
+      "required": ["title", "level"],
+      "oneOf": [{"required": ["pages"]}, {"required": ["lines"]}],
+      "properties": {
+        "number": {"$comment": "The section number the title starts with, when it has one.", "$ref": "spec.schema.json#/$defs/line"},
+        "title": {"$ref": "spec.schema.json#/$defs/line"},
+        "level": {"type": "integer", "minimum": 1},
+        "pages": {"$ref": "#/$defs/range"},
+        "lines": {"$ref": "#/$defs/range"}
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "array",
+      "prefixItems": [{"type": "integer", "minimum": 1}, {"type": "integer", "minimum": 1}],
+      "items": false,
+      "minItems": 2
+    }
+  }
+}

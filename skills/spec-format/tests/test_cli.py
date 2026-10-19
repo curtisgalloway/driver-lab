@@ -231,7 +231,8 @@ class ExitCodes(unittest.TestCase):
     def test_dependency_check_reads_every_direct_pin(self):
         pins = spec_cli.pinned_versions()
         self.assertEqual({d: pins[d] for d in spec_cli.DIRECT},
-                         {"pyyaml": "6.0.3", "jsonschema": "4.26.0", "markdown-it-py": "4.2.0"})
+                         {"pyyaml": "6.0.3", "jsonschema": "4.26.0", "markdown-it-py": "4.2.0",
+                          "pypdf": "6.19.0"})
         self.assertEqual(spec_cli.check_dependencies(), [])
 
 

@@ -773,6 +773,25 @@ const graph = (() => {
     tb.append(tr);
   }
   t.append(tb); wrap.append(t); host.append(wrap);
+  for (const x of DATA.indexes) {
+    const covered = x.sections.filter(s => s.facts.length).length;
+    host.append(el('h3', 'cov-h', 'Document index · ' + x.document + ' · ' + shortRoot(x.root)));
+    host.append(el('div', 'count', covered + ' of ' + x.sections.length + ' sections cited by a fact'));
+    const w = el('div', 'cov-scroll'); const it = el('table', 'cov');
+    const h = el('tr'); for (const k of ['Section', 'Title', x.source === 'pdf' ? 'Pages' : 'Lines', 'Facts']) h.append(el('th', null, k));
+    const ih = el('thead'); ih.append(h); it.append(ih);
+    const ib = el('tbody');
+    for (const s of x.sections) {
+      const tr = el('tr', 'ledger ' + (s.facts.length ? 'spec' : 'excluded'));
+      const fc = el('td');
+      for (const k of s.facts) { const f = factByKey.get(k); fc.append(f ? factLink(f) : el('span', null, k)); }
+      if (!s.facts.length) fc.textContent = 'none';
+      tr.append(el('td', null, s.number || ''), el('td', null, '\u00a0'.repeat(2 * (s.level - 1)) + s.title),
+        el('td', null, (s.pages || s.lines).join('–')), fc);
+      ib.append(tr);
+    }
+    it.append(ib); w.append(it); host.append(w);
+  }
   for (const c of DATA.corpus) {
     host.append(el('h3', 'cov-h', 'Corpus ledger · ' + shortRoot(c.root)));
     for (const group of ['documents', 'blocks']) {

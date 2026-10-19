@@ -317,6 +317,24 @@ mismatch is the exception and makes the root untrusted. `spec.py corpus`
 also fails a checked root with no ledger and prints its coverage; the repository checks run it
 under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 
+### Document indexes
+
+`spec.py index <document> --root <root> --docs-dir <dir>` writes
+`<root>/index/<document>.index.yaml` ([schema](schema/index.schema.json)) from `<dir>/<document>`:
+each section's `number` (when its title starts with one), `title`, `level` and `pages` (a PDF's
+outline, PDF page numbers) or `lines` (a Markdown file's headings), and the document's
+`sha256`. A PDF range ends on the page the next section at its level or above starts on, that
+page included; parents cover their children. It refuses bytes that do not hash to the
+registry's `sha256`, a document no spec of the root lists or that has no `sha256`, a PDF with no
+outline (an index is never guessed from page text), and a target reached through a link. The file depends only on the bytes and carries the marker's SPDX lines. An index
+holds headings and locators, never document text, so it may ship in a public root whose
+documents cannot. `check` validates each index (a malformed, misplaced or misnamed one is an
+error that leaves the root trusted) and warns when its `sha256` or page count is not the
+registry's, the registry records no `sha256`, or no spec lists its document. Views list each index's sections with the facts citing them (by
+`section` number or prefix, `heading` title, or page when `page_numbering: pdf`); a section with
+none is not yet covered. board-expert answers a question no fact covers from the indexed pages
+as `unverified (doc-read)`, never as a fact.
+
 ## Records and freshness
 
 One record per spec file, overlays included: `<root>/resources/<name>.verify.yaml`, with the
@@ -420,6 +438,7 @@ spec.py todo <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--check hardware|document|source] [--json]
 spec.py corpus <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--json]
+spec.py index <document> --root <dir> --docs-dir <dir> [--json]
 spec.py render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
     [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html [--json]
@@ -430,7 +449,7 @@ spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
 spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
 ```
 
-Availability: validate/check/status are SF2-1–3; `todo` (issue 112) and `corpus` (issue 153) follow them; Markdown render is SF2-4; HTML render and the
+Availability: validate/check/status are SF2-1–3; `todo` (issue 112), `corpus` (issue 153) and `index` (issue 155) follow them; Markdown render is SF2-4; HTML render and the
 publishing template under `ci/` are SF2-5; resolve/show/drift are SF2-6; inventory is SF2-7a.
 All are on main.
 

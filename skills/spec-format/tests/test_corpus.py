@@ -263,6 +263,12 @@ class CorpusTest(unittest.TestCase):
         self.assertIn("`excluded: no public documentation`", view)
         self.assertIn("1 spec\\, 1 planned\\, 1 excluded", view)
 
+    def test_html_viewer_shows_coverage(self):
+        code, result = run("render", self.root, *SKILL, "--format", "html")
+        self.assertEqual(code, 0, result)
+        self.assertIn("Corpus coverage (generated): good", result["html"])
+        self.assertIn("<td>excluded: no public documentation</td>", result["html"])
+
     def test_markdown_view_without_ledger_has_no_coverage(self):
         self.ledger.unlink()
         code, result = run("render", self.root, *SKILL, "--format", "md")

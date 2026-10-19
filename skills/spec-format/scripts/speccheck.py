@@ -33,6 +33,9 @@ already-parsed data and never over prose:
 - the corpus ledger (`corpus.yaml` beside the marker, corpus.py, #153): every `spec:`
   disposition resolves; every document a spec of the root lists is in the ledger, with the same
   `sha256` when both give one; no name twice; no `access: private` entry under a `public` layer;
+- document indexes (`index/<name>.index.yaml`, index.py, #155): valid; a warning when no spec
+  of the root lists the document, when the index's `sha256` is not the registry's, or when its
+  page count differs;
 - stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
@@ -142,6 +145,8 @@ class Root:
     record_paths: list = dataclasses.field(default_factory=list)  # resources/*.verify.yaml
     corpus_path: Path | None = None  # corpus.yaml beside the marker (corpus.py, #153)
     corpus: object = None  # its Loaded, when it validates
+    index_paths: list = dataclasses.field(default_factory=list)  # index/*.index.yaml (#155)
+    indexes: list = dataclasses.field(default_factory=list)  # (path, Loaded) of the valid ones
     # Every error-severity finding its own check produced, before context downgrading, as a
     # (location, message) pair. A root with any is untrusted: no reference may rest on it (user
     # decision, 2026-10-08).
@@ -371,6 +376,8 @@ class Checker:
                 self.load_spec(root, path, schemas)
             if root.corpus_path is not None:
                 self.load_corpus(root, schemas)
+            for path in root.index_paths:
+                self.load_index(root, path, schemas)
 
     def read_marker(self, root: Root, schemas):
         marker = root.given / MARKER
@@ -447,6 +454,18 @@ class Checker:
                                                      f"move it out of the root", trust=False)
                 elif name.endswith(".spec.yaml"):
                     found.append(path)
+                elif name.endswith(".index.yaml"):
+                    if Path(top) == root.given / "index":
+                        root.index_paths.append(path)
+                    else:
+                        self.add((path, root, None), (), "a document index lives in the root's "
+                                                         "own index/ directory: move it there",
+                                 trust=False)
+                elif ".index." in lower:
+                    # .index.yml, a case variant, a backup: an index discovery passes over
+                    self.add((path, root, None), (), "not read as a document index: name it "
+                                                     "<document>.index.yaml in index/",
+                             trust=False)
                 elif name.endswith(".verify.yaml"):
                     if Path(top) == root.given / "resources":
                         root.record_paths.append(path)
@@ -494,15 +513,26 @@ class Checker:
     def load_corpus(self, root: Root, schemas):
         """The ledger's schema findings are errors, but they leave the root trusted: the
         ledger records scope, not facts a reference could rest on."""
+        loaded = self._load_untrusting(root, root.corpus_path, schemas)
+        if loaded is not None:
+            root.corpus = loaded
+
+    def load_index(self, root: Root, path: Path, schemas):
+        """A document index (index.py): like the ledger, a malformed one is an error that
+        leaves the root trusted."""
+        loaded = self._load_untrusting(root, path, schemas)
+        if loaded is not None:
+            root.indexes.append((path, loaded))
+
+    def _load_untrusting(self, root: Root, path: Path, schemas):
         raw = []
-        ok, _, loaded = self.api.validate_file(root.corpus_path, schemas, None, raw)
+        ok, _, loaded = self.api.validate_file(path, schemas, None, raw)
         for f in raw:
             level, message = "error", f.message
             if root.context:
                 level, message = "warning", f"context root: {message}"
             self.findings.append(Finding(f.path, f.line, f.column, message, level))
-        if ok:
-            root.corpus = loaded
+        return loaded if ok else None
 
     # --- per file ----------------------------------------------------------------------------
 
@@ -1237,6 +1267,9 @@ class Checker:
         import corpus
 
         corpus.check(self)
+        import index
+
+        index.check(self)
         records.first_pass(self)  # current FAILs: defects of a root's data, before trust
         self.check_trust()
         records.second_pass(self, self.require_verified)

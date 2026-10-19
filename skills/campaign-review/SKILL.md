@@ -33,7 +33,9 @@ When the campaign's specs live in a root with a corpus ledger, run spec-format's
 `spec.py corpus <root>...` and keep its report with the review artifact. Report coverage
 (documents and blocks specified, planned, excluded), list `planned` entries as candidate
 work, and flag an `excluded` reason a reviewer would not accept. A root with no ledger is
-reported as unscoped, not as covered.
+reported as unscoped, not as covered. Spec gaps board-expert proposed from doc-read answers
+appear, once authored, in `spec.py todo <root>... --check document`; report their count, and
+for an indexed document the sections no fact cites (the views' document index tables).
 
 At the start of each orchestrator session and whenever a known input changes
 (such as a package upgrade or manual edition), refresh applicable sources locally

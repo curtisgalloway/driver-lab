@@ -189,7 +189,18 @@ def data(checker, spec_id, *, merged=False, source_commit=None, tool_commit=None
         'outside_links': sum(x.pop('outside') for x in facts), 'row_links': row_links,
         'unplaced': _unplaced(checker, placed), 'tool_commit': tool_commit or '',
         'corpus': _corpus(chosen),
+        'indexes': _indexes(chosen),
     }
+
+
+def _indexes(chosen):
+    """Each rendered (non-context) root's document indexes (#155), sections linked to facts."""
+    import index
+
+    out = []
+    for root in sorted({f.root for f in chosen if not f.root.context}, key=lambda r: r.order):
+        out += [{'root': root.label, **entry} for entry in index.links(root)]
+    return out
 
 
 def _corpus(chosen):

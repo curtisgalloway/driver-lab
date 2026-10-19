@@ -18,6 +18,11 @@ pub mod campaign;
 pub mod author;
 pub mod verify_flow;
 pub mod eval;
+pub mod docresolve;
+pub mod resolve;
+pub mod git_source;
+pub mod inventory;
+pub mod drift;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use diagnostic::{DiagnosticEnvelope, EXIT_OK, EXIT_SANDBOX_ERROR, EXIT_USAGE_ERROR};
@@ -356,6 +361,12 @@ pub struct FetchArgs {
     /// Context spec root directories (`BF-IMX-18`).
     #[arg(long = "context-root", value_name = "DIR")]
     pub context_roots: Vec<PathBuf>,
+    /// Repository specs (`id=url`).
+    #[arg(long = "repo", value_name = "ID=URL")]
+    pub repos: Vec<String>,
+    /// Output directory for documentation artifacts.
+    #[arg(long = "docs-dir", value_name = "DIR")]
+    pub docs_dir: Option<PathBuf>,
 }
 
 /// Arguments for `driver-lab stubgen`.
@@ -532,6 +543,12 @@ where
         Command::Assemble(asm_args) => author::run_assemble_cmd(asm_args, &scratch, stdout, stderr),
         Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
 
+        Command::Resolve(args) => resolve::run_resolve_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::Show(args) => resolve::run_show_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::Inventory(args) => inventory::run_inventory_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::Drift(args) => drift::run_drift_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::Fetch(args) => run_fetch_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::PinnedFileAdapter(args) => run_pinned_file_adapter_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
         Command::Campaign(campaign_args) => campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr),
         other => run_stub_subcommand(&cli, other, stdout, stderr),
@@ -666,6 +683,74 @@ fn run_index_cmd(
         }
     } else {
         for line in &outcome.text {
+            let _ = writeln!(stderr, "{line}");
+        }
+    }
+    code
+}
+fn run_fetch_cmd(
+    cli: &Cli,
+    args: &FetchArgs,
+    scratch: &ScratchResolver,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let outcome = git_source::run_fetch_command(
+        &args.targets,
+        &args.cache,
+        &args.repos,
+        args.docs_dir.as_deref(),
+        cli.offline,
+        scratch,
+    );
+    let code: i32 = outcome.exit_code.into();
+    if cli.json {
+        let val = &outcome.payload;
+        let _ = writeln!(
+            stdout,
+            "{}",
+            serde_json::to_string_pretty(val).unwrap_or_else(|_| val.to_string())
+        );
+    } else {
+        let out: &mut dyn Write = if code == 0 { stdout } else { stderr };
+        for line in &outcome.text {
+            let _ = writeln!(out, "{line}");
+        }
+    }
+    code
+}
+
+fn run_pinned_file_adapter_cmd(
+    cli: &Cli,
+    args: &PinnedFileAdapterArgs,
+    scratch: &ScratchResolver,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let outcome = git_source::run_pinned_file_adapter(
+        &args.registry,
+        &args.source_id,
+        args.repo.as_deref().unwrap_or_else(|| std::path::Path::new("")),
+        None,
+        Some(&args.out),
+        true,
+        false,
+        scratch,
+    );
+    let code = outcome.exit_code;
+    if cli.json {
+        let val = &outcome.payload;
+        let _ = writeln!(
+            stdout,
+            "{}",
+            serde_json::to_string_pretty(val).unwrap_or_else(|_| val.to_string())
+        );
+    } else if !outcome.is_error {
+        for line in &outcome.lines {
+            let _ = writeln!(stdout, "{line}");
+        }
+    } else {
+        for line in &outcome.lines {
             let _ = writeln!(stderr, "{line}");
         }
     }

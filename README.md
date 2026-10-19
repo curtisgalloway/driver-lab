@@ -57,6 +57,7 @@ bringing up a particular board, which happen in projects that use these skills.
 | You have a hardware question and the answer will be published in a spec repository, so each source you cite must be one that repository's license accepts | `hardware-investigator` |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
 | You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
+| You need to fetch, pin, inspect or materialize web documentation pages, vendor wikis (Trac, MediaWiki) or PDFs into a durable local cache and `--docs-dir` without recursive crawling | `site-cache` |
 | You have a bank of code-writing items for a spec and want to measure, by compiling and running tests, whether readers of the spec answer them correctly | `spec-eval` |
 
 ## Installing
@@ -160,6 +161,10 @@ checked topology format from the graph views still to be delivered.
   and never edits the spec.
 - **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and CLI:
   `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift` and `inventory`.
+- **`site-cache`** manages an out-of-tree, content-addressed document blob store and polite
+  read-through HTTP cache (`get`, `pin`, `links`, `headings`, `info`, `prefetch`, `materialize`,
+  `verify`, `gc`), discovering immutable wiki revisions (such as Trac `?version=N&format=txt`)
+  and materializing `docs/by-name` for `spec.py resolve --docs-dir`.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
@@ -200,6 +205,7 @@ uv pip install --python /tmp/driver-lab-spec/bin/python --require-hashes -r skil
 python3 -m unittest discover -s skills/board-expert/tests -v
 /tmp/driver-lab-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
 /tmp/driver-lab-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
+/tmp/driver-lab-spec/bin/python -m unittest discover -s skills/site-cache/tests -v
 python3 -m unittest discover -s skills/spec-eval/tests -v
 /tmp/driver-lab-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
 ```

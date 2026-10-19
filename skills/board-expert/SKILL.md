@@ -110,8 +110,11 @@ independent work and return Needs decision; the orchestrator asks the user.
 - **Documents**: read `resources.documents` authorities first (omit `cite`, or `cite: false`
   for maps). Keep the canonical URL in citations, retrieve bytes from `retrieval` when needed;
   for Arm PDFs use the listed documentation-service static URL. Match revision/hash before
-  relying on bytes. `spec.py resolve <file> --docs-dir <dir>` expects files named by document
-  name, not an arbitrary PDF filename. Source code is the map and implementation evidence.
+  relying on bytes. Use [site-cache](../site-cache/SKILL.md) (`site_cache.py materialize
+  <file>... --docs-dir <dir> --root <root>`, `get`, or `pin`) to fetch, cache and materialize
+  web or wiki documents politely without recursive crawling. `spec.py resolve <file>
+  --docs-dir <dir>` expects files named by document name, not an arbitrary PDF filename.
+  Source code is the map and implementation evidence.
 - **Tools/internal access**: load the skill named by a `resources.tools[].via` entry and follow
   its invocation/access rules. Internal documents set `access: private`; source and
   document entries have no invocation `via` field. If the vendor skill is absent, say what is

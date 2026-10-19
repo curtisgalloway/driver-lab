@@ -46,6 +46,7 @@ python3 -m venv .venv-spec && .venv-spec/bin/pip install -q --require-hashes -r 
 .venv-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
 .venv-spec/bin/python -m unittest discover -s skills/spec-format/tests
 .venv-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests
+.venv-spec/bin/python -m unittest discover -s skills/site-cache/tests
 .venv-spec/bin/python -m unittest discover -s evals/enc28j60/tests
 .venv-spec/bin/python evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests

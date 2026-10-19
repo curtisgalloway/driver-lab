@@ -115,7 +115,10 @@ is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the con
 
    Facts-file `check` reads the target marker and applies citation/license rules without
    installing the file in a spec root or requiring a verification record. It accepts no context,
-   stub or verification options. Add `--docs-dir DIR` to resolve/show to hash `DIR/NAME` bytes.
+   stub or verification options. Add `--docs-dir DIR` to resolve/show to hash `DIR/NAME` bytes
+   (use [site-cache](../site-cache/SKILL.md)'s `site_cache.py pin` to discover and pin wiki or
+   web documents and `site_cache.py materialize <facts> --docs-dir DIR --root <root>` to
+   populate `DIR/NAME`).
    Inspect errors, warnings and skipped-anchor counts; an exit 0 with skips is incomplete.
    Fix evidence, not the root policy. License surprises mean remove the refused evidence and
    report the mistake. Search support still needs the reader's search; mechanical resolution

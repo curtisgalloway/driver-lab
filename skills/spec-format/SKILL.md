@@ -2,7 +2,7 @@
 name: spec-format
 description: >-
   Reference skill: the spec format contract for YAML hardware specs and verification records.
-  Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving spec.py.
+  Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving driver-lab.
   Defines evidence classes, references, roots, rendering and freshness; schemas define shapes.
   Also read when asked for a board atlas or spec map (render --format atlas): an interactive map
   of a board's specs.
@@ -125,7 +125,7 @@ holds (names a bitmask, opcode table or enum without its values, or leaves out r
 or footnotes), add `todo: {check: document, text: ...}` saying what was left out and where:
 `Per-bit Function Type encodings (Table 12-47, p. 1857) not extracted.` The Markdown and HTML
 renders show it beside the record (and, for a spec with typed payloads, in the generated open
-questions), and `spec.py todo --check document` lists it. A record holds one TODO. When it
+questions), and `driver-lab todo --check document` lists it. A record holds one TODO. When it
 already needs one, put the omission on the payload row it concerns if there is one; otherwise
 say both things in the existing TODO's text, which keeps its own `check`, so the
 `--check document` list no longer shows the omission.
@@ -226,10 +226,15 @@ conflicts/observations and evidence in premises do not bypass the gate.
 ## Resources, roots and composition
 
 `resources.documents` is the one document registry. `url` is the canonical citation URL;
-`retrieval` lists working fetch URLs separately. For Arm manuals keep
-`https://developer.arm.com/documentation/<id>/latest` as the citation and record the actual
-documentation-service static PDF URL in retrieval, with revision, SHA-256 and page count when
-bytes are available. Documents in git record the commit read. `cite: false` means map-only
+`retrieval` lists working fetch URLs separately:
+- Public NXP manuals blocked by CDN bot filtering on `https://www.nxp.com/docs/en/...` should
+  record `url: https://www.nxp.com/docs/en/...` and `retrieval: https://cache.nxp.com/docs/en/...`.
+- Public Arm TRMs and architecture reference manuals blocked on
+  `https://developer.arm.com/documentation/<doc_id>/latest` should query
+  `https://documentation-service.arm.com/documentation/<doc_id>/latest/` to obtain the direct
+  asset URL `https://documentation-service.arm.com/static/<object_id>` for `retrieval:`, with
+  revision, SHA-256 and page count when bytes are available.
+Documents in git record the commit read. `cite: false` means map-only
 and cannot be cited; otherwise omit `cite` (`cite: true` is not allowed). Fetch status
 (`ok`, `blocked`, `truncated`, `partial`) records availability, never validity.
 
@@ -271,7 +276,7 @@ board-expert's shipped `specs/`; loaded skills' `board-spec root: <path>` lines;
 top-level marker; the user's board-specs configuration marker. Skill pointer paths are relative
 to the checkout or user-supplied absolute paths; machine paths never go into specs. Entries in
 a marker's `roots` are relative to that marker file, or absolute, as the root schema defines.
-The reader expands marker `roots` in order; CLI arguments are explicit (`spec.py` does not expand them).
+The reader expands marker `roots` in order; CLI arguments are explicit (`driver-lab` does not expand them).
 Deduplicate roots and require `format: 2` throughout the composition. No symlinks within or on
 the route to a root, no nested markers.
 
@@ -314,13 +319,13 @@ spec of the root lists to be in the ledger with an agreeing `access` and `sha256
 `access: private` under a `public` layer, and no misnamed ledger (`corpus.yml`). Ledger errors
 fail the check but leave the root trusted, so references into it still resolve; a `sha256`
 mismatch is the exception and makes the root untrusted. A `spec:` disposition that does not
-resolve counts as `unresolved`, not specified. `spec.py corpus`
+resolve counts as `unresolved`, not specified. `driver-lab corpus`
 also fails a checked root with no ledger and prints its coverage; the repository checks run it
 under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 
 ### Document indexes
 
-`spec.py index <document> --root <root> --docs-dir <dir>` writes
+`driver-lab index <document> --root <root> --docs-dir <dir>` writes
 `<root>/index/<document>.index.yaml` ([schema](schema/index.schema.json)) from `<dir>/<document>`:
 each section's `number` (when its title starts with one; a lone number followed by a unit, as
 in `12 MHz clock`, is a quantity, not a number), `title` (plain text for Markdown), `level`
@@ -351,7 +356,8 @@ must match. GAP belongs to gap facts only. FAIL carries `correction`; ADJUDICATE
 `readings` until settled to PASS/FAIL, retaining `adjudication` and readings. Every verdict
 states `contrary_evidence` and `citation_precision`.
 
-Use `spec.py status --json` to get each current `basis` and `upstream` map to write a verdict;
+Use `driver-lab status --json` (adding `--no-fail-on-pending` when specs are still unverified) to
+get each current `basis` and `upstream` map to write a verdict;
 omit `upstream` when empty. `canonical: fact-v1` identifies the hash contract: fact except
 `section`, cited resources, assumptions and referenced facts' bases. Whole cited entries count
 except `records.BOOKKEEPING`: document `verified`, `fetch`, `note`; repos `verified`, `fetch`,
@@ -377,7 +383,7 @@ list, not a list of all failed verdicts.
 
 ## Inventory
 
-`spec.py inventory <file> --headers <path>...` compares structured register offsets and
+`driver-lab inventory <file> --headers <path>...` compares structured register offsets and
 field masks with constants in the cited headers at the immutable source pin. Unknown names
 carry reasons, fail the command even when covered, and still count for omission checks;
 `--strict` also fails on omissions. Prose does not count as coverage.
@@ -424,32 +430,34 @@ output, and its jump links only add a heading anchor to a document URL the spec 
 
 ## Command line
 
-Substitute the installed `spec-format/scripts/spec.py` path for the repository-relative path.
-Install [requirements.txt](requirements.txt) in a virtual environment with pip's
-`--require-hashes`; all commands require pinned versions, without a fallback parser.
-`python3 skills/spec-format/scripts/spec.py --skill` prints usage.
+Before running any subcommand, run `driver-lab --version` to verify the compiled CLI is installed
+and embeds a non-`unknown` `DRIVER_LAB_TOOL_COMMIT` (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <driver-lab>`). `driver-lab --skill` prints usage.
 
 ```text
-spec.py validate <file>... [--root <dir>] [--json]
-spec.py check <file.facts.yaml>... --root <dir> [--require-license] [--json]
-spec.py check <root>... [--context-root <dir>]... [--require-license]
+driver-lab validate <file>... [--root <dir>] [--context-root <dir>]... [--json]
+driver-lab check <file.facts.yaml>... --root <dir> [--require-license] [--json]
+driver-lab check <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stub <SKILL.md>]... [--stubs-from <dir>]...
-    [--require-verified pr|main] [--json]
-spec.py status <root>... [--context-root <dir>]... [--require-license]
-    [--public-skill <name>]... [--stale] [--json]
-spec.py todo <root>... [--context-root <dir>]... [--require-license]
+    [--require-verified pr|main] [--resolve-headings] [--json]
+driver-lab status <root>... [--context-root <dir>]... [--require-license]
+    [--public-skill <name>]... [--stale] [--no-fail-on-pending] [--json]
+driver-lab todo <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--check hardware|document|source] [--json]
-spec.py corpus <root>... [--context-root <dir>]... [--require-license]
+driver-lab corpus <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--json]
-spec.py index <document> --root <dir> --docs-dir <dir> [--json]
-spec.py render <root>... [--context-root <dir>]... [--require-license]
+driver-lab index <document> --root <dir> --docs-dir <dir> [--json]
+driver-lab render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
-    [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html [--json]
-spec.py resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
-    [--root DIR] [--timeout SECONDS] [--limit-mb N] [--json]
-spec.py show <file>... [same resolver options]
-spec.py drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
-spec.py inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
+    [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html|atlas [--json]
+driver-lab resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
+    [--root DIR] [--context-root <dir>]... [--timeout SECONDS] [--limit-mb N] [--json]
+driver-lab show <file>... [same resolver options]
+driver-lab drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
+driver-lab inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
+driver-lab fetch <file>... --cache <dir> [--root DIR] [--context-root <dir>]... [--json]
+driver-lab stubgen <domains.yaml> --out <skills-dir> [--check]
+driver-lab publish build|check <root>... --out <site-dir> ...
 ```
 
 Availability: validate/check/status are SF2-1–3; `todo` (issue 112), `corpus` (issue 153) and `index` (issue 155) follow them; Markdown render is SF2-4; HTML render and the
@@ -529,10 +537,10 @@ Two input roots, one contributing root (the roots of `tests/fixtures/worked-exam
 `permissive` is a context root and the view is not merged, so only `docs` is rendered.
 
 ```text
-$ spec.py render docs --context-root permissive --spec bcm2711 --format md \
+$ driver-lab render docs --context-root permissive --spec bcm2711 --format md \
     --source-commit docs=<40-hex> --source-commit permissive=<40-hex>
 usage error: --source-commit ROOT must name a rendered root directory (rendered: docs)
-$ spec.py render docs --context-root permissive --spec bcm2711 --format md \
+$ driver-lab render docs --context-root permissive --spec bcm2711 --format md \
     --source-commit docs=<40-hex>
 ```
 

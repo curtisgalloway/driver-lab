@@ -101,7 +101,7 @@ paths for each harness.
   sequence and layout payloads hold the programming data. Repository resources declare each
   pin's full commit, license and per-file license evidence. The placement rule chooses a
   spec repository that accepts every cited source's license.
-  `spec.py check/resolve/show/drift/inventory` check structure and licenses, resolve citations,
+  `driver-lab check/resolve/show/drift/inventory` check structure and licenses, resolve citations,
   show claims beside evidence, compare pins and compare register payloads with headers.
 - **`reference-driver-review`** compares an implementation with a pinned reference for the
   same hardware. It produces a `kind: review` YAML spec: repositories have `role: impl` or
@@ -111,9 +111,9 @@ paths for each harness.
   review, never driver code.
 - **`hardware-investigator`** answers one board or peripheral question as `kind: facts` YAML
   ready for peripheral authoring. It gets the map from `board-expert` and checks source
-  licenses against the target root before reading source evidence. Its `license_gate.py`
+  licenses against the target root before reading source evidence. `driver-lab license-gate`
   uses the spec format’s strict marker validation and shared SPDX acceptance rules; `--facts` runs
-  the complete citation gate. It needs spec-format's hash-pinned dependencies. The
+  the complete citation gate. The
   [worked example](skills/hardware-investigator/WORKED-EXAMPLE.md) exercises accepting,
   refusing and alternate-source cases with synthetic sources.
 
@@ -127,7 +127,7 @@ board, SoC, chip and IP specs compose through `parts` and `instances`; overlays 
 from other roots in a fixed layer order. Reference source stays in an out-of-tree cache.
 
 The shared contract is [spec-format](skills/spec-format/SKILL.md), with a pointer at
-[board-expert/SPEC-FORMAT.md](skills/board-expert/SPEC-FORMAT.md). `spec.py check` enforces
+[board-expert/SPEC-FORMAT.md](skills/board-expert/SPEC-FORMAT.md). `driver-lab check` enforces
 schemas, references, composition, license policy, public-root restrictions, stub resolution
 and verification records. Generated Markdown and HTML views present the YAML with provenance
 and per-fact status; edit the YAML, then regenerate the views.
@@ -154,12 +154,14 @@ checked topology format from the graph views still to be delivered.
 - **`spec-verifier`** re-derives each fact from its evidence in fresh reader contexts and writes
   `<root>/resources/<name>.verify.yaml`, one record per spec file, including overlays.
   Verdicts use fact ids, or sub-keys for independently supported register fields and sequence
-  steps. Critical facts need a second independent reader. `spec.py status` computes per-fact
+  steps. Critical facts need a second independent reader. `driver-lab status` computes per-fact
   freshness from basis and dependency hashes; whole-file `spec_sha256` is informational.
   `--require-verified pr|main` selects the checking policy. The verifier proposes corrections
   and never edits the spec.
-- **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and CLI:
-  `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift` and `inventory`.
+- **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and `driver-lab` CLI:
+  `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift`, `inventory`, `index`,
+  `todo`, `corpus`, `fetch`, `stubgen`, `publish`, `license-gate`, `prose-facts`, `resource`,
+  `assemble`, `verify`, `eval` and `campaign`.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
@@ -192,16 +194,12 @@ Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
 
 ## Tests
 
-Install the hash-pinned dependencies and run the spec-format suites and shipped-root check:
+Build `driver-lab` and run the Rust test suite and shipped-root check:
 
 ```bash
-uv venv /tmp/driver-lab-spec
-uv pip install --python /tmp/driver-lab-spec/bin/python --require-hashes -r skills/spec-format/requirements.txt
-python3 -m unittest discover -s skills/board-expert/tests -v
-/tmp/driver-lab-spec/bin/python -m unittest discover -s skills/spec-format/tests -v
-/tmp/driver-lab-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests -v
-python3 -m unittest discover -s skills/spec-eval/tests -v
-/tmp/driver-lab-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
+cargo test --locked --offline
+cargo build --release --locked
+target/release/driver-lab check skills/board-expert/specs --stubs-from skills --require-license
 ```
 
 Add `--require-verified pr` to reject missing or stale verdicts; `main` allows upstream-stale

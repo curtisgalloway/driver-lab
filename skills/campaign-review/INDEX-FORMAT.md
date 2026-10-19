@@ -226,11 +226,11 @@ is a records finding. Outward reports remain user decisions.
 
 ## Checker boundary
 
-From the repository root, with `.venv-spec` built as in the checks list in `AGENTS.md`:
+From the repository root, with `driver-lab` on `PATH`:
 
 ```bash
-.venv-spec/bin/python skills/campaign-review/scripts/index_check.py evals/e1000
-.venv-spec/bin/python -m unittest discover -s skills/campaign-review/tests
+driver-lab campaign index-check evals/e1000
+cargo test --test test_campaign
 ```
 
 `--root` explicitly selects the evidence root (default: working directory).
@@ -245,8 +245,8 @@ and cannot supply a matching check name.
 Name existence does not prove stimulus, scenario reachability or qualification;
 the artifact reviewer traces those to evidence.
 
-Exit codes: 0 clean, 1 findings, 2 usage, 3 missing input/PyYAML. `--json` emits
-one object with `ok`, `counts`, `findings`; `--skill` prints embedded usage.
+Exit codes: 0 clean, 1 findings, 2 usage, 3 missing input. `--json` emits
+one object with `ok`, `counts`, `findings`.
 
 ## Source registry: sources.yaml (version 1)
 
@@ -496,8 +496,8 @@ do not prevent a sufficient campaign once current coverage replaces their use.
 ### Adapter and report
 
 ```bash
-uv run --with pyyaml python3 skills/campaign-review/scripts/pinned_file_adapter.py evals/e1000/sources.yaml spec --json
-uv run --with pyyaml python3 skills/campaign-review/scripts/sweep.py evals/e1000 --json
+driver-lab campaign pinned-file-adapter evals/e1000/sources.yaml spec --json
+driver-lab campaign sweep evals/e1000 --json
 ```
 
 The adapter supports `--root`, `--run-store`, `--write` and `--dry-run`. With no
@@ -577,7 +577,7 @@ From the repository root, capture an adapter's output and supply one existing
 isolated run directory:
 
 ```bash
-uv run --with pyyaml python3 skills/campaign-review/scripts/contract_check.py \
+driver-lab campaign contract-check \
   --source-json adapter-output.json --run-dir isolated-run --json
 ```
 

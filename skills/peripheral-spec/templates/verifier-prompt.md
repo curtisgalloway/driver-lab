@@ -15,14 +15,14 @@ Independently verify <spec> in <root>. You did not author it. Load `peripheral-s
 additional source/target bindings: <additional bindings>. Resolve license lines, and read
 notices/license files for every `license_from` confirmation the resolver cannot prove.
 
-Run with the hash-pinned interpreter `<python>` and sibling `<spec.py>`:
+Run `driver-lab --version` first, then run:
 
 ```bash
-<python> <spec.py> check <root> --require-license
-<python> <spec.py> resolve <spec> --root <root> --repo linux=<source-checkout>
-<python> <spec.py> inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
-<python> <spec.py> show <spec> --root <root> --repo linux=<source-checkout>
-<python> <spec.py> status <root> --json
+driver-lab check <root> --require-license
+driver-lab resolve <spec> --root <root> --repo linux=<source-checkout>
+driver-lab inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+driver-lab show <spec> --root <root> --repo linux=<source-checkout>
+driver-lab status <root> --json --no-fail-on-pending
 ```
 
 Repeat bindings for all cited entries; add document bytes via `--docs-dir DIR` (`DIR/NAME`).

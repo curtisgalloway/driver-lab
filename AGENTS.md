@@ -41,22 +41,29 @@ python3 utilities/check-no-private-paths.py
 python3 utilities/check-open-side.py
 python3 utilities/check-no-hardware-facts.py
 python3 -m unittest discover -s utilities/tests
-python3 -m unittest discover -s skills/board-expert/tests
-python3 -m venv .venv-spec && .venv-spec/bin/pip install -q --require-hashes -r skills/spec-format/requirements.txt
-.venv-spec/bin/python skills/spec-format/scripts/spec.py check skills/board-expert/specs --stubs-from skills --require-license
-.venv-spec/bin/python -m unittest discover -s skills/spec-format/tests
-.venv-spec/bin/python -m unittest discover -s skills/hardware-investigator/tests
-.venv-spec/bin/python -m unittest discover -s evals/enc28j60/tests
-.venv-spec/bin/python evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
+cargo test --locked --offline
+cargo build --release --locked
+target/release/driver-lab check skills/board-expert/specs --stubs-from skills --require-license
+target/release/driver-lab status skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/driver-lab validate skills/board-expert/specs/board-specs.yaml skills/spec-verifier/examples/widget/widget.spec.yaml
+bwrap --ro-bind / / --unshare-net target/release/driver-lab check skills/board-expert/specs --stubs-from skills --require-license
+bwrap --ro-bind / / --unshare-net target/release/driver-lab status skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/driver-lab todo skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/driver-lab prose-facts agents/board-expert.md
+bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format md >/dev/null
+bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format html >/dev/null
+python3 -m venv .venv-evals && .venv-evals/bin/pip install -q --require-hashes -r evals/requirements.txt
+.venv-evals/bin/python -m unittest discover -s evals/enc28j60/tests
+.venv-evals/bin/python evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
-.venv-spec/bin/python -m unittest discover -s skills/campaign-review/tests
-.venv-spec/bin/python skills/campaign-review/scripts/index_check.py evals/e1000
+.venv-evals/bin/python evals/e1000/index_check.py evals/e1000
+target/release/driver-lab campaign index-check evals/e1000
 ```
 
 ## Rules the work runs under
 
 - **Continuous review**: at the start of each orchestrator session, refresh applicable
-  source identities and run `skills/campaign-review/scripts/sweep.py` on the campaign.
+  source identities and run `driver-lab campaign sweep` on the campaign.
   Follow its stopping report and guarded queue. A batch contains at most three tier-1
   units, each ending in a reviewed checkpoint commit; tier-2 work requires its own
   recorded user decision. Pull requests still open only on the user's explicit "push".
@@ -99,8 +106,9 @@ python3 -m unittest discover -s evals/e1000/harness/tests
       the new untracked files, all before any patched code runs; the suites come last, and
       the worktree must be unchanged after them. It fails on any refused file, failing suite,
       home path, unreadable new file, binary change, or change to a gate input (the check
-      scripts, the gate, the Codex wrappers, the pinned requirements, CI workflows); it rebuilds `.venv-spec` with
-      `--require-hashes` and prints every risky-pattern hit in the patch's added lines (shell
+      scripts, the gate, the Codex wrappers, the Rust crate and conformance fixtures, the
+      pinned evaluation requirements, CI workflows); it runs `cargo test --locked --offline`
+      and prints every risky-pattern hit in the patch's added lines (shell
       or eval calls, network calls, subprocess use, home or absolute user paths, dotfiles,
       agent configuration) verbatim.
     - The orchestrator reads any hits; they never pass or fail the gate on their own.

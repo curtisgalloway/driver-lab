@@ -4,7 +4,7 @@
 #
 # The checks CI runs (.github/workflows/checks.yml), runnable locally from the top of the
 # repository. specs/ is a spec format root; the contract is driver-lab's
-# skills/spec-format/SKILL.md and the tool is driver-lab (or skills/spec-format/scripts/spec.py).
+# skills/spec-format/SKILL.md and the tool is driver-lab.
 #
 #   scripts/checks.sh [--mode pr|main] <step> <driver-lab checkout> [<further root>...]
 #
@@ -23,7 +23,7 @@
 #              view and, when further roots are given, the merged views; a view that cannot be
 #              built fails the step
 #   self-test  prove the license gate with this repository's root marker on driver-lab's
-#              the spec format fixtures (below)
+#              spec format fixtures (below)
 #   all        the four in order
 #
 # --mode is the verification policy (design D19). pr (the default): every fact must be current,
@@ -44,11 +44,9 @@
 # license line that disagrees) fails the step. The limit bounds what is kept, not what is
 # transferred. Unset, resolve fetches nothing and says so.
 #
-# Needs bash 3.2 or later and either DRIVER_LAB_BIN or a Python with driver-lab's
-# skills/spec-format/requirements.txt installed with pip's --require-hashes:
-#   python3 -m venv .venv-spec
-#   .venv-spec/bin/pip install --require-hashes -r <driver-lab>/skills/spec-format/requirements.txt
-#   CHECKS_PYTHON=.venv-spec/bin/python scripts/checks.sh all <driver-lab>
+# Needs bash 3.2 or later and driver-lab (set DRIVER_LAB_BIN, put driver-lab on PATH, or build
+# <driver-lab>/target/release/driver-lab with cargo build --release --locked):
+#   DRIVER_LAB_BIN=<driver-lab>/target/release/driver-lab scripts/checks.sh all <driver-lab>
 #
 # Exit codes: 0 passed, 1 a check failed, 2 usage error, 3 missing precondition.
 set -euo pipefail
@@ -103,9 +101,6 @@ if [ "${#further[@]}" -lt "$REQUIRE_FURTHER" ]; then
   exit 2
 fi
 
-SPEC=$dl/skills/spec-format/scripts/spec.py
-STUBGEN=$dl/skills/board-spec-scaffold/scripts/stubgen.py
-REQUIREMENTS=$dl/skills/spec-format/requirements.txt
 FIXTURES=$dl/skills/spec-format/tests/fixtures/license-gate
 
 needed=("$FIXTURES/specs/$FIT" "$FIXTURES/specs/$MISFIT"
@@ -116,19 +111,22 @@ if [ -n "$BOARD_FIT" ]; then
   needed+=("$FIXTURES/board/$BOARD_FIT")
 fi
 
-PY=("${CHECKS_PYTHON:-python3}")
 if [ -n "${DRIVER_LAB_BIN:-}" ]; then
   if [ ! -x "$DRIVER_LAB_BIN" ]; then
     echo "missing precondition: $DRIVER_LAB_BIN is not an executable file" >&2
     exit 3
   fi
-  SPEC_CMD=("$DRIVER_LAB_BIN")
-  STUBGEN_CMD=("$DRIVER_LAB_BIN" stubgen)
+  DL_BIN="$DRIVER_LAB_BIN"
+elif [ -x "$dl/target/release/driver-lab" ]; then
+  DL_BIN="$dl/target/release/driver-lab"
+elif command -v driver-lab >/dev/null 2>&1; then
+  DL_BIN="$(command -v driver-lab)"
 else
-  needed+=("$SPEC" "$REQUIREMENTS")
-  SPEC_CMD=("${PY[@]}" "$SPEC")
-  STUBGEN_CMD=("${PY[@]}" -I "$STUBGEN")
+  echo "missing precondition: driver-lab binary not found (set DRIVER_LAB_BIN, add driver-lab to PATH, or build $dl/target/release/driver-lab)" >&2
+  exit 3
 fi
+SPEC_CMD=("$DL_BIN")
+STUBGEN_CMD=("$DL_BIN" stubgen)
 
 for f in "${needed[@]}"; do
   if [ ! -f "$f" ]; then
@@ -136,22 +134,6 @@ for f in "${needed[@]}"; do
     exit 3
   fi
 done
-
-if [ -z "${DRIVER_LAB_BIN:-}" ]; then
-  # spec.py's own dependency check: the versions requirements.txt pins, imported from the pin.
-  if ! deps=$("${PY[@]}" -I -c '
-import sys
-sys.path.insert(0, sys.argv[1])
-import spec
-problems = spec.check_dependencies()
-print("; ".join(problems))
-sys.exit(1 if problems else 0)
-' "$dl/skills/spec-format/scripts" 2>&1); then
-    echo "missing dependency: ${deps:-spec.py cannot be imported by ${PY[*]}} (create a" \
-      "virtualenv with pip install --require-hashes -r $REQUIREMENTS and set CHECKS_PYTHON)" >&2
-    exit 3
-  fi
-fi
 
 if [ ! -f specs/board-specs.yaml ]; then
   echo "missing precondition: specs/board-specs.yaml (run from the top of the repository)" >&2
@@ -172,7 +154,7 @@ for r in ${further[@]+"${further[@]}"}; do
   ctx+=(--context-root "$r")
 done
 
-# Runs driver-lab / spec.py and keeps the exit-code contract: 0, 1 and 3 pass through;
+# Runs driver-lab and keeps the exit-code contract: 0, 1 and 3 pass through;
 # anything else (2, a usage error in this script's call, or 100, an internal error) is a failed check.
 spec() {
   local rc=0
@@ -180,7 +162,7 @@ spec() {
   case "$rc" in
     0 | 1 | 3) return "$rc" ;;
     *)
-      echo "error: spec.py $1 exited $rc (usage or internal error; nothing was judged)"
+      echo "error: driver-lab $1 exited $rc (usage or internal error; nothing was judged)"
       return 1
       ;;
   esac
@@ -209,7 +191,7 @@ check_specs() {
   if [ -n "$stubs_dir" ]; then
     stub_args=(--stubs-from "$stubs_dir")
   fi
-  echo "== spec.py check specs ${ctx[*]+${ctx[*]} }${stub_args[*]+${stub_args[*]} }--require-license --require-verified $mode"
+  echo "== driver-lab check specs ${ctx[*]+${ctx[*]} }${stub_args[*]+${stub_args[*]} }--require-license --require-verified $mode"
   spec check specs ${ctx[@]+"${ctx[@]}"} ${stub_args[@]+"${stub_args[@]}"} \
     --require-license --require-verified "$mode" || return
   if [ -n "$domains_manifest" ]; then
@@ -217,14 +199,15 @@ check_specs() {
     stubgen "$domains_manifest" --out "${stubs_dir:-skills}" --check || return
   fi
   if [ "${REQUIRE_CORPUS:-0}" = 1 ]; then
-    echo "== spec.py corpus specs ${ctx[*]+${ctx[*]} }--require-license"
+    echo "== driver-lab corpus specs ${ctx[*]+${ctx[*]} }--require-license"
     spec corpus specs ${ctx[@]+"${ctx[@]}"} --require-license
   fi
 }
 
 # Print "name<TAB>commit" lines for every repos entry with a commit in the given spec files.
 discover_repo_pins() {
-  "${PY[@]}" - "$@" <<'PYEOF'
+  python3 - "$@" <<'PYEOF'
+import re
 import sys
 
 try:
@@ -255,6 +238,18 @@ for path in sys.argv[1:]:
                             if pair not in seen:
                                 seen.append(pair)
             continue
+    cur_name = None
+    for raw in text.splitlines():
+        m_name = re.match(r"^\s*-\s*name:\s*['\"]?([A-Za-z0-9_.-]+)['\"]?\s*$", raw)
+        if m_name:
+            cur_name = m_name.group(1)
+            continue
+        m_commit = re.match(r"^\s*commit:\s*['\"]?([0-9a-fA-F]{40})['\"]?\s*$", raw)
+        if m_commit and cur_name:
+            pair = (cur_name, m_commit.group(1))
+            if pair not in seen:
+                seen.append(pair)
+            cur_name = None
 for name, commit in seen:
     print(f"{name}\t{commit}")
 PYEOF
@@ -317,7 +312,7 @@ check_resolve() {
       fi
     done <<< "$pins_out"
   fi
-  echo "== spec.py resolve ${files[*]} ${repo_args[*]+${repo_args[*]} }--root specs --limit-mb ${SRC_FETCH_LIMIT_MB:-50}"
+  echo "== driver-lab resolve ${files[*]} ${repo_args[*]+${repo_args[*]} }--root specs --limit-mb ${SRC_FETCH_LIMIT_MB:-50}"
   spec resolve "${files[@]}" ${repo_args[@]+"${repo_args[@]}"} --root specs --limit-mb "${SRC_FETCH_LIMIT_MB:-50}"
 }
 
@@ -329,7 +324,7 @@ check_render() {
       continue
     fi
     for format in md html; do
-      echo "== spec.py render specs ${ctx[*]+${ctx[*]} }--require-license --with-status" \
+      echo "== driver-lab render specs ${ctx[*]+${ctx[*]} }--require-license --with-status" \
         "${merged:+$merged }--format $format"
       if spec render specs ${ctx[@]+"${ctx[@]}"} --require-license --with-status \
           ${merged:+"$merged"} --format "$format" > "$out/view.$format"; then

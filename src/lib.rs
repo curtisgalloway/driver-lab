@@ -14,6 +14,7 @@ pub mod schema;
 pub mod spdx;
 pub mod specmd;
 pub mod yaml_strict;
+pub mod campaign;
 pub mod author;
 pub mod verify_flow;
 pub mod eval;
@@ -527,14 +528,12 @@ where
             prosefacts::run_prose_facts_cmd(&pf_args.paths, cli.json, stdout, stderr)
         }
         Command::LicenseGate(gate_args) => run_license_gate_cmd(&cli, gate_args, stdout, stderr),
-<<<<<<< HEAD
         Command::Resource(res_args) => author::run_resource_cmd(res_args, &scratch, stdout, stderr),
         Command::Assemble(asm_args) => author::run_assemble_cmd(asm_args, &scratch, stdout, stderr),
         Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
 
-=======
         Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
->>>>>>> f151191 (driver-porting: RT-9 — spec evaluation harness with sandboxed candidate execution)
+        Command::Campaign(campaign_args) => campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr),
         other => run_stub_subcommand(&cli, other, stdout, stderr),
     }
 }

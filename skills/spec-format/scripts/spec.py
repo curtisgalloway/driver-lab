@@ -45,7 +45,8 @@ CORPUS = "corpus.yaml"
 
 # Distribution name -> import name. The three libraries the spec format is built on (D8, D9, D20);
 # every spec.py subcommand runs under the same pinned set.
-DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markdown_it"}
+DIRECT = {"pyyaml": "yaml", "jsonschema": "jsonschema", "markdown-it-py": "markdown_it",
+          "pypdf": "pypdf"}
 
 SKILL = """\
 ---
@@ -68,6 +69,8 @@ description: Drive spec.py, the spec format tool (validate a file against its sc
         [--json]
     python3 skills/spec-format/scripts/spec.py corpus <root>... [--context-root <dir>]...
         [--require-license] [--public-skill <name>]... [--json]
+    python3 skills/spec-format/scripts/spec.py index <document> --root <dir> --docs-dir <dir>
+        [--json]
     python3 skills/spec-format/scripts/spec.py render <root>... [--context-root <dir>]...
         [--spec <id>] [--merged] [--with-status] [--source-commit <ROOT=40-hex>]...
         [--tool-commit <40-hex>] --format md|html|atlas [--json]
@@ -128,6 +131,13 @@ spec lists that document, every document a spec of the root lists is in the ledg
 `sha256` when both give one), no name is listed twice, and under a `public` layer no entry is
 `access: private`. Ledger errors fail the run but leave the root trusted, except a `sha256`
 mismatch, which may mean a spec cites other bytes.
+
+`index` writes `<root>/index/<document>.index.yaml` (index.schema.json) from
+`<docs-dir>/<document>`: the section numbers, titles, levels and PDF page ranges of a PDF's
+outline, or the line ranges of a Markdown file's headings, with the document's `sha256`. It
+refuses bytes whose hash is not the registry's, a document without `sha256`, and a PDF with no
+outline. `check` validates every index and warns when its hash or page count is not the
+registry's.
 
 Verification records: `<root>/resources/<name>.verify.yaml` belongs to `<name>.spec.yaml` (any
 directory of the root); its `spec` and `spec_file` name that file, every verdict key names one of
@@ -295,7 +305,7 @@ def _installed(dist: str) -> str | None:
 
 def check_dependencies() -> list[str]:
     """Problems with the pinned dependencies; empty when every pin that applies is installed
-    at its version and the three direct ones import."""
+    at its version and the direct ones import."""
     import importlib
 
     try:
@@ -443,19 +453,21 @@ def schema_kind(path: Path) -> str:
         return "root"
     if name == CORPUS:
         return "corpus"
+    if name.endswith(".index.yaml"):
+        return "index"
     if name.endswith(".verify.yaml"):
         return "verify"
     if name.endswith(".spec.yaml") or name.endswith(".facts.yaml"):
         return "spec"
     raise Usage(
         f"{path}: cannot tell which schema applies; name the file *.spec.yaml, *.facts.yaml, "
-        f"*.verify.yaml, {MARKER} or {CORPUS}"
+        f"*.verify.yaml, *.index.yaml, {MARKER} or {CORPUS}"
     )
 
 
 def load_schemas() -> dict[str, dict]:
     schemas = {}
-    for kind in ("spec", "root", "verify", "corpus"):
+    for kind in ("spec", "root", "verify", "corpus", "index"):
         path = SCHEMA_DIR / f"{kind}.schema.json"
         try:
             schemas[kind] = _strict_json(path)
@@ -1041,6 +1053,7 @@ def source_commit_arg(value):
 def build_parser() -> argparse.ArgumentParser:
     sys.path.insert(0, str(HERE))
     import drift
+    import index
     import resolve
     import inventory
 
@@ -1123,6 +1136,7 @@ def build_parser() -> argparse.ArgumentParser:
                          "(needs --spec)")
     rd.add_argument("--json", action="store_true", help="one JSON object on stdout")
     resolve.register(sub)
+    index.register(sub)
     drift.register(sub)
     inventory.register(sub)
     return parser
@@ -1193,7 +1207,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command is None:
         return fail("usage", EXIT_USAGE,
-                    ["name a subcommand: validate, check, status, todo, corpus, render, resolve, show, drift, inventory"])
+                    ["name a subcommand: validate, check, status, todo, corpus, render, index, resolve, "
+                     "show, drift, inventory"])
 
     try:
         problems = check_dependencies()

@@ -553,9 +553,27 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
                     _author(out, notice["text"], "Notice")
     for root in dict.fromkeys(f.root for f in selected):
         _coverage(out, root)
+        _indexes(out, root)
     view = "\n".join(out).rstrip() + "\n"
     specmd.check_view(view, out.expected)
     return view
+
+
+def _indexes(out, root):
+    """Each indexed document's sections (#155) and the facts citing each; a section no fact
+    cites is a place the specs do not cover yet."""
+    import index
+
+    for entry in index.links(root):
+        out.heading(2, "Document index (generated): " + escape(entry["document"]))
+        covered = sum(1 for s in entry["sections"] if s["facts"])
+        out.extend([escape(f"{covered} of {len(entry['sections'])} sections cited by a fact; "
+                           f"sha256 ") + code(entry["sha256"]) + ".", ""])
+        _table(out, "Sections", [
+            {"section": s.get("number", ""), "title": s["title"],
+             "pages" if "pages" in s else "lines": "–".join(str(n) for n in s.get(
+                 "pages", s.get("lines"))),
+             "facts": ", ".join(s["facts"]) or "none"} for s in entry["sections"]])
 
 
 def _coverage(out, root):

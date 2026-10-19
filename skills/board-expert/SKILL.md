@@ -122,6 +122,17 @@ those pages rather than searching the whole document. A missing omission marker 
 of completeness: open the locator whenever the question needs a row, bit, condition or
 footnote the record does not state.
 
+**When no composed fact covers the question** (no claim, payload or locator touches the
+topic), look it up in the root's section index before searching a document or answering from
+memory: `<root>/index/<document>.index.yaml`, written by `spec.py index` and pinned to the
+document's `sha256`. Find the section, read only its pages (or lines) from the materialized,
+hash-checked document, and answer from them. Such an answer is **`unverified (doc-read)`**:
+label it so, with document name, revision and page or section locator, and keep it apart from
+fact-backed claims in the report. A doc-read answer is never a verified fact, however clear the
+page; it becomes one only when a spec author records it and `spec-verifier` passes it. Record a
+**spec gap** for it (Report). With no index, or an index the check warns is stale, say so and
+read the document's own contents pages; never trust an index whose hash does not match.
+
 Read files rather than answer addresses, interrupts or ordering from memory. Apply every bus
 `ranges` translation explicitly to obtain CPU-physical addresses. When cloning is impractical,
 fetch needed raw files at a full commit into the same cache, recording the commit. Follow
@@ -176,6 +187,20 @@ not a fresh source reading. Do not publish private paths/endpoints in the report
 `spec.py todo <root>... --context-root <dependency root>... --check hardware` lists the open
 hardware TODOs as the input to a readback plan, and a narrow follow-up question names one fact id
 from that list instead of commissioning another general investigation.
+
+Keep **doc-read answers** in their own block after the fact-backed answer, each labeled
+`unverified (doc-read)` with document, revision and locator. For each, add a **spec gap**: a
+proposed gap record the next lap turns into a checked fact, in the spec's own shape:
+
+```yaml
+- id: <proposed-id>
+  section: <section>
+  title: <topic>
+  claim: <the question, as a gap; not the doc-read answer>
+  todo: {check: document, text: "read <document> §<section> (pp. <first>-<last>): <question>"}
+```
+
+Once authored, `spec.py todo --check document` lists it and `campaign-review` sees it.
 
 Return Needs decision per QUESTIONS before provenance when a fork remains. End with
 **Suggested spec change** when evidence adds/corrects something: originating file, existing

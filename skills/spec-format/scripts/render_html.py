@@ -520,8 +520,39 @@ def render(checker, *, spec_id=None, merged=False, with_status=False,
                 out.append('<section><h2>Source notice: ' + literal(notice['repo'] + ':' + notice['path']) +
                            '</h2><pre>' + escape(notice['text']) + '</pre></section>')
         out.append('</section>')
+    for root in dict.fromkeys(f.root for f in selected):
+        out.append(root_tables(root))
     out.append('</main></body></html>')
     return '\n'.join(out) + '\n'
+
+
+def root_tables(root):
+    """The root's corpus ledger (#153) and document indexes (#155), as fixed tables."""
+    import corpus
+    import index
+
+    out = []
+    cov = corpus.coverage(root)
+    if cov is not None:
+        out.append('<section><h2>' + literal('Corpus coverage (generated): ' + root.label) +
+                   '</h2><p>' + literal(corpus.summary(cov)) + '</p>')
+        for group in corpus.GROUPS:
+            out.append(table(group.capitalize(), [
+                {'name': r['name'], 'subsystem': r['subsystem'], 'state': r['state'],
+                 'disposition': r['disposition']} for r in cov[group]['rows']]))
+        out.append('</section>')
+    for entry in index.links(root):
+        covered = sum(1 for s in entry['sections'] if s['facts'])
+        out.append('<section><h2>' + literal('Document index (generated): ' + entry['document']) +
+                   '</h2><p>' + literal(f"{covered} of {len(entry['sections'])} sections cited "
+                                        f"by a fact; sha256 {entry['sha256']}") + '</p>')
+        out.append(table('Sections', [
+            {'section': s.get('number', ''), 'title': s['title'],
+             'pages' if 'pages' in s else 'lines': '–'.join(str(n) for n in s.get(
+                 'pages', s.get('lines'))),
+             'facts': ', '.join(s['facts']) or 'none'} for s in entry['sections']]))
+        out.append('</section>')
+    return ''.join(out)
 
 
 def command(api, args):

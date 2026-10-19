@@ -80,6 +80,46 @@ unchanged.
 All three are created together and are public. `bringup-kit`'s spec roots point at the docs and
 permissive repos, never at the GPL repo.
 
+### Standards and architecture specs (#154)
+
+Most SoC peripheral specs sit on an industry standard or a widely licensed IP block. Their
+generic facts (protocol registers, capability structures, architectural behavior) are written
+once, in documents-only roots, and every board and SoC root composes them through `describes`
+and `instances[].ip` instead of restating them. A peripheral spec then records only how the SoC
+integrates the standard: base addresses, instance count, lane widths, quirks.
+
+Layout, decided by the user on 2026-10-18:
+
+- **One repository per CPU architecture vendor**: Arm's architecture documents in one repository,
+  and Intel's and AMD's each in their own when work reaches them. The `arm-gicv3-ip` and
+  `arm-generic-timer-ip` specs would move there from `hardware-specs-docs` once it exists.
+- **One repository per very large standard family**: USB (including xHCI, Type-C, PD and TCPCI),
+  PCI (PCIe base and config-space capabilities) and Bluetooth each get their own.
+- **Smaller standards grouped by category**: for example a low-speed-bus repository (I2C/SMBus,
+  I3C, SPI, MDIO) and a storage repository (NVMe, SD/SDHCI, eMMC, UFS). Category names are chosen
+  when the first spec of the category is written.
+
+Each of these is a documents-only root like `hardware-specs-docs` (`accepts: []`, `[doc:]`
+citations only). Proposed, not yet decided: the license (CC-BY-4.0, as `hardware-specs-docs`)
+and the repository names, `hardware-specs-<vendor>`, `hardware-specs-<standard>` and
+`hardware-specs-<category>` (`hardware-specs-arm`, `hardware-specs-usb`,
+`hardware-specs-low-speed-bus`); each is created only on the user's go-ahead.
+
+What a public root may cite, by the document's `access` class (`spec.py check` enforces the
+`members-only` and `private` rows; the others are conventions):
+
+| `access` | Example | In a public root |
+| --- | --- | --- |
+| `public` | USB-IF specifications, xHCI, NVMe, Arm architecture manuals | cited as usual |
+| `registration` | standards a free account downloads | cited as usual; the root records the URL, never a copy |
+| `members-only` | parts of the PCI-SIG, JEDEC, VESA and MIPI catalogs | a map only (`cite: false`): a reader of a public root could not check the citation |
+| `private` | NDA or internal documents | never; the spec belongs in a vendor or local root |
+
+`board-expert` finds these repositories as it finds any root: a checkout listed in the user's
+configuration marker (`~/.config/board-specs/board-specs.yaml`, `roots:`) or in a project's
+marker. Each standards repository's README will carry an index table (spec id, revision, access
+class, and the roots that compose it), so one place shows what has been specified.
+
 ## Current state (measured 2026-10-05 at `a82785c`)
 
 - **Root marker** (`board-specs.yaml`): fields `layer`, `name`, optional `roots`

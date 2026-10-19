@@ -255,8 +255,8 @@ retrieval guidance in a note. `tools` is declarative: `via: skill:<name>` names 
 skill. Fetch-method strings (`fetch_via`, retrieval `via`) are prose, never commands. Internal
 access goes through a loaded vendor skill declared among tools: documents and repos have no
 invocation `via` field. A document may have `access`: `public`, `registration` (free sign-up), `members-only` (a
-standards body's or vendor's members), or `private` (not published; never under a `public`
-layer); repos have no `access` field.
+standards body's or vendor's members; under a `public` layer only as `cite: false`, a map), or
+`private` (not published; never under a `public` layer); repos have no `access` field.
 
 The marker requires `format: 2`, `name`, `layer`, `license`, `accepts`. Accepts holds single
 SPDX identifiers, not expressions; `[]` means documents only. The gate accepts `A OR B` when

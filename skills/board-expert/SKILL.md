@@ -55,7 +55,10 @@ or permissions; follow the caller's authorized scope.
 
 1. **Collect pointers**, in order: this skill's `specs/`; loaded skills' `board-spec root: <path>`
    lines; `board-specs.yaml` at the checkout root (or project-declared multi-repository root);
-   the user's configuration marker at `~/.config/board-specs/board-specs.yaml`. Expand any
+   the user's configuration marker at `~/.config/board-specs/board-specs.yaml`. Standards and
+   architecture roots (USB, PCI, Arm and so on; see the license-split design) are found the
+   same way: list their checkouts in that marker's `roots`, and compose their `ip` specs rather
+   than answering protocol questions from memory. Expand any
    marker's `roots` in listed order and deduplicate: those entries are relative to that marker
    file or absolute. Skill pointer paths are relative to the checkout or absolute.
    Never search the checkout for markers.

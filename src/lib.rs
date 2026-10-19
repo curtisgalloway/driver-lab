@@ -12,7 +12,7 @@ pub mod spdx;
 pub mod yaml_strict;
 pub mod author;
 pub mod verify_flow;
-
+pub mod eval;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use diagnostic::{DiagnosticEnvelope, EXIT_OK, EXIT_SANDBOX_ERROR, EXIT_USAGE_ERROR};
@@ -503,10 +503,14 @@ where
     match command {
         Command::Index(idx_args) => run_index_cmd(&cli, idx_args, &scratch, stdout, stderr),
         Command::LicenseGate(gate_args) => run_license_gate_cmd(&cli, gate_args, stdout, stderr),
+<<<<<<< HEAD
         Command::Resource(res_args) => author::run_resource_cmd(res_args, &scratch, stdout, stderr),
         Command::Assemble(asm_args) => author::run_assemble_cmd(asm_args, &scratch, stdout, stderr),
         Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
 
+=======
+        Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
+>>>>>>> f151191 (driver-porting: RT-9 — spec evaluation harness with sandboxed candidate execution)
         other => run_stub_subcommand(&cli, other, stdout, stderr),
     }
 }

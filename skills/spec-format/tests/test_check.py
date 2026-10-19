@@ -868,6 +868,30 @@ class BoardFixtures(unittest.TestCase):
         code, result = check(vendor)
         self.assertEqual(len(errors(result)), 3)  # without the base, every overlay dangles
 
+    def test_members_only_documents_are_maps_under_a_public_root(self):
+        """#154: a members-only document may be listed under a public root only as cite: false;
+        registration-only and public documents may be cited."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp) / "good_root"
+            shutil.copytree(CHECK / "good_root", root)
+            uart = root / "ip" / "widgetuart.spec.yaml"
+            text = uart.read_text(encoding="utf-8")
+            old = 'url: "https://example.invalid/uart-trm.pdf", access: public}'
+            self.assertIn(old, text)
+            for access, extra, bad in (("registration", "", False), ("members-only", "", True),
+                                       ("members-only", ", cite: false", None)):
+                with self.subTest(access=access, extra=extra):
+                    uart.write_text(text.replace(old, old.replace(
+                        "access: public}", f"access: {access}{extra}}}")), encoding="utf-8")
+                    code, result = check(root, "--public-skill", "widget-board-tools")
+                    found = [f["message"] for f in errors(result)]
+                    members = [m for m in found if "members-only document" in m]
+                    if bad is None:  # cite: false while the fact still cites it
+                        self.assertEqual(members, [])
+                        self.assertTrue(any("cite: false" in m for m in found), found)
+                    else:
+                        self.assertEqual(bool(members), bad, found)
+
     def test_stubs(self):
         code, result = check(CHECK / "good_root", "--public-skill", "widget-board-tools",
                              "--stubs-from", CHECK / "stubs", "--stub", CHECK / "stub_good.md",

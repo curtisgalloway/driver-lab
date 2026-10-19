@@ -1567,7 +1567,7 @@ Each is one session and one pull request, in this order:
 | License gate (SPDX expression logic), direct and transitive | | yes | |
 | `parts`, `overlays`, `variant_of`, `instances[].ip`, `instances[].peripheral`, `describes` resolve, to the right kind; stubs resolve | | yes | |
 | A peripheral spec no `describes` or instance row composes, beside a soc, chip or board (warning, D44) | | yes | |
-| Public-layer privacy (`access: private`, `via:` to a private skill) | | yes | |
+| Public-layer privacy (`access: private`; `access: members-only` without `cite: false`, #154; `via:` to a private skill) | | yes | |
 | Corpus ledger: a disposition per entry; `spec:` dispositions resolve; every listed document in the ledger, `sha256` agreeing; ledger required by `spec.py corpus` (#153) | disposition | yes | |
 | Template placeholders left in: `<`, a letter, then letters, digits, spaces, `-` or `_`, then `>`, outside code (`<linux/of.h>`, `<a@b>` and URLs are not placeholders; SF2-2 review) | | yes | |
 | Records: shape (schema), key per fact, summary counts, basis freshness, two readers for `critical` | shape | yes | |

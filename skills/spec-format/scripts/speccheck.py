@@ -28,7 +28,8 @@ already-parsed data and never over prose:
   entry whose license the file's root accepts, and every fact reference reaches, through its
   target's citations and references followed transitively, only repos entries the citing root
   accepts; with --require-license, also every repos entry no anchor or notice names;
-- under a `public` layer: no `access: private`, no tool `via:` a skill not named with
+- under a `public` layer: no `access: private`; a `members-only` document only as
+  `cite: false`; no tool `via:` a skill not named with
   --public-skill; anywhere: no unsubstituted template placeholder (`<...>` outside code);
 - the corpus ledger (`corpus.yaml` beside the marker, corpus.py, #153): every `spec:`
   disposition resolves; every document a spec of the root lists is in the ledger, with the same
@@ -745,6 +746,13 @@ class Checker:
                 if entry.get("access") == "private":
                     self.add(f, ("resources", group, i, "access"),
                              f"{group} entry {label!r}: access: private under a public root")
+                elif entry.get("access") == "members-only" and entry.get("cite") is not False:
+                    # a reader of a public root cannot check a citation into a document only a
+                    # standards body's members can read: it may map, never support (#154)
+                    self.add(f, ("resources", group, i, "access"),
+                             f"{group} entry {label!r}: a members-only document under a public "
+                             f"root is a map only: mark it cite: false, or move the spec to a "
+                             f"root whose readers have access")
                 via = entry.get("via") if group == "tools" else None
                 if via is not None and via[len("skill:"):] not in self.public_skills:
                     self.add(f, ("resources", group, i, "via"),

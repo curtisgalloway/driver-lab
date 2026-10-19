@@ -77,6 +77,7 @@ import argparse
 import hashlib
 import importlib.util
 import os
+import pwd
 import re
 import shlex
 import shutil
@@ -84,20 +85,24 @@ import signal
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 RISKY = re.compile(
     r"subprocess|os\.system|eval\(|exec\(|shell=True|socket|urllib|requests\.|http://|"
-    r"https://|/home/|/Users/|~/|\.ssh|\.claude|\.codex|\.config|AGENTS\.md|CLAUDE\.md",
+    r"https://|/home/|/Users/|~/|\.ssh|\.claude|\.codex|\.config|AGENTS\.md|CLAUDE\.md|"
+    r"std::process::Command|std::net|\bunsafe\b|include_bytes!|env!\(",
     re.IGNORECASE)
 HOME_PATH = re.compile(r"/(?:Users|home)/[A-Za-z0-9_]")
 ERROR_LINE = re.compile(r"^(FAIL|ERROR):|Error\b|error:")
 HERE = os.path.dirname(os.path.realpath(__file__))
 # Paths whose change can weaken the gate itself: the checks, the Codex wrappers (Codex's own
-# containment; SF2-G review A-F1), the pinned requirements, CI, and the files that decide what
-# git reports as changed or how it diffs it.
+# containment; SF2-G review A-F1), the pinned requirements, Cargo/Rust toolchain and conformance
+# corpus files, CI, and the files that decide what git reports as changed or how it diffs it.
 GATE_INPUTS = re.compile(
     r"utilities/(check-[^/]*|patch-gate|codex-implement|codex-review)\.py|"
     r"skills/spec-format/requirements\.txt|skills/spec-format/scripts/prosefacts\.py|"
+    r"evals/requirements\.txt|"
+    r"Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/.*|tests/conformance/.*|"
     r"\.github/.*|(.*/)?\.git(ignore|attributes|modules)", re.DOTALL)
 # A changed path holding a control character is refused outright rather than matched.
 ODD_PATH = re.compile(r"[\x00-\x1f\x7f]")
@@ -105,13 +110,16 @@ MAX_ERROR_LINES = 3
 MAX_UNTRACKED_BYTES = 1 << 20
 
 
-def default_suites():
+def default_suites(worktree=None):
   python = sys.executable
-  return [
+  suites = [
       ("spec-format", [os.path.join(".venv-spec", "bin", "python"), "-I", "-m", "unittest",
                        "discover", "-s", "skills/spec-format/tests"]),
       ("utilities", [python, "-I", "-m", "unittest", "discover", "-s", "utilities/tests"]),
   ]
+  if worktree is not None and os.path.isfile(os.path.join(worktree, "Cargo.toml")):
+    suites.insert(0, ("cargo", ["cargo", "test", "--locked", "--offline"]))
+  return suites
 
 
 def risky_hits(patch_text):
@@ -316,15 +324,68 @@ def summary(output):
   return lines[-1] if lines else "(no output)"
 
 
-def run(command, cwd):
+def read_user_config():
+  """Read optional ~/.config/driver-lab/config.toml if present."""
+  try:
+    h = pwd.getpwuid(os.getuid()).pw_dir
+    cfg = os.path.join(h, ".config", "driver-lab", "config.toml")
+    with open(cfg, "rb") as stream:
+      return tomllib.load(stream)
+  except (KeyError, OSError, tomllib.TOMLDecodeError):
+    return {}
+
+
+def cargo_suite_env(scratch_dir, base_env=None):
+  """Construct an isolated Cargo environment using SCRATCH_DIR outside WORKTREE."""
+  env = dict(os.environ if base_env is None else base_env)
+  cargo_target = os.path.join(scratch_dir, "cargo-target")
+  cargo_home = os.path.join(scratch_dir, "cargo-home")
+  tmp_dir = os.path.join(scratch_dir, "tmp")
+  for path in (cargo_target, cargo_home, tmp_dir):
+    os.makedirs(path, mode=0o700, exist_ok=True)
+  env["CARGO_TARGET_DIR"] = cargo_target
+  env["CARGO_HOME"] = cargo_home
+  env["CARGO_NET_OFFLINE"] = "true"
+  env["TMPDIR"] = tmp_dir
+  env["TEMP"] = tmp_dir
+  env["TMP"] = tmp_dir
+  cfg_data = read_user_config()
+  vendor_dir = env.get("DRIVER_LAB_CARGO_VENDOR") or cfg_data.get("cargo_vendor_dir")
+  rust_bin = env.get("DRIVER_LAB_RUST_BIN") or cfg_data.get("rust_toolchain_bin")
+  if isinstance(rust_bin, str) and os.path.isdir(rust_bin):
+    env["PATH"] = rust_bin + os.pathsep + env.get("PATH", "")
+    toolchain = cfg_data.get("rustup_toolchain")
+    if not toolchain and os.path.basename(rust_bin) == "bin":
+      parent = os.path.dirname(rust_bin)
+      if os.path.basename(os.path.dirname(parent)) == "toolchains":
+        toolchain = os.path.basename(parent)
+    if isinstance(toolchain, str) and toolchain:
+      env["RUSTUP_TOOLCHAIN"] = toolchain
+  if isinstance(vendor_dir, str) and os.path.isdir(vendor_dir):
+    with open(os.path.join(cargo_home, "config.toml"), "w", encoding="utf-8") as out:
+      out.write(
+          '[source.crates-io]\n'
+          'replace-with = "vendored-sources"\n\n'
+          '[source.vendored-sources]\n'
+          f'directory = "{os.path.realpath(vendor_dir)}"\n'
+      )
+  return env
+
+
+def run(command, cwd, env=None):
   """Run COMMAND in its own process group; kill whatever of the group outlives it.
 
   Output goes to a temporary file, not a pipe, so a background child that inherits it cannot
-  hold the gate open until it finishes.
+  hold the gate open until it finishes. When COMMAND starts with `cargo` and ENV is None,
+  CARGO_TARGET_DIR and CARGO_HOME are placed in a temporary directory outside CWD so WORKTREE
+  remains untouched.
   """
+  if env is None and command and os.path.basename(command[0]) == "cargo":
+    with tempfile.TemporaryDirectory(prefix="patch-gate-cargo-") as scratch_dir:
+      return run(command, cwd, env=cargo_suite_env(scratch_dir))
   with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as out:
     try:
-      proc = subprocess.Popen(command, cwd=cwd, stdin=subprocess.DEVNULL, stdout=out,
+      proc = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=out,
                               stderr=subprocess.STDOUT, start_new_session=True)
     except OSError as exc:
       return 127, str(exc)
@@ -473,7 +534,7 @@ def main(argv):
       print(f"  {line}")
 
   # Patched code runs from here on.
-  suites = [] if args.no_default_suites else default_suites()
+  suites = [] if args.no_default_suites else default_suites(worktree)
   suites += args.suite
   if not args.reuse_venv and any(name == "spec-format" for name, _ in suites):
     code, output = build_venv(worktree)

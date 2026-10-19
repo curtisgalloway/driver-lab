@@ -56,6 +56,25 @@ class Rules(unittest.TestCase):
         self.assertEqual(self.whats("an example 0xdead hw-fact-ok: format example"), [])
         self.assertEqual(self.rules.findings("ok\n  at 0xbeef")[0][:2], (2, 6))
 
+    def test_standalone_no_skills_dependency(self):
+        self.assertFalse(hasattr(check, "PROSEFACTS"))
+        self.assertIs(check.rules().findings, check.findings)
+        self.assertIn("hw-fact-ok:", check.message("hex literal '0x10'"))
+
+    def test_conformance_prosefacts_if_present(self):
+        conformance = check.ROOT / "tests" / "conformance" / "prosefacts.json"
+        if not conformance.is_file():
+            return
+        import json
+        data = json.loads(conformance.read_text(encoding="utf-8"))
+        cases = data.get("cases", data) if isinstance(data, dict) else data
+        for case in cases:
+            if not isinstance(case, dict) or "text" not in case:
+                continue
+            got = check.findings(case["text"])
+            if "expected" in case:
+                self.assertEqual(len(got), len(case["expected"]), case)
+
 
 class Command(unittest.TestCase):
     def setUp(self):

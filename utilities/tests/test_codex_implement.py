@@ -596,6 +596,85 @@ class CodexImplementTest(unittest.TestCase):
     self.assertEqual(code, 4)
     self.assertIn("cannot remove scratch root", err)
 
+  def test_rust_and_driver_lab_config_validation(self):
+    rust_bin = os.path.join(self.tmp, "rustup", "toolchains", "1.85.0-x86_64", "bin")
+    vendor_dir = os.path.join(self.tmp, "cargo-vendor")
+    driver_lab = os.path.join(self.tmp, "bin", "driver-lab")
+    os.makedirs(rust_bin, mode=0o755)
+    os.makedirs(vendor_dir, mode=0o755)
+    self.write(driver_lab, f"#!/bin/sh\necho 'driver-lab 0.1.0 ({self.base})'\n", 0o755)
+
+    # Relative, missing, non-dir/non-exec, group-writable, or inside repo/scratch must exit 3.
+    loose_dir = os.path.join(self.tmp, "loose-dir")
+    os.makedirs(loose_dir, mode=0o775)
+    os.chmod(loose_dir, 0o775)
+    in_repo_vendor = os.path.join(self.repo, "vendor")
+    os.makedirs(in_repo_vendor, mode=0o755)
+    bad_configs = [
+        f'rust_toolchain_bin = "relative/bin"\n',
+        f'rust_toolchain_bin = "{os.path.join(self.tmp, "missing-rust")}"\n',
+        f'rust_toolchain_bin = "{driver_lab}"\n',
+        f'rust_toolchain_bin = "{loose_dir}"\n',
+        f'cargo_vendor_dir = "{in_repo_vendor}"\n',
+        f'cargo_vendor_dir = "{loose_dir}"\n',
+        f'driver_lab_binary = "{vendor_dir}"\n',
+        f'driver_lab_binary = "{driver_lab}"\ntool_commit = "not-a-sha"\n',
+        f'tool_commit = "{self.base}"\n',
+    ]
+    for extra in bad_configs:
+      with self.subTest(extra=extra):
+        self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n' + extra)
+        self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
+
+    # Mismatched or 'unknown' driver-lab --version must exit 3.
+    other_commit = "a" * 40
+    self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n'
+                f'driver_lab_binary = "{driver_lab}"\ntool_commit = "{other_commit}"\n')
+    self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
+
+    self.write(driver_lab, "#!/bin/sh\necho 'driver-lab 0.1.0 (unknown)'\n", 0o755)
+    self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n'
+                f'driver_lab_binary = "{driver_lab}"\ntool_commit = "{self.base}"\n')
+    self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
+
+  def test_offline_cargo_env_and_vendor_config(self):
+    rust_bin = os.path.join(self.tmp, "rustup", "toolchains", "1.85.0-x86_64", "bin")
+    vendor_dir = os.path.join(self.tmp, "cargo-vendor")
+    driver_lab = os.path.join(self.tmp, "dl-bin", "driver-lab")
+    os.makedirs(rust_bin, mode=0o755)
+    os.makedirs(vendor_dir, mode=0o755)
+    self.write(driver_lab, f"#!/bin/sh\necho 'driver-lab 0.1.0 ({self.base})'\n", 0o755)
+    self.config(
+        f'run_store = "{self.store}"\n'
+        f'codex = "{self.codex}"\n'
+        f'rust_toolchain_bin = "{rust_bin}"\n'
+        f'cargo_vendor_dir = "{vendor_dir}"\n'
+        f'driver_lab_binary = "{driver_lab}"\n'
+        f'tool_commit = "{self.base}"\n'
+    )
+    cargo_cfg_copy = os.path.join(self.tmp, "cargo-config-copy.toml")
+    self.fake_codex(
+        f'cp "$CARGO_HOME/config.toml" "{cargo_cfg_copy}"\n'
+        'mkdir -p "$CARGO_TARGET_DIR/debug" && printf "\\000elf" > "$CARGO_TARGET_DIR/debug/bin"\n'
+        'echo "pub fn x() {}" > lib.rs\n'
+    )
+    code, _, err = self.run_codex()
+    self.assertEqual(code, 0, err)
+    env = dict(line.split("=", 1) for line in self.read(self.env_dump).splitlines()
+               if "=" in line)
+    tmp = env["TMPDIR"]
+    self.assertEqual(env["CARGO_TARGET_DIR"], os.path.join(tmp, "cargo-target"))
+    self.assertEqual(env["CARGO_HOME"], os.path.join(tmp, "cargo-home"))
+    self.assertEqual(env["CARGO_NET_OFFLINE"], "true")
+    self.assertEqual(env["RUSTUP_TOOLCHAIN"], "1.85.0-x86_64")
+    self.assertTrue(env["PATH"].startswith(rust_bin + ":"), env["PATH"])
+    self.assertIn(os.path.dirname(driver_lab), env["PATH"].split(":"))
+    cfg_text = self.read(cargo_cfg_copy)
+    self.assertIn('[source.crates-io]\nreplace-with = "vendored-sources"', cfg_text)
+    self.assertIn(f'directory = "{vendor_dir}"', cfg_text)
+    self.assertEqual(self.read(self.output("refused")), "refused: 0\n")
+    self.assertIn("diff --git a/lib.rs b/lib.rs", self.read(self.output("patch")))
+
 
 if __name__ == "__main__":
   unittest.main()

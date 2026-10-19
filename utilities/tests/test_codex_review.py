@@ -4,6 +4,7 @@
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -44,6 +45,7 @@ class CodexReviewTest(unittest.TestCase):
 
   def setUp(self):
     self.tmp = os.path.realpath(tempfile.mkdtemp())
+    self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
     self.brief = os.path.join(self.tmp, "BRIEF.md")
     with open(self.brief, "w", encoding="utf-8") as f:
       f.write("brief\n")
@@ -105,6 +107,33 @@ class CodexReviewTest(unittest.TestCase):
     r = subprocess.run([sys.executable, SCRIPT, "net", self.tmp, self.brief, self.log,
                         "-c", "mcp_servers.x.command=sh"], capture_output=True, check=False)
     self.assertEqual(r.returncode, 2)
+
+  def test_net_creates_tmpdir_and_passes_env(self):
+    fake_bin = os.path.join(self.tmp, "bin")
+    os.mkdir(fake_bin)
+    fake_codex = os.path.join(fake_bin, "codex")
+    with open(fake_codex, "w", encoding="utf-8") as f:
+      f.write('#!/bin/sh\nprintf "TMPDIR=%s\\n" "$TMPDIR"\n'
+              'test -d "$TMPDIR" && echo ok > "$TMPDIR/probe.txt"\n')
+    os.chmod(fake_codex, 0o755)
+    env = {**os.environ, "PATH": fake_bin + os.pathsep + os.environ.get("PATH", ""),
+           "TMPDIR": "/nonexistent-host-tmp"}
+    r = subprocess.run([sys.executable, SCRIPT, "net", self.tmp, self.brief, self.log],
+                       capture_output=True, text=True, check=False, env=env)
+    self.assertEqual(r.returncode, 0, r.stderr)
+    expected_tmp = os.path.join(self.tmp, "tmp")
+    self.assertTrue(os.path.isdir(expected_tmp))
+    self.assertTrue(os.path.isfile(os.path.join(expected_tmp, "probe.txt")))
+    with open(self.log, encoding="utf-8") as f:
+      self.assertIn(f"TMPDIR={expected_tmp}", f.read())
+
+  def test_net_refuses_symlinked_tmp_subdir(self):
+    outside = os.path.realpath(tempfile.mkdtemp())
+    self.addCleanup(shutil.rmtree, outside, ignore_errors=True)
+    os.symlink(outside, os.path.join(self.tmp, "tmp"))
+    r = run("net", self.tmp, self.brief, self.log)
+    self.assertEqual(r.returncode, 2)
+    self.assertIn("net scratch directory", r.stderr)
 
 
 if __name__ == "__main__":

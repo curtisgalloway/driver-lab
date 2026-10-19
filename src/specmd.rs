@@ -831,7 +831,9 @@ fn walk_constructs<'a>(node: &'a AstNode<'a>, text: &str, result: &mut Construct
 pub fn constructs(text: &str) -> ConstructMap {
     let mut result = ConstructMap::new();
     let arena = Arena::new();
-    let root = parse_document(&arena, text, &Options::default());
+    let mut opts = Options::default();
+    opts.extension.table = true;
+    let root = parse_document(&arena, text, &opts);
     walk_constructs(root, text, &mut result);
 
     let mut covered_ranges = Vec::new();
@@ -852,35 +854,63 @@ pub fn constructs(text: &str) -> ConstructMap {
 
 pub fn check_view(text: &str, expected: &ConstructMap) -> Result<(), String> {
     let arena = Arena::new();
-    let root = parse_document(&arena, text, &Options::default());
-    
-    fn check_node<'a>(node: &'a AstNode<'a>, depth: usize) -> Result<(), String> {
+    let mut opts = Options::default();
+    opts.extension.table = true;
+    let root = parse_document(&arena, text, &opts);
+
+    fn check_node<'a>(node: &'a AstNode<'a>, text: &str, depth: usize) -> Result<(), String> {
         let ast = node.data.borrow();
         match &ast.value {
-            NodeValue::Heading(_) | NodeValue::Paragraph | NodeValue::List(_) | NodeValue::Item(_) | NodeValue::BlockQuote => {
+            NodeValue::Document => {}
+            NodeValue::Heading(_) => {
                 if depth > 0 {
                     return Err("assembled Markdown containment failed".to_string());
                 }
             }
+            NodeValue::Paragraph
+            | NodeValue::List(_)
+            | NodeValue::Item(_)
+            | NodeValue::Table(_)
+            | NodeValue::TableRow(_)
+            | NodeValue::TableCell
+            | NodeValue::Text(_)
+            | NodeValue::Code(_)
+            | NodeValue::SoftBreak => {}
             NodeValue::CodeBlock(cb) => {
-                if depth > 0 || !cb.info.is_empty() {
+                if !cb.fenced || depth > 0 || !cb.info.is_empty() {
+                    return Err("assembled Markdown containment failed".to_string());
+                }
+                let literal_newlines = cb.literal.chars().filter(|&c| c == '\n').count();
+                let end_line_text = text
+                    .lines()
+                    .nth(ast.sourcepos.end.line.saturating_sub(1))
+                    .unwrap_or("");
+                let fence_str = std::iter::repeat(cb.fence_char as char)
+                    .take(cb.fence_length)
+                    .collect::<String>();
+                if ast.sourcepos.end.line <= ast.sourcepos.start.line + literal_newlines
+                    || !end_line_text.contains(&fence_str)
+                {
                     return Err("assembled Markdown containment failed".to_string());
                 }
             }
-            NodeValue::HtmlBlock(_) | NodeValue::ThematicBreak => {
+            _ => {
                 return Err("assembled Markdown containment failed".to_string());
             }
-            _ => {}
         }
-        let child_depth = if matches!(ast.value, NodeValue::Document) { depth } else { depth + 1 };
+        let child_depth = if matches!(ast.value, NodeValue::Document) {
+            depth
+        } else {
+            depth + 1
+        };
         for child in node.children() {
-            check_node(child, child_depth)?;
+            check_node(child, text, child_depth)?;
         }
         Ok(())
     }
 
-    check_node(root, 0)?;
-    
+    check_node(root, text, 0)?;
+
     let actual = constructs(text);
     if &actual != expected {
         return Err("assembled Markdown containment failed".to_string());

@@ -23,6 +23,10 @@ pub mod yaml_strict;
 pub mod campaign;
 pub mod author;
 pub mod verify_flow;
+pub mod render_md;
+pub mod render_html;
+pub mod explorer;
+pub mod publish;
 pub mod eval;
 pub mod docresolve;
 pub mod resolve;
@@ -96,6 +100,8 @@ pub enum RenderFormat {
     Md,
     /// Offline HTML spec viewer, explorer, or interactive topology atlas.
     Html,
+    /// Interactive topology atlas (`atlas.py`).
+    Atlas,
 }
 
 /// Subcommands for `driver-lab` (`RUST-TOOLING-DESIGN.md` §2.3).
@@ -322,12 +328,30 @@ pub struct RenderArgs {
     /// Context spec root directories (`BF-IMX-18`).
     #[arg(long = "context-root", value_name = "DIR")]
     pub context_roots: Vec<PathBuf>,
-    /// Output format (`md` or `html`).
+    /// Require license compatibility check.
+    #[arg(long = "require-license")]
+    pub require_license: bool,
+    /// Public skill names for skill containment checks.
+    #[arg(long = "public-skill", value_name = "SKILL")]
+    pub public_skills: Vec<String>,
+    /// Restrict output to one spec id.
+    #[arg(long = "spec", value_name = "ID")]
+    pub spec: Option<String>,
+    /// Output format (`md`, `html`, or `atlas`).
     #[arg(long = "format", value_enum, default_value_t = RenderFormat::Md)]
     pub format: RenderFormat,
     /// Render an overlay merged with its base spec.
     #[arg(long = "merged")]
     pub merged: bool,
+    /// Include verification verdict and freshness status.
+    #[arg(long = "with-status")]
+    pub with_status: bool,
+    /// Source commit (`ROOT=SHA` or bare 40-hex SHA when rendering one root).
+    #[arg(long = "source-commit", value_name = "COMMIT")]
+    pub source_commits: Vec<String>,
+    /// Tool commit (40 lowercase hex).
+    #[arg(long = "tool-commit", value_name = "SHA")]
+    pub tool_commit: Option<String>,
     /// Render a self-contained view inlining referenced context facts.
     #[arg(long = "self-contained")]
     pub self_contained: bool,
@@ -579,7 +603,6 @@ where
         Command::Resource(res_args) => author::run_resource_cmd(res_args, &scratch, stdout, stderr),
         Command::Assemble(asm_args) => author::run_assemble_cmd(asm_args, &scratch, stdout, stderr),
         Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
-
         Command::Resolve(args) => resolve::run_resolve_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Show(args) => resolve::run_show_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Inventory(args) => inventory::run_inventory_cmd(&cli, args, &scratch, stdout, stderr),
@@ -593,7 +616,8 @@ where
         Command::Todo(todo_args) => worklist::run_todo_cmd(&cli, todo_args, stdout, stderr),
         Command::Corpus(corpus_args) => corpus::run_corpus_cmd(&cli, corpus_args, stdout, stderr),
         Command::Stubgen(stub_args) => stubgen::run_stubgen_cmd(&cli, stub_args, stdout, stderr),
-        other => run_stub_subcommand(&cli, other, stdout, stderr),
+        Command::Render(render_args) => render_md::run_render_cmd(&cli, render_args, stdout, stderr),
+        Command::Publish(pub_args) => publish::run_publish_cmd(&cli, pub_args, stdout, stderr),
     }
 }
 
@@ -652,6 +676,7 @@ fn run_license_gate_cmd(
     report.exit_code
 }
 
+#[allow(dead_code)]
 fn subcommand_name(cmd: &Command) -> &'static str {
     match cmd {
         Command::Validate(_) => "validate",
@@ -679,6 +704,7 @@ fn subcommand_name(cmd: &Command) -> &'static str {
     }
 }
 
+#[allow(dead_code)]
 fn run_stub_subcommand(
     cli: &Cli,
     cmd: &Command,

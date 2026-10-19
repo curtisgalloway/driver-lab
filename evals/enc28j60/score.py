@@ -22,8 +22,6 @@ import ledger_check
 
 HERE = Path(__file__).resolve().parent
 ACCEPT_PATH = HERE / 'strict_accept.py'
-if not ACCEPT_PATH.exists():
-    ACCEPT_PATH = HERE / '../../skills/board-expert/scripts/strict_accept.py'
 spec = importlib.util.spec_from_file_location('strict_accept', ACCEPT_PATH)
 strict_accept = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(strict_accept)

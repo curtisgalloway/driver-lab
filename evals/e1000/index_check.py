@@ -10,7 +10,6 @@ object with ok, counts and findings. No private run store is opened.
 
 from __future__ import annotations
 
-import argparse
 import ast
 from collections import Counter
 import datetime
@@ -1090,38 +1089,12 @@ def read_yaml(path):
     return yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueLoader)
 
 
-class Parser(argparse.ArgumentParser):
-    """Keep normal argparse help; emit structured usage failures for --json."""
-
-    def __init__(self, *, error_fields=None, **kwargs):
-        # An abbreviated --js would select --json without being detected below.
-        kwargs.setdefault("allow_abbrev", False)
-        super().__init__(**kwargs)
-        self.error_fields = error_fields or {}
-        self.json_requested = False
-
-    def parse_args(self, args=None, namespace=None):
-        args = list(sys.argv[1:] if args is None else args)
-        self.json_requested = any(
-            a == "--json" or a.startswith("--json=") for a in args
-        )
-        return super().parse_args(args, namespace)
-
-    def error(self, message):
-        if self.json_requested:
-            print(
-                json.dumps(
-                    dict(self.error_fields, ok=False, findings=[message]),
-                    sort_keys=True,
-                )
-            )
-            self.exit(2)
-        super().error(message)
-
-
 def main(argv=None):
     """Run the read-only public index check."""
-    parser = Parser(description=__doc__, error_fields={"counts": {}})
+    # Imported here: library users may load this module by its file path alone.
+    import cli  # pylint: disable=import-outside-toplevel
+
+    parser = cli.Parser(description=__doc__, error_fields={"counts": {}})
     parser.add_argument("campaign", type=Path, nargs="?")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--json", action="store_true")

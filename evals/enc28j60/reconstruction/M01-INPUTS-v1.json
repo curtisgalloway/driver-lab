@@ -62,7 +62,7 @@
       "role": "current documentary tool"
     },
     {
-      "path": "skills/board-expert/scripts/strict_accept.py",
+      "path": "evals/enc28j60/strict_accept.py",
       "bytes": 1704,
       "sha256": "010b14960547e4cc4f74cc37e9b9c0af3f0fc1aec07724d9614970a94b556d2a",
       "role": "current documentary tool"

@@ -12,3 +12,7 @@ __pycache__/
 
 # Spec format check environment (AGENTS.md, Checks)
 .venv-*/
+
+# Rust build artifacts
+/target/
+

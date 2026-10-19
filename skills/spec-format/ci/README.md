@@ -17,7 +17,8 @@ These are maintained templates, not active driver-lab workflows. They include ph
 self-test temporary paths for macOS and run all check steps on Ubuntu and macOS. Existing
 repositories hold independent copies; review and apply later template changes explicitly.
 The script assumes the repository's marker is `specs/board-specs.yaml` and runs from the
-repository top level. It needs Bash 3.2 or later and the pinned spec-format dependencies.
+repository top level. It needs Bash 3.2 or later and either `driver-lab` (`DRIVER_LAB_BIN`)
+or the pinned spec-format Python dependencies.
 
 Set `TOOL_COMMIT` in the check workflow to a full driver-lab commit on `main` that contains
 the required fixtures and checker; use the same pin in the publishing workflow. The all-zero
@@ -44,9 +45,21 @@ A profile is the following set of fixture settings, not a new license decision:
 These profiles match the three hardware-specs repositories. For another policy, select fit
 and misfit fixtures that actually exercise it, using the [fixture matrix](../tests/fixtures/license-gate/README.md).
 `REQUIRE_FURTHER` is the minimum number of context roots, directories read alongside the own
-root to resolve references and overlays. The cross-root self-test assumes the first context
-has a documents-only marker and the own marker accepts BSD source overlays. Adapt that test
-if a new repository has a different relationship; do not silently skip a required context.
+root to resolve references and overlays. In the cross-root overlay self-test, when `SRC_FIT=0`
+(or `specs/board-specs.yaml` has `accepts: []`), `checks.sh` constructs a documents-only overlay
+fixture so documents-only repositories that depend on upstream context roots pass the cross-root
+self-test without adding source licenses (`BF-IMX-ISS-2`).
+
+When `STUBS_DIR` is set or `skills/` contains expert stub `SKILL.md` files, `check_specs`
+automatically passes `--stubs-from "$STUBS_DIR"` to the checker; when `DOMAINS_MANIFEST` is set
+or `domains.yaml` is present at the repository top level, `check_specs` also runs
+`stubgen "$DOMAINS_MANIFEST" --out "${STUBS_DIR:-skills}" --check` (`BF-IMX-ISS-3`).
+
+During `resolve`, `check_resolve` inspects `cache/<name>` for each repository declared in
+`resources.repos`. When `cache/<name>` is a full (non-partial) git clone containing every pinned
+commit cited for `<name>`, `check_resolve` automatically binds `--repo <name>=cache/<name>`;
+partial clones (`extensions.partialClone` or `remote.*.promisor`) and checkouts missing the
+pinned commit are skipped with a note (`BF-GW-23`).
 
 The workflow initially has no context roots. For each required context, add an
 `actions/checkout` step with its repository, explicit ref, `persist-credentials: false`, and a
@@ -55,28 +68,30 @@ invocations, in the table's order. Existing hardware-specs checks use context re
 `main` refs so new spec data is checked together; the executable driver-lab tool stays pinned.
 Set `REQUIRE_CORPUS=1` on the check step once the root keeps a corpus ledger
 (`specs/corpus.yaml`, [spec-format](../SKILL.md#corpus-ledger)): the step then also runs
-`spec.py corpus`, which fails when the ledger is missing. Without it, `check` still checks a
+`corpus`, which fails when the ledger is missing. Without it, `check` still checks a
 ledger that exists, but a root without one passes.
 Keep `RESOLVE_SRC=1` on both resolve and self-test steps. It fetches cited source revisions;
 the self-test proves a valid anchor resolves and a deliberately invalid anchor is rejected.
 
 Before the first commit, run `scripts/checks.sh --mode pr all` with the pinned driver-lab
-checkout and the configured context-root arguments, setting `CHECKS_PYTHON` to the pinned
-Python environment and `RESOLVE_SRC=1`. Verify the license fit passes, the misfit fails for
-the expected license reason, and both platform jobs run in CI. Never relax the checker's
-symlink policy: the script canonicalizes only the temporary directory it just created.
+checkout and the configured context-root arguments, setting `DRIVER_LAB_BIN` (or `CHECKS_PYTHON`
+to the pinned Python environment) and `RESOLVE_SRC=1`. Verify the license fit passes, the misfit
+fails for the expected license reason, and both platform jobs run in CI. Never relax the
+checker's symlink policy: the script canonicalizes only the temporary directory it just created.
 
 ## Publishing spec views
 
 `publish.yml` is a workflow template for a spec repository, not an active driver-lab workflow.
 Copy it into that repository's workflows directory during SF2-11. Replace `TOOL_COMMIT` with
 the full driver-lab commit containing this viewer. The zero placeholder deliberately fails.
-The template assumes the checked root's marker is at the repository top level. Enable GitHub
+The template checks out the spec repository to `path: repo` and passes `repo/specs` with
+`--source-commit "repo/specs=$SOURCE_COMMIT"` so repositories whose root marker is at
+`specs/board-specs.yaml` build and verify cleanly (`BF-IMX-ISS-1`). Enable GitHub
 Pages with Actions as its source during cutover, then link the generated index from the README.
 
-For roots with dependencies, add separate context checkouts beside `specs` in **both** jobs,
+For roots with dependencies, add separate context checkouts beside `repo` in **both** jobs,
 pin each to a full commit, and pass `--context-root DIRECTORY` and
-`--source-commit DIRECTORY=COMMIT` to **every** build and verify invocation. Add
+`--source-commit DIRECTORY=COMMIT` to **every** build and check/verify invocation. Add
 `--public-skill NAME` where a public tool skill is declared. Context checkouts must be siblings,
 never nested in a spec root. Own pages show same-id files in separate unmerged groups; each
 overlaid spec also gets a merged page with the context base and every supplied overlay. The generated index lists all
@@ -89,11 +104,11 @@ job downloads the build, rechecks the same sources and re-renders every expected
 uploading the Pages artifact. The source inventory determines completeness; editing a manifest
 cannot hide a missing or modified page. All actions are pinned by full commit SHA.
 
-Local dry run, using a pinned Python environment and a scratch copy of a fixture root:
+Local dry run, using `driver-lab` (or a pinned Python environment) and a scratch copy of a fixture root:
 
 ```text
-python skills/spec-format/ci/publish.py build ROOT --out SITE --source-commit ROOT=SHA --tool-commit SHA
-python skills/spec-format/ci/publish.py verify ROOT --out SITE --source-commit ROOT=SHA --tool-commit SHA
+driver-lab publish build repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
+driver-lab publish check repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
 ```
 
 `SITE` must be empty and outside every supplied root; neither command follows output symlinks.
@@ -107,11 +122,11 @@ heading. It fetches each cited GitHub page once (a `blob` URL pinned to a full c
 API, or a wiki page), records each heading's anchor in the site's `anchors.json`, and prints the
 headings it could not find, which usually means a locator does not match the document. A fetch
 failure leaves those headings unresolved and never fails the build. Set `GITHUB_TOKEN` for the
-API rate limit. `verify` and the deploy job do not fetch: they validate the stored `anchors.json`
-(format, well-formed anchors, only headings the specs cite) and re-render from it, so the byte
-comparison still holds. An edited `anchors.json` can at most change a heading fragment on a
-declared document URL. Without the flag, `anchors.json` is empty and citations link to the
-document.
+API rate limit. `check`/`verify` and the deploy job do not fetch: they validate the stored
+`anchors.json` (format, well-formed anchors, only headings the specs cite) and re-render from it,
+so the byte comparison still holds. An edited `anchors.json` can at most change a heading
+fragment on a declared document URL. Without the flag, `anchors.json` is empty and citations
+link to the document.
 The helper returns 0 for a complete build/verification and 1 for a refused site. The workflow
 adds `--require-verified pr|main`; omit that only for synthetic fixtures without records. The
 local tests exercise both policies. Real deployment and repository README links belong to

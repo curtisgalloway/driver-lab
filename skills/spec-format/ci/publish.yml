@@ -18,12 +18,14 @@ jobs:
     steps:
       - name: Require an installed tool revision
         run: test "$TOOL_COMMIT" != 0000000000000000000000000000000000000000
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          path: specs
+          path: repo
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: curtisgalloway/driver-lab
           ref: ${{ env.TOOL_COMMIT }}
@@ -34,16 +36,24 @@ jobs:
           python-version: '3.12'
       - name: Install pinned renderer
         run: |
-          python -m venv "$RUNNER_TEMP/spec-venv"
-          "$RUNNER_TEMP/spec-venv/bin/pip" install --require-hashes -r tooling/skills/spec-format/requirements.txt
+          if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
+            python -m venv "$RUNNER_TEMP/spec-venv"
+            "$RUNNER_TEMP/spec-venv/bin/pip" install --require-hashes -r tooling/skills/spec-format/requirements.txt
+          fi
       - name: Build both views and repeat containment checks
         env:
           SOURCE_COMMIT: ${{ github.sha }}
           VERIFY_POLICY: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py build specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY" --fetch-anchors
-          "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
+          if [ -n "${DRIVER_LAB_BIN:-}" ] || command -v driver-lab >/dev/null 2>&1; then
+            dl_bin="${DRIVER_LAB_BIN:-driver-lab}"
+            "$dl_bin" publish build repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY" --fetch-anchors
+            "$dl_bin" publish check repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
+          else
+            "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py build repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY" --fetch-anchors
+            "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: spec-views
@@ -64,12 +74,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          path: specs
+          path: repo
           ref: ${{ github.sha }}
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: curtisgalloway/driver-lab
           ref: ${{ env.TOOL_COMMIT }}
@@ -80,8 +92,10 @@ jobs:
           python-version: '3.12'
       - name: Install pinned renderer
         run: |
-          python -m venv "$RUNNER_TEMP/spec-venv"
-          "$RUNNER_TEMP/spec-venv/bin/pip" install --require-hashes -r tooling/skills/spec-format/requirements.txt
+          if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
+            python -m venv "$RUNNER_TEMP/spec-venv"
+            "$RUNNER_TEMP/spec-venv/bin/pip" install --require-hashes -r tooling/skills/spec-format/requirements.txt
+          fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: spec-views
@@ -90,7 +104,12 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
-          "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify specs --out site --source-commit "specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified main
+          if [ -n "${DRIVER_LAB_BIN:-}" ] || command -v driver-lab >/dev/null 2>&1; then
+            dl_bin="${DRIVER_LAB_BIN:-driver-lab}"
+            "$dl_bin" publish check repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified main
+          else
+            "$RUNNER_TEMP/spec-venv/bin/python" tooling/skills/spec-format/ci/publish.py verify repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified main
+          fi
       # Prepare the Pages tar locally: upload-pages-artifact nests a mutable
       # upload-artifact@v4 even when the composite itself is pinned by SHA.
       - name: Archive verified Pages site

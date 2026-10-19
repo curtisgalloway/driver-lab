@@ -1,0 +1,1084 @@
+{
+  "schema_version": 1,
+  "description": "Comprehensive stable finding code catalog mapping every diagnostic across specload.py, speccheck.py, peripheral.py, topology.py, records.py, specmd.py, prosefacts.py, resolve.py, docresolve.py, index.py, corpus.py, worklist.py, inventory.py, drift.py, stubgen.py, textcheck.py, headingcheck.py, review.py, attribution.py, and spec.py, plus the 31 BF-* regression codes and AUTO-5 warning codes.",
+  "modules": [
+    "specload.py",
+    "speccheck.py",
+    "peripheral.py",
+    "topology.py",
+    "records.py",
+    "specmd.py",
+    "prosefacts.py",
+    "resolve.py",
+    "docresolve.py",
+    "index.py",
+    "corpus.py",
+    "worklist.py",
+    "inventory.py",
+    "drift.py",
+    "stubgen.py",
+    "textcheck.py",
+    "headingcheck.py",
+    "review.py",
+    "attribution.py",
+    "spec.py"
+  ],
+  "codes": [
+    {
+      "code": "LOAD-YAML-SYNTAX",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(expected .* but got|mapping values are not allowed here|while scanning|while parsing|found unexpected|could not find expected)",
+      "description": "YAML syntax or scanner/parser error in strict loader"
+    },
+    {
+      "code": "LOAD-DIRECTIVE",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(YAML directive .* is refused|directives are not allowed)",
+      "description": "YAML %YAML or %TAG directive refused (D6)"
+    },
+    {
+      "code": "LOAD-DUPLICATE-KEY",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(duplicate key|duplicate mapping key)",
+      "description": "Duplicate key in YAML mapping"
+    },
+    {
+      "code": "LOAD-ANCHOR-ALIAS",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(anchors and aliases|YAML anchor|YAML alias)",
+      "description": "YAML &anchor or *alias refused (D6)"
+    },
+    {
+      "code": "LOAD-TAG",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(explicit tag|YAML tag)",
+      "description": "Explicit YAML tag refused (D6)"
+    },
+    {
+      "code": "LOAD-MERGE-KEY",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "merge key",
+      "description": "YAML << merge key refused (D6)"
+    },
+    {
+      "code": "LOAD-NON-STRING-KEY",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(mapping key .* is not a string|non-string key)",
+      "description": "Non-string mapping key refused"
+    },
+    {
+      "code": "LOAD-FLOAT",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "floating-point",
+      "description": "Floating-point scalar refused"
+    },
+    {
+      "code": "LOAD-AMBIGUOUS-SCALAR",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(was read as a boolean|was read as an integer|sexagesimal|octal)",
+      "description": "Unquoted YAML 1.1 boolean/integer/octal/sexagesimal ambiguity (D6)"
+    },
+    {
+      "code": "LOAD-CONTROL-CHAR",
+      "module": "specload.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(UTF-8 BOM|bidirectional control|control character|not valid UTF-8)",
+      "description": "Refused control character, UTF-8 BOM, or bidirectional formatting character"
+    },
+    {
+      "code": "SCHEMA-REQUIRED-PROPERTY",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is a required property",
+      "description": "Required JSON Schema property missing"
+    },
+    {
+      "code": "SCHEMA-ENUM-OR-CONST",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is not one of \\[",
+      "description": "Value not in JSON Schema enum"
+    },
+    {
+      "code": "SCHEMA-PATTERN-OR-TYPE",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(does not match|is not of type|was read as .* expected|is too short|is too long|Additional properties are not allowed)",
+      "description": "JSON Schema pattern, type, or length constraint failed"
+    },
+    {
+      "code": "SCHEMA-UNKNOWN-KEY",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "unknown key .* here",
+      "description": "Unevaluated or additional property rejected by schema"
+    },
+    {
+      "code": "SCHEMA-EXTENSION-INVALID",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "^extensions:",
+      "description": "Invalid or out-of-root source-observed schema extension fragment"
+    },
+    {
+      "code": "SPEC-FACTS-KIND-MISMATCH",
+      "module": "spec.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(a \\*\\.facts\\.yaml file holds kind: facts|kind: facts belongs in a \\*\\.facts\\.yaml file)",
+      "description": "File suffix (.facts.yaml vs .spec.yaml) disagrees with kind: facts"
+    },
+    {
+      "code": "CHK-CONTEXT-ROOT-WARNING",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "^context root:",
+      "description": "Finding inside a --context-root downgraded to warning"
+    },
+    {
+      "code": "CHK-NOT-READ-AS-SPEC",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(^not read as a spec:|is not read: specs are|is not read: the extension is|backup file .* is not read)",
+      "description": "Misnamed spec file (.spec.yml, .spec.md, backup) or .facts.yaml placed inside a spec root"
+    },
+    {
+      "code": "CHK-UNTRUSTED-ROOT",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(root .* is not trusted|in an untrusted root)",
+      "description": "Fail-closed rejection of citations into an untrusted root"
+    },
+    {
+      "code": "CHK-DUP-SPEC-ID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "spec id .* is also declared by",
+      "description": "Duplicate non-overlay spec id across roots"
+    },
+    {
+      "code": "CHK-ALIAS-CLASH",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(alias .* is the id of another spec|spec id .* is also an alias in)",
+      "description": "Spec alias collides with another spec id or alias"
+    },
+    {
+      "code": "CHK-DUP-FACT-ID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "fact id .* is (used twice in this file|also used by)",
+      "description": "Duplicate fact, instance, or variant id within a spec id and root"
+    },
+    {
+      "code": "CHK-DUP-RESOURCE-NAME",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(documents|repos|assumptions|tools) entry .* is listed twice",
+      "description": "Duplicate resource entry name in a spec file"
+    },
+    {
+      "code": "CHK-DOC-UNRESOLVED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "document .* is not in this file's resources\\.documents",
+      "description": "Citation names a document absent from resources.documents"
+    },
+    {
+      "code": "CHK-DOC-UNCITABLE",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "document .* is marked cite: false",
+      "description": "Citation names a map-only document with cite: false"
+    },
+    {
+      "code": "CHK-DOC-CLASS-MISMATCH",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "citation names document .* of class",
+      "description": "Support entry class disagrees with cited document class"
+    },
+    {
+      "code": "CHK-PAGE-LEADING-ZERO",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "no leading zeros",
+      "description": "Page locator has leading zeros"
+    },
+    {
+      "code": "CHK-PAGE-OUT-OF-BOUNDS",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is outside the .* pages of document",
+      "description": "Cited page number exceeds document page count"
+    },
+    {
+      "code": "CHK-PAGES-BACKWARDS",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "pages .* run backwards",
+      "description": "Page range [first, last] runs backwards"
+    },
+    {
+      "code": "CHK-PAGED-STANDARD-HEADING",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is paged, so a standard locator needs a section, page, pages, table, figure or clause, not a heading alone",
+      "description": "Paged standard cited by heading alone"
+    },
+    {
+      "code": "CHK-REPO-UNRESOLVED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(names repos entry .*, which is not in this file's resources\\.repos|series target .* names no repos entry)",
+      "description": "Anchor, notice, or series target names an undeclared repos entry"
+    },
+    {
+      "code": "CHK-REPO-REF-NOT-COMMIT",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "pins a ref, not a commit",
+      "description": "Cited repos entry pins a ref rather than an immutable commit hash"
+    },
+    {
+      "code": "CHK-PATH-UNLISTED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is not in the files of repos entry .* \\(the closed list of cited paths, D12\\)",
+      "description": "Anchor path is absent from the closed repos[].files list (D12)"
+    },
+    {
+      "code": "CHK-LINES-BACKWARDS",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "lines .* run backwards",
+      "description": "Source anchor line range [start, end] runs backwards"
+    },
+    {
+      "code": "CHK-ASSUMPTION-UNRESOLVED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "assumption .* is not in this file's assumptions",
+      "description": "Fact cites an assumption absent from the file"
+    },
+    {
+      "code": "CHK-PRIVATE-DOC-IN-PUBLIC",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "access: private under a public root",
+      "description": "Private document or corpus entry under a public root"
+    },
+    {
+      "code": "CHK-PRIVATE-TOOL-IN-PUBLIC",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "is not a public skill \\(pass --public-skill NAME if it is\\)",
+      "description": "Tool via: skill:<name> is not declared as a public skill under a public root"
+    },
+    {
+      "code": "CHK-LICENSE-GATE",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(is not accepted by root .* \\(license gate, D13\\)|has no license)",
+      "description": "Direct or transitive source license rejected by the root accepts list (D13)"
+    },
+    {
+      "code": "CHK-REF-UNRESOLVED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "reference .* resolves to nothing",
+      "description": "Fact reference (#id, spec#id, spec@root#id) does not resolve"
+    },
+    {
+      "code": "CHK-REF-AMBIGUOUS",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "reference .* is ambiguous",
+      "description": "Fact reference matches multiple declarations in the target root"
+    },
+    {
+      "code": "CHK-REF-SELF",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "names the fact itself",
+      "description": "Fact relates or premises entry references itself"
+    },
+    {
+      "code": "CHK-REF-DUP-PREMISE",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "already does in this premise list",
+      "description": "Duplicate fact reference in an inference premise list"
+    },
+    {
+      "code": "CHK-REF-LATER-LAYER",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "names a fact in layer .*, which merges after this file's layer",
+      "description": "Reference points to a root layer that merges after the citing layer"
+    },
+    {
+      "code": "CHK-REF-CYCLE",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "its inference premises form a cycle among",
+      "description": "Cycle in inference premises"
+    },
+    {
+      "code": "CHK-PARTS-DANGLING",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "parts entry .* resolves to no spec",
+      "description": "Composition parts entry resolves to no spec"
+    },
+    {
+      "code": "CHK-PARTS-CYCLE",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "parts form a cycle:",
+      "description": "Composition parts graph contains a cycle"
+    },
+    {
+      "code": "CHK-PARTS-CACHE-MISMATCH",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "part .* names cache .*, this spec",
+      "description": "Composed part names a different resource cache directory"
+    },
+    {
+      "code": "CHK-VARIANT-OF-INVALID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "variant_of .* (resolves to no spec|is not a board spec)",
+      "description": "variant_of target is missing or not a board spec"
+    },
+    {
+      "code": "CHK-INSTANCE-TARGET-INVALID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "instance .*: (ip .* resolves to no spec|.* is not an ip spec|peripheral .* resolves to no spec|.* is not a peripheral spec)",
+      "description": "Instance ip or peripheral reference is unresolved or has the wrong spec kind"
+    },
+    {
+      "code": "CHK-IRQ-INTID-MISMATCH",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "intid .* does not agree with",
+      "description": "GIC SPI/PPI number disagrees with computed GIC INTID"
+    },
+    {
+      "code": "CHK-DESCRIBES-INVALID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "describes .* (resolves to no spec|is not an ip spec)",
+      "description": "Peripheral describes target is unresolved or not an ip spec"
+    },
+    {
+      "code": "CHK-UNATTACHED-PERIPHERAL",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "peripheral spec .* is not attached",
+      "description": "Peripheral spec is not attached to any instance or board parts"
+    },
+    {
+      "code": "CHK-OVERLAY-INVALID",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(overlays .* resolves to no spec|is not a section of the target|the target .* is of kind .*, which has no instances)",
+      "description": "Overlay target is missing or incompatible with overlay sections/instances"
+    },
+    {
+      "code": "CHK-OVERLAY-ORDER-UNDEFINED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "overlays of .* in root .*; their merge order is undefined",
+      "description": "Multiple overlays target the same spec in one root"
+    },
+    {
+      "code": "CHK-STUB-SPEC-UNRESOLVED",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "stub spec id .* resolves to no spec",
+      "description": "Expert stub SKILL.md references an unresolved spec id"
+    },
+    {
+      "code": "CHK-STUB-MISSING-SPLIT",
+      "module": "speccheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "both enter through spec .* with no stated split",
+      "description": "Multiple expert stubs share an entry spec without a pairwise split: declaration"
+    },
+    {
+      "code": "PER-REG-OVERLAP",
+      "module": "peripheral.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "overlaps (register|field|entry)",
+      "description": "Overlapping register offsets or bitfield ranges in peripheral spec"
+    },
+    {
+      "code": "PER-WIDTH-OR-FIT",
+      "module": "peripheral.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(exceeds .*-bit|does not fit in|outside .*-bit)",
+      "description": "Register offset, bitfield range, or reset/step value exceeds width"
+    },
+    {
+      "code": "PER-LOOKUP-UNRESOLVED",
+      "module": "peripheral.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "names no (register|field|registry|enumeration|layout)",
+      "description": "Peripheral field, constraint, or sequence step references an unknown register/field/registry"
+    },
+    {
+      "code": "PER-SEQUENCE-STEP",
+      "module": "peripheral.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "sequence .*: step",
+      "description": "Invalid sequence step operation, value, mask, or timeout"
+    },
+    {
+      "code": "TOP-ENDPOINT-INVALID",
+      "module": "topology.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(clock-edge|power-domain|reset-line|interrupt-route|dma-route|pin-group|mailbox-channel).* (names no|resolves to no|is not a)",
+      "description": "Typed topology payload endpoint or target fails resolution or kind check"
+    },
+    {
+      "code": "REC-UNVERIFIED",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(fact|instance|variant) .*: unverified:",
+      "description": "Fact, instance, or variant has no verification record, no verdict, or an invalid record"
+    },
+    {
+      "code": "REC-STALE",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(fact|instance|variant) .*: verdict stale:",
+      "description": "Recorded verdict basis hash differs from current fact-v1 basis hash"
+    },
+    {
+      "code": "REC-UPSTREAM-STALE",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(fact|instance|variant) .*: verdict upstream-stale:",
+      "description": "Cross-root upstream premise basis hash changed since verdict was recorded"
+    },
+    {
+      "code": "REC-FRESHNESS-UNKNOWN",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(fact|instance|variant) .*: freshness unknown:",
+      "description": "Fact basis hash cannot be computed because a citation or premise failed check"
+    },
+    {
+      "code": "REC-CURRENT-FAIL",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "its current verdict in .* is FAIL",
+      "description": "Fact carries a current FAIL verification verdict"
+    },
+    {
+      "code": "REC-CURRENT-ADJUDICATE",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "its current verdict in .* is ADJUDICATE",
+      "description": "Fact carries a current ADJUDICATE verification verdict"
+    },
+    {
+      "code": "REC-MISSING-SECOND-READER",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "has no second reader in readers",
+      "description": "Critical fact verdict lacks a second independent reader"
+    },
+    {
+      "code": "REC-SUMMARY-MISMATCH",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "^summary (pass|fail|unverifiable|gap|adjudicate):",
+      "description": "Verification record summary count disagrees with verdicts map"
+    },
+    {
+      "code": "REC-GAP-HAS-SUPPORT",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "verdict GAP for .*, which has support: GAP is a gap fact's verdict",
+      "description": "GAP verdict recorded for a fact that has support"
+    },
+    {
+      "code": "REC-ORPHAN-VERDICT-KEY",
+      "module": "records.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "verdict key .* names no fact, instance or variant of",
+      "description": "Verdict key in .verify.yaml does not match any fact, instance, or variant in the spec"
+    },
+    {
+      "code": "MD-PLACEHOLDER",
+      "module": "specmd.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "unsubstituted template placeholder",
+      "description": "Unsubstituted <placeholder> in spec or stub text"
+    },
+    {
+      "code": "MD-CONTAINMENT",
+      "module": "specmd.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(raw HTML|disallowed link|link reference definition|heading in|unclosed fence|nesting deeper than 16)",
+      "description": "CommonMark containment violation in author prose field"
+    },
+    {
+      "code": "MD-RETIRED-PROVENANCE",
+      "module": "specmd.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "retired provenance",
+      "description": "Retired provenance tag spelling in author prose"
+    },
+    {
+      "code": "PROSE-HEX-LITERAL",
+      "module": "prosefacts.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "hex literal '0[xX][0-9A-Fa-f_]+'",
+      "description": "Hardware hexadecimal literal in agent prompt or expert stub"
+    },
+    {
+      "code": "PROSE-REGISTER-NAME",
+      "module": "prosefacts.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "register-style name '[A-Z0-9_]+[nx]?'",
+      "description": "Hardware register-style identifier in agent prompt or expert stub"
+    },
+    {
+      "code": "RES-ANCHOR-ERROR",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(does not exist at|lines .* exceed|symbol .* not found|cannot fetch)",
+      "description": "Source anchor file, line range, or symbol failed resolution at pinned commit"
+    },
+    {
+      "code": "RES-LICENSE-OR-ATTRIBUTION",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(SPDX|license .* does not match|attribution|copyright)",
+      "description": "Resolved file SPDX license or copyright attribution mismatch"
+    },
+    {
+      "code": "RES-HEX-ABSENT",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "hex values .* absent from cited",
+      "description": "Hexadecimal literal in claim or register offset absent from cited evidence lines/pages"
+    },
+    {
+      "code": "RES-SKIP-LIMIT",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "skipped:",
+      "description": "Anchor or document resolution skipped due to time or size limit"
+    },
+    {
+      "code": "DOC-HASH-MISMATCH",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "sha256 .* does not match",
+      "description": "Local document bytes SHA-256 differs from resources.documents[].sha256"
+    },
+    {
+      "code": "DOC-LOCATOR-ABSENT",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(section|table|figure) .* absent from cited",
+      "description": "Cited section, table, or figure heading/caption not found on cited pages/lines"
+    },
+    {
+      "code": "DOC-LOCATOR-ADJACENT",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "adjacent page",
+      "description": "Cited locator absent on cited page but present on adjacent page"
+    },
+    {
+      "code": "IDX-NOT-INDEXABLE",
+      "module": "index.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "has no (outline|headings) to index",
+      "description": "PDF has no outline bookmarks or document has no headings to index"
+    },
+    {
+      "code": "IDX-MISMATCH",
+      "module": "index.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "index .*: (sha256|pages)",
+      "description": "Document index file sha256 or page count differs from resources.documents"
+    },
+    {
+      "code": "CORP-MISSING-LEDGER",
+      "module": "corpus.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "has no corpus ledger: every document and block it considered needs a recorded disposition \\(#153\\)",
+      "description": "Checked root is missing corpus.yaml (#153)"
+    },
+    {
+      "code": "CORP-LEDGER-ERROR",
+      "module": "corpus.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "corpus\\.yaml.* (is not listed|does not match|resolves to nothing|is listed twice)",
+      "description": "Corpus ledger disposition, document coverage, or sha256 mismatch"
+    },
+    {
+      "code": "TODO-MISSING-METHOD",
+      "module": "worklist.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(no method|missing_method)",
+      "description": "Hardware TODO entry omits verification method"
+    },
+    {
+      "code": "INV-MISMATCH",
+      "module": "inventory.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "((offset|mask) .* does not match|is absent from the headers|is not in the spec)",
+      "description": "Peripheral spec register offset or field mask disagrees with C header constants"
+    },
+    {
+      "code": "INV-UNKNOWN-EXPR",
+      "module": "inventory.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "unknown expression",
+      "description": "C header constant uses an unsupported macro or expression"
+    },
+    {
+      "code": "DRIFT-DETECTED",
+      "module": "drift.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(moved|changed|stale)",
+      "description": "Source anchor drifted (moved or changed) between pinned commit and target commit"
+    },
+    {
+      "code": "DRIFT-REWRITE-REFUSED",
+      "module": "drift.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(cannot rewrite|refuse)",
+      "description": "Drift --rewrite refused because search scope changed or file read failed"
+    },
+    {
+      "code": "STUB-DRIFT",
+      "module": "stubgen.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(out of date|stubgen)",
+      "description": "Generated expert stub SKILL.md differs from domains.yaml"
+    },
+    {
+      "code": "TXT-CHECK",
+      "module": "textcheck.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(unbalanced backtick|control character)",
+      "description": "Text check failure on backticks or control characters"
+    },
+    {
+      "code": "HDG-CHECK",
+      "module": "headingcheck.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "(heading .* not found|unavailable page|unsupported URL)",
+      "description": "Remote GitHub blob or wiki heading check warning"
+    },
+    {
+      "code": "REV-CHECK",
+      "module": "review.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "review finding",
+      "description": "Review spec finding validation error"
+    },
+    {
+      "code": "ATTR-CHECK",
+      "module": "attribution.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(notice|holder)",
+      "description": "Attribution notice comparison finding"
+    },
+    {
+      "code": "AUTO-5-103",
+      "module": "speccheck.py",
+      "category": "auto5_warning",
+      "level": "warning",
+      "pattern": "(#103|unverified:|verdict stale:)",
+      "description": "AUTO-5 (#103): verification freshness warning surfaced in non-blocking check mode"
+    },
+    {
+      "code": "AUTO-5-105",
+      "module": "speccheck.py",
+      "category": "auto5_warning",
+      "level": "warning",
+      "pattern": "(#105|^context root:)",
+      "description": "AUTO-5 (#105): context-root diagnostic downgraded to warning"
+    },
+    {
+      "code": "AUTO-5-150",
+      "module": "speccheck.py",
+      "category": "auto5_warning",
+      "level": "warning",
+      "pattern": "(#150|both enter through spec .* with no stated split)",
+      "description": "AUTO-5 (#150): multiple stubs entering through the same spec without split:"
+    },
+    {
+      "code": "AUTO-5-D31-D32",
+      "module": "records.py",
+      "category": "auto5_warning",
+      "level": "warning",
+      "pattern": "(D31|D32|has no second reader in readers|ADJUDICATE)",
+      "description": "AUTO-5 (D31/D32): critical fact missing second reader or current ADJUDICATE warning"
+    },
+    {
+      "code": "BF-USB-1",
+      "module": "docresolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "Table 9-2\\.",
+      "description": "Table, figure, and section locators followed by a trailing period (e.g. Table 9-2. Title)"
+    },
+    {
+      "code": "BF-USB-2",
+      "module": "docresolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "9\\u20132|9-2",
+      "description": "Unicode en-dash (U+2013) in PDF captions matched against ASCII hyphen (-) in YAML locators"
+    },
+    {
+      "code": "BF-USB-3",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "cryptography|AES",
+      "description": "Encrypted public PDF outline extraction without missing cryptography dependency error"
+    },
+    {
+      "code": "BF-USB-4",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "^(Chapter|Appendix)\\s+([0-9]+|[A-Z])\\b",
+      "description": "Outline bookmark number extraction for Chapter N, Appendix X, and single-letter appendices"
+    },
+    {
+      "code": "BF-IMX-ISS-1",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "board-specs\\.yaml",
+      "description": "CI publish.yml template supports repositories with root or specs/board-specs.yaml marker"
+    },
+    {
+      "code": "BF-IMX-ISS-2",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "context-root",
+      "description": "CI checks.sh cross-root self-test supports documents-only roots with context roots"
+    },
+    {
+      "code": "BF-IMX-ISS-3",
+      "module": "stubgen.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "stubs-from|stubgen",
+      "description": "CI checks.sh supports --stubs-from and stubgen --check"
+    },
+    {
+      "code": "BF-IMX-ISS-4",
+      "module": "stubgen.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "split:",
+      "description": "domains.yaml documents and stubgen emits pairwise split: declarations across shared entry specs"
+    },
+    {
+      "code": "BF-IMX-ISS-5",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "pypdf",
+      "description": "Non-PDF subcommands (validate, status, check) do not fail when pypdf is unused"
+    },
+    {
+      "code": "BF-IMX-ISS-6",
+      "module": "docresolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "section .* absent from cited PDF pages",
+      "description": "Multi-page section subset citation and line-wrapped PDF table captions accepted"
+    },
+    {
+      "code": "BF-IMX-ISS-7",
+      "module": "resolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "[0-9A-Fa-f]+h",
+      "description": "PDF hex-value check recognizes NXP XXXX_XXXXh / XXh hexadecimal notation"
+    },
+    {
+      "code": "BF-IMX-8",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "<h[1-6]",
+      "description": "spec index extracts headings from HTML documents (<h1>..<h6>)"
+    },
+    {
+      "code": "BF-IMX-9",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "end_page",
+      "description": "index.from_pdf computes non-overlapping end_page before next sibling start_page"
+    },
+    {
+      "code": "BF-IMX-10",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "^(Part|Appendix)\\s+[A-Z0-9]+",
+      "description": "index.py NUMBER regex matches Part and top-level lettered Appendix headings"
+    },
+    {
+      "code": "BF-IMX-11",
+      "module": "specload.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "\\.index\\.yaml",
+      "description": "Fast loading/caching of large *.index.yaml files without repeated full re-parsing"
+    },
+    {
+      "code": "BF-IMX-12",
+      "module": "corpus.py",
+      "category": "bf_regression",
+      "level": "error",
+      "pattern": "unsubstituted template placeholder",
+      "description": "Angle-bracket expressions in derivation and note fields not flagged as template placeholders"
+    },
+    {
+      "code": "BF-IMX-13",
+      "module": "docresolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "(Table|Figure)\\s+[0-9]+-[0-9]+\\.",
+      "description": "docresolve.locator_pattern avoids double-prefixing Table/Figure and accepts trailing periods"
+    },
+    {
+      "code": "BF-IMX-14",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "error",
+      "pattern": "class",
+      "description": "spec.schema.json resources.documents[].class accepts vendor document classifications"
+    },
+    {
+      "code": "BF-IMX-15",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "cache\\.nxp\\.com|documentation-service\\.arm\\.com",
+      "description": "Vendor CDN retrieval guidance in scaffold and investigator skills"
+    },
+    {
+      "code": "BF-IMX-16",
+      "module": "resolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "[0-9A-Fa-f_]+h\\b",
+      "description": "resolve.py HEX_LITERAL matches vendor h-suffix hex notation (4438_0000h, 580h)"
+    },
+    {
+      "code": "BF-IMX-17",
+      "module": "docresolve.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "\\.index\\.yaml",
+      "description": "Mid-table PDF page citations verified against .index.yaml section page range"
+    },
+    {
+      "code": "BF-IMX-18",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "--root|--context-root|--json",
+      "description": "Consistent --root, --context-root, and --json flags across subcommands"
+    },
+    {
+      "code": "BF-ARM-19",
+      "module": "specmd.py",
+      "category": "bf_regression",
+      "level": "error",
+      "pattern": "<(n|m|x|i)>",
+      "description": "Arm architectural <n>/<m> register-index metavariables allowed in claim, todo.text, and verify note fields"
+    },
+    {
+      "code": "BF-ARM-20",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "^[A-Z][0-9]+(\\.[0-9]+)+",
+      "description": "index.py NUMBER regex matches Arm alphanumeric section numbers (A1.2, B2.3, C1.1, D1.1)"
+    },
+    {
+      "code": "BF-ARM-21",
+      "module": "records.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "status --json",
+      "description": "status --json exits 0 when structural check has no errors even with unverified or missing-second-reader facts"
+    },
+    {
+      "code": "BF-GW-22",
+      "module": "index.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "^=+\\s+.+\\s+=+$",
+      "description": "spec index extracts Trac/MoinMoin wiki = Heading = sections"
+    },
+    {
+      "code": "BF-GW-23",
+      "module": "resolve.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "cache/",
+      "description": "checks.sh check_resolve binds local cache/ repository checkouts automatically"
+    },
+    {
+      "code": "BF-GW-24",
+      "module": "corpus.py",
+      "category": "bf_regression",
+      "level": "error",
+      "pattern": "<0x[0-9a-fA-F]+",
+      "description": "Devicetree <0x... 0x...> cell syntax in corpus.yaml prose not flagged as template placeholder"
+    },
+    {
+      "code": "BF-GW-25",
+      "module": "speccheck.py",
+      "category": "bf_regression",
+      "level": "warning",
+      "pattern": "peripheral spec .* is not attached",
+      "description": "kind: peripheral specs composed into a kind: board spec via parts: are recognized as attached"
+    },
+    {
+      "code": "BF-GW-26",
+      "module": "resolve.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "names an entry absent from the input files",
+      "description": "resolve accepts extra --repo NAME=PATH bindings without failing with exit code 2"
+    },
+    {
+      "code": "BF-GW-27",
+      "module": "spec.py",
+      "category": "bf_regression",
+      "level": "info",
+      "pattern": "render --merged",
+      "description": "render --merged handles transitive upstream context roots with spec_file prefixes or unresolved instances[].ip"
+    }
+  ]
+}

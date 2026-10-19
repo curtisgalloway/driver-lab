@@ -1,0 +1,821 @@
+{
+  "schema_version": 1,
+  "description": "Language-neutral conformance corpus for prosefacts hardware-fact detection (hex literals, register names, bitfields, bit widths, timing bounds, code fences, inline code, URLs, SHA-256 digests, model names, shell variables, and hw-fact-ok: opt-outs).",
+  "opt_out_token": "hw-fact-ok:",
+  "cases": [
+    {
+      "id": "hex-mmio-address-and-underscored",
+      "category": "hex_literal",
+      "positive": true,
+      "description": "MMIO base address and uppercase-prefix underscored hex literal",
+      "text": "UART at 0xfe201000 and 0X7E20_1000.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 9,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 24,
+          "kind": "hex_literal",
+          "token": "0X7E20_1000",
+          "what": "hex literal '0X7E20_1000'",
+          "message": "hex literal '0X7E20_1000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          9,
+          "hex literal '0xfe201000'"
+        ],
+        [
+          1,
+          24,
+          "hex literal '0X7E20_1000'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 9,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 24,
+          "kind": "hex_literal",
+          "token": "0X7E20_1000",
+          "what": "hex literal '0X7E20_1000'",
+          "message": "hex literal '0X7E20_1000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "hex-range-hyphen",
+      "category": "hex_literal",
+      "positive": true,
+      "description": "Hyphen-separated hexadecimal address range",
+      "text": "range 0x1000-0x1fff",
+      "findings": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "hex_literal",
+          "token": "0x1000",
+          "what": "hex literal '0x1000'",
+          "message": "hex literal '0x1000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 14,
+          "kind": "hex_literal",
+          "token": "0x1fff",
+          "what": "hex literal '0x1fff'",
+          "message": "hex literal '0x1fff' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          7,
+          "hex literal '0x1000'"
+        ],
+        [
+          1,
+          14,
+          "hex literal '0x1fff'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "hex_literal",
+          "token": "0x1000",
+          "what": "hex literal '0x1000'",
+          "message": "hex literal '0x1000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 14,
+          "kind": "hex_literal",
+          "token": "0x1fff",
+          "what": "hex literal '0x1fff'",
+          "message": "hex literal '0x1fff' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "hex-short-and-64bit",
+      "category": "hex_literal",
+      "positive": true,
+      "description": "Two-digit hex literal and 64-bit underscored hex literal",
+      "text": "mask 0xff at offset 0x0000_0001_8000_0000",
+      "findings": [
+        {
+          "line": 1,
+          "column": 6,
+          "kind": "hex_literal",
+          "token": "0xff",
+          "what": "hex literal '0xff'",
+          "message": "hex literal '0xff' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 21,
+          "kind": "hex_literal",
+          "token": "0x0000_0001_8000_0000",
+          "what": "hex literal '0x0000_0001_8000_0000'",
+          "message": "hex literal '0x0000_0001_8000_0000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          6,
+          "hex literal '0xff'"
+        ],
+        [
+          1,
+          21,
+          "hex literal '0x0000_0001_8000_0000'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 6,
+          "kind": "hex_literal",
+          "token": "0xff",
+          "what": "hex literal '0xff'",
+          "message": "hex literal '0xff' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 21,
+          "kind": "hex_literal",
+          "token": "0x0000_0001_8000_0000",
+          "what": "hex literal '0x0000_0001_8000_0000'",
+          "message": "hex literal '0x0000_0001_8000_0000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-hex-single-digit-and-embedded",
+      "category": "hex_literal",
+      "positive": false,
+      "description": "Single hex digits (0x0, 0x1) and hex-like substrings inside identifiers",
+      "text": "value 0x0 and v0x10 and 0x1 and 0x10g",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "reg-standard-names",
+      "category": "register_name",
+      "positive": true,
+      "description": "Standard uppercase underscore-separated register names",
+      "text": "set GICD_CTLR then UART0_CR",
+      "findings": [
+        {
+          "line": 1,
+          "column": 5,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 20,
+          "kind": "register_name",
+          "token": "UART0_CR",
+          "what": "register-style name 'UART0_CR'",
+          "message": "register-style name 'UART0_CR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          5,
+          "register-style name 'GICD_CTLR'"
+        ],
+        [
+          1,
+          20,
+          "register-style name 'UART0_CR'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 5,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 20,
+          "kind": "register_name",
+          "token": "UART0_CR",
+          "what": "register-style name 'UART0_CR'",
+          "message": "register-style name 'UART0_CR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "reg-banked-suffix-nx",
+      "category": "register_name",
+      "positive": true,
+      "description": "Banked register names ending with lowercase n or x",
+      "text": "set GICD_ITARGETSRn, GICR_IPRIORITYRn, and USB_PORTSCx",
+      "findings": [
+        {
+          "line": 1,
+          "column": 5,
+          "kind": "register_name",
+          "token": "GICD_ITARGETSRn",
+          "what": "register-style name 'GICD_ITARGETSRn'",
+          "message": "register-style name 'GICD_ITARGETSRn' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 22,
+          "kind": "register_name",
+          "token": "GICR_IPRIORITYRn",
+          "what": "register-style name 'GICR_IPRIORITYRn'",
+          "message": "register-style name 'GICR_IPRIORITYRn' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 44,
+          "kind": "register_name",
+          "token": "USB_PORTSCx",
+          "what": "register-style name 'USB_PORTSCx'",
+          "message": "register-style name 'USB_PORTSCx' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          5,
+          "register-style name 'GICD_ITARGETSRn'"
+        ],
+        [
+          1,
+          22,
+          "register-style name 'GICR_IPRIORITYRn'"
+        ],
+        [
+          1,
+          44,
+          "register-style name 'USB_PORTSCx'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 5,
+          "kind": "register_name",
+          "token": "GICD_ITARGETSRn",
+          "what": "register-style name 'GICD_ITARGETSRn'",
+          "message": "register-style name 'GICD_ITARGETSRn' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 22,
+          "kind": "register_name",
+          "token": "GICR_IPRIORITYRn",
+          "what": "register-style name 'GICR_IPRIORITYRn'",
+          "message": "register-style name 'GICR_IPRIORITYRn' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 44,
+          "kind": "register_name",
+          "token": "USB_PORTSCx",
+          "what": "register-style name 'USB_PORTSCx'",
+          "message": "register-style name 'USB_PORTSCx' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-reg-single-word-spdx-snake-env",
+      "category": "register_name",
+      "positive": false,
+      "description": "Single uppercase word, hyphenated SPDX identifier, snake_case, trailing non-n/x lowercase, and $ENV_VAR",
+      "text": "UART, SPDX-License-Identifier, my_var, Foo_Bar, GICD_CTLRa, $GITHUB_TOKEN",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "bitfield-names-and-masks",
+      "category": "bitfield",
+      "positive": true,
+      "description": "Bitfield register_field names and hexadecimal bitmask",
+      "text": "clear USBSTS_HCH and set SCTLR_EL1_M with mask 0x0001_0000",
+      "findings": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "register_name",
+          "token": "USBSTS_HCH",
+          "what": "register-style name 'USBSTS_HCH'",
+          "message": "register-style name 'USBSTS_HCH' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 26,
+          "kind": "register_name",
+          "token": "SCTLR_EL1_M",
+          "what": "register-style name 'SCTLR_EL1_M'",
+          "message": "register-style name 'SCTLR_EL1_M' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 48,
+          "kind": "hex_literal",
+          "token": "0x0001_0000",
+          "what": "hex literal '0x0001_0000'",
+          "message": "hex literal '0x0001_0000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          7,
+          "register-style name 'USBSTS_HCH'"
+        ],
+        [
+          1,
+          26,
+          "register-style name 'SCTLR_EL1_M'"
+        ],
+        [
+          1,
+          48,
+          "hex literal '0x0001_0000'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "register_name",
+          "token": "USBSTS_HCH",
+          "what": "register-style name 'USBSTS_HCH'",
+          "message": "register-style name 'USBSTS_HCH' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 26,
+          "kind": "register_name",
+          "token": "SCTLR_EL1_M",
+          "what": "register-style name 'SCTLR_EL1_M'",
+          "message": "register-style name 'SCTLR_EL1_M' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 48,
+          "kind": "hex_literal",
+          "token": "0x0001_0000",
+          "what": "hex literal '0x0001_0000'",
+          "message": "hex literal '0x0001_0000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-bitfield-prose-brackets",
+      "category": "bitfield",
+      "positive": false,
+      "description": "Bracketed bit slice notation in prose without register names or hex literals",
+      "text": "bits [31:16] and bit [0] of the status word",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "neg-bit-width-prose",
+      "category": "bit_width",
+      "positive": false,
+      "description": "Bit-width adjectives in prose",
+      "text": "Use 32-bit and 64-bit accesses; 8-bit and 16-bit writes trap.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "bit-width-constant-token",
+      "category": "bit_width",
+      "positive": true,
+      "description": "Uppercase constant name and hex value alongside bit width",
+      "text": "Configure BUS_WIDTH_32 with 0x20.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 11,
+          "kind": "register_name",
+          "token": "BUS_WIDTH_32",
+          "what": "register-style name 'BUS_WIDTH_32'",
+          "message": "register-style name 'BUS_WIDTH_32' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 29,
+          "kind": "hex_literal",
+          "token": "0x20",
+          "what": "hex literal '0x20'",
+          "message": "hex literal '0x20' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          11,
+          "register-style name 'BUS_WIDTH_32'"
+        ],
+        [
+          1,
+          29,
+          "hex literal '0x20'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 11,
+          "kind": "register_name",
+          "token": "BUS_WIDTH_32",
+          "what": "register-style name 'BUS_WIDTH_32'",
+          "message": "register-style name 'BUS_WIDTH_32' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 29,
+          "kind": "hex_literal",
+          "token": "0x20",
+          "what": "hex literal '0x20'",
+          "message": "hex literal '0x20' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-timing-bounds-prose",
+      "category": "timing_bound",
+      "positive": false,
+      "description": "Decimal timing bounds and frequencies in prose",
+      "text": "Wait 100 us after reset and poll for up to 10 ms at 24 MHz.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "timing-bound-register-and-hex",
+      "category": "timing_bound",
+      "positive": true,
+      "description": "Hex timeout value and timeout register name",
+      "text": "Write 0x03e8 to PLL_LOCK_TIMEOUT before enabling.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "hex_literal",
+          "token": "0x03e8",
+          "what": "hex literal '0x03e8'",
+          "message": "hex literal '0x03e8' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 17,
+          "kind": "register_name",
+          "token": "PLL_LOCK_TIMEOUT",
+          "what": "register-style name 'PLL_LOCK_TIMEOUT'",
+          "message": "register-style name 'PLL_LOCK_TIMEOUT' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          7,
+          "hex literal '0x03e8'"
+        ],
+        [
+          1,
+          17,
+          "register-style name 'PLL_LOCK_TIMEOUT'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "hex_literal",
+          "token": "0x03e8",
+          "what": "hex literal '0x03e8'",
+          "message": "hex literal '0x03e8' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 17,
+          "kind": "register_name",
+          "token": "PLL_LOCK_TIMEOUT",
+          "what": "register-style name 'PLL_LOCK_TIMEOUT'",
+          "message": "register-style name 'PLL_LOCK_TIMEOUT' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-code-fence-clean",
+      "category": "code_fence",
+      "positive": false,
+      "description": "Fenced YAML code block without hardware hex literals or register names",
+      "text": "```yaml\nspec: bcm2711\nkind: soc\n```",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "code-fence-with-hardware-facts",
+      "category": "code_fence",
+      "positive": true,
+      "description": "Fenced C code block containing an MMIO hex address and register name",
+      "text": "```c\nwritel(0xfe201000, UART0_DR);\n```",
+      "findings": [
+        {
+          "line": 2,
+          "column": 8,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 2,
+          "column": 20,
+          "kind": "register_name",
+          "token": "UART0_DR",
+          "what": "register-style name 'UART0_DR'",
+          "message": "register-style name 'UART0_DR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          2,
+          8,
+          "hex literal '0xfe201000'"
+        ],
+        [
+          2,
+          20,
+          "register-style name 'UART0_DR'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 2,
+          "column": 8,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 2,
+          "column": 20,
+          "kind": "register_name",
+          "token": "UART0_DR",
+          "what": "register-style name 'UART0_DR'",
+          "message": "register-style name 'UART0_DR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-inline-code-clean",
+      "category": "inline_code",
+      "positive": false,
+      "description": "Inline code spans naming skills and YAML keys",
+      "text": "Load `board-expert` and pass `spec: x`.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "inline-code-with-hardware-facts",
+      "category": "inline_code",
+      "positive": true,
+      "description": "Inline code spans containing a register name and hex literal",
+      "text": "Read `GICD_CTLR` at `0xff841000`.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 22,
+          "kind": "hex_literal",
+          "token": "0xff841000",
+          "what": "hex literal '0xff841000'",
+          "message": "hex literal '0xff841000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          7,
+          "register-style name 'GICD_CTLR'"
+        ],
+        [
+          1,
+          22,
+          "hex literal '0xff841000'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 7,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        },
+        {
+          "line": 1,
+          "column": 22,
+          "kind": "hex_literal",
+          "token": "0xff841000",
+          "what": "hex literal '0xff841000'",
+          "message": "hex literal '0xff841000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-url-clean",
+      "category": "url",
+      "positive": false,
+      "description": "HTTPS URL without hex literals or uppercase underscore tokens",
+      "text": "See https://developer.arm.com/documentation/ddi0487/latest for details.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "url-with-hex-segment",
+      "category": "url",
+      "positive": true,
+      "description": "URL path containing a 0x-prefixed hex literal",
+      "text": "See https://example.invalid/regs/0xfe201000 for details.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 34,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          34,
+          "hex literal '0xfe201000'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 34,
+          "kind": "hex_literal",
+          "token": "0xfe201000",
+          "what": "hex literal '0xfe201000'",
+          "message": "hex literal '0xfe201000' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-sha256-digest",
+      "category": "sha256_digest",
+      "positive": false,
+      "description": "Bare 64-character lowercase hex SHA-256 digest without 0x prefix",
+      "text": "sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "neg-model-names",
+      "category": "model_name",
+      "positive": false,
+      "description": "SoC, CPU, and architecture model names without uppercase underscores",
+      "text": "Supports BCM2711, RK3588, i.MX95, Cortex-A72, and ARMv8-A boards.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "neg-shell-variable-braced",
+      "category": "shell_variable",
+      "positive": false,
+      "description": "Braced shell variable expansions (${VAR}) stripped before register matching",
+      "text": "Run ${CLAUDE_PLUGIN_ROOT}/scripts/spec.py in ${GITHUB_WORKSPACE}/specs.",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "shell-variable-plus-register",
+      "category": "shell_variable",
+      "positive": true,
+      "description": "Braced shell variable on the same line as a real register name (column preserved)",
+      "text": "${CLAUDE_PLUGIN_ROOT}/scripts/spec.py flags GICD_CTLR.",
+      "findings": [
+        {
+          "line": 1,
+          "column": 45,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          1,
+          45,
+          "register-style name 'GICD_CTLR'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 1,
+          "column": 45,
+          "kind": "register_name",
+          "token": "GICD_CTLR",
+          "what": "register-style name 'GICD_CTLR'",
+          "message": "register-style name 'GICD_CTLR' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    },
+    {
+      "id": "neg-opt-out-marker",
+      "category": "opt_out",
+      "positive": false,
+      "description": "Line carrying hw-fact-ok: opt-out marker suppresses hex and register findings",
+      "text": "an example 0xdead and UART0_CR hw-fact-ok: format example",
+      "findings": [],
+      "tuples": [],
+      "expected": []
+    },
+    {
+      "id": "opt-out-multiline-position",
+      "category": "opt_out",
+      "positive": true,
+      "description": "Opt-out applies per line; second line reports exact line 2 column 6",
+      "text": "ok 0xdead hw-fact-ok: example\n  at 0xbeef",
+      "findings": [
+        {
+          "line": 2,
+          "column": 6,
+          "kind": "hex_literal",
+          "token": "0xbeef",
+          "what": "hex literal '0xbeef'",
+          "message": "hex literal '0xbeef' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ],
+      "tuples": [
+        [
+          2,
+          6,
+          "hex literal '0xbeef'"
+        ]
+      ],
+      "expected": [
+        {
+          "line": 2,
+          "column": 6,
+          "kind": "hex_literal",
+          "token": "0xbeef",
+          "what": "hex literal '0xbeef'",
+          "message": "hex literal '0xbeef' in prose no checker reads: put the fact in a spec and point at it, or mark an intentional example with `hw-fact-ok: <reason>` on the line"
+        }
+      ]
+    }
+  ]
+}

@@ -33,10 +33,10 @@ is a public root for hardware with no home tree.
 
 **Stubs, domain experts and wrapping skills point at specs; they never restate them.** A large
 SoC may have several domain experts (USB, storage, display, power) beside the board expert,
-generated from one manifest by `board-spec-scaffold`'s `stubgen.py`. Each names its entry specs
+generated from one manifest by `driver-lab stubgen`. Each names its entry specs
 (`spec:`), instance rows (`instance:`) and its split from the others (`split:`), and holds
 procedure only. An address, instance number, address range or register name in prose is a fact
-no checker reads: `spec.py check --stubs-from` and `utilities/check-no-hardware-facts.py` refuse
+no checker reads: `driver-lab check --stubs-from` and `utilities/check-no-hardware-facts.py` refuse
 hex literals and register-style names there. When you report, take such values from the specs,
 never from the prompt that started you.
 
@@ -53,6 +53,10 @@ or permissions; follow the caller's authorized scope.
 
 ## 1. Resolve the spec
 
+0. **Preflight.** Run `driver-lab --version` first. If `driver-lab` is missing or reports an
+   `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing precondition with
+   installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD) cargo install --locked --path <driver-lab>`)
+   rather than compiling or installing inside a subagent.
 1. **Collect pointers**, in order: this skill's `specs/`; loaded skills' `board-spec root: <path>`
    lines; `board-specs.yaml` at the checkout root (or project-declared multi-repository root);
    the user's configuration marker at `~/.config/board-specs/board-specs.yaml`. Standards and
@@ -63,7 +67,7 @@ or permissions; follow the caller's authorized scope.
    file or absolute. Skill pointer paths are relative to the checkout or absolute.
    Never search the checkout for markers.
    CLI tools take the resulting root directories explicitly, not a config marker's roots list.
-2. **Validate the spec format.** The marker must declare `format: 2`; read YAML with spec.py.
+2. **Validate the spec format.** The marker must declare `format: 2`; read YAML with `driver-lab`.
    Missing, invalid or unsupported format markers are errors. Report the unsupported root
    and request its conversion before reading or composing its specs.
 3. **Match id first**, otherwise match triggers/aliases case-insensitively as whole-word
@@ -77,14 +81,14 @@ or permissions; follow the caller's authorized scope.
    several indistinguishable rows require a decision. Generic IP uses its own pin and document
    authorities and has no instance facts. Branch-only map entries must be resolved to the
    commit actually read and reported; never silently treat a branch as a cited immutable pin.
-5. **Check and render specs.** With the contract's pinned environment, run
-   `spec.py check <checked root>... --context-root <dependency root>... --require-license`.
+5. **Check and render specs.** Run
+   `driver-lab check <checked root>... --context-root <dependency root>... --require-license`.
    Keep root order by layer, then pointer order; docs, permissive, GPL among spec repositories.
    Check every root whose own facts you will report as a checked root; use context for other
    dependencies. A root cannot be both checked and context. Errors block use as verified
    evidence; warnings and unavailable tooling go in the report.
    Render each id needed in the composition with
-   `spec.py render <root>... --context-root <dependency root>... --spec <id> --merged
+   `driver-lab render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md`. The selector does not recursively render parts. Read those
    views and consult originating YAML for exact fields. Track all contributing files and layers.
    Give `--source-commit` only for roots that contribute to the view
@@ -100,23 +104,24 @@ independent work and return Needs decision; the orchestrator asks the user.
 ## 2. Materialize resources
 
 - **Cache**: use the caller's cache convention and spec's `cache` name; parts inherit the board's
-  cache unless they name their own. Reuse existing resources before fetching. Cache paths are
+  cache unless they name their own. Reuse existing resources before fetching, or populate the cache
+  with `driver-lab fetch <file>... --cache <dir> --root <root>`. Cache paths are
   local choices, never spec content or public report material.
 - **Repositories**: read each cited entry at `commit`. Branch-only `ref` entries are maps;
-  record the full commit actually read. Use `spec.py resolve <file>... --root <root>
+  record the full commit actually read. Use `driver-lab resolve <file>... --root <root>
   --repo NAME=CHECKOUT` for bindings to existing checkouts; unbound entries fetch over HTTPS.
   Repeat per file/root when extension declarations differ. Check anchor and skip counts, not
   only exit status: a size/time-limited, fully skipped run can still exit 0.
 - **Documents**: read `resources.documents` authorities first (omit `cite`, or `cite: false`
   for maps). Keep the canonical URL in citations, retrieve bytes from `retrieval` when needed;
   for Arm PDFs use the listed documentation-service static URL. Match revision/hash before
-  relying on bytes. `spec.py resolve <file> --docs-dir <dir>` expects files named by document
+  relying on bytes. `driver-lab resolve <file> --docs-dir <dir>` expects files named by document
   name, not an arbitrary PDF filename. Source code is the map and implementation evidence.
 - **Tools/internal access**: load the skill named by a `resources.tools[].via` entry and follow
   its invocation/access rules. Internal documents set `access: private`; source and
   document entries have no invocation `via` field. If the vendor skill is absent, say what is
   unavailable and use a named public proxy if applicable. Never guess internal endpoints.
-- **Evidence display**: `spec.py show <file>...` with the same resolver options places claims
+- **Evidence display**: `driver-lab show <file>...` with the same resolver options places claims
   beside cited source lines. Search-anchor prose is never executed by the tool; repeat that
   search as a reader before treating a negative claim as supported.
 
@@ -136,7 +141,7 @@ footnote the record does not state.
 
 **When no composed fact covers the question** (no claim, payload or locator touches the
 topic), look it up in the root's section index before searching a document or answering from
-memory: `<root>/index/<document>.index.yaml`, written by `spec.py index` and pinned to the
+memory: `<root>/index/<document>.index.yaml`, written by `driver-lab index` and pinned to the
 document's `sha256`. Find the section, read only its pages (or lines) from the materialized,
 hash-checked document, and answer from them. Such an answer is **`unverified (doc-read)`**:
 label it so, with document name, revision and page or section locator, and keep it apart from
@@ -188,7 +193,7 @@ Include mechanism or tables only when useful. Then a short **Spec provenance** b
 - anchored board/instance or generic IP mode, missing board facts;
 - vendor/local origins and any citations not publicly checkable, respecting classification;
 - per-file record summary and per-fact freshness from
-  `spec.py status <root>... --context-root <dependency root>... --json`, including missing
+  `driver-lab status <root>... --context-root <dependency root>... --json`, including missing
   records, stale/upstream-stale/unknown/unverified facts and missing second
   readers. Do not calculate freshness from `spec_sha256` or load the record body yourself.
 
@@ -196,7 +201,7 @@ The status command checks roots and may return errors with its report: retain th
 A current PASS with a missing second reader is not fully verified. A generated status row is
 not a fresh source reading. Do not publish private paths/endpoints in the report.
 
-`spec.py todo <root>... --context-root <dependency root>... --check hardware` lists the open
+`driver-lab todo <root>... --context-root <dependency root>... --check hardware` lists the open
 hardware TODOs as the input to a readback plan, and a narrow follow-up question names one fact id
 from that list instead of commissioning another general investigation.
 
@@ -212,7 +217,7 @@ proposed gap record the next lap turns into a checked fact, in the spec's own sh
   todo: {check: document, text: "read <document> §<section> (pp. <first>-<last>): <question>"}
 ```
 
-Once authored, `spec.py todo --check document` lists it and `campaign-review` sees it.
+Once authored, `driver-lab todo --check document` lists it and `campaign-review` sees it.
 
 Return Needs decision per QUESTIONS before provenance when a fork remains. End with
 **Suggested spec change** when evidence adds/corrects something: originating file, existing

@@ -137,30 +137,36 @@ contestant who copies the premise fails the harness; one who reads the spec pass
 ## Authoring protocol
 
 1. **Draft** the item: prompt, signature, reference, trap and harness, with page citations.
-2. **Self-test**: `grade_code.py --self-test` must pass. It proves the reference passes
-   the harness, the trap fails it (a trap that hangs is also a finding), the harness and probe
-   compile against the published signature with a stub body, the probe fires on that stub, and
-   the probe does not fire on the reference.
+2. **Self-test**: `driver-lab eval grade-code --bank eval/bank/code_bank.json --self-test` must
+   pass. It proves the reference passes the harness, the trap fails it (a trap that hangs is also
+   a finding), the harness and probe compile against the published signature with a stub body,
+   the probe fires on that stub, and the probe does not fire on the reference.
 3. **Blind verification**: three independent reviewers (models or people) each check every item
    against the source documents, without seeing the reference or the other reviews. Fix or drop
    items they dispute.
 
 ## Commands
 
-All scripts use only the Python standard library and need `rustc` (edition 2021) on the path.
-Run them with `python3 -I`.
+First verify that both `driver-lab` (`driver-lab --version`) and `rustc` (`rustc --version`,
+edition 2021) are on `PATH`. If `driver-lab` is missing, stop and ask the user to install a
+release binary or run `cargo install --path .` from a `driver-lab` checkout (`ENV-6`).
 
 ```bash
-python3 -I skills/spec-eval/scripts/grade_code.py --bank eval/bank/code_bank.json --self-test
-python3 -I skills/spec-eval/scripts/rust_check.py --export-preambles eval/bank/code_bank.json -o code_preambles.json
-python3 -I skills/spec-eval/scripts/rust_check.py ITEM_ID --file answer.rs --preambles code_preambles.json
-python3 -I skills/spec-eval/scripts/grade_code.py --bank eval/bank/code_bank.json --raw raw/ --out graded.jsonl --report report.md --abstain-arms ARM1,ARM2
+driver-lab eval validate-bank --bank eval/bank/code_bank.json
+driver-lab eval grade-code --bank eval/bank/code_bank.json --self-test
+driver-lab eval rust-check --export-preambles eval/bank/code_bank.json -o code_preambles.json
+driver-lab eval rust-check ITEM_ID --file answer.rs --preambles code_preambles.json
+driver-lab eval grade-code --bank eval/bank/code_bank.json --raw raw/ --out graded.jsonl --report report.md --abstain-arms ARM1,ARM2
+driver-lab eval build-prompt --bank eval/bank/code_bank.json --item ITEM_ID --arm A --specs specs/ --docs docs/
+driver-lab eval grade-facts --bank eval/bank/fact_bank.json --raw raw_facts.jsonl --out graded_facts.jsonl --abstain-arms A,C
+driver-lab eval score --bank eval/bank/code_bank.json --graded graded.jsonl --report report.md --abstain-arms ARM1,ARM2
 ```
 
 - The export holds only `preamble`, `signature`, `tier` and `use_hw_prelude` for each item, so
-  it can go to a contestant. `rust_check.py` reads it from `--preambles`, else from
-  `SPEC_EVAL_PREAMBLES`, else `code_preambles.json` in the current directory, and takes the
-  code from `--code`, `--file` or standard input.
+  it can go to a contestant (`driver-lab eval extract` is an alias for
+  `driver-lab eval rust-check --export-preambles`). `driver-lab eval rust-check` reads it from
+  `--preambles`, else from `SPEC_EVAL_PREAMBLES`, else `code_preambles.json` in the current
+  directory, and takes the code from `--code`, `--file` or standard input.
 - A sweep's `--raw` is a `.jsonl` file or a directory of them. Each record has `item_id` (or
   `id`), `model`, `arm`, `rust_code` and optionally `abstained`. Records with an unknown item
   id are reported on standard error and graded `unknown-item`, outside the tables.
@@ -181,11 +187,13 @@ python3 -I skills/spec-eval/scripts/grade_code.py --bank eval/bank/code_bank.jso
   any whitespace Rust allows between the tokens) are refused: `compile-error` with
   diagnostics starting `refused:`. The list blocks the obvious ways to subvert a harness; it
   is not a sandbox.
-- **Grading runs answers unsandboxed**, with the grader's privileges, file system and network,
-  and the harness assumes answers are not written to subvert it. Run grading in a disposable
-  environment.
-- `rust_check.py` compiles a library crate, while grading builds the test program; an error
-  that appears only in the full build can pass `COMPILE_OK` and fail at grading.
+- **Candidate test binary containment (`ENV-5`)**: `driver-lab eval grade-code` and
+  `driver-lab eval run` execute compiled candidate test binaries inside `bwrap` on Linux
+  (`--unshare-net`, read-only `/`, writable scratch only) and `sandbox-exec` on macOS. If the
+  OS sandbox binary is missing or cannot initialize, grading fails closed with exit code `3`
+  unless `--allow-unsandboxed` is explicitly passed.
+- `driver-lab eval rust-check` compiles a library crate, while grading builds the test program;
+  an error that appears only in the full build can pass `COMPILE_OK` and fail at grading.
 - `SPEC_EVAL_RUN_TIMEOUT` (seconds, default 20) bounds each test run; a value that is not a
   positive integer exits 2.
 - `--jobs N` sets the thread count (default: the CPU count). `--schema` and `--prelude`
@@ -196,8 +204,9 @@ python3 -I skills/spec-eval/scripts/grade_code.py --bank eval/bank/code_bank.jso
 | Code | Meaning |
 | --- | --- |
 | 0 | Success (`COMPILE_OK`, export written, grading finished, self-test clean). |
-| 1 | Self-test findings or schema errors; `rust_check.py`: `COMPILE_ERROR`. |
-| 2 | Usage or environment error: bad arguments, unreadable file, unknown item id, no `rustc`. |
+| 1 | Self-test findings or schema errors; `driver-lab eval rust-check`: `COMPILE_ERROR`. |
+| 2 | Usage or input error: bad arguments, unreadable file, unknown item id, no `rustc`. |
+| 3 | Sandbox precondition error (`ENV-5`): OS sandbox (`bwrap` or `sandbox-exec`) unavailable without `--allow-unsandboxed`. |
 
 ## Not here
 

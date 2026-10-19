@@ -61,19 +61,21 @@ readers the spec, declared dependencies, this skill and access to sources at the
 Do not give them the author's reasoning, this conversation or earlier verdicts. For delta
 work give selected fact ids and changed upstream references, without previous conclusions.
 
-Commands use repository-relative paths; when installed, locate the sibling
-`spec-format/scripts/spec.py`. Use Python with spec-format's hash-pinned requirements
-installed. Run `spec.py --skill` to confirm availability. `check` and `status` exist from
-SF2-3; `resolve` and `show` require SF2-6. Report a missing prerequisite rather than
-guessing at an unchecked result.
+Before running any subcommand, run `driver-lab --version` first. If `driver-lab` is missing or
+reports an `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing
+precondition with installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <driver-lab>`) rather than compiling or installing inside a
+subagent.
 
 1. **Check structure and licenses.** Supply the selected root and every dependency root
-   needed by composition or fact references as context:
+   needed by composition or fact references as context (pass `--no-fail-on-pending` to `status`
+   so extracting `basis` hashes for `unverified` or `needs-second-reader` specs exits `0` under
+   `set -euo pipefail` while still failing on schema, semantic, or license errors):
 
    ```bash
-   python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license
-   python3 skills/spec-format/scripts/spec.py status <root> --context-root <dependency-root> --require-license --json
-   python3 skills/spec-format/scripts/spec.py status <root> --context-root <dependency-root> --require-license --stale --json
+   driver-lab check <root> --context-root <dependency-root> --require-license
+   driver-lab status <root> --context-root <dependency-root> --require-license --no-fail-on-pending --json
+   driver-lab status <root> --context-root <dependency-root> --require-license --stale --no-fail-on-pending --json
    ```
 
    Repeat `--context-root` for more dependencies; omit it when none are needed. A context
@@ -150,8 +152,8 @@ guessing at an unchecked result.
   available document hashes; then read each fact beside its cited source lines:
 
   ```bash
-  python3 skills/spec-format/scripts/spec.py resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
-  python3 skills/spec-format/scripts/spec.py show <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  driver-lab resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  driver-lab show <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
   ```
 
   Repeat `--repo` for named repos; unbound repos are fetched over HTTPS. `--docs-dir` supplies
@@ -327,7 +329,7 @@ share it between files, or keep any record other than a `.verify.yaml` file in a
   source: report the schema limitation and request an identified resource. For a run extract
   without such identity, name it in the verdict note and report the missing source identity.
 - `verdicts`: keyed by **bare fact id**, including instance and variant ids. Copy a new
-  verdict's `basis` from that fact's **`spec.py status --json`** row, and its `upstream` map
+  verdict's `basis` from that fact's **`driver-lab status --json`** row, and its `upstream` map
   when nonempty; omit `{}` because an empty map is invalid. Null `basis` or `upstream` means
   unknown: repair the cause and rerun status. **Never compute a basis by hand**, use
   `recorded` as today's basis, or update hashes without a reading.
@@ -341,8 +343,8 @@ share it between files, or keep any record other than a `.verify.yaml` file in a
 ## Gate and report
 
 ```bash
-python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license --require-verified pr
-python3 skills/spec-format/scripts/spec.py check <root> --context-root <dependency-root> --require-license --require-verified main
+driver-lab check <root> --context-root <dependency-root> --require-license --require-verified pr
+driver-lab check <root> --context-root <dependency-root> --require-license --require-verified main
 ```
 
 Use `pr` for a proposed change: stale, upstream-stale, unverified, unknown, a current
@@ -360,11 +362,11 @@ The [example root](examples/widget/board-specs.yaml) describes a **synthetic** W
 not real hardware. Its [spec](examples/widget/widget.spec.yaml) cites a local
 [synthetic manual](examples/widget/resources/widget-trm.txt). Copy this record verbatim to
 `<example-root>/resources/widget.verify.yaml` in scratch and run
-`check <example-root> --require-license --require-verified pr`. The reset count is marked
+`driver-lab check <example-root> --require-license --require-verified pr`. The reset count is marked
 critical only to demonstrate the `readers` field, not because real bring-up depends on it.
 The reset-budget inference combines two separately documented phases; no single section
-states their total. The test in
-`skills/spec-format/tests/test_verifier_example.py` copies this exact fenced record into a
+states their total. The crate's conformance and record test suite
+(`cargo test --locked --offline`) copies this exact fenced record into a
 fixture root and requires zero errors. Bases came from `status --json`; changing example
 facts or resource identities requires a new reading and new bases.
 

@@ -140,12 +140,12 @@ class PatchGateTest(unittest.TestCase):
     self.assertIn("gate inputs touched: utilities/check-open-side.py", out)
 
   def test_new_and_renamed_gate_inputs_fail(self):
-    os.makedirs(os.path.join(self.tree, "skills/spec-format"))
-    self.git("mv", "README.md", "skills/spec-format/requirements.txt")
+    os.makedirs(os.path.join(self.tree, "evals"))
+    self.git("mv", "README.md", "evals/requirements.txt")
     self.put(".github/workflows/checks.yml", "on: push\n")
     code, out = self.gate()
     self.assertEqual(code, 1)
-    self.assertIn(".github/workflows/checks.yml, skills/spec-format/requirements.txt", out)
+    self.assertIn(".github/workflows/checks.yml, evals/requirements.txt", out)
 
   def test_binary_change_fails(self):
     self.put("README.md", b"\x00\x01binary")

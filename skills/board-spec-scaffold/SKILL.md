@@ -41,6 +41,7 @@ the interview checklist. Author and read specs as YAML.
 | Corpus ledger, `corpus.yaml` beside the marker | [corpus.yaml](templates/corpus.yaml) |
 | Documents-only root marker (`accepts: []`) | [docs-root/board-specs.yaml](templates/docs-root/board-specs.yaml) |
 | `<board>-expert/SKILL.md` | [stub-SKILL.md](templates/stub-SKILL.md) |
+| Domain expert stubs, one per domain (`<board>-usb-expert/SKILL.md`, ...) | [domains.yaml](templates/domains.yaml) manifest, then `scripts/stubgen.py` renders [domain-stub-SKILL.md](templates/domain-stub-SKILL.md) |
 | `<vendor>-board-tools/SKILL.md` | [vendor-board-tools-SKILL.md](templates/vendor-board-tools-SKILL.md) |
 | `<root>/resources/<name>.verify.yaml`, one per spec file, overlays included | spec-verifier writes it |
 | New spec repository: `scripts/checks.sh`, `.github/workflows/checks.yml` | [Check templates and setup](../spec-format/ci/README.md#repository-checks) |
@@ -97,6 +98,12 @@ When creating a spec repository, install and configure the [repository checks](.
    Keep private document/bench details in private overlays. Source-license notices belong
    in `notices`, not code excerpts. A stub keeps “Board expert for” and “A stub over the
    `<id>` board spec” in its description, a `spec: <id>` line in its body, and no facts.
+   For several domain experts on one SoC, write a `domains.yaml` manifest (name, description
+   with the delegation triggers, entry spec ids, instance rows, skills to preload, a `split:`
+   from the other experts, an optional output profile) and run
+   `python3 scripts/stubgen.py domains.yaml --out <skills dir>`; rerun it after editing the
+   manifest, and run it with `--check` in CI so hand edits are caught. No addresses, instance
+   numbers or register names in any stub text: name spec ids.
 6. **Register** a new stub where the target repository requires; inspect its current README
    and plugin metadata rather than assuming an obsolete registration script exists. Spec
    files need no separate registry: they are discovered under the chosen roots. Follow the

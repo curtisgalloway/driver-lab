@@ -39,6 +39,7 @@ list:
 ```bash
 python3 utilities/check-no-private-paths.py
 python3 utilities/check-open-side.py
+python3 utilities/check-no-hardware-facts.py
 python3 -m unittest discover -s utilities/tests
 python3 -m unittest discover -s skills/board-expert/tests
 python3 -m venv .venv-spec && .venv-spec/bin/pip install -q --require-hashes -r skills/spec-format/requirements.txt

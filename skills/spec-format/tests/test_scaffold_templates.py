@@ -37,7 +37,7 @@ VALUES = {
     'driver-first': '4', 'driver-last': '6', 'driver-symbol': 'fixture_init',
     'uart-instance': 'uart0', 'uart-base': '0x1000', 'uart-spi': '7',
     'uart-intid': '39', 'uart-clock': 'uartclk', 'uart-page': '12',
-    'addressing-page': '4', 'excluded-block': 'fixture-gpu',
+    'addressing-page': '4', 'excluded-block': 'fixture-gpu', 'usb-instance': 'console-uart',
 }
 
 
@@ -101,7 +101,7 @@ class ScaffoldTemplates(unittest.TestCase):
         return docs, source, extra
 
     def test_every_template_validates_after_text_substitution(self):
-        paths = sorted(TEMPLATES.rglob('*.yaml'))
+        paths = sorted(p for p in TEMPLATES.rglob('*.yaml') if p.name != 'domains.yaml')
         self.assertEqual({str(p.relative_to(TEMPLATES)) for p in paths}, {
             'board.spec.yaml', 'soc.spec.yaml', 'chip.spec.yaml', 'ip.spec.yaml',
             'overlay.spec.yaml', 'board-specs.yaml', 'docs-root/board-specs.yaml',
@@ -120,7 +120,7 @@ class ScaffoldTemplates(unittest.TestCase):
 
     def test_every_template_header_uses_the_chosen_license(self):
         paths = sorted(p for p in TEMPLATES.rglob('*') if p.is_file())
-        self.assertEqual(len(paths), 11)
+        self.assertEqual(len(paths), 13)
         for template in paths:
             header = '\n'.join(line for line in template.read_text().splitlines()
                                if 'SPDX-' in line)
@@ -152,6 +152,60 @@ class ScaffoldTemplates(unittest.TestCase):
         cov = result['roots'][0]['coverage']
         self.assertEqual(cov['documents']['counts'], {'spec': 5, 'planned': 1, 'excluded': 0})
         self.assertEqual(cov['blocks']['counts'], {'spec': 1, 'planned': 0, 'excluded': 1})
+
+    def stubgen(self, *argv):
+        import subprocess
+
+        script = TEMPLATES.parent / 'scripts' / 'stubgen.py'
+        return subprocess.run([sys.executable, '-I', str(script), *map(str, argv)],
+                              capture_output=True, text=True)
+
+    def test_domain_manifest_generates_stubs_that_check(self):
+        docs, _, extra = self.composition()
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        skills = self.tmp / 'skills'
+        proc = self.stubgen(manifest, '--out', skills)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        names = sorted(p.parent.name for p in skills.glob('*/SKILL.md'))
+        self.assertEqual(names, ['fixture-board-storage-expert', 'fixture-board-usb-expert'])
+        usb = (skills / 'fixture-board-usb-expert' / 'SKILL.md').read_text()
+        self.assertIn('`spec: fixture-soc`', usb)
+        self.assertIn('`instance: fixture-soc#console-uart`', usb)
+        self.assertIn('`split: fixture-board-expert answers board integration', usb)
+        self.assertIn('SPDX-License-Identifier: CC-BY-4.0', usb)
+        code, result, err = run('check', docs, extra, '--require-license', '--stubs-from', skills)
+        self.assertEqual(code, 0, (result, err))
+        self.assertEqual(result['stubs'], 2)
+        self.assertFalse([f for f in result['findings'] if 'split' in f['message']], result)
+        self.assertEqual(self.stubgen(manifest, '--out', skills, '--check').returncode, 0)
+        (skills / 'fixture-board-usb-expert' / 'SKILL.md').write_text(usb + 'edited\n')
+        self.assertEqual(self.stubgen(manifest, '--out', skills, '--check').returncode, 1)
+
+    def test_domain_manifest_refuses_hardware_facts_and_duplicate_names(self):
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        text = manifest.read_text()
+        for old, new, why in [
+                ('USB host, xHCI', 'USB host at 0xfc000000, xHCI', 'hex literal'),
+                ('USB host, xHCI', 'USB host, USB3_CTRL, xHCI', 'register-style name'),
+                ('name: fixture-board-storage-expert', 'name: fixture-board-usb-expert',
+                 'used twice')]:
+            with self.subTest(why=why):
+                manifest.write_text(text.replace(old, new, 1))
+                proc = self.stubgen(manifest, '--out', self.tmp / 'skills')
+                self.assertEqual(proc.returncode, 1, proc.stdout)
+                self.assertIn(why, proc.stderr)
+                self.assertFalse((self.tmp / 'skills').exists())
+
+    def test_manifest_values_are_not_expanded_again(self):
+        docs, _, extra = self.composition()
+        manifest = self.write('domains.yaml', self.tmp / 'domains.yaml')
+        manifest.write_text(manifest.read_text().replace(
+            'USB host, xHCI', 'USB host <entry-lines> <board>, xHCI', 1))
+        skills = self.tmp / 'skills'
+        self.assertEqual(self.stubgen(manifest, '--out', skills).returncode, 0)
+        usb = (skills / 'fixture-board-usb-expert' / 'SKILL.md').read_text()
+        self.assertIn('USB host <entry-lines> <board>, xHCI', usb)
+        self.assertEqual(usb.count('`spec: fixture-soc`'), 1)
 
     def test_soc_template_accepts_the_minimal_instances_list(self):
         docs, source, extra = self.composition()

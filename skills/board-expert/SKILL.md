@@ -31,6 +31,15 @@ contract and schemas; [QUESTIONS.md](QUESTIONS.md) for input choices; [VENDOR-GU
 for private resources. Per-board stubs name a spec id and hand the work here. The shipped `specs/`
 is a public root for hardware with no home tree.
 
+**Stubs, domain experts and wrapping skills point at specs; they never restate them.** A large
+SoC may have several domain experts (USB, storage, display, power) beside the board expert,
+generated from one manifest by `board-spec-scaffold`'s `stubgen.py`. Each names its entry specs
+(`spec:`), instance rows (`instance:`) and its split from the others (`split:`), and holds
+procedure only. An address, instance number, address range or register name in prose is a fact
+no checker reads: `spec.py check --stubs-from` and `utilities/check-no-hardware-facts.py` refuse
+hex literals and register-style names there. When you report, take such values from the specs,
+never from the prompt that started you.
+
 ## How to run this skill (delegate; don't inline)
 
 This is a subagent role. The orchestrator spawns an expert, has it load this skill and any

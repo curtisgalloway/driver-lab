@@ -27,6 +27,10 @@ jobs:
       - name: Open side only
         run: python3 utilities/check-open-side.py
 
+      # No hardware facts (addresses, register names) in agent or stub prose (#156).
+      - name: No hardware facts in prose
+        run: python3 utilities/check-no-hardware-facts.py
+
       - name: utilities tests
         run: python3 -m unittest discover -s utilities/tests -v
 

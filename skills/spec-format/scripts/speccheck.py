@@ -36,7 +36,10 @@ already-parsed data and never over prose:
 - document indexes (`index/<name>.index.yaml`, index.py, #155): valid; a warning when no spec
   of the root lists the document, when the index's `sha256` is not the registry's, or when its
   page count differs;
-- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves;
+- stubs (--stub, --stubs-from): each names a `spec: <id>` that resolves, and each
+  `instance: <spec>#<row>` an instance row; no hex literal or register-style name in its prose
+  (prosefacts.py, #156); no two stubs share a name; two stubs entering through one spec without
+  a `split:` line naming the other is a warning;
 - verification records (`resources/<name>.verify.yaml`, records.py, SF2-3): each belongs to the
   spec file of its name, its keys name that file's facts, its summary counts its verdicts; a
   current FAIL is an error; stale, upstream-stale, unverified and unknown verdicts, a current
@@ -81,6 +84,10 @@ REF = re.compile(r"(?:([a-z0-9][a-z0-9-]*)(?:@([a-z0-9][a-z0-9._-]*))?)?#([a-z0-
 DIGITS = re.compile(r"[0-9]+")
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 STUB = re.compile(r"`spec:\s*([a-z0-9][a-z0-9\-]*)`")
+STUB_INSTANCE = re.compile(r"`instance:\s*([a-z0-9][a-z0-9\-]*)#([a-z0-9][a-z0-9\-]*)`")
+STUB_SPLIT = re.compile(r"`split:\s*([^`]+)`")
+STUB_NAME = re.compile(r"(?m)^name:\s*[\"']?([^\s\"']+)[\"']?\s*$")
+WORD = re.compile(r"[a-z0-9][a-z0-9-]*")
 SPDX_PY = Path(__file__).resolve().parents[2] / "board-expert" / "scripts" / "spdx.py"
 
 
@@ -1225,8 +1232,16 @@ class Checker:
                 m = FRONTMATTER.match(path.read_text(encoding="utf-8"))
                 if m and "stub over" in m.group(1):
                     stubs.append(path)
+        import prosefacts
+
         ids = {f.spec_id for f in self.files if not f.is_overlay}
+        unique = {}  # one file named twice (--stub and --stubs-from, or a directory twice)
+        for path in stubs:
+            unique.setdefault(path.resolve() if path.exists() else path, path)
+        stubs = list(unique.values())
         self.stubs = len(stubs)
+        names: dict = {}  # stub name -> first path
+        claims: dict = {}  # spec id -> [(stub name, path, split texts)]
         for path in stubs:
             if not path.is_file():
                 self.findings.append(Finding(str(path), 1, 1, "stub file not found"))
@@ -1241,12 +1256,45 @@ class Checker:
             for line, column, found in specmd.placeholders(text)[:1]:
                 self.findings.append(Finding(str(path), line, column, f"unsubstituted template "
                                                                       f"placeholder {found!r}"))
-            names = list(STUB.finditer(text))
-            if not names:
+            specs = list(STUB.finditer(text))
+            if not specs:
                 at(0, "stub names no `spec: <id>`")
-            for m in names:
+            for m in specs:
                 if m.group(1) not in ids:
                     at(m.start(), f"stub spec id {m.group(1)!r} resolves to no spec")
+            for m in STUB_INSTANCE.finditer(text):
+                rows = [f for f in self.files if f.spec_id == m.group(1)
+                        and m.group(2) in f.records and f.records[m.group(2)].path[0] == "instances"]
+                if not rows:
+                    at(m.start(), f"stub instance {m.group(1)}#{m.group(2)} resolves to no "
+                                  f"instance row")
+            for line, column, what in prosefacts.findings(text):
+                self.findings.append(Finding(str(path), line, column, prosefacts.message(what)))
+            front = FRONTMATTER.match(text)
+            name = STUB_NAME.search(front.group(1)) if front else None
+            name = name.group(1) if name else path.parent.name
+            if name in names:
+                at(0, f"stub name {name!r} is also the name of {names[name]}: installed "
+                      f"agents and skills need distinct names")
+            names.setdefault(name, path)
+            splits = [set(WORD.findall(m.group(1))) for m in STUB_SPLIT.finditer(text)]
+            for spec_id in dict.fromkeys(m.group(1) for m in specs):
+                claims.setdefault(spec_id, []).append((name, path, splits))
+        self.check_overlap(claims)
+
+    def check_overlap(self, claims: dict):
+        """Two stubs entering through one spec need a stated split: a `split:` line in either
+        that names the other (the whole name), so a question has one place to go (#156). A
+        warning."""
+        for spec_id, owners in sorted(claims.items()):
+            for i, (a, apath, asplit) in enumerate(owners):
+                for b, bpath, bsplit in owners[i + 1:]:
+                    if a == b or any(b in s for s in asplit) or any(a in s for s in bsplit):
+                        continue
+                    self.findings.append(Finding(
+                        str(bpath), 1, 1, f"stubs {a!r} ({apath}) and {b!r} both enter through "
+                        f"spec {spec_id!r} with no stated split: add a `split: ...` line to one "
+                        f"naming the other and saying which questions go where", "warning"))
 
     # --- driver ------------------------------------------------------------------------------
 

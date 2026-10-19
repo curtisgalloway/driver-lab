@@ -6,9 +6,13 @@
 pub mod diagnostic;
 
 pub mod index;
+pub mod model;
 pub mod pdf;
+pub mod prosefacts;
 pub mod sandbox;
+pub mod schema;
 pub mod spdx;
+pub mod specmd;
 pub mod yaml_strict;
 pub mod author;
 pub mod verify_flow;
@@ -461,7 +465,13 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    let cli = match Cli::try_parse_from(args) {
+    let os_args: Vec<std::ffi::OsString> = args.into_iter().map(Into::into).collect();
+    let want_json = os_args.iter().skip(1).any(|a| {
+        let s = a.to_string_lossy();
+        s == "--json" || s.starts_with("--json=")
+    });
+
+    let cli = match Cli::try_parse_from(os_args) {
         Ok(c) => c,
         Err(err) => {
             use clap::error::ErrorKind;
@@ -475,7 +485,13 @@ where
                     return EXIT_OK;
                 }
                 _ => {
-                    let _ = write!(stderr, "{err}");
+                    if want_json {
+                        let env = DiagnosticEnvelope::usage_error("CLI-USAGE", err.to_string())
+                            .with_field("files", serde_json::json!([]));
+                        let _ = writeln!(stdout, "{}", env.to_json_string());
+                    } else {
+                        let _ = write!(stderr, "usage error: {err}");
+                    }
                     return EXIT_USAGE_ERROR;
                 }
             }
@@ -488,10 +504,14 @@ where
     }
 
     let Some(ref command) = cli.command else {
-        let _ = writeln!(
-            stderr,
-            "error: a subcommand is required (pass --help for usage)"
-        );
+        let msg = "error: a subcommand is required (pass --help for usage)";
+        if cli.json {
+            let env = DiagnosticEnvelope::usage_error("CLI-USAGE", msg)
+                .with_field("files", serde_json::json!([]));
+            let _ = writeln!(stdout, "{}", env.to_json_string());
+        } else {
+            let _ = writeln!(stderr, "usage error: {msg}");
+        }
         return EXIT_USAGE_ERROR;
     };
 
@@ -502,6 +522,10 @@ where
 
     match command {
         Command::Index(idx_args) => run_index_cmd(&cli, idx_args, &scratch, stdout, stderr),
+        Command::Validate(val_args) => schema::run_validate(val_args, cli.json, stdout, stderr),
+        Command::ProseFacts(pf_args) => {
+            prosefacts::run_prose_facts_cmd(&pf_args.paths, cli.json, stdout, stderr)
+        }
         Command::LicenseGate(gate_args) => run_license_gate_cmd(&cli, gate_args, stdout, stderr),
 <<<<<<< HEAD
         Command::Resource(res_args) => author::run_resource_cmd(res_args, &scratch, stdout, stderr),

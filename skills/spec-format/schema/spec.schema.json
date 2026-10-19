@@ -1635,7 +1635,7 @@
       "required": ["name", "class", "title", "url"],
       "properties": {
         "name": {"$ref": "#/$defs/name"},
-        "class": {"enum": ["databook", "standard", "doc"]},
+        "class": {"enum": ["databook", "datasheet", "errata", "appnote", "standard", "doc"]},
         "title": {"$ref": "#/$defs/line"},
         "revision": {"$ref": "#/$defs/line"},
         "url": {"$ref": "#/$defs/httpsUrl"},

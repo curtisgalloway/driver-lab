@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: 2026 contributors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<ipxact:component xmlns:ipxact="http://www.accellera.org/XMLSchema/IPXACT/1685-2022"
+    xmlns:dl="urn:driver-lab:spec-format:2:ipxact"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ipxact:vendor>example.invalid</ipxact:vendor>
+  <ipxact:library>fixtures</ipxact:library>
+  <ipxact:name>widgetuart</ipxact:name>
+  <ipxact:version>1.0</ipxact:version>
+    <ipxact:memoryMaps><ipxact:memoryMap><ipxact:name>regs</ipxact:name><ipxact:addressBlock>
+  <ipxact:name>block</ipxact:name><ipxact:baseAddress>0</ipxact:baseAddress><ipxact:range>4096</ipxact:range><ipxact:width>32</ipxact:width>
+<ipxact:register><ipxact:name>R</ipxact:name><ipxact:addressOffset>0</ipxact:addressOffset><ipxact:size>32</ipxact:size><ipxact:field><ipxact:name>F</ipxact:name><ipxact:bitOffset>0</ipxact:bitOffset><ipxact:bitWidth>2</ipxact:bitWidth><ipxact:fieldAccessPolicies><ipxact:fieldAccessPolicy><ipxact:access>read-write</ipxact:access><ipxact:modifiedWriteValue>oneToClear</ipxact:modifiedWriteValue><ipxact:writeValueConstraint><ipxact:minimum>0</ipxact:minimum><ipxact:maximum>3</ipxact:maximum></ipxact:writeValueConstraint><ipxact:readAction>clear</ipxact:readAction></ipxact:fieldAccessPolicy></ipxact:fieldAccessPolicies></ipxact:field></ipxact:register>
+  </ipxact:addressBlock></ipxact:memoryMap></ipxact:memoryMaps>
+  <ipxact:resetTypes><ipxact:resetType><ipxact:name>SOFT</ipxact:name></ipxact:resetType></ipxact:resetTypes>
+</ipxact:component>

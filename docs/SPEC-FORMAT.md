@@ -1507,7 +1507,9 @@ arrays) and validates it with `xmlschema` against the official XSD, vendored wit
 citations (D41). CI exports every spec in the fixtures and the three spec repositories; a
 validation failure fails the build. `xmlschema` is pinned with hashes after a `dep-quality`
 score, and the requirements and CI changes are gate inputs, so the orchestrator lands those
-two files itself.
+two files itself. Generated bindings were evaluated and rejected for both the exporter and the
+`ipxact` adapter ([IPX-1](../evidence/IPX-1.md), #152): they keep only the last register of a
+block; the adapter decodes with the same xmlschema schema instead.
 
 ### Units of work
 

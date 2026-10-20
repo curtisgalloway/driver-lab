@@ -53,6 +53,7 @@ bwrap --ro-bind / / --unshare-net target/release/driver-lab prose-facts agents/b
 bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format md >/dev/null
 bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format html >/dev/null
 python3 -m venv .venv-evals && .venv-evals/bin/pip install -q --require-hashes -r evals/requirements.txt
+.venv-evals/bin/python -m unittest discover -s skills/site-cache/tests
 .venv-evals/bin/python -m unittest discover -s evals/enc28j60/tests
 .venv-evals/bin/python evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests

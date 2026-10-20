@@ -102,6 +102,9 @@ jobs:
           "$RUNNER_TEMP/evals/bin/python" -m pip install --require-hashes \
             -r evals/requirements.txt
 
+      - name: site-cache tests
+        run: '"$RUNNER_TEMP/evals/bin/python" -m unittest discover -s skills/site-cache/tests -v'
+
       - name: enc28j60 corpus tests
         run: >-
           "$RUNNER_TEMP/evals/bin/python" -m unittest discover

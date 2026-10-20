@@ -57,6 +57,7 @@ bringing up a particular board, which happen in projects that use these skills.
 | You have a hardware question and the answer will be published in a spec repository, so each source you cite must be one that repository's license accepts | `hardware-investigator` |
 | You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
 | You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
+| You need to fetch, pin, inspect or materialize web documentation pages, vendor wikis (Trac, MediaWiki) or PDFs into a durable local cache and `--docs-dir` without recursive crawling | `site-cache` |
 | You have a bank of code-writing items for a spec and want to measure, by compiling and running tests, whether readers of the spec answer them correctly | `spec-eval` |
 
 ## Installing
@@ -162,6 +163,10 @@ checked topology format from the graph views still to be delivered.
   `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift`, `inventory`, `index`,
   `todo`, `corpus`, `fetch`, `stubgen`, `publish`, `license-gate`, `prose-facts`, `resource`,
   `assemble`, `verify`, `eval` and `campaign`.
+- **`site-cache`** manages an out-of-tree, content-addressed document blob store and polite
+  read-through HTTP cache (`get`, `pin`, `links`, `headings`, `info`, `prefetch`, `materialize`,
+  `verify`, `gc`), discovering immutable wiki revisions (such as Trac `?version=N&format=txt`)
+  and materializing `docs/by-name` for `driver-lab resolve --docs-dir`.
 
 The Fuchsia-specific skills that consume these skills live in
 [curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand

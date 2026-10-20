@@ -89,3 +89,173 @@ fn test_bf_imx_17() {
 fn test_bf_gw_26() {
     let _ = run_test_cli(vec!["resolve", "--help"]);
 }
+
+#[test]
+fn test_issue_181_verify_schema_allows_unpinned_fetch_ok_source() {
+    use std::fs;
+    let tmp = tempfile::tempdir().unwrap();
+    let valid_path = tmp.path().join("gw9200.verify.yaml");
+    let valid_yaml = r#"# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+spec: gw9200
+spec_file: gw9200.spec.yaml
+spec_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+canonical: fact-v1
+sources:
+  - name: gw-wiki-catalina
+    url: https://trac.gateworks.com/wiki/catalina
+    fetch: ok
+    note: Online vendor wiki retrieved during verification
+  - name: imx95-rm
+    sha256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+    fetch: ok
+summary:
+  pass: 0
+  fail: 0
+  unverifiable: 0
+  gap: 0
+  adjudicate: 0
+verdicts: {}
+"#;
+    fs::write(&valid_path, valid_yaml).unwrap();
+    let out = run_test_cli(vec!["--json", "validate", valid_path.to_str().unwrap()]);
+    assert!(
+        out.status.success(),
+        "validate should accept unpinned source with url and fetch: ok: {}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+
+    // Unpinned source with fetch != "ok" must be rejected
+    let invalid_blocked_path = tmp.path().join("blocked.verify.yaml");
+    let invalid_blocked_yaml = valid_yaml.replace("fetch: ok\n    note:", "fetch: blocked\n    note:");
+    fs::write(&invalid_blocked_path, invalid_blocked_yaml).unwrap();
+    let out_blocked = run_test_cli(vec![
+        "--json",
+        "validate",
+        invalid_blocked_path.to_str().unwrap(),
+    ]);
+    assert!(
+        !out_blocked.status.success(),
+        "validate must reject unpinned source when fetch is not ok"
+    );
+
+    // Unpinned source without url must be rejected
+    let invalid_no_url_path = tmp.path().join("nourl.verify.yaml");
+    let invalid_no_url_yaml =
+        valid_yaml.replace("    url: https://trac.gateworks.com/wiki/catalina\n", "");
+    fs::write(&invalid_no_url_path, invalid_no_url_yaml).unwrap();
+    let out_no_url = run_test_cli(vec![
+        "--json",
+        "validate",
+        invalid_no_url_path.to_str().unwrap(),
+    ]);
+    assert!(
+        !out_no_url.status.success(),
+        "validate must reject unpinned source without url"
+    );
+}
+
+#[test]
+fn test_issue_181_resolve_non_pdf_docs_silences_pdf_skip_warnings() {
+    use sha2::{Digest, Sha256};
+    use std::fs;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let docs_dir = tmp.path().join("docs");
+    fs::create_dir_all(&docs_dir).unwrap();
+
+    let wiki_text = "# Catalina Peripherals\nI2C2 is routed to the GSC at 0x20.\n";
+    let wiki_sha = hex::encode(Sha256::digest(wiki_text.as_bytes()));
+    fs::write(docs_dir.join("gw-wiki-pinned"), wiki_text).unwrap();
+
+    let spec_path = tmp.path().join("board.spec.yaml");
+    let spec_yaml = format!(
+        r#"# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: board
+id: test-board
+name: Test Board
+soc: test-soc
+triggers:
+  - Test Board
+resources:
+  documents:
+    - name: gw-wiki-pinned
+      title: Gateworks Catalina Wiki (Pinned Cache)
+      class: doc
+      access: public
+      url: https://trac.gateworks.com/wiki/catalina
+      sha256: "{wiki_sha}"
+      fetch: ok
+    - name: gw-wiki-online
+      title: Gateworks Catalina Wiki (Online Unpinned)
+      class: doc
+      access: public
+      url: https://trac.gateworks.com/wiki/catalina/gsc
+      fetch: ok
+facts:
+  - id: gsc-i2c-addr
+    section: quick-facts
+    claim: "The GSC responds on I2C2 at 7-bit address 0x20."
+    authority: doc
+    support:
+      - class: doc
+        doc: gw-wiki-pinned
+        at:
+          - heading: "Catalina Peripherals"
+      - class: doc
+        doc: gw-wiki-online
+        at:
+          - heading: "GSC Overview"
+"#
+    );
+    fs::write(&spec_path, spec_yaml).unwrap();
+
+    let out = run_test_cli(vec![
+        "--json",
+        "resolve",
+        spec_path.to_str().unwrap(),
+        "--docs-dir",
+        docs_dir.to_str().unwrap(),
+    ]);
+    assert!(
+        out.status.success(),
+        "resolve failed: {}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let res: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(res["ok"], true);
+    let findings = res["findings"].as_array().unwrap();
+    assert!(
+        findings.is_empty(),
+        "expected no PDF-skip warnings for non-PDF docs, got: {findings:?}"
+    );
+    assert_eq!(res["documents_resolved"], 0);
+    assert_eq!(res["documents_skipped"], 2);
+
+    // Corrupting the local pinned non-PDF file must still fail sha256 verification
+    fs::write(docs_dir.join("gw-wiki-pinned"), "tampered content").unwrap();
+    let out_bad = run_test_cli(vec![
+        "--json",
+        "resolve",
+        spec_path.to_str().unwrap(),
+        "--docs-dir",
+        docs_dir.to_str().unwrap(),
+    ]);
+    assert!(!out_bad.status.success());
+    let res_bad: serde_json::Value = serde_json::from_slice(&out_bad.stdout).unwrap();
+    assert_eq!(res_bad["ok"], false);
+    let bad_findings = res_bad["findings"].as_array().unwrap();
+    assert!(
+        bad_findings.iter().any(|f| {
+            f["level"] == "error"
+                && f["message"]
+                    .as_str()
+                    .unwrap_or("")
+                    .contains("document gw-wiki-pinned: sha256 mismatch")
+        }),
+        "expected sha256 mismatch error on tampered non-PDF doc, got: {bad_findings:?}"
+    );
+}

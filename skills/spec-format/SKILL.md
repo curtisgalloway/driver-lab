@@ -350,8 +350,12 @@ filename's `.spec.yaml` removed. Records live at the root's own resources direct
 the spec is nested; `spec_file` is relative to the root. Filenames that would share a record
 are an error. The verifier, not board-expert, writes the body.
 
-Record shape comes from the verify schema. `verdicts` keys are bare fact/instance/variant ids
-of that file. All five `summary` counts (`pass`, `fail`, `unverifiable`, `gap`, `adjudicate`)
+Record shape comes from the verify schema. Each `sources` entry records `commit` (for a git
+repository), `sha256` (for a pinned document file), or `url` with `fetch: ok` (for an online
+document without a file hash). When `resolve --docs-dir <dir>` runs, it verifies `sha256` on
+every pinned document in `<dir>` (PDF or non-PDF) and skips PDF page extraction silently for
+non-PDF documents cited without PDF page locators. `verdicts` keys are bare fact, instance or
+variant ids of that file. All five `summary` counts (`pass`, `fail`, `unverifiable`, `gap`, `adjudicate`)
 must match. GAP belongs to gap facts only. FAIL carries `correction`; ADJUDICATE carries
 `readings` until settled to PASS/FAIL, retaining `adjudication` and readings. Every verdict
 states `contrary_evidence` and `citation_precision`.

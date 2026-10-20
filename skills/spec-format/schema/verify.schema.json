@@ -51,7 +51,14 @@
         "fetch": {"$ref": "spec.schema.json#/$defs/fetch"},
         "note": {"$ref": "spec.schema.json#/$defs/text"}
       },
-      "anyOf": [{"required": ["commit"]}, {"required": ["sha256"]}],
+      "anyOf": [
+        {"required": ["commit"]},
+        {"required": ["sha256"]},
+        {
+          "required": ["url", "fetch"],
+          "properties": {"fetch": {"const": "ok"}}
+        }
+      ],
       "additionalProperties": false
     },
     "verdict": {

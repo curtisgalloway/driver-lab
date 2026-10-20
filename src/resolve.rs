@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::diagnostic::ExitCode;
-use crate::docresolve::{citations as doc_citations, DocReader, PdfPages};
+use crate::docresolve::{citations_with_status, DocReader, PdfPages, DOC_CLASSES};
 use crate::git_source::{Resolver, OperationalError, collect_spec_files_from_targets};
 use crate::yaml_strict::{load_file, Loaded, PathSegment};
 use crate::sandbox::ScratchResolver;
@@ -376,6 +376,8 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                 "citations": []
             });
             let citations = display.get_mut("citations").unwrap().as_array_mut().unwrap();
+            let mut own_lines: Vec<String> = Vec::new();
+            let mut pdf_own_lines: Vec<String> = Vec::new();
 
             for (anchor, at) in anchors(record, base.clone()) {
                 let repo_name = anchor.get("repo").and_then(|v| v.as_str()).unwrap_or("");
@@ -422,12 +424,19 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                                                     }
                                                 }
                                                 if start > 0 && start <= end && end <= lines.len() {
+                                                    let cited_slice = &lines[start - 1..end];
                                                     let source_arr = item.get_mut("source").unwrap().as_array_mut().unwrap();
-                                                    for (idx, line) in lines[start - 1..end].iter().enumerate() {
+                                                    for (idx, line) in cited_slice.iter().enumerate() {
                                                         source_arr.push(json!([start + idx, line]));
                                                     }
                                                     item["status"] = json!("resolved");
                                                     item["commit"] = json!(commit);
+                                                    if at.len() == base.len() + 4
+                                                        && at[..base.len()] == base[..]
+                                                        && at[base.len()] == "support"
+                                                    {
+                                                        own_lines.extend(cited_slice.iter().cloned());
+                                                    }
                                                 } else {
                                                     resolve_err = Some(format!("line range is outside the file's {} lines", lines.len()));
                                                 }
@@ -462,8 +471,8 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                 citations.push(item);
             }
 
-            if resolver.docs_dir.is_some() {
-                let (doc_items, _doc_own_lines) = doc_citations(
+            let has_unextracted_own_doc = if resolver.docs_dir.is_some() {
+                let doc_res = citations_with_status(
                     record,
                     base.clone(),
                     &mut documents,
@@ -478,7 +487,9 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                         }));
                     },
                 );
-                for di in doc_items {
+                own_lines.extend(doc_res.own_lines);
+                pdf_own_lines.extend(doc_res.pdf_own_lines);
+                for di in doc_res.items {
                     let source_json: Vec<Value> = di
                         .source
                         .into_iter()
@@ -493,6 +504,66 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                     });
                     document_citations_out.push(ci_val.clone());
                     citations.push(ci_val);
+                }
+                doc_res.has_unextracted_own_doc
+            } else {
+                record
+                    .get("support")
+                    .and_then(Value::as_array)
+                    .is_some_and(|arr| {
+                        arr.iter().any(|s| {
+                            s.get("class")
+                                .and_then(Value::as_str)
+                                .is_some_and(|cls| DOC_CLASSES.contains(&cls))
+                        })
+                    })
+            };
+
+            if !own_lines.is_empty() && !has_unextracted_own_doc {
+                let claim_str = record.get("claim").and_then(Value::as_str).unwrap_or("");
+                let claim_hex = hex_values(claim_str);
+                let cited_hex = hex_values(&own_lines.join("\n"));
+                let missing: Vec<String> = claim_hex
+                    .difference(&cited_hex)
+                    .map(|v| format!("0x{v:x}"))
+                    .collect();
+                if !missing.is_empty() {
+                    let mut claim_at = base.clone();
+                    claim_at.push("claim".to_string());
+                    let mark = mark_for_at(&loaded, &claim_at);
+                    findings_out.push(json!({
+                        "path": path_str,
+                        "line": mark.line,
+                        "column": mark.column,
+                        "level": "warning",
+                        "message": format!("claim hex values absent from cited lines: {}", missing.join(", "))
+                    }));
+                }
+            }
+
+            if !pdf_own_lines.is_empty() {
+                if let Some(offset_str) = record
+                    .get("data")
+                    .and_then(|d| d.get("register"))
+                    .and_then(|r| r.get("offset"))
+                    .and_then(Value::as_str)
+                {
+                    let offset_hex = hex_values(offset_str);
+                    let pdf_hex = hex_values(&pdf_own_lines.join("\n"));
+                    if !offset_hex.is_subset(&pdf_hex) {
+                        let mut off_at = base.clone();
+                        off_at.push("data".to_string());
+                        off_at.push("register".to_string());
+                        off_at.push("offset".to_string());
+                        let mark = mark_for_at(&loaded, &off_at);
+                        findings_out.push(json!({
+                            "path": path_str,
+                            "line": mark.line,
+                            "column": mark.column,
+                            "level": "warning",
+                            "message": format!("register offset absent from cited PDF pages: {offset_str}")
+                        }));
+                    }
                 }
             }
 

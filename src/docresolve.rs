@@ -92,6 +92,13 @@ pub fn locator_pattern(kind: &str, value: &str) -> Regex {
     RegexBuilder::new(&pat).case_insensitive(true).build().unwrap()
 }
 
+pub enum DocReader {
+    Pdf(PdfPages),
+    NonPdf { lines: Option<Vec<String>> },
+    Unpinned,
+    ResolutionError(String),
+}
+
 pub struct CitationItem {
     pub doc: String,
     pub locator: Value,
@@ -99,6 +106,8 @@ pub struct CitationItem {
     pub status: String,
     pub source: Vec<(usize, usize, String)>,
 }
+
+pub const DOC_CLASSES: &[&str] = &["databook", "datasheet", "errata", "appnote", "standard", "doc"];
 
 pub fn supports<'a>(
     data: &'a Value,
@@ -147,7 +156,7 @@ pub fn supports<'a>(
 pub fn citations<F>(
     record: &Value,
     base: Vec<String>,
-    documents: &mut HashMap<String, (Value, Result<PdfPages, String>)>,
+    documents: &mut HashMap<String, (Value, DocReader)>,
     mut add: F,
 ) -> (Vec<CitationItem>, Vec<String>)
 where
@@ -158,7 +167,6 @@ where
     let mut supports_list = Vec::new();
     supports(record, base.clone(), false, &mut supports_list);
     
-    let doc_classes = ["databook", "datasheet", "errata", "appnote", "standard", "doc"];
     let fact_id = record.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
     for (support, at) in supports_list {
@@ -166,7 +174,7 @@ where
             Some(c) => c,
             None => continue,
         };
-        if !doc_classes.contains(&cls) {
+        if !DOC_CLASSES.contains(&cls) {
             continue;
         }
         let name = match support.get("doc").and_then(|v| v.as_str()) {
@@ -193,7 +201,7 @@ where
             };
 
             let doc_entry = documents.get_mut(&name);
-            let (doc_info, reader_res) = match doc_entry {
+            let (doc_info, reader_state) = match doc_entry {
                 Some(entry) => entry,
                 None => {
                     item.status = "skipped".to_string();
@@ -202,16 +210,52 @@ where
                     continue;
                 }
             };
-            
+
+            let has_pdf_url = ["url", "retrieval"].iter().any(|k| {
+                doc_info
+                    .get(*k)
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|u| {
+                        let path_part = u.split(['?', '#']).next().unwrap_or(u);
+                        path_part.to_ascii_lowercase().ends_with(".pdf")
+                    })
+            });
+            let is_pdf_doc = doc_info.get("page_numbering").and_then(|v| v.as_str()) == Some("pdf")
+                || doc_info.get("pages").is_some()
+                || has_pdf_url;
+            let has_page_locator = locator.get("page").is_some() || locator.get("pages").is_some();
+
+            let mut expected_support = base.clone();
+            expected_support.push("support".to_string());
+            let is_own_support = !at.is_empty() && at[..at.len() - 1] == expected_support;
+
             let result: Result<(), String> = (|| {
-                let reader = match reader_res {
-                    Ok(r) => r,
-                    Err(e) => {
+                let reader = match reader_state {
+                    DocReader::Pdf(r) => r,
+                    DocReader::ResolutionError(e) => {
                         if e.starts_with("ResolutionError:") {
                             return Err(e.clone());
-                        } else {
-                            return Err(format!("LimitExceeded: {}", e));
                         }
+                        return Err(format!("ResolutionError: {}", e));
+                    }
+                    DocReader::Unpinned => {
+                        if is_pdf_doc || has_page_locator {
+                            return Err("LimitExceeded: document has no sha256 pin".to_string());
+                        }
+                        item.status = "skipped".to_string();
+                        return Ok(());
+                    }
+                    DocReader::NonPdf { lines } => {
+                        if is_pdf_doc || has_page_locator {
+                            return Err("LimitExceeded: document is not a PDF".to_string());
+                        }
+                        if let Some(doc_lines) = lines {
+                            if is_own_support {
+                                own_lines.extend(doc_lines.iter().cloned());
+                            }
+                        }
+                        item.status = "skipped".to_string();
+                        return Ok(());
                     }
                 };
                 
@@ -297,9 +341,7 @@ where
 
                 item.status = "resolved".to_string();
                 
-                let mut expected_support = base.clone();
-                expected_support.push("support".to_string());
-                if !at.is_empty() && at[..at.len() - 1] == expected_support {
+                if is_own_support {
                     own_lines.extend(lines);
                 }
 

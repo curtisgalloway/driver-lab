@@ -153,21 +153,45 @@ pub fn supports<'a>(
     }
 }
 
+pub struct DocCitationsResult {
+    pub items: Vec<CitationItem>,
+    pub own_lines: Vec<String>,
+    pub pdf_own_lines: Vec<String>,
+    pub has_unextracted_own_doc: bool,
+}
+
 pub fn citations<F>(
     record: &Value,
     base: Vec<String>,
     documents: &mut HashMap<String, (Value, DocReader)>,
-    mut add: F,
+    add: F,
 ) -> (Vec<CitationItem>, Vec<String>)
+where
+    F: FnMut(Vec<String>, String, &str),
+{
+    let res = citations_with_status(record, base, documents, add);
+    (res.items, res.own_lines)
+}
+
+pub fn citations_with_status<F>(
+    record: &Value,
+    base: Vec<String>,
+    documents: &mut HashMap<String, (Value, DocReader)>,
+    mut add: F,
+) -> DocCitationsResult
 where
     F: FnMut(Vec<String>, String, &str),
 {
     let mut items = Vec::new();
     let mut own_lines = Vec::new();
+    let mut pdf_own_lines = Vec::new();
+    let mut has_unextracted_own_doc = false;
     let mut supports_list = Vec::new();
     supports(record, base.clone(), false, &mut supports_list);
     
     let fact_id = record.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let mut expected_support = base.clone();
+    expected_support.push("support".to_string());
 
     for (support, at) in supports_list {
         let cls = match support.get("class").and_then(|v| v.as_str()) {
@@ -177,15 +201,24 @@ where
         if !DOC_CLASSES.contains(&cls) {
             continue;
         }
+        let is_own_support = !at.is_empty() && at[..at.len() - 1] == expected_support;
         let name = match support.get("doc").and_then(|v| v.as_str()) {
             Some(n) => n.to_string(),
-            None => continue,
+            None => {
+                if is_own_support {
+                    has_unextracted_own_doc = true;
+                }
+                continue;
+            }
         };
         
         let at_locators = match support.get("at").and_then(|v| v.as_array()) {
             Some(arr) => arr.clone(),
             None => Vec::new(),
         };
+        if at_locators.is_empty() && is_own_support {
+            has_unextracted_own_doc = true;
+        }
 
         for (index, locator) in at_locators.iter().enumerate() {
             let mut where_at = at.clone();
@@ -204,6 +237,9 @@ where
             let (doc_info, reader_state) = match doc_entry {
                 Some(entry) => entry,
                 None => {
+                    if is_own_support {
+                        has_unextracted_own_doc = true;
+                    }
                     item.status = "skipped".to_string();
                     add(where_at.clone(), format!("{}: {}: PDF evidence skipped: document is not declared", fact_id, name), "warning");
                     items.push(item);
@@ -225,10 +261,7 @@ where
                 || has_pdf_url;
             let has_page_locator = locator.get("page").is_some() || locator.get("pages").is_some();
 
-            let mut expected_support = base.clone();
-            expected_support.push("support".to_string());
-            let is_own_support = !at.is_empty() && at[..at.len() - 1] == expected_support;
-
+            let mut extracted_own = false;
             let result: Result<(), String> = (|| {
                 let reader = match reader_state {
                     DocReader::Pdf(r) => r,
@@ -252,6 +285,7 @@ where
                         if let Some(doc_lines) = lines {
                             if is_own_support {
                                 own_lines.extend(doc_lines.iter().cloned());
+                                extracted_own = true;
                             }
                         }
                         item.status = "skipped".to_string();
@@ -342,11 +376,17 @@ where
                 item.status = "resolved".to_string();
                 
                 if is_own_support {
+                    pdf_own_lines.extend(lines.iter().cloned());
                     own_lines.extend(lines);
+                    extracted_own = true;
                 }
 
                 Ok(())
             })();
+
+            if is_own_support && !extracted_own {
+                has_unextracted_own_doc = true;
+            }
 
             match result {
                 Ok(_) => {}
@@ -367,7 +407,12 @@ where
         }
     }
     
-    (items, own_lines)
+    DocCitationsResult {
+        items,
+        own_lines,
+        pdf_own_lines,
+        has_unextracted_own_doc,
+    }
 }
 
 pub fn hex_values(text: &str) -> Vec<String> {

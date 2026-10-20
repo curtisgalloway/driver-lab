@@ -1111,3 +1111,287 @@ facts:
         errors(&bad_res, None)
     );
 }
+
+#[test]
+fn test_issue_180_board_sections_and_connector_memory_map_payloads() {
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().join("root");
+    fs::create_dir_all(&root).unwrap();
+
+    write_file(
+        &root.join("board-specs.yaml"),
+        r#"format: 2
+name: board-bringup-root
+layer: public
+license: CC-BY-4.0
+accepts: []
+"#,
+    );
+
+    write_file(
+        &root.join("soc.spec.yaml"),
+        r#"format: 2
+kind: soc
+id: sample-soc
+name: Sample SoC
+triggers: [sample-soc]
+instances: []
+resources:
+  documents:
+    - name: soc-doc
+      class: doc
+      title: SoC Doc
+      url: "https://example.invalid/soc.html"
+      fetch: ok
+facts:
+  - id: soc-qf
+    section: quick-facts
+    title: SoC quick fact.
+    claim: Base SoC quick fact.
+    support:
+      - {class: doc, doc: soc-doc, at: [{heading: "Overview"}]}
+"#,
+    );
+
+    write_file(
+        &root.join("board.spec.yaml"),
+        r#"format: 2
+kind: board
+id: sample-board
+name: Sample Board
+triggers: [sample-board]
+parts: [sample-soc]
+cache: sample-board-resources
+resources:
+  documents:
+    - name: board-doc
+      class: doc
+      title: Board Manual
+      url: "https://example.invalid/board.html"
+      fetch: ok
+facts:
+  - id: j11-console-header
+    section: connectors
+    title: J11 serial and DIO header pinout.
+    claim: J11 exposes the primary console UART and four 3.3V GPIO lines.
+    data:
+      connector:
+        designator: J11
+        kind: 2x5-pin 2.0mm header
+        part_number: HDR-2X5
+        mating_part: CAB-2X5
+        pitch: "2.0mm"
+        pins:
+          - {pin: 1, signal: UART3_TXD, gpio: GPIO5_IO27, ball: AE14, direction: out, level: "3.3V", note: Console TX}
+          - {pin: 2, signal: UART3_RXD, gpio: GPIO5_IO26, ball: AF14, direction: in, level: "3.3V", pull: pull-up, note: Console RX}
+          - {pin: "3", signal: GND, direction: ground}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "J11 Connector"}]}
+  - id: uboot-dram-layout
+    section: bootloader
+    title: Default bootloader DRAM load addresses.
+    claim: The bootloader environment defines non-overlapping load addresses in DRAM.
+    data:
+      memory_map:
+        name: u-boot-dram
+        regions:
+          - {name: kernel, env_var: kernel_addr_r, base: "0x80200000", size: "0x4000000", kind: dram, purpose: Uncompressed kernel image}
+          - {name: fdt, env_var: fdt_addr_r, base: "0x88000000", size: "0x100000", kind: dram, purpose: Flattened device tree blob}
+          - {name: ramdisk, env_var: ramdisk_addr_r, base: "0x88800000", size: "0x4000000", kind: dram, note: Initial ramdisk}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "Bootloader Memory Map"}]}
+  - id: board-reset-hold-time
+    section: bringup
+    title: Board controller power-cycle and reset hold timing.
+    claim: >-
+      Run `bmc sleep <seconds>` at the bootloader prompt or hold `RST#` low for at least 50 ms
+      to trigger a full board power cycle.
+    data:
+      quantity: {min: 50, unit: ms}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "Reset and Power Cycle"}]}
+"#,
+    );
+
+    let (rc, res) = check_json(&[root.to_str().unwrap()]);
+    assert_eq!(
+        rc,
+        0,
+        "board spec with connectors, bootloader, bringup sections and connector/memory_map/quantity payloads should check clean: {:?}",
+        errors(&res, None)
+    );
+
+    let (st_rc, _st_res) = status_json(&["--no-fail-on-pending", root.to_str().unwrap()]);
+    assert_eq!(st_rc, 0);
+
+    // Render Markdown and verify connector and memory_map tables are rendered and pass containment
+    let (md_rc, md_out, md_err) = run_cli(&[
+        "render",
+        root.to_str().unwrap(),
+        "--spec",
+        "sample-board",
+        "--format",
+        "md",
+    ]);
+    assert_eq!(md_rc, 0, "render md failed: {md_err}");
+    assert!(md_out.contains("## Connectors"), "expected Connectors section in md: {md_out}");
+    assert!(md_out.contains("## Bootloader"), "expected Bootloader section in md: {md_out}");
+    assert!(md_out.contains("## Bringup"), "expected Bringup section in md: {md_out}");
+    assert!(
+        md_out.contains("| Pin | Signal | Direction | Level | Note |"),
+        "expected connector table header in md: {md_out}"
+    );
+    assert!(
+        md_out.contains("UART3\\_TXD \\(gpio: GPIO5\\_IO27, ball: AE14\\)")
+            || md_out.contains("UART3_TXD (gpio: GPIO5_IO27, ball: AE14)"),
+        "expected pin row with gpio/ball in md: {md_out}"
+    );
+    assert!(
+        md_out.contains("| Name | Variable | Base | Size | Purpose |"),
+        "expected memory_map table header in md: {md_out}"
+    );
+    assert!(
+        md_out.contains("0x80200000") && md_out.contains("kernel"),
+        "expected memory_map region row in md: {md_out}"
+    );
+
+    // Render HTML and verify connector and memory_map tables
+    let (html_rc, html_out, html_err) = run_cli(&[
+        "render",
+        root.to_str().unwrap(),
+        "--spec",
+        "sample-board",
+        "--format",
+        "html",
+    ]);
+    assert_eq!(html_rc, 0, "render html failed: {html_err}");
+    assert!(
+        html_out.contains("<table class=\"connector\">"),
+        "expected connector table in html: {html_out}"
+    );
+    assert!(
+        html_out.contains("<table class=\"memory-map\">"),
+        "expected memory-map table in html: {html_out}"
+    );
+
+    // Negative check: data.register is still rejected on kind: board
+    write_file(
+        &root.join("bad_board.spec.yaml"),
+        r#"format: 2
+kind: board
+id: bad-board
+name: Bad Board
+triggers: [bad-board]
+parts: [sample-soc]
+cache: bad-board-resources
+resources:
+  documents:
+    - name: board-doc
+      class: doc
+      title: Board Manual
+      url: "https://example.invalid/board.html"
+      fetch: ok
+facts:
+  - id: bad-reg-on-board
+    section: quick-facts
+    title: Register on board.
+    claim: Boards must not carry inline register payloads.
+    data:
+      register: {name: CTRL, offset: "0x0", width: 32}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "Overview"}]}
+"#,
+    );
+    let (bad_rc, _bad_res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(bad_rc, 0, "data.register on kind: board must fail schema validation");
+    let _ = fs::remove_file(root.join("bad_board.spec.yaml"));
+
+    // Negative check R1a: overlay targeting kind: board with data.register must fail check
+    write_file(
+        &root.join("board_overlay.spec.yaml"),
+        r#"format: 2
+kind: overlay
+overlays: sample-board
+resources:
+  documents:
+    - name: board-doc
+      class: doc
+      title: Board Manual
+      url: "https://example.invalid/board.html"
+      fetch: ok
+facts:
+  - id: bad-reg-on-board-overlay
+    section: quick-facts
+    title: Register on board overlay.
+    claim: Board overlays must not carry inline register payloads.
+    data:
+      register: {name: CTRL, offset: "0x0", width: 32}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "Overview"}]}
+"#,
+    );
+    let (ov_rc, ov_res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(ov_rc, 0, "board overlay with data.register must fail");
+    assert!(
+        !errors(&ov_res, Some("board overlay refuses register")).is_empty(),
+        "expected board overlay payload refusal error: {:?}",
+        errors(&ov_res, None)
+    );
+    let _ = fs::remove_file(root.join("board_overlay.spec.yaml"));
+
+    // Negative check R3: duplicate pin in connector and overlapping regions in memory_map must fail check
+    write_file(
+        &root.join("bad_semantics.spec.yaml"),
+        r#"format: 2
+kind: board
+id: bad-semantics-board
+name: Bad Semantics Board
+triggers: [bad-semantics-board]
+parts: [sample-soc]
+cache: bad-semantics-resources
+resources:
+  documents:
+    - name: board-doc
+      class: doc
+      title: Board Manual
+      url: "https://example.invalid/board.html"
+      fetch: ok
+facts:
+  - id: dup-pin-conn
+    section: connectors
+    title: Duplicate pin connector.
+    claim: Connector with duplicate pin 1.
+    data:
+      connector:
+        designator: J99
+        pins:
+          - {pin: 1, signal: TX}
+          - {pin: 1, signal: RX}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "J99"}]}
+  - id: overlap-mm
+    section: bootloader
+    title: Overlapping memory map.
+    claim: Memory map with overlapping regions.
+    data:
+      memory_map:
+        regions:
+          - {name: reg_a, base: "0x1000", size: "0x1000"}
+          - {name: reg_b, base: "0x1800", size: "0x1000"}
+    support:
+      - {class: doc, doc: board-doc, at: [{heading: "Map"}]}
+"#,
+    );
+    let (sem_rc, sem_res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(sem_rc, 0, "duplicate connector pin and overlapping memory_map regions must fail");
+    assert!(
+        !errors(&sem_res, Some("duplicate pin '1' in connector")).is_empty(),
+        "expected duplicate pin error: {:?}",
+        errors(&sem_res, None)
+    );
+    assert!(
+        !errors(&sem_res, Some("memory_map region 'reg_b' overlaps region 'reg_a'")).is_empty(),
+        "expected overlapping memory_map region error: {:?}",
+        errors(&sem_res, None)
+    );
+}

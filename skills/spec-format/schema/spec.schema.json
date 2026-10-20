@@ -35,8 +35,20 @@
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
             "not": {"required": ["requirement"]},
-            "if": {"properties": {"section": {"const": "topology"}}},
-            "else": {"not": {"required": ["data"]}}}}
+            "properties": {
+              "data": {
+                "not": {
+                  "anyOf": [
+                    {"required": ["register"]},
+                    {"required": ["sequence"]},
+                    {"required": ["layout"]},
+                    {"required": ["finding"]},
+                    {"required": ["pair"]},
+                    {"required": ["coverage"]}
+                  ]
+                }
+              }
+            }}}
         }
       }
     },
@@ -54,8 +66,20 @@
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
             "not": {"required": ["requirement"]},
-            "if": {"properties": {"section": {"const": "topology"}}},
-            "else": {"not": {"required": ["data"]}}}}
+            "properties": {
+              "data": {
+                "not": {
+                  "anyOf": [
+                    {"required": ["register"]},
+                    {"required": ["sequence"]},
+                    {"required": ["layout"]},
+                    {"required": ["finding"]},
+                    {"required": ["pair"]},
+                    {"required": ["coverage"]}
+                  ]
+                }
+              }
+            }}}
         }
       }
     },
@@ -74,8 +98,20 @@
           "cache": {"$ref": "#/$defs/name"},
           "facts": {"items": {"$ref": "#/$defs/boardSpecFactSections",
             "not": {"required": ["requirement"]},
-            "if": {"properties": {"section": {"const": "topology"}}},
-            "else": {"not": {"required": ["data"]}}}}
+            "properties": {
+              "data": {
+                "not": {
+                  "anyOf": [
+                    {"required": ["register"]},
+                    {"required": ["sequence"]},
+                    {"required": ["layout"]},
+                    {"required": ["finding"]},
+                    {"required": ["pair"]},
+                    {"required": ["coverage"]}
+                  ]
+                }
+              }
+            }}}
         }
       }
     },
@@ -102,7 +138,9 @@
                   "not": {
                     "anyOf": [
                       {"required": ["register"]},
-                      {"required": ["sequence"]}
+                      {"required": ["sequence"]},
+                      {"required": ["connector"]},
+                      {"required": ["memory_map"]}
                     ]
                   }
                 }
@@ -135,7 +173,9 @@
                   "not": {
                     "anyOf": [
                       {"required": ["register"]},
-                      {"required": ["sequence"]}
+                      {"required": ["sequence"]},
+                      {"required": ["connector"]},
+                      {"required": ["memory_map"]}
                     ]
                   }
                 }
@@ -161,6 +201,9 @@
                 "section": {
                   "enum": [
                       "quick-facts",
+                      "connectors",
+                      "bootloader",
+                      "bringup",
                       "topology",
                       "gotchas",
                       "standards",
@@ -265,6 +308,16 @@
                         "required": [
                           "layout"
                         ]
+                      },
+                      {
+                        "required": [
+                          "connector"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "memory_map"
+                        ]
                       }
                     ]
                   }
@@ -341,6 +394,14 @@
                     "gotchas",
                     "open-questions"
                   ]
+                },
+                "data": {
+                  "not": {
+                    "anyOf": [
+                      {"required": ["connector"]},
+                      {"required": ["memory_map"]}
+                    ]
+                  }
                 }
               }
             }
@@ -803,6 +864,9 @@
         "section": {
           "enum": [
             "quick-facts",
+            "connectors",
+            "bootloader",
+            "bringup",
             "gotchas",
             "topology"
           ]
@@ -3120,6 +3184,127 @@
         },
         "additionalProperties": false
       },
+      "connectorPin": {
+        "type": "object",
+        "required": [
+          "pin",
+          "signal"
+        ],
+        "properties": {
+          "pin": {
+            "oneOf": [
+              {"$ref": "#/$defs/line"},
+              {"type": "integer", "minimum": 1}
+            ]
+          },
+          "signal": {
+            "$ref": "#/$defs/line"
+          },
+          "gpio": {
+            "$ref": "#/$defs/line"
+          },
+          "ball": {
+            "$ref": "#/$defs/line"
+          },
+          "direction": {
+            "enum": ["in", "out", "inout", "power", "ground", "nc"]
+          },
+          "level": {
+            "$ref": "#/$defs/line"
+          },
+          "pull": {
+            "$ref": "#/$defs/line"
+          },
+          "note": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "additionalProperties": false
+      },
+      "connector": {
+        "type": "object",
+        "required": [
+          "designator",
+          "pins"
+        ],
+        "properties": {
+          "designator": {
+            "$ref": "#/$defs/line"
+          },
+          "kind": {
+            "$ref": "#/$defs/line"
+          },
+          "part_number": {
+            "$ref": "#/$defs/line"
+          },
+          "mating_part": {
+            "$ref": "#/$defs/line"
+          },
+          "pitch": {
+            "$ref": "#/$defs/line"
+          },
+          "pins": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/connectorPin"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "memoryMapRegion": {
+        "type": "object",
+        "required": [
+          "name",
+          "base"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/line"
+          },
+          "env_var": {
+            "$ref": "#/$defs/line"
+          },
+          "base": {
+            "type": "string",
+            "$ref": "#/$defs/hex"
+          },
+          "size": {
+            "type": "string",
+            "$ref": "#/$defs/hex"
+          },
+          "kind": {
+            "$ref": "#/$defs/line"
+          },
+          "purpose": {
+            "$ref": "#/$defs/text"
+          },
+          "note": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "additionalProperties": false
+      },
+      "memoryMap": {
+        "type": "object",
+        "required": [
+          "regions"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "#/$defs/line"
+          },
+          "regions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/memoryMapRegion"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
     "payload": {
       "type": "object",
       "oneOf": [
@@ -3136,6 +3321,16 @@
         {
           "required": [
             "layout"
+          ]
+        },
+        {
+          "required": [
+            "connector"
+          ]
+        },
+        {
+          "required": [
+            "memory_map"
           ]
         },
         {
@@ -3198,6 +3393,12 @@
         },
         "layout": {
           "$ref": "#/$defs/layout"
+        },
+        "connector": {
+          "$ref": "#/$defs/connector"
+        },
+        "memory_map": {
+          "$ref": "#/$defs/memoryMap"
         },
         "finding": {
           "$ref": "#/$defs/finding"

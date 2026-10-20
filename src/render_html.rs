@@ -412,8 +412,13 @@ pub fn _fact(out: &mut Vec<String>, _checker: &Checker, rec: &SpecRecord, file: 
         .or_else(|| data.get("name"))
         .or_else(|| {
             data.get("data")
-                .and_then(|d| d.get("register").or_else(|| d.get("layout")))
-                .and_then(|x| x.get("name"))
+                .and_then(|d| {
+                    d.get("register")
+                        .or_else(|| d.get("layout"))
+                        .or_else(|| d.get("connector"))
+                        .or_else(|| d.get("memory_map"))
+                })
+                .and_then(|x| x.get("name").or_else(|| x.get("designator")))
         })
         .and_then(|v| v.as_str())
         .unwrap_or(&rec.id);
@@ -441,6 +446,116 @@ pub fn _fact(out: &mut Vec<String>, _checker: &Checker, rec: &SpecRecord, file: 
         let name = layout.get("name").and_then(|v| v.as_str()).unwrap_or("");
         let size = layout.get("size").and_then(|v| v.as_i64()).unwrap_or(0);
         out.push(format!("<p>Layout <code>{}</code> ({} B).</p>", literal(name), size));
+    }
+    if let Some(conn) = data.get("data").and_then(|v| v.get("connector")) {
+        let cname = conn
+            .get("designator")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let mut meta = Vec::new();
+        for (label, key) in &[
+            ("kind", "kind"),
+            ("part", "part_number"),
+            ("mating", "mating_part"),
+            ("pitch", "pitch"),
+        ] {
+            if let Some(val) = conn.get(*key).and_then(|v| v.as_str()) {
+                meta.push(format!("{}: {}", label, literal(val)));
+            }
+        }
+        if meta.is_empty() {
+            out.push(format!("<p>Connector <code>{}</code>.</p>", literal(cname)));
+        } else {
+            out.push(format!(
+                "<p>Connector <code>{}</code> ({}).</p>",
+                literal(cname),
+                meta.join(", ")
+            ));
+        }
+        if let Some(pins) = conn.get("pins").and_then(|v| v.as_array()) {
+            if !pins.is_empty() {
+                out.push("<table class=\"connector\"><thead><tr><th>Pin</th><th>Signal</th><th>Direction</th><th>Level</th><th>Note</th></tr></thead><tbody>".to_string());
+                for p in pins {
+                    let pin_str = p.get("pin").map(crate::render_md::_value).unwrap_or_default();
+                    let mut sig = p
+                        .get("signal")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let mut qualifiers = Vec::new();
+                    if let Some(gpio) = p.get("gpio").and_then(|v| v.as_str()) {
+                        qualifiers.push(format!("gpio: {}", gpio));
+                    }
+                    if let Some(ball) = p.get("ball").and_then(|v| v.as_str()) {
+                        qualifiers.push(format!("ball: {}", ball));
+                    }
+                    if !qualifiers.is_empty() {
+                        sig.push_str(&format!(" ({})", qualifiers.join(", ")));
+                    }
+                    let dir = p.get("direction").and_then(|v| v.as_str()).unwrap_or("");
+                    let mut level = p
+                        .get("level")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    if let Some(pull) = p.get("pull").and_then(|v| v.as_str()) {
+                        if level.is_empty() {
+                            level = pull.to_string();
+                        } else {
+                            level.push_str(&format!(" ({})", pull));
+                        }
+                    }
+                    let note = p.get("note").and_then(|v| v.as_str()).unwrap_or("");
+                    out.push(format!(
+                        "<tr><td><code>{}</code></td><td><code>{}</code></td><td>{}</td><td>{}</td><td>{}</td></tr>",
+                        literal(&pin_str),
+                        literal(&sig),
+                        literal(dir),
+                        literal(&level),
+                        literal(note)
+                    ));
+                }
+                out.push("</tbody></table>".to_string());
+            }
+        }
+    }
+    if let Some(mm) = data.get("data").and_then(|v| v.get("memory_map")) {
+        if let Some(mname) = mm.get("name").and_then(|v| v.as_str()) {
+            out.push(format!("<p>Memory map <code>{}</code>.</p>", literal(mname)));
+        }
+        if let Some(entries) = mm.get("regions").and_then(|v| v.as_array()) {
+            if !entries.is_empty() {
+                out.push("<table class=\"memory-map\"><thead><tr><th>Name</th><th>Variable</th><th>Base</th><th>Size</th><th>Purpose</th></tr></thead><tbody>".to_string());
+                for e in entries {
+                    let rname = e.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let var = e.get("env_var").and_then(|v| v.as_str()).unwrap_or("");
+                    let base = e.get("base").and_then(|v| v.as_str()).unwrap_or("");
+                    let size = e.get("size").and_then(|v| v.as_str()).unwrap_or("");
+                    let mut purpose = e
+                        .get("purpose")
+                        .or_else(|| e.get("note"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    if let Some(kind) = e.get("kind").and_then(|v| v.as_str()) {
+                        if purpose.is_empty() {
+                            purpose = kind.to_string();
+                        } else {
+                            purpose.push_str(&format!(" ({})", kind));
+                        }
+                    }
+                    out.push(format!(
+                        "<tr><td><code>{}</code></td><td><code>{}</code></td><td><code>{}</code></td><td><code>{}</code></td><td>{}</td></tr>",
+                        literal(rname),
+                        literal(var),
+                        literal(base),
+                        literal(size),
+                        literal(&purpose)
+                    ));
+                }
+                out.push("</tbody></table>".to_string());
+            }
+        }
     }
     if let Some(qty) = data.get("data").and_then(|v| v.get("quantity")) {
         out.push(format!("<p>Quantity: {}.</p>", literal(&crate::render_md::_value(qty))));

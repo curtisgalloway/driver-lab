@@ -62,24 +62,33 @@ impl PdfPages {
 }
 
 pub fn locator_pattern(kind: &str, value: &str) -> Regex {
-    let mut val = value.trim_end_matches(|c| c == '.' || c == ':').to_string();
+    let trimmed = value.trim().trim_end_matches(['.', ':']).trim();
+    let base = if trimmed.is_empty() { value.trim() } else { trimmed };
     let kind_lower = kind.to_lowercase();
-    if kind_lower == "table" || kind_lower == "figure" {
-        let prefix = format!("{} ", kind_lower);
-        if val.to_lowercase().starts_with(&prefix) {
-            val = val[prefix.len()..].to_string();
-        }
-        val = format!("{} {}", kind_lower, val);
+    let mut raw_tokens: Vec<&str> = base.split_whitespace().collect();
+    if (kind_lower == "table" || kind_lower == "figure")
+        && !raw_tokens
+            .first()
+            .is_some_and(|first| first.eq_ignore_ascii_case(&kind_lower))
+    {
+        raw_tokens.insert(0, &kind_lower);
     }
-    
-    let tokens: Vec<&str> = val.split_whitespace().collect();
-    let mut token_regexes = Vec::new();
-    for token in tokens {
-        let t = regex::escape(token).replace("\\-", "[-–]");
-        token_regexes.push(t);
-    }
+
+    let token_regexes: Vec<String> = raw_tokens
+        .into_iter()
+        .map(|token| {
+            token
+                .split(['-', '–'])
+                .map(regex::escape)
+                .collect::<Vec<_>>()
+                .join("[-–]")
+        })
+        .collect();
     let token_str = token_regexes.join(r"\s+");
-    let pat = format!(r"(?i)(?:^|[^\w.])(?:{})(?:$|[^\w.]|[-–](?:\D|$))", token_str);
+    let pat = format!(
+        r"(?i)(?:^|[^\w.])(?:{})(?:$|[^\w.\-–]|\.(?:\W|$)|[-–](?:\D|$))",
+        token_str
+    );
     RegexBuilder::new(&pat).case_insensitive(true).build().unwrap()
 }
 

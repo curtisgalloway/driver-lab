@@ -1003,6 +1003,16 @@ fn subschema_is_valid(
 ) -> bool {
     let mut schema_to_compile = sub.clone();
     if let Value::Object(ref mut map) = schema_to_compile {
+        if !map.contains_key("$id") {
+            if let Some(base_id) = active_root.get("$id").and_then(Value::as_str) {
+                if let Some((prefix, _)) = base_id.rsplit_once('/') {
+                    map.insert(
+                        "$id".to_string(),
+                        Value::String(format!("{prefix}/__subschema__.json")),
+                    );
+                }
+            }
+        }
         if !map.contains_key("$defs") {
             if let Some(defs) = active_root.get("$defs") {
                 map.insert("$defs".to_string(), defs.clone());

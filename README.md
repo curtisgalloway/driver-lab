@@ -154,7 +154,7 @@ checked topology format from the graph views still to be delivered.
   hands the files to `spec-verifier`.
 - **`spec-verifier`** re-derives each fact from its evidence in fresh reader contexts and writes
   `<root>/resources/<name>.verify.yaml`, one record per spec file, including overlays.
-  Verdicts use fact ids, or sub-keys for independently supported register fields and sequence
+  Verdicts use fact ids, or sub-keys for independently supported register fields, layout fields and sequence
   steps. Critical facts need a second independent reader. `driver-lab status` computes per-fact
   freshness from basis and dependency hashes; whole-file `spec_sha256` is informational.
   `--require-verified pr|main` selects the checking policy. The verifier proposes corrections

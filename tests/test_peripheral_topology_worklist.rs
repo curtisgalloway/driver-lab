@@ -661,3 +661,453 @@ domains:
         warnings(&res_spec, None)
     );
 }
+
+// ---------------------------------------------------------------------------
+// 6. Issue #164: `kind: protocol`, `kind: ip` data-formats/enumerations, and D16 layout sub-keys
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_issue_164_protocol_kind_ip_data_formats_and_layout_d16_subkeys() {
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().join("root");
+    write_file(
+        &root.join("board-specs.yaml"),
+        "format: 2\nname: std-root\nlayer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0]\n",
+    );
+
+    // Put a board spec in the same root to confirm `kind: protocol` does not emit an
+    // unattached-peripheral warning even without `describes:`.
+    write_file(
+        &root.join("board.spec.yaml"),
+        r#"format: 2
+kind: board
+id: sample-board
+name: Sample Board
+triggers: [sample-board]
+cache: sample-cache
+parts: [sample-ip]
+resources:
+  documents:
+    - name: bdoc
+      class: doc
+      title: Sample Board Doc
+      url: "https://example.invalid/board.html"
+      fetch: ok
+facts:
+  - id: board-qf
+    section: quick-facts
+    title: Board Overview
+    claim: Sample board uses sample IP.
+    support:
+      - {class: doc, doc: bdoc, at: [{heading: "Overview"}]}
+"#,
+    );
+
+    // `kind: ip` with `enumerationDefinitions`, `section: data-formats` (`data.layout`), and `data.quantity`.
+    write_file(
+        &root.join("sample_ip.spec.yaml"),
+        r#"format: 2
+kind: ip
+id: sample-ip
+name: Sample IP
+triggers: [sample-ip]
+resources:
+  documents:
+    - name: ip-trm
+      class: databook
+      title: Sample IP TRM
+      url: "https://example.invalid/ip-trm.pdf"
+      sha256: "2222222222222222222222222222222222222222222222222222222222222222"
+      pages: 40
+areas:
+  - {area: descriptors, level: document-only, note: Extracted from IP TRM.}
+enumerationDefinitions:
+  - name: dma-desc-owner
+    enumeratedValues:
+      - {name: CPU, value: "0x0"}
+      - {name: DMA, value: "0x1"}
+    support:
+      - {class: databook, doc: ip-trm, at: [{page: "5"}]}
+facts:
+  - id: ip-desc
+    section: data-formats
+    claim: Sample IP DMA descriptor is 4 bytes.
+    requirement: hw-required
+    data:
+      layout:
+        name: sample_dma_desc
+        size: 4
+        byteOrder: littleEndian
+        fields:
+          - id: owner
+            name: owner
+            offset: "0x0"
+            size: 1
+            bits: [0, 0]
+            meaning: descriptor ownership bit
+            enumerationDefinitionRef: dma-desc-owner
+          - id: length
+            name: length
+            offset: "0x2"
+            size: 2
+            meaning: transfer byte count
+    support:
+      - {class: databook, doc: ip-trm, at: [{page: "5"}]}
+  - id: ip-max-burst
+    section: standards
+    title: Max Burst Size
+    claim: Maximum burst size is 64 bytes.
+    requirement: hw-required
+    data:
+      quantity: {unit: By, max: 64}
+    support:
+      - {class: databook, doc: ip-trm, at: [{page: "6"}]}
+"#,
+    );
+
+    // `kind: protocol` with `enumerationDefinitions`, `data-formats`, `sub-protocols`, `data.quantity`,
+    // and a layout field carrying its own `support` (D16 sub-key).
+    write_file(
+        &root.join("usb2_ch9.spec.yaml"),
+        r#"format: 2
+kind: protocol
+id: usb2-ch9
+name: USB 2.0 Chapter 9 Protocol Data Structures
+triggers: [usb2-ch9, usb-descriptor]
+resources:
+  documents:
+    - name: usb20
+      class: standard
+      title: Universal Serial Bus Specification Revision 2.0
+      url: "https://example.invalid/usb_20.pdf"
+      sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+      pages: 650
+areas:
+  - {area: chapter-9, level: document-only, note: Standard Chapter 9 descriptors and requests.}
+enumerationDefinitions:
+  - name: usb-descriptor-type
+    enumeratedValues:
+      - {name: DEVICE, value: "0x1"}
+      - {name: CONFIGURATION, value: "0x2"}
+      - {name: STRING, value: "0x3"}
+      - {name: INTERFACE, value: "0x4"}
+      - {name: ENDPOINT, value: "0x5"}
+    support:
+      - {class: standard, doc: usb20, at: [{page: "251", table: "9-5"}]}
+  - name: usb-request-code
+    enumeratedValues:
+      - {name: GET_STATUS, value: "0x0"}
+      - {name: SET_ADDRESS, value: "0x5"}
+      - {name: GET_DESCRIPTOR, value: "0x6"}
+      - {name: SET_CONFIGURATION, value: "0x9"}
+    support:
+      - {class: standard, doc: usb20, at: [{page: "250", table: "9-4"}]}
+facts:
+  - id: setup-packet
+    section: data-formats
+    claim: Every USB control setup stage packet is 8 bytes in little-endian byte order.
+    requirement: hw-required
+    data:
+      layout:
+        name: usb_setup_packet
+        size: 8
+        byteOrder: littleEndian
+        bitNumbering: lsb0
+        fields:
+          - id: recipient
+            name: bmRequestType_recipient
+            offset: "0x0"
+            size: 1
+            bits: [0, 4]
+            meaning: request recipient
+            enumeratedValues:
+              - {name: DEVICE, value: "0x0"}
+              - {name: INTERFACE, value: "0x1"}
+              - {name: ENDPOINT, value: "0x2"}
+              - {name: OTHER, value: "0x3"}
+          - id: dir
+            name: bmRequestType_dir
+            offset: "0x0"
+            size: 1
+            bits: [7, 7]
+            meaning: data transfer direction
+            enumeratedValues:
+              - {name: HOST_TO_DEVICE, value: "0x0"}
+              - {name: DEVICE_TO_HOST, value: "0x1"}
+          - id: request
+            name: bRequest
+            offset: "0x1"
+            size: 1
+            meaning: specific standard request code
+            enumerationDefinitionRef: usb-request-code
+            support:
+              - {class: standard, doc: usb20, at: [{page: "250", table: "9-4"}]}
+          - id: value
+            name: wValue
+            offset: "0x2"
+            size: 2
+            meaning: request-specific value word
+          - id: index
+            name: wIndex
+            offset: "0x4"
+            size: 2
+            meaning: request-specific index or offset word
+          - id: length
+            name: wLength
+            offset: "0x6"
+            size: 2
+            meaning: number of bytes to transfer in data stage
+    support:
+      - {class: standard, doc: usb20, at: [{page: "248", table: "9-2"}]}
+  - id: set-address-recovery
+    section: sub-protocols
+    title: SetAddress Recovery Interval
+    claim: The USB device is given a 2 ms recovery interval after SetAddress completes.
+    requirement: hw-required
+    data:
+      quantity: {unit: ms, min: 2}
+    support:
+      - {class: standard, doc: usb20, at: [{page: "246", section: "9.2.6.3"}]}
+"#,
+    );
+
+    let (rc, res) = check_json(&[root.to_str().unwrap()]);
+    assert_eq!(
+        rc, 0,
+        "Issue #164: protocol and ip specs with data-formats and enumerationDefinitions must pass check: {res}"
+    );
+    assert!(
+        warnings(&res, Some("usb2-ch9")).is_empty(),
+        "Issue #164: protocol spec must not emit unattached peripheral warning: {:?}",
+        warnings(&res, None)
+    );
+
+    // Check D16 sub-key (`setup-packet.request`) in `status --json --no-fail-on-pending`
+    let (s_rc, s_res) = status_json(&[root.to_str().unwrap(), "--no-fail-on-pending"]);
+    assert_eq!(s_rc, 0, "status --no-fail-on-pending must succeed: {s_res}");
+    let usb_file = s_res["specs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["spec"] == "usb2-ch9")
+        .expect("usb2-ch9 in status specs");
+    let usb_facts = usb_file["facts"].as_array().unwrap();
+    let setup_basis = usb_facts
+        .iter()
+        .find(|r| r["key"] == "setup-packet")
+        .and_then(|r| r["basis"].as_str())
+        .expect("setup-packet basis")
+        .to_string();
+    let req_sub_basis = usb_facts
+        .iter()
+        .find(|r| r["key"] == "setup-packet.request")
+        .and_then(|r| r["basis"].as_str())
+        .expect("D16 sub-key setup-packet.request basis")
+        .to_string();
+    let set_addr_basis = usb_facts
+        .iter()
+        .find(|r| r["key"] == "set-address-recovery")
+        .and_then(|r| r["basis"].as_str())
+        .expect("set-address-recovery basis")
+        .to_string();
+
+    // Write `resources/usb2_ch9.verify.yaml` verifying `setup-packet`, `setup-packet.request`, and `set-address-recovery`
+    write_file(
+        &root.join("resources/usb2_ch9.verify.yaml"),
+        &format!(
+            r#"format: 2
+spec: usb2-ch9
+spec_file: usb2_ch9.spec.yaml
+spec_sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+canonical: fact-v1
+sources:
+  - name: usb20
+    url: "https://example.invalid/usb_20.pdf"
+    sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+summary:
+  pass: 3
+  fail: 0
+  unverifiable: 0
+  gap: 0
+  adjudicate: 0
+verdicts:
+  setup-packet:
+    verdict: PASS
+    date: "2026-04-20"
+    verifier: reader-one
+    basis: "{setup_basis}"
+    contrary_evidence: none-found
+    citation_precision: exact
+    note: Verified Table 9-2 8-byte setup packet layout.
+  setup-packet.request:
+    verdict: PASS
+    date: "2026-04-20"
+    verifier: reader-one
+    basis: "{req_sub_basis}"
+    contrary_evidence: none-found
+    citation_precision: exact
+    note: Verified Table 9-4 standard request codes on bRequest.
+  set-address-recovery:
+    verdict: PASS
+    date: "2026-04-20"
+    verifier: reader-one
+    basis: "{set_addr_basis}"
+    contrary_evidence: none-found
+    citation_precision: exact
+    note: Verified 2 ms recovery interval.
+"#
+        ),
+    );
+
+    let (chk_rc, chk_res) = check_json(&[root.to_str().unwrap()]);
+    assert_eq!(
+        chk_rc, 0,
+        "Issue #164: verify.yaml with D16 sub-key on data.layout.fields must pass check: {chk_res}"
+    );
+
+    // Also verify `speccheck.rs` allows an unpinned `fetch: ok` document in `.verify.yaml` `sources`
+    // (such as `bdoc` on `sample-board`) and rejects an unpinned source that is not `fetch: ok`.
+    let board_file = s_res["specs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["spec"] == "sample-board")
+        .expect("sample-board in status specs");
+    let board_qf_basis = board_file["facts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["key"] == "board-qf")
+        .and_then(|r| r["basis"].as_str())
+        .expect("board-qf basis")
+        .to_string();
+    write_file(
+        &root.join("resources/board.verify.yaml"),
+        &format!(
+            r#"format: 2
+spec: sample-board
+spec_file: board.spec.yaml
+spec_sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+canonical: fact-v1
+sources:
+  - name: bdoc
+    url: "https://example.invalid/board.html"
+    fetch: ok
+summary:
+  pass: 1
+  fail: 0
+  unverifiable: 0
+  gap: 0
+  adjudicate: 0
+verdicts:
+  board-qf:
+    verdict: PASS
+    date: "2026-04-20"
+    verifier: reader-one
+    basis: "{board_qf_basis}"
+    contrary_evidence: none-found
+    citation_precision: exact
+    note: Verified from unpinned fetch:ok bdoc.
+"#
+        ),
+    );
+    let (b_rc, b_res) = check_json(&[root.to_str().unwrap()]);
+    assert_eq!(
+        b_rc, 0,
+        "verify.yaml with unpinned fetch:ok document in sources must pass speccheck: {b_res}"
+    );
+
+    // Negative check: an unpinned source in verify.yaml naming a non-existent or non-fetch:ok doc must fail
+    write_file(
+        &root.join("resources/board.verify.yaml"),
+        &format!(
+            r#"format: 2
+spec: sample-board
+spec_file: board.spec.yaml
+spec_sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+canonical: fact-v1
+sources:
+  - name: unknown-doc
+    url: "https://example.invalid/board.html"
+    fetch: ok
+summary:
+  pass: 1
+  fail: 0
+  unverifiable: 0
+  gap: 0
+  adjudicate: 0
+verdicts:
+  board-qf:
+    verdict: PASS
+    date: "2026-04-20"
+    verifier: reader-one
+    basis: "{board_qf_basis}"
+    contrary_evidence: none-found
+    citation_precision: exact
+    note: Verified from unpinned unknown-doc.
+"#
+        ),
+    );
+    let (b_bad_rc, b_bad_res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(
+        b_bad_rc, 0,
+        "verify.yaml with unpinned source not matching an unpinned fetch:ok spec document must fail"
+    );
+    assert!(
+        !errors(&b_bad_res, Some("must name an unpinned fetch: ok document")).is_empty(),
+        "expected unpinned fetch:ok source mismatch error: {:?}",
+        errors(&b_bad_res, None)
+    );
+    let _ = fs::remove_file(root.join("resources/board.verify.yaml"));
+
+    // Negative check: layout field with enumerationDefinitionRef whose value exceeds field width must fail
+    write_file(
+        &root.join("bad_proto.spec.yaml"),
+        r#"format: 2
+kind: protocol
+id: bad-proto
+name: Bad Protocol
+triggers: [bad-proto]
+resources:
+  documents:
+    - name: pdoc
+      class: standard
+      title: Proto Spec
+      url: "https://example.invalid/proto.pdf"
+      sha256: "4444444444444444444444444444444444444444444444444444444444444444"
+      pages: 20
+enumerationDefinitions:
+  - name: too-wide-enum
+    enumeratedValues:
+      - {name: SMALL, value: "0x1"}
+      - {name: TOO_BIG, value: "0x10"}
+    support:
+      - {class: standard, doc: pdoc, at: [{page: "2"}]}
+facts:
+  - id: bad-pkt
+    section: data-formats
+    claim: Packet with 2-bit field referencing 5-bit enum value.
+    data:
+      layout:
+        name: bad_pkt
+        size: 1
+        fields:
+          - id: code
+            name: code
+            offset: "0x0"
+            size: 1
+            bits: [0, 1]
+            meaning: 2-bit code
+            enumerationDefinitionRef: too-wide-enum
+    support:
+      - {class: standard, doc: pdoc, at: [{page: "2"}]}
+"#,
+    );
+    let (bad_rc, bad_res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(bad_rc, 0, "layout field referencing enum value exceeding field width must fail");
+    assert!(
+        !errors(&bad_res, Some("exceeds field width")).is_empty(),
+        "expected enumeration value exceeds field width error: {:?}",
+        errors(&bad_res, None)
+    );
+}

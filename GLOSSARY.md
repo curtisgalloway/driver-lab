@@ -225,7 +225,7 @@ evaluation; add other terms as the documents that use them are updated.
 | PDF / physical versus printed pages | Portable Document Format, a file format preserving page layout. Physical PDF pages count from one; printed page labels inside the file can differ. |
 | Poppler / pdftotext | A PDF processing toolkit / its command-line text extractor, used optionally to read cited PDF pages without adding a Python package. |
 | TODO method | A proposed way to settle a fact's remaining question, stored in `todo.method` or described in `todo.text`; the verifier checks whether it can observe that question under the stated conditions. |
-| D16 sub-key | A verdict key of the form `fact-id.sub-id` for a register field or sequence step with its own support. SF2-7a checks these records and their freshness; fields and steps without separate support share their parent's verdict. |
+| D16 sub-key | A verdict key of the form `fact-id.sub-id` for a register field, layout field or sequence step with its own support. SF2-7a checks these records and their freshness; fields and steps without separate support share their parent's verdict. |
 | Register payload | A fact's structured `data.register` (name, byte offset, width in bits, access and optional reset) and optional `data.fields`; each field's `bits` is an inclusive `[low, high]` pair. |
 | Sequence payload | A fact's structured `data.sequence`: steps with stable ids and actions, plus ordering constraints naming the step that comes before and the step that comes after. A step or constraint may override the fact's requirement label. |
 | Layout payload | A fact's structured `data.layout`: a name, total size in bytes and fields with byte offsets and byte sizes. |

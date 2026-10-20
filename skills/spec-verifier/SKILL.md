@@ -45,7 +45,7 @@ own record, overlays included. The record's `spec` is the file's `id`, or its `o
 ### Peripheral specs and reviews
 
 Peripheral specs and reviews use this same procedure. Verdicts cover facts,
-not individual anchors. Register fields and sequence steps with their own support get
+not individual anchors. Register fields, layout fields and sequence steps with their own support get
 `fact-id.sub-id` keys (D16); otherwise the parent verdict covers them. Their bases include
 the effective requirement and parent identifying data. Finding assessments are separate from
 verifier verdicts. Correspondence pair anchors count as support. Read the authoring procedures

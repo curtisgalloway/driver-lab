@@ -189,7 +189,7 @@ Set `requirement` for behavior and steps: `hw-required` needs document-class sup
 actually states the requirement; `comment-explained` attributes the code's explanation;
 `driver-choice` describes policy; `as-implemented` says only what the code does. Children
 inherit the parent's requirement unless they override it. Independently supported register
-fields and sequence steps get verdict sub-keys `fact-id.sub-id`; otherwise the parent's
+fields, layout fields and sequence steps get verdict sub-keys `fact-id.sub-id`; otherwise the parent's
 verdict covers them. A changed independent child does not stale unrelated children.
 
 **Authoring rule (D31, D32)**: do not copy a fact that a canonical source already gives. A

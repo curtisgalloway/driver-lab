@@ -468,13 +468,13 @@ pub fn peripheral_children(data: &Value, base: &[PathElem]) -> Vec<(Value, Vec<P
     out
 }
 
-/// D16: supported register fields and sequence steps have verdict sub-keys (`peripheral.py:subrecords`).
+/// D16: supported register fields, layout fields, and sequence steps have verdict sub-keys (`peripheral.py:subrecords`).
 #[must_use]
 pub fn subrecords(data: &Value, base: &[PathElem]) -> Vec<(Value, Vec<PathElem>)> {
-    let has_register = data
+    let has_register_or_layout = data
         .get("data")
         .and_then(Value::as_object)
-        .is_some_and(|d| d.contains_key("register"));
+        .is_some_and(|d| d.contains_key("register") || d.contains_key("layout"));
     let mut out = Vec::new();
     for (row, path) in peripheral_children(data, base) {
         let Some(row_obj) = row.as_object() else {
@@ -487,9 +487,7 @@ pub fn subrecords(data: &Value, base: &[PathElem]) -> Vec<(Value, Vec<PathElem>)
             PathElem::Key(k) => k.as_str(),
             PathElem::Index(_) => continue,
         };
-        if (parent_key == "fields" || parent_key == "steps")
-            && (parent_key == "steps" || has_register)
-        {
+        if parent_key == "steps" || (parent_key == "fields" && has_register_or_layout) {
             out.push((row, path));
         }
     }
@@ -516,6 +514,21 @@ pub fn basis_data(rec_data: &Value, parent_data: Option<&Value>) -> Value {
                     }
                     if let Some(offset) = reg.get("offset") {
                         pid.insert("offset".to_string(), offset.clone());
+                    }
+                    data_obj.insert("parent_identity".to_string(), Value::Object(pid));
+                } else if let Some(layout) = payload.get("layout").and_then(Value::as_object) {
+                    let mut pid = Map::new();
+                    if let Some(name) = layout.get("name") {
+                        pid.insert("name".to_string(), name.clone());
+                    }
+                    if let Some(size) = layout.get("size") {
+                        pid.insert("size".to_string(), size.clone());
+                    }
+                    if let Some(bo) = layout.get("byteOrder") {
+                        pid.insert("byteOrder".to_string(), bo.clone());
+                    }
+                    if let Some(bn) = layout.get("bitNumbering") {
+                        pid.insert("bitNumbering".to_string(), bn.clone());
                     }
                     data_obj.insert("parent_identity".to_string(), Value::Object(pid));
                 } else if let Some(seq) = payload.get("sequence").and_then(Value::as_object) {

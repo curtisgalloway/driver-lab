@@ -7,7 +7,7 @@
   "required": ["format", "kind", "facts"],
   "properties": {
     "format": {"const": 2},
-    "kind": {"enum": ["board", "soc", "chip", "ip", "overlay", "facts", "peripheral", "review"]},
+    "kind": {"enum": ["board", "soc", "chip", "ip", "protocol", "overlay", "facts", "peripheral", "review"]},
     "facts": {"type": "array", "items": {"$ref": "#/$defs/fact"}},
     "resources": {"$ref": "#/$defs/resources"},
     "assumptions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/assumption"}},
@@ -89,14 +89,57 @@
           "triggers": {"$ref": "#/$defs/triggers"},
           "not_triggers": {"$ref": "#/$defs/wordList"},
           "aliases": {"$ref": "#/$defs/idList"},
+          "parts": {"$ref": "#/$defs/parts"},
           "cache": {"$ref": "#/$defs/name"},
+          "areas": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/area"}},
           "facts": {
             "items": {
-              "required": ["title"],
+              "if": {"properties": {"section": {"const": "data-formats"}}},
+              "else": {"required": ["title"]},
               "properties": {
-                "section": {"enum": ["standards", "programming-model", "variants-quirks", "gotchas"]}
-              },
-                "not": {"anyOf": [{"required": ["data"]}, {"required": ["requirement"]}]}
+                "section": {"enum": ["standards", "programming-model", "data-formats", "variants-quirks", "gotchas"]},
+                "data": {
+                  "not": {
+                    "anyOf": [
+                      {"required": ["register"]},
+                      {"required": ["sequence"]}
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"const": "protocol"}}},
+      "then": {
+        "required": ["id", "name", "triggers", "resources"],
+        "properties": {
+          "id": {"$ref": "#/$defs/specId"},
+          "name": {"$ref": "#/$defs/line"},
+          "triggers": {"$ref": "#/$defs/triggers"},
+          "not_triggers": {"$ref": "#/$defs/wordList"},
+          "aliases": {"$ref": "#/$defs/idList"},
+          "parts": {"$ref": "#/$defs/parts"},
+          "cache": {"$ref": "#/$defs/name"},
+          "areas": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/area"}},
+          "facts": {
+            "items": {
+              "if": {"properties": {"section": {"const": "data-formats"}}},
+              "else": {"required": ["title"]},
+              "properties": {
+                "section": {"enum": ["standards", "programming-model", "data-formats", "sub-protocols", "variants-quirks", "gotchas", "open-questions"]},
+                "data": {
+                  "not": {
+                    "anyOf": [
+                      {"required": ["register"]},
+                      {"required": ["sequence"]}
+                    ]
+                  }
+                }
+              }
             }
           }
         }
@@ -112,7 +155,8 @@
           "instances": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/instance"}},
           "facts": {
             "items": {
-              "required": ["title"],
+              "if": {"properties": {"section": {"const": "data-formats"}}},
+              "else": {"required": ["title"]},
               "properties": {
                 "section": {
                   "enum": [
@@ -264,6 +308,9 @@
           "aliases": {
             "$ref": "#/$defs/idList"
           },
+          "parts": {
+            "$ref": "#/$defs/parts"
+          },
           "describes": {
             "$comment": "The soc, chip or board specs whose block this peripheral spec programs: structural composition, like parts, so outside every fact's basis and not license-gated.",
             "$ref": "#/$defs/parts"
@@ -302,7 +349,7 @@
       }
     },
     {
-      "if": {"required": ["kind"], "properties": {"kind": {"enum": ["board", "soc", "chip", "ip", "review"]}}},
+      "if": {"required": ["kind"], "properties": {"kind": {"enum": ["board", "soc", "chip", "review"]}}},
       "then": {
         "not": {"anyOf": [
           {"required": ["resetTypes"]},
@@ -311,6 +358,17 @@
           {"required": ["registerFiles"]}
         ]},
         "$comment": "message: resetTypes, fieldAccessPolicyDefinitions, enumerationDefinitions and registerFiles belong to a peripheral, an overlay or a facts file, not to this kind"
+      }
+    },
+    {
+      "if": {"required": ["kind"], "properties": {"kind": {"enum": ["ip", "protocol"]}}},
+      "then": {
+        "not": {"anyOf": [
+          {"required": ["resetTypes"]},
+          {"required": ["fieldAccessPolicyDefinitions"]},
+          {"required": ["registerFiles"]}
+        ]},
+        "$comment": "message: resetTypes, fieldAccessPolicyDefinitions and registerFiles belong to a peripheral, an overlay or a facts file, not to this kind (enumerationDefinitions is allowed)"
       }
     }
   ],
@@ -1780,6 +1838,7 @@
           "level": {
             "enum": [
               "document-and-code",
+              "document-only",
               "code-only",
               "inferred"
             ]

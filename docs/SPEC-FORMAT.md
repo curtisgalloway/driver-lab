@@ -192,7 +192,8 @@ in this order:
 | Kind | Sections |
 | --- | --- |
 | board, soc, chip | `quick-facts`, `gotchas` |
-| ip | `standards`, `programming-model`, `variants-quirks`, `gotchas` |
+| ip | `standards`, `programming-model`, `data-formats`, `variants-quirks`, `gotchas` |
+| protocol | `standards`, `programming-model`, `data-formats`, `sub-protocols`, `variants-quirks`, `gotchas`, `open-questions` |
 | overlay | the sections of the kind it overlays |
 | peripheral | `identity`, `registers`, `sequences`, `data-formats`, `interrupts`, `dma`, `sub-protocols`, `target`, `gotchas`, `open-questions` |
 | review | `identity`, `correspondence`, `coverage`, `findings`, `agreements`, `open-questions` |
@@ -977,8 +978,9 @@ named, hashed, and cited by name and page) is the only shape.
 - `claim` is optional for a register fact: when absent, the renderer writes it from `data`. The
   basis hash covers `data`, so a changed offset stales the verdict.
 - A field with its own `support` gets its own verdict key (`reg-ctrl.en`); otherwise the
-  register's verdict covers its fields (D16). A sub-key's basis covers its own data and
-  support plus the parent's identifying data: the register's name and offset, or the
+  register's or layout's verdict covers its fields (D16). A sub-key's basis covers its own data and
+  support plus the parent's identifying data: the register's name and offset, the layout's name, size,
+  byteOrder and bitNumbering, or the
   sequence's step order. The parent's basis excludes the data and support of children
   with their own support. Editing step `s4` stales only `seq.s4`; editing field `en`'s
   own anchor stales only `reg.en`.
@@ -1027,7 +1029,7 @@ fields with byte offsets, plus the optional `bits`, `byteOrder` and `bitNumberin
 under [Layouts](#layouts-bit-packed-fields-and-byte-order)); `interrupts` and `dma` facts are
 ordinary claims with support; `target` facts cite repos entries with `role: target`. Per-area
 confidence is the spec-level `areas` list
-(`{area, level: document-and-code | code-only | inferred, note}`).
+(`{area, level: document-and-code | document-only | code-only | inferred, note}`).
 
 **A value the driver reports to the OS framework states its unit and layer (#150).** An MTU or
 frame size, a buffer length, head or tail room, a rate: the `target` fact says what the number
@@ -2627,7 +2629,7 @@ left open, also decided by the user on 2026-10-08.
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
 | D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without driver-lab defining its content |
-| D16 | Verdict granularity | One verdict per register or sequence fact; sub-keys for fields or steps with their own support | precise where the author cited precisely, without hundreds of records |
+| D16 | Verdict granularity | One verdict per register, layout or sequence fact; sub-keys for register fields, layout fields or sequence steps with their own support | precise where the author cited precisely, without hundreds of records |
 | D17 | File names | Every spec is `<name>.spec.yaml`; `kind` says what it is | one glob, one rule |
 | D18 | Conflict entries | The `conflicts` field now | DESIGN.md's proposal gets a home, and RG1's documentation-versus-source contradiction is recorded as one |
 | D19 | Cross-root staleness (raised from the draft's Risks table) | A fact staled through a reference into another root is a **warning on the dependent repository's `main`**; **any pull request to the dependent repository must re-verify** it (`--require-verified` treats it as an error there) | an upstream merge never turns another repository's `main` red, and stale facts cannot ride along on the next change there ([Freshness](#freshness-per-fact-basis-hashes-d2)) |

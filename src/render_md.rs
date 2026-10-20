@@ -287,8 +287,14 @@ pub fn render(
         }
         
         // Sections
-        let sections = if base.kind() == "peripheral" { vec!["facts"] } else { vec!["facts"] }; // simplified sections mapping
-        for section in &sections {
+        let target_kind = checker
+            .files
+            .iter()
+            .find(|f| !f.is_overlay() && f.spec_id() == base_id)
+            .map(|f| f.kind())
+            .unwrap_or(base.kind());
+        let sections = crate::speccheck::allowed_sections(target_kind);
+        for section in sections {
             let mut has_section = false;
             for file in group.iter() {
                 for (_, rec) in &file.records {
@@ -371,7 +377,16 @@ pub fn render(
 
 pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFile, status_map: &HashMap<(usize, String), HashMap<String, &StatusRow>>, with_status: bool) {
     let data = &rec.data;
-    let title = data.get("title").or_else(|| data.get("name")).and_then(|v| v.as_str()).unwrap_or(&rec.id);
+    let title = data
+        .get("title")
+        .or_else(|| data.get("name"))
+        .or_else(|| {
+            data.get("data")
+                .and_then(|d| d.get("register").or_else(|| d.get("layout")))
+                .and_then(|x| x.get("name"))
+        })
+        .and_then(|v| v.as_str())
+        .unwrap_or(&rec.id);
     out.heading(4, &escape(title));
     
     if let Some(claim) = data.get("claim").and_then(|v| v.as_str()) {
@@ -392,6 +407,14 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
             }
         }
         out.append(String::new());
+    }
+    if let Some(layout) = data.get("data").and_then(|v| v.get("layout")) {
+        let name = layout.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let size = layout.get("size").and_then(|v| v.as_i64()).unwrap_or(0);
+        out.extend(vec![format!("Layout {} ({} B).", code(name), size), String::new()]);
+    }
+    if let Some(qty) = data.get("data").and_then(|v| v.get("quantity")) {
+        out.extend(vec![format!("Quantity: {}.", escape(&_value(qty))), String::new()]);
     }
     
     out.extend(vec!["Provenance (generated):".to_string(), String::new()]);

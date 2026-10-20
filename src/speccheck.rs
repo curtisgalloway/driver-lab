@@ -102,14 +102,24 @@ pub fn classify_context_finding(message: &str) -> TaintClass {
     }
 }
 
-fn allowed_sections(kind: &str) -> &'static [&'static str] {
+pub(crate) fn allowed_sections(kind: &str) -> &'static [&'static str] {
     match kind {
         "chip" | "soc" | "board" => &["quick-facts", "gotchas", "topology"],
         "ip" => &[
             "standards",
             "programming-model",
+            "data-formats",
             "variants-quirks",
             "gotchas",
+        ],
+        "protocol" => &[
+            "standards",
+            "programming-model",
+            "data-formats",
+            "sub-protocols",
+            "variants-quirks",
+            "gotchas",
+            "open-questions",
         ],
         "peripheral" => &[
             "identity",
@@ -2312,6 +2322,22 @@ pub fn check_overlay(checker: &mut Checker, f_idx: usize, base: &BTreeMap<String
                         ));
                     }
                 }
+            } else if matches!(tf_kind.as_str(), "ip" | "protocol") {
+                if let Some(payload) = fact.get("data").and_then(Value::as_object) {
+                    if ["register", "sequence"]
+                        .iter()
+                        .any(|k| payload.contains_key(*k))
+                    {
+                        fact_reports.push((
+                            vec![
+                                PathElem::from("facts"),
+                                PathElem::Index(i),
+                                PathElem::from("data"),
+                            ],
+                            format!("{tf_kind} overlay refuses register and sequence payloads"),
+                        ));
+                    }
+                }
             }
         }
     }
@@ -3448,6 +3474,44 @@ fn check_one_verify_record(
             true,
             true,
         );
+    }
+
+    if let Some(sources_arr) = data.get("sources").and_then(Value::as_array) {
+        let spec_docs = checker.files[f_idx]
+            .data
+            .get("resources")
+            .and_then(|r| r.get("documents"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for (s_idx, src_entry) in sources_arr.iter().enumerate() {
+            let Some(src_obj) = src_entry.as_object() else {
+                continue;
+            };
+            if !src_obj.contains_key("commit") && !src_obj.contains_key("sha256") {
+                let src_name = src_obj.get("name").and_then(Value::as_str).unwrap_or("");
+                let matches_unpinned_doc = spec_docs.iter().any(|d| {
+                    d.get("name").and_then(Value::as_str) == Some(src_name)
+                        && !d.as_object().is_some_and(|m| m.contains_key("sha256"))
+                        && d.get("fetch").and_then(Value::as_str) == Some("ok")
+                });
+                if !matches_unpinned_doc {
+                    checker.add_where(
+                        rpath,
+                        Some(root_idx),
+                        Some(&loaded),
+                        &[PathElem::from("sources"), PathElem::from(s_idx)],
+                        format!(
+                            "source '{src_name}' without commit or sha256 must name an unpinned fetch: ok document in '{rel}'"
+                        ),
+                        "error",
+                        false,
+                        true,
+                        true,
+                    );
+                }
+            }
+        }
     }
 
     checker.files[f_idx].record_state = "ok".to_string();

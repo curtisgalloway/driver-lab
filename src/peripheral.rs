@@ -97,17 +97,20 @@ pub fn children<'a>(data: &'a Value, base: &[PathElem]) -> Vec<(&'a Value, Vec<P
     out
 }
 
-/// D16: supported register fields and sequence steps have verdict sub-keys (`peripheral.py:subrecords`).
+/// D16: supported register fields, layout fields, and sequence steps have verdict sub-keys (`peripheral.py:subrecords`).
 #[must_use]
 pub fn subrecords<'a>(data: &'a Value, base: &[PathElem]) -> Vec<(&'a Value, Vec<PathElem>)> {
     let mut out = Vec::new();
-    let has_register = data.get("data").and_then(|d| d.get("register")).is_some();
+    let has_register_or_layout = data
+        .get("data")
+        .and_then(Value::as_object)
+        .is_some_and(|d| d.contains_key("register") || d.contains_key("layout"));
     for (row, path) in children(data, base) {
         if row.get("support").is_some() && path.len() >= 2 {
             let p_2 = &path[path.len() - 2];
             let is_fields = matches!(p_2, PathElem::Key(k) if k == "fields");
             let is_steps = matches!(p_2, PathElem::Key(k) if k == "steps");
-            if (is_fields || is_steps) && (is_steps || has_register) {
+            if is_steps || (is_fields && has_register_or_layout) {
                 out.push((row, path));
             }
         }
@@ -778,10 +781,15 @@ fn check_enumeration(
     let width = entry.get("width").and_then(Value::as_u64);
     let mut values_seen = HashSet::new();
     let mut names_seen = HashSet::new();
-    if let Some(values) = as_array(entry, "values") {
+    let (val_key, values_opt) = if let Some(v) = as_array(entry, "enumeratedValues") {
+        ("enumeratedValues", Some(v))
+    } else {
+        ("values", as_array(entry, "values"))
+    };
+    if let Some(values) = values_opt {
         for (i, row) in values.iter().enumerate() {
             let mut vpath = path.to_vec();
-            vpath.push(PathElem::from("values"));
+            vpath.push(PathElem::from(val_key));
             vpath.push(PathElem::Index(i));
             if let Some(val) = parse_int(row.get("value")) {
                 let val_str = as_str(row, "value").unwrap_or("");
@@ -1003,21 +1011,47 @@ fn check_field(
             .and_then(|m| m.get(ed))
             .cloned();
         if let Some((ed_entry, _)) = ed_opt {
-            if let (Some(fw), Some(ew)) = (fwidth, ed_entry.get("width").and_then(Value::as_u64)) {
-                if ew > fw {
-                    let mut p = fpath.to_vec();
-                    p.push(PathElem::from("enumerationDefinitionRef"));
-                    checker.add_file(
-                        file_idx,
-                        &p,
-                        format!(
-                            "{what}: enumeration '{ed}' width {ew} exceeds field width {fw}"
-                        ),
-                        "error",
-                        false,
-                        true,
-                        true,
-                    );
+            if let Some(fw) = fwidth {
+                if let Some(ew) = ed_entry.get("width").and_then(Value::as_u64) {
+                    if ew > fw {
+                        let mut p = fpath.to_vec();
+                        p.push(PathElem::from("enumerationDefinitionRef"));
+                        checker.add_file(
+                            file_idx,
+                            &p,
+                            format!(
+                                "{what}: enumeration '{ed}' width {ew} exceeds field width {fw}"
+                            ),
+                            "error",
+                            false,
+                            true,
+                            true,
+                        );
+                    }
+                }
+                if let Some(vals) = as_array(&ed_entry, "enumeratedValues")
+                    .or_else(|| as_array(&ed_entry, "values"))
+                {
+                    for row in vals {
+                        if let Some(val) = parse_int(row.get("value")) {
+                            if bit_length(val) > fw {
+                                let val_str = as_str(row, "value").unwrap_or("");
+                                let mut p = fpath.to_vec();
+                                p.push(PathElem::from("enumerationDefinitionRef"));
+                                checker.add_file(
+                                    file_idx,
+                                    &p,
+                                    format!(
+                                        "{what}: enumeration '{ed}' value {val_str} exceeds field width {fw}"
+                                    ),
+                                    "error",
+                                    false,
+                                    true,
+                                    true,
+                                );
+                            }
+                        }
+                    }
                 }
             }
         } else {
@@ -1304,6 +1338,68 @@ pub fn check_layouts(checker: &mut Checker, file_idx: usize) {
                 };
 
                 let fwidth = bh.saturating_sub(bl) + 1;
+                let what = format!("layout field '{fid}'");
+                if let Some(ed) = as_str(field, "enumerationDefinitionRef") {
+                    let ed_opt = checker.files[file_idx]
+                        .registries
+                        .get("enumerationDefinitions")
+                        .and_then(|m| m.get(ed))
+                        .cloned();
+                    if let Some((ed_entry, _)) = ed_opt {
+                        if let Some(ew) = ed_entry.get("width").and_then(Value::as_u64) {
+                            if ew > fwidth {
+                                let mut p = fpath.clone();
+                                p.push(PathElem::from("enumerationDefinitionRef"));
+                                checker.add_file(
+                                    file_idx,
+                                    &p,
+                                    format!(
+                                        "{what}: enumeration '{ed}' width {ew} exceeds field width {fwidth}"
+                                    ),
+                                    "error",
+                                    false,
+                                    true,
+                                    true,
+                                );
+                            }
+                        }
+                        if let Some(vals) = as_array(&ed_entry, "enumeratedValues")
+                            .or_else(|| as_array(&ed_entry, "values"))
+                        {
+                            for row in vals {
+                                if let Some(val) = parse_int(row.get("value")) {
+                                    if bit_length(val) > fwidth {
+                                        let val_str = as_str(row, "value").unwrap_or("");
+                                        let mut p = fpath.clone();
+                                        p.push(PathElem::from("enumerationDefinitionRef"));
+                                        checker.add_file(
+                                            file_idx,
+                                            &p,
+                                            format!(
+                                                "{what}: enumeration '{ed}' value {val_str} exceeds field width {fwidth}"
+                                            ),
+                                            "error",
+                                            false,
+                                            true,
+                                            true,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        let mut p = fpath.clone();
+                        p.push(PathElem::from("enumerationDefinitionRef"));
+                        checker.reject(
+                            file_idx,
+                            &p,
+                            format!(
+                                "{what}: enumeration '{ed}' is not in this file's enumerationDefinitions"
+                            ),
+                            true,
+                        );
+                    }
+                }
                 if field.get("enumeratedValues").is_some() {
                     let mut ev_map = Map::new();
                     ev_map.insert("width".to_string(), json!(fwidth));
@@ -1314,7 +1410,7 @@ pub fn check_layouts(checker: &mut Checker, file_idx: usize) {
                     check_enumeration(
                         checker,
                         file_idx,
-                        &format!("layout field '{fid}'"),
+                        &what,
                         &Value::Object(ev_map),
                         &fpath,
                     );
@@ -1603,7 +1699,9 @@ fn check_step_value(
                 .get("enumerationDefinitions")
                 .and_then(|m| m.get(eref))
             {
-                if let Some(vals) = as_array(ed_entry, "values") {
+                if let Some(vals) = as_array(ed_entry, "enumeratedValues")
+                    .or_else(|| as_array(ed_entry, "values"))
+                {
                     for r in vals {
                         if let Some(n) = as_str(r, "name") {
                             names.insert(n.to_string());

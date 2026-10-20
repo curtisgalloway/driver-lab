@@ -51,10 +51,13 @@ schema; identity comes from `id`, or `overlays`. Conventionally name base files 
 use distinct filenames for overlays. Put SPDX copyright and license comments at the top,
 matching the target repository's license. No frontmatter or Markdown body surrounds the YAML data.
 
-Implemented kinds are `board`, `soc`, `chip`, `ip`, `overlay`, `peripheral`, `review` and
-`facts`. Peripheral and review specs include `data` payloads, `requirement` and verdict sub-keys.
+Implemented kinds are `board`, `soc`, `chip`, `ip`, `protocol`, `overlay`, `peripheral`,
+`review` and `facts`. Peripheral, protocol, IP and review specs include `data` payloads,
+`requirement` and verdict sub-keys (register fields, layout fields and sequence steps with
+their own `support`).
 Register fields carry IP-XACT properties and the spec-level registries (`resetTypes`,
-`fieldAccessPolicyDefinitions`, `enumerationDefinitions`, `registerFiles`); see
+`fieldAccessPolicyDefinitions`, `enumerationDefinitions`, `registerFiles`); `ip` and `protocol`
+specs also admit `enumerationDefinitions` for shared descriptor/request enumerations; see
 [SPEC-FORMAT.md](../../docs/SPEC-FORMAT.md#register-fields-ip-xact-properties). Layout fields
 take `bits`, and a layout takes `byteOrder` and `bitNumbering`; see
 [the layouts subsection](../../docs/SPEC-FORMAT.md#layouts-bit-packed-fields-and-byte-order).
@@ -72,10 +75,14 @@ Place facts by kind:
   timers, clocks/power, GPIO/pinmux, runtime device-tree changes; `instances` places blocks.
 - `chip`: how the companion is reached, its address window, contents and hand-off state.
 - `ip`: standards, register model/sequences, public variants/errata; no instance addresses.
+- `protocol`: reusable protocol data structures (descriptors, setup packets, request tables),
+  enumerations and timing quantities in standards roots without requiring a `describes:` link.
 - `overlay`: `kind: overlay` and `overlays` name the target; no `id` or `parts` override.
 
-Sections are `quick-facts`, `gotchas`, `topology` for board/SoC/chip; `standards`, `programming-model`,
-`variants-quirks`, `gotchas` for IP. The schema admits their union for overlays; `check`
+Sections are `quick-facts`, `gotchas`, `topology` for board/SoC/chip; `standards`,
+`programming-model`, `data-formats`, `variants-quirks`, `gotchas` for IP; `standards`,
+`programming-model`, `data-formats`, `sub-protocols`, `variants-quirks`, `gotchas`,
+`open-questions` for protocol. The schema admits their union for overlays; `check`
 requires the target's sections. Facts retain reading order within sections.
 
 ### Structured topology

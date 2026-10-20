@@ -31,6 +31,7 @@ const TEXT_KEYS: &[&str] = &[
     "claim",
     "title",
     "note",
+    "purpose",
     "orientation",
     "milestones",
     "notes",
@@ -104,7 +105,14 @@ pub fn classify_context_finding(message: &str) -> TaintClass {
 
 pub(crate) fn allowed_sections(kind: &str) -> &'static [&'static str] {
     match kind {
-        "chip" | "soc" | "board" => &["quick-facts", "gotchas", "topology"],
+        "chip" | "soc" | "board" => &[
+            "quick-facts",
+            "connectors",
+            "bootloader",
+            "bringup",
+            "gotchas",
+            "topology",
+        ],
         "ip" => &[
             "standards",
             "programming-model",
@@ -1976,6 +1984,7 @@ pub fn check_composition_full(checker: &mut Checker) {
 
     let mut parts_graph: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for f_idx in 0..checker.files.len() {
+        check_connector_and_memory_map(checker, f_idx);
         if checker.files[f_idx].is_overlay() {
             check_overlay(checker, f_idx, &base);
             continue;
@@ -2320,6 +2329,18 @@ pub fn check_overlay(checker: &mut Checker, f_idx: usize, base: &BTreeMap<String
                             "review overlay refuses register, sequence and layout payloads"
                                 .to_string(),
                         ));
+                    } else if ["connector", "memory_map"]
+                        .iter()
+                        .any(|k| payload.contains_key(*k))
+                    {
+                        fact_reports.push((
+                            vec![
+                                PathElem::from("facts"),
+                                PathElem::Index(i),
+                                PathElem::from("data"),
+                            ],
+                            "review overlay refuses connector and memory_map payloads".to_string(),
+                        ));
                     }
                 }
             } else if matches!(tf_kind.as_str(), "ip" | "protocol") {
@@ -2335,6 +2356,53 @@ pub fn check_overlay(checker: &mut Checker, f_idx: usize, base: &BTreeMap<String
                                 PathElem::from("data"),
                             ],
                             format!("{tf_kind} overlay refuses register and sequence payloads"),
+                        ));
+                    } else if ["connector", "memory_map"]
+                        .iter()
+                        .any(|k| payload.contains_key(*k))
+                    {
+                        fact_reports.push((
+                            vec![
+                                PathElem::from("facts"),
+                                PathElem::Index(i),
+                                PathElem::from("data"),
+                            ],
+                            format!("{tf_kind} overlay refuses connector and memory_map payloads"),
+                        ));
+                    }
+                }
+            } else if matches!(tf_kind.as_str(), "board" | "soc" | "chip") {
+                if let Some(payload) = fact.get("data").and_then(Value::as_object) {
+                    if ["register", "sequence", "layout", "finding", "pair", "coverage"]
+                        .iter()
+                        .any(|k| payload.contains_key(*k))
+                    {
+                        fact_reports.push((
+                            vec![
+                                PathElem::from("facts"),
+                                PathElem::Index(i),
+                                PathElem::from("data"),
+                            ],
+                            format!(
+                                "{tf_kind} overlay refuses register, sequence, layout, finding, pair and coverage payloads"
+                            ),
+                        ));
+                    }
+                }
+            } else if tf_kind == "peripheral" {
+                if let Some(payload) = fact.get("data").and_then(Value::as_object) {
+                    if ["connector", "memory_map"]
+                        .iter()
+                        .any(|k| payload.contains_key(*k))
+                    {
+                        fact_reports.push((
+                            vec![
+                                PathElem::from("facts"),
+                                PathElem::Index(i),
+                                PathElem::from("data"),
+                            ],
+                            "peripheral overlay refuses connector and memory_map payloads"
+                                .to_string(),
                         ));
                     }
                 }
@@ -2361,6 +2429,136 @@ pub fn check_overlay(checker: &mut Checker, f_idx: usize, base: &BTreeMap<String
         );
     }
     check_instances(checker, f_idx, base);
+}
+
+/// Checks semantic invariants on `data.connector` and `data.memory_map` payloads (`issue #180`).
+pub fn check_connector_and_memory_map(checker: &mut Checker, f_idx: usize) {
+    let mut reports: Vec<(Vec<PathElem>, String)> = Vec::new();
+    if let Some(facts) = checker.files[f_idx]
+        .data
+        .get("facts")
+        .and_then(Value::as_array)
+    {
+        for (i, fact) in facts.iter().enumerate() {
+            let Some(data) = fact.get("data").and_then(Value::as_object) else {
+                continue;
+            };
+            if let Some(conn) = data.get("connector").and_then(Value::as_object) {
+                if let Some(pins) = conn.get("pins").and_then(Value::as_array) {
+                    let mut seen_pins = HashSet::new();
+                    for (p_idx, p) in pins.iter().enumerate() {
+                        let pin_id = match p.get("pin") {
+                            Some(Value::String(s)) => s.clone(),
+                            Some(Value::Number(n)) => n.to_string(),
+                            _ => continue,
+                        };
+                        if !seen_pins.insert(pin_id.clone()) {
+                            reports.push((
+                                vec![
+                                    PathElem::from("facts"),
+                                    PathElem::Index(i),
+                                    PathElem::from("data"),
+                                    PathElem::from("connector"),
+                                    PathElem::from("pins"),
+                                    PathElem::Index(p_idx),
+                                    PathElem::from("pin"),
+                                ],
+                                format!("duplicate pin '{pin_id}' in connector"),
+                            ));
+                        }
+                    }
+                }
+            }
+            if let Some(mm) = data.get("memory_map").and_then(Value::as_object) {
+                if let Some(regions) = mm.get("regions").and_then(Value::as_array) {
+                    let mut seen_names = HashSet::new();
+                    let mut intervals: Vec<(u64, u64, String)> = Vec::new();
+                    for (r_idx, reg) in regions.iter().enumerate() {
+                        let rname = reg
+                            .get("name")
+                            .and_then(Value::as_str)
+                            .unwrap_or("")
+                            .to_string();
+                        if !rname.is_empty() && !seen_names.insert(rname.clone()) {
+                            reports.push((
+                                vec![
+                                    PathElem::from("facts"),
+                                    PathElem::Index(i),
+                                    PathElem::from("data"),
+                                    PathElem::from("memory_map"),
+                                    PathElem::from("regions"),
+                                    PathElem::Index(r_idx),
+                                    PathElem::from("name"),
+                                ],
+                                format!("duplicate region name '{rname}' in memory_map"),
+                            ));
+                        }
+                        let base_val = reg
+                            .get("base")
+                            .and_then(Value::as_str)
+                            .and_then(|s| s.strip_prefix("0x"))
+                            .and_then(|h| u64::from_str_radix(h, 16).ok());
+                        let size_val = reg
+                            .get("size")
+                            .and_then(Value::as_str)
+                            .and_then(|s| s.strip_prefix("0x"))
+                            .and_then(|h| u64::from_str_radix(h, 16).ok());
+                        if let (Some(base), Some(size)) = (base_val, size_val) {
+                            if size == 0 {
+                                reports.push((
+                                    vec![
+                                        PathElem::from("facts"),
+                                        PathElem::Index(i),
+                                        PathElem::from("data"),
+                                        PathElem::from("memory_map"),
+                                        PathElem::from("regions"),
+                                        PathElem::Index(r_idx),
+                                        PathElem::from("size"),
+                                    ],
+                                    format!("memory_map region '{rname}' has zero size"),
+                                ));
+                            } else if let Some(end) = base.checked_add(size) {
+                                for (prev_base, prev_end, prev_name) in &intervals {
+                                    if base < *prev_end && *prev_base < end {
+                                        reports.push((
+                                            vec![
+                                                PathElem::from("facts"),
+                                                PathElem::Index(i),
+                                                PathElem::from("data"),
+                                                PathElem::from("memory_map"),
+                                                PathElem::from("regions"),
+                                                PathElem::Index(r_idx),
+                                            ],
+                                            format!(
+                                                "memory_map region '{rname}' overlaps region '{prev_name}'"
+                                            ),
+                                        ));
+                                    }
+                                }
+                                intervals.push((base, end, rname));
+                            } else {
+                                reports.push((
+                                    vec![
+                                        PathElem::from("facts"),
+                                        PathElem::Index(i),
+                                        PathElem::from("data"),
+                                        PathElem::from("memory_map"),
+                                        PathElem::from("regions"),
+                                        PathElem::Index(r_idx),
+                                        PathElem::from("size"),
+                                    ],
+                                    format!("memory_map region '{rname}' base + size overflows 64-bit address space"),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for (p, msg) in reports {
+        checker.add_file(f_idx, &p, msg, "error", false, true, true);
+    }
 }
 
 /// Checks for cycles in `parts:` (`speccheck.py:check_parts_cycles`).

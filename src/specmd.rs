@@ -979,7 +979,14 @@ fn walk_author_fields(data: &Value, path: &mut Vec<PathSegment>, out: &mut Vec<A
                 path.push(PathSegment::Key(key.clone()));
                 if matches!(
                     key.as_str(),
-                    "claim" | "title" | "note" | "orientation" | "milestones" | "notes" | "states"
+                    "claim"
+                        | "title"
+                        | "note"
+                        | "purpose"
+                        | "orientation"
+                        | "milestones"
+                        | "notes"
+                        | "states"
                 ) {
                     if let Value::String(s) = value {
                         let lint = matches!(

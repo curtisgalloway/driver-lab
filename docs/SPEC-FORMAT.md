@@ -191,13 +191,21 @@ in this order:
 
 | Kind | Sections |
 | --- | --- |
-| board, soc, chip | `quick-facts`, `gotchas` |
+| board, soc, chip | `quick-facts`, `connectors`, `bootloader`, `bringup`, `gotchas`, `topology` |
 | ip | `standards`, `programming-model`, `data-formats`, `variants-quirks`, `gotchas` |
 | protocol | `standards`, `programming-model`, `data-formats`, `sub-protocols`, `variants-quirks`, `gotchas`, `open-questions` |
 | overlay | the sections of the kind it overlays |
 | peripheral | `identity`, `registers`, `sequences`, `data-formats`, `interrupts`, `dma`, `sub-protocols`, `target`, `gotchas`, `open-questions` |
 | review | `identity`, `correspondence`, `coverage`, `findings`, `agreements`, `open-questions` |
 | facts | `facts` |
+
+Outside `section: topology`, facts on `board`, `soc` and `chip` specs (and overlays targeting
+them) may attach structured `data.connector` (connector/header pin tables rendered as Markdown
+and HTML tables), `data.memory_map` (bootloader DRAM/flash address maps and environment-variable
+tables rendered as Markdown and HTML tables), or `data.quantity` (board reset/power-cycle timing
+quantities). When citing CLI syntax with angle-bracket placeholders in `claim` or `note` prose
+(such as `` `bmc sleep <seconds>` ``), wrap the command in backticks so CommonMark parses it as
+inline code rather than raw HTML.
 
 The peripheral spec's provenance notice, canonical-references table and verify-on-hardware list,
 and the review's notice and reference-provenance section, are no longer written by hand: the

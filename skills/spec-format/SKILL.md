@@ -79,11 +79,18 @@ Place facts by kind:
   enumerations and timing quantities in standards roots without requiring a `describes:` link.
 - `overlay`: `kind: overlay` and `overlays` name the target; no `id` or `parts` override.
 
-Sections are `quick-facts`, `gotchas`, `topology` for board/SoC/chip; `standards`,
-`programming-model`, `data-formats`, `variants-quirks`, `gotchas` for IP; `standards`,
-`programming-model`, `data-formats`, `sub-protocols`, `variants-quirks`, `gotchas`,
-`open-questions` for protocol. The schema admits their union for overlays; `check`
-requires the target's sections. Facts retain reading order within sections.
+Sections are `quick-facts`, `connectors`, `bootloader`, `bringup`, `gotchas`, `topology` for
+board/SoC/chip; `standards`, `programming-model`, `data-formats`, `variants-quirks`, `gotchas`
+for IP; `standards`, `programming-model`, `data-formats`, `sub-protocols`, `variants-quirks`,
+`gotchas`, `open-questions` for protocol. The schema admits their union for overlays; `check`
+requires the target's sections. Facts retain reading order within sections. Outside
+`section: topology`, `board`, `soc` and `chip` facts may carry typed `data.connector`
+(physical header/socket pinouts: `designator`, optional `kind`, `part_number`, `mating_part`,
+`pitch`, and `pins: [{pin, signal, gpio?, ball?, direction?, level?, pull?, note?}]`),
+`data.memory_map` (bootloader DRAM/flash address layouts: optional `name` and `regions` of
+`{name, env_var?, base, size?, kind?, purpose?, note?}`, with `base`/`size` in canonical
+lowercase hex without leading zeros and non-overlapping `[base, base + size)` ranges), or
+`data.quantity` (such as board reset hold times or power-cycle sleep durations).
 
 ### Structured topology
 
@@ -429,7 +436,9 @@ characters (CRLF allowed). Optional lists are absent or nonempty, except provide
 
 SF2-4's CommonMark check rejects raw HTML, disallowed links/images, reference definitions,
 footnotes, nesting deeper than 16, headings and unclosed fences in author fields, including
-record notes. HTML-like text in code is allowed. Link schemes are HTTP, HTTPS, mailto and
+record notes. HTML-like text in code is allowed: always wrap CLI syntax with angle-bracket
+placeholders (such as `` `bmc sleep <seconds>` `` or `` `bootm <addr>` ``) in backticked code
+spans so CommonMark does not parse `<seconds>` as raw HTML. Link schemes are HTTP, HTTPS, mailto and
 in-page anchors. Retired provenance-tag spellings in prose are warnings, never evidence. Rendering
 repeats containment checks and emits no partial view on errors. The HTML viewer renders
 images as links and separates generated badges from author containers (SF2-5). Its fixed

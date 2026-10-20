@@ -348,10 +348,10 @@ fn get_context(checker: &Checker, focus_idx: usize, real: &HashMap<String, usize
                             if payload(node_rec, "topologyNode").is_some() {
                                 if let Some(&owner_idx) = real.get(&node_file.spec_id()) {
                                     let owner_f = &checker.files[owner_idx];
-                                    if owner_f.kind() == "soc" || owner_f.kind() == "chip" {
-                                        if admit(&owner_f.spec_id(), &mut owners) {
-                                            changed = true;
-                                        }
+                                    if (owner_f.kind() == "soc" || owner_f.kind() == "chip")
+                                        && admit(&owner_f.spec_id(), &mut owners)
+                                    {
+                                        changed = true;
                                     }
                                 }
                             }
@@ -372,10 +372,10 @@ fn get_context(checker: &Checker, focus_idx: usize, real: &HashMap<String, usize
         }
         let rec = &rec_file.records[rec_file.record_map[&key.id]].1;
 
-        if payload(rec, "topologyConfiguration").is_some() || payload(rec, "selection").is_some() {
-            if focus.kind() != "board" || rec_file.spec_id() != focus.spec_id() {
-                continue;
-            }
+        if (payload(rec, "topologyConfiguration").is_some() || payload(rec, "selection").is_some())
+            && (focus.kind() != "board" || rec_file.spec_id() != focus.spec_id())
+        {
+            continue;
         }
 
         let mut excluded = false;
@@ -660,7 +660,7 @@ pub fn check(checker: &mut Checker) {
     }
 
     let mut contexts = HashMap::new();
-    for &f_idx  in real.values() {
+    for &f_idx in real.values() {
         if OWNER_KINDS.contains(&checker.files[f_idx].kind()) {
             contexts.insert(f_idx, get_context(checker, f_idx, &real));
         }

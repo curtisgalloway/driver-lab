@@ -529,32 +529,27 @@ fn load_untrusting(
     }
 }
 
-fn read_marker_full(
-    checker: &mut Checker,
-    root_idx: usize,
-    schema_map: &BTreeMap<String, Value>,
-) {
+fn read_marker_full(checker: &mut Checker, root_idx: usize, schema_map: &BTreeMap<String, Value>) {
     let marker_path = checker.roots[root_idx].given.join(MARKER);
     let mut raw = Vec::new();
-    let (ok, _, loaded_opt) =
-        match fast_validate_file(&marker_path, schema_map, None, &mut raw) {
-            Ok(res) => res,
-            Err(msg) => {
-                checker.add_where(
-                    &marker_path,
-                    Some(root_idx),
-                    None,
-                    &[],
-                    msg,
-                    "error",
-                    false,
-                    true,
-                    true,
-                );
-                checker.unreadable_markers.push(marker_path);
-                return;
-            }
-        };
+    let (ok, _, loaded_opt) = match fast_validate_file(&marker_path, schema_map, None, &mut raw) {
+        Ok(res) => res,
+        Err(msg) => {
+            checker.add_where(
+                &marker_path,
+                Some(root_idx),
+                None,
+                &[],
+                msg,
+                "error",
+                false,
+                true,
+                true,
+            );
+            checker.unreadable_markers.push(marker_path);
+            return;
+        }
+    };
     add_schema_findings_to_checker(checker, raw, Some(root_idx), true);
     let Some(loaded) = loaded_opt else {
         checker.unreadable_markers.push(marker_path);
@@ -898,24 +893,23 @@ fn load_spec_full(
 ) {
     let ext = checker.roots[root_idx].extension.clone();
     let mut raw = Vec::new();
-    let (ok, _, loaded_opt) =
-        match fast_validate_file(path, schema_map, ext.as_ref(), &mut raw) {
-            Ok(res) => res,
-            Err(msg) => {
-                checker.add_where(
-                    path,
-                    Some(root_idx),
-                    None,
-                    &[],
-                    msg,
-                    "error",
-                    false,
-                    true,
-                    true,
-                );
-                return;
-            }
-        };
+    let (ok, _, loaded_opt) = match fast_validate_file(path, schema_map, ext.as_ref(), &mut raw) {
+        Ok(res) => res,
+        Err(msg) => {
+            checker.add_where(
+                path,
+                Some(root_idx),
+                None,
+                &[],
+                msg,
+                "error",
+                false,
+                true,
+                true,
+            );
+            return;
+        }
+    };
     add_schema_findings_to_checker(checker, raw, Some(root_idx), true);
     if !ok {
         return;
@@ -963,7 +957,10 @@ fn load_roots_full(
     }
     for (p, _) in &given {
         if !p.is_dir() {
-            return Err((EXIT_USAGE_ERROR, format!("{}: not a directory", p.display())));
+            return Err((
+                EXIT_USAGE_ERROR,
+                format!("{}: not a directory", p.display()),
+            ));
         }
     }
     let mut reals: Vec<(PathBuf, PathBuf, bool)> = Vec::with_capacity(given.len());
@@ -1339,7 +1336,9 @@ fn check_support_full(
                         checker.reject(
                             file_idx,
                             &p,
-                            format!("{what}: lines [{l0}, {l1}] run backwards; write [first, last]"),
+                            format!(
+                                "{what}: lines [{l0}, {l1}] run backwards; write [first, last]"
+                            ),
                             true,
                         );
                     }
@@ -1542,7 +1541,9 @@ fn check_review_file(checker: &mut Checker, file_idx: usize) {
                                     PathElem::Index(j),
                                     PathElem::from("repo"),
                                 ],
-                                format!("{what}: pair {side} needs a repos entry with role: {side}"),
+                                format!(
+                                    "{what}: pair {side} needs a repos entry with role: {side}"
+                                ),
                                 "error",
                                 false,
                                 true,
@@ -2373,9 +2374,11 @@ pub fn check_overlay(checker: &mut Checker, f_idx: usize, base: &BTreeMap<String
                 }
             } else if matches!(tf_kind.as_str(), "board" | "soc" | "chip") {
                 if let Some(payload) = fact.get("data").and_then(Value::as_object) {
-                    if ["register", "sequence", "layout", "finding", "pair", "coverage"]
-                        .iter()
-                        .any(|k| payload.contains_key(*k))
+                    if [
+                        "register", "sequence", "layout", "finding", "pair", "coverage",
+                    ]
+                    .iter()
+                    .any(|k| payload.contains_key(*k))
                     {
                         fact_reports.push((
                             vec![
@@ -3064,10 +3067,7 @@ pub fn check_agent_names(checker: &mut Checker, stubs_from: &[PathBuf]) {
     let mut dirs = Vec::new();
     let mut seen_dirs = HashSet::new();
     for d in stubs_from {
-        let agent_dir = d
-            .parent()
-            .unwrap_or_else(|| Path::new(""))
-            .join("agents");
+        let agent_dir = d.parent().unwrap_or_else(|| Path::new("")).join("agents");
         if agent_dir.is_dir() {
             let canon = agent_dir
                 .canonicalize()
@@ -3184,9 +3184,8 @@ static HEADING_WITH_ID_RE: LazyLock<Regex> = LazyLock::new(|| {
         .expect("valid HEADING_WITH_ID_RE")
 });
 
-static ATTR_ID_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)\bid\s*=\s*["']([^"']*)["']"#).expect("valid ATTR_ID_RE")
-});
+static ATTR_ID_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)\bid\s*=\s*["']([^"']*)["']"#).expect("valid ATTR_ID_RE"));
 
 static ATTR_CLASS_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)\bclass\s*=\s*["']([^"']*)["']"#).expect("valid ATTR_CLASS_RE")
@@ -3467,8 +3466,7 @@ pub fn check_headings(checker: &mut Checker, offline: bool) -> Result<(), (i32, 
             .set("Accept", accept)
             .set("User-Agent", "spec-explorer");
         if req_url.starts_with("https://api.github.com/") {
-            if let Ok(token) =
-                std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GH_TOKEN"))
+            if let Ok(token) = std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GH_TOKEN"))
             {
                 if !token.is_empty() {
                     req = req.set("Authorization", &format!("Bearer {token}"));
@@ -3504,7 +3502,10 @@ fn check_structure_full(
                 .file_name()
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            let stem = fname.strip_suffix(SPEC_SUFFIX).unwrap_or(&fname).to_string();
+            let stem = fname
+                .strip_suffix(SPEC_SUFFIX)
+                .unwrap_or(&fname)
+                .to_string();
             stems.entry(stem).or_default().push(p.clone());
         }
 
@@ -3560,8 +3561,7 @@ fn check_one_verify_record(
     by_path: &HashMap<PathBuf, usize>,
 ) {
     let mut raw = Vec::new();
-    let (ok, _, loaded_opt) = match fast_validate_file(rpath, schema_map, None, &mut raw)
-    {
+    let (ok, _, loaded_opt) = match fast_validate_file(rpath, schema_map, None, &mut raw) {
         Ok(res) => res,
         Err(msg) => {
             checker.add_where(
@@ -3834,10 +3834,7 @@ fn check_one_verify_record(
             if v_str != "ADJUDICATE" {
                 if let Some(readers) = v.get("readers").and_then(Value::as_array) {
                     for (i, reader) in readers.iter().enumerate() {
-                        let r_verdict = reader
-                            .get("verdict")
-                            .and_then(Value::as_str)
-                            .unwrap_or("");
+                        let r_verdict = reader.get("verdict").and_then(Value::as_str).unwrap_or("");
                         if r_verdict != v_str {
                             let mut rpath_at = kpath.clone();
                             rpath_at.push(PathElem::from("readers"));
@@ -3970,7 +3967,9 @@ pub fn check_facts(
 
     let schema_map = &*CACHED_SCHEMA_MAP;
     let mut checker = Checker::new(require_license, public_skills.clone(), None);
-    let real = target.canonicalize().unwrap_or_else(|_| target.to_path_buf());
+    let real = target
+        .canonicalize()
+        .unwrap_or_else(|_| target.to_path_buf());
     checker.roots.push(SpecRoot {
         given: target.to_path_buf(),
         real,
@@ -3990,7 +3989,7 @@ pub fn check_facts(
         index_paths: Vec::new(),
         untrusted: Vec::new(),
     });
-    read_marker_full(&mut checker, 0, &schema_map);
+    read_marker_full(&mut checker, 0, schema_map);
     if checker.roots[0].accepts.is_none() {
         return Ok(checker);
     }
@@ -4018,7 +4017,10 @@ pub fn check_facts(
             ));
         }
         if !path.exists() {
-            return Err((EXIT_USAGE_ERROR, format!("{}: file not found", path.display())));
+            return Err((
+                EXIT_USAGE_ERROR,
+                format!("{}: file not found", path.display()),
+            ));
         }
         if !path.is_file() || through_link(path) {
             return Err((
@@ -4029,7 +4031,7 @@ pub fn check_facts(
                 ),
             ));
         }
-        load_spec_full(&mut checker, 0, path, &schema_map);
+        load_spec_full(&mut checker, 0, path, schema_map);
     }
 
     for f_idx in 0..checker.files.len() {
@@ -4317,7 +4319,11 @@ fn emit_check_report(
         );
     } else if report.error.is_some() {
         if let Some(first) = report.findings.first() {
-            let _ = writeln!(stderr, "{}", visible_name(&format!("error: {}", first.message)));
+            let _ = writeln!(
+                stderr,
+                "{}",
+                visible_name(&format!("error: {}", first.message))
+            );
         }
     } else {
         for line in &report.text_lines {

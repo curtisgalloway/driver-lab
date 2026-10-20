@@ -45,7 +45,13 @@ pub const SUMMARY: &[(&str, &str)] = &[
 ];
 
 /// Ordered freshness status strings (`records.py:STATUSES`).
-pub const STATUSES: &[&str] = &["current", "stale", "upstream-stale", "unverified", "unknown"];
+pub const STATUSES: &[&str] = &[
+    "current",
+    "stale",
+    "upstream-stale",
+    "unverified",
+    "unknown",
+];
 
 /// Ordered spec root layers (`speccheck.py:LAYERS`).
 pub const LAYERS: &[&str] = &["public", "ip-vendor", "soc-vendor", "product", "local"];
@@ -533,10 +539,8 @@ pub fn basis_data(rec_data: &Value, parent_data: Option<&Value>) -> Value {
                     data_obj.insert("parent_identity".to_string(), Value::Object(pid));
                 } else if let Some(seq) = payload.get("sequence").and_then(Value::as_object) {
                     if let Some(steps) = seq.get("steps").and_then(Value::as_array) {
-                        let step_ids: Vec<Value> = steps
-                            .iter()
-                            .filter_map(|r| r.get("id").cloned())
-                            .collect();
+                        let step_ids: Vec<Value> =
+                            steps.iter().filter_map(|r| r.get("id").cloned()).collect();
                         let mut pid = Map::new();
                         pid.insert("steps".to_string(), Value::Array(step_ids));
                         data_obj.insert("parent_identity".to_string(), Value::Object(pid));
@@ -1126,10 +1130,7 @@ impl SpecFile {
     /// Spec kind (`"chip"`, `"soc"`, `"board"`, `"ip"`, `"peripheral"`, `"overlay"`, `"facts"`, `"review"`).
     #[must_use]
     pub fn kind(&self) -> &str {
-        self.data
-            .get("kind")
-            .and_then(Value::as_str)
-            .unwrap_or("")
+        self.data.get("kind").and_then(Value::as_str).unwrap_or("")
     }
 
     /// `true` if `kind == "overlay"`.
@@ -1236,7 +1237,10 @@ pub fn referenced_registries(
                 }
             }
         }
-        if let Some(eref) = field.get("enumerationDefinitionRef").and_then(Value::as_str) {
+        if let Some(eref) = field
+            .get("enumerationDefinitionRef")
+            .and_then(Value::as_str)
+        {
             want("enumerationDefinitions", eref);
         }
         if let Some(pref) = field
@@ -1556,10 +1560,7 @@ impl<'a> FreshnessEngine<'a> {
     }
 
     /// Outgoing reference edges `(ref_str, Option<TargetKey>, Option<Why>)` (`records.py:Freshness.edges`).
-    pub fn edges(
-        &mut self,
-        key: &RecordKey,
-    ) -> Vec<(String, Option<RecordKey>, Option<String>)> {
+    pub fn edges(&mut self, key: &RecordKey) -> Vec<(String, Option<RecordKey>, Option<String>)> {
         if let Some(cached) = self.edges_cache.get(key) {
             return cached.clone();
         }
@@ -2171,9 +2172,7 @@ pub fn validate_file(
                 ValidationErrorKind::MinProperties { limit: 1 } => {
                     "{} should be non-empty".to_string()
                 }
-                ValidationErrorKind::MinItems { limit: 1 } => {
-                    "[] should be non-empty".to_string()
-                }
+                ValidationErrorKind::MinItems { limit: 1 } => "[] should be non-empty".to_string(),
                 _ => error.to_string(),
             }
         };
@@ -2464,7 +2463,6 @@ fn short_repr(value: &str) -> String {
     }
 }
 
-
 /// Full specification & verification-record checker (`speccheck.py:Checker` + `records.py`).
 pub struct Checker {
     /// Verification policy (`None`, `Some("pr")`, or `Some("main")`).
@@ -2675,7 +2673,10 @@ impl Checker {
         }
         for (p, _) in &given {
             if !p.is_dir() {
-                return Err((EXIT_USAGE_ERROR, format!("{}: not a directory", p.display())));
+                return Err((
+                    EXIT_USAGE_ERROR,
+                    format!("{}: not a directory", p.display()),
+                ));
             }
         }
         let mut reals: Vec<(PathBuf, PathBuf, bool)> = Vec::with_capacity(given.len());
@@ -2840,7 +2841,9 @@ impl Checker {
             .and_then(Value::as_str)
         {
             if let Some(parent) = marker_path.parent() {
-                let root_real = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+                let root_real = parent
+                    .canonicalize()
+                    .unwrap_or_else(|_| parent.to_path_buf());
                 let target = parent.join(rel);
                 if let Ok(target_real) = target.canonicalize() {
                     if target_real.starts_with(&root_real) && target_real != root_real {
@@ -3021,7 +3024,9 @@ impl Checker {
                             Some(root_idx),
                             None,
                             &[],
-                            format!("a corpus ledger lives beside the root's {MARKER}: move it there"),
+                            format!(
+                                "a corpus ledger lives beside the root's {MARKER}: move it there"
+                            ),
                             "error",
                             false,
                             true,
@@ -3285,10 +3290,12 @@ impl Checker {
                     continue;
                 };
                 if self.files[file_idx].assumptions.contains_key(aid) {
-                    self.files[file_idx].ambiguous.insert(AmbiguousItem::GroupName(
-                        "assumptions".to_string(),
-                        aid.to_string(),
-                    ));
+                    self.files[file_idx]
+                        .ambiguous
+                        .insert(AmbiguousItem::GroupName(
+                            "assumptions".to_string(),
+                            aid.to_string(),
+                        ));
                     dup_messages.push((
                         vec![
                             PathElem::from("assumptions"),
@@ -3322,10 +3329,12 @@ impl Checker {
                             &mut self.files[file_idx].repos
                         };
                         if table.contains_key(ename) {
-                            self.files[file_idx].ambiguous.insert(AmbiguousItem::GroupName(
-                                group.to_string(),
-                                ename.to_string(),
-                            ));
+                            self.files[file_idx]
+                                .ambiguous
+                                .insert(AmbiguousItem::GroupName(
+                                    group.to_string(),
+                                    ename.to_string(),
+                                ));
                             dup_messages.push((
                                 vec![
                                     PathElem::from("resources"),
@@ -3365,10 +3374,12 @@ impl Checker {
                     };
                     let table = self.files[file_idx].registries.get_mut(group).unwrap();
                     if table.contains_key(ename) {
-                        self.files[file_idx].ambiguous.insert(AmbiguousItem::GroupName(
-                            group.to_string(),
-                            ename.to_string(),
-                        ));
+                        self.files[file_idx]
+                            .ambiguous
+                            .insert(AmbiguousItem::GroupName(
+                                group.to_string(),
+                                ename.to_string(),
+                            ));
                         dup_messages.push((
                             vec![
                                 PathElem::from(group),
@@ -3701,7 +3712,9 @@ impl Checker {
                             self.reject(
                                 file_idx,
                                 &p,
-                                format!("{what}: lines [{l0}, {l1}] run backwards; write [first, last]"),
+                                format!(
+                                    "{what}: lines [{l0}, {l1}] run backwards; write [first, last]"
+                                ),
                                 true,
                             );
                         }
@@ -3710,7 +3723,13 @@ impl Checker {
             }
             let mut repo_path = path.clone();
             repo_path.push(PathElem::from("repo"));
-            if !self.gate_name(file_idx, &repo_path, name, &format!("{what}: an anchor"), true) {
+            if !self.gate_name(
+                file_idx,
+                &repo_path,
+                name,
+                &format!("{what}: an anchor"),
+                true,
+            ) {
                 continue;
             }
             let (entry, _) = self.files[file_idx].repos[name].clone();
@@ -3729,7 +3748,11 @@ impl Checker {
                 .and_then(Value::as_array)
                 .map(|arr| {
                     arr.iter()
-                        .filter_map(|item| item.get("path").and_then(Value::as_str).map(ToString::to_string))
+                        .filter_map(|item| {
+                            item.get("path")
+                                .and_then(Value::as_str)
+                                .map(ToString::to_string)
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
@@ -3785,13 +3808,7 @@ impl Checker {
         }
     }
 
-    fn check_citation(
-        &mut self,
-        file_idx: usize,
-        what: &str,
-        entry: &Value,
-        path: &[PathElem],
-    ) {
+    fn check_citation(&mut self, file_idx: usize, what: &str, entry: &Value, path: &[PathElem]) {
         let Some(name) = entry.get("doc").and_then(Value::as_str) else {
             return;
         };
@@ -3939,7 +3956,10 @@ impl Checker {
                     .file_name()
                     .map(|s| s.to_string_lossy().into_owned())
                     .unwrap_or_default();
-                let stem = fname.strip_suffix(SPEC_SUFFIX).unwrap_or(&fname).to_string();
+                let stem = fname
+                    .strip_suffix(SPEC_SUFFIX)
+                    .unwrap_or(&fname)
+                    .to_string();
                 stems.entry(stem).or_default().push(p.clone());
             }
             for (stem, paths) in &stems {
@@ -4132,10 +4152,8 @@ impl Checker {
         }
 
         self.files[f_idx].record_state = "ok".to_string();
-        let mut counts: HashMap<String, i64> = SUMMARY
-            .iter()
-            .map(|&(_, v)| (v.to_string(), 0))
-            .collect();
+        let mut counts: HashMap<String, i64> =
+            SUMMARY.iter().map(|&(_, v)| (v.to_string(), 0)).collect();
 
         if let Some(verdicts_map) = data.get("verdicts").and_then(Value::as_object) {
             for (key, v) in verdicts_map {
@@ -4307,14 +4325,8 @@ impl Checker {
 
     /// Resolves a fact reference (`#id`, `spec#id`, `spec@root#id`) from `file_idx`
     /// (`speccheck.py:Checker.resolve`).
-
-
     #[must_use]
-    pub fn resolve(
-        &self,
-        file_idx: usize,
-        ref_str: &str,
-    ) -> (Option<RecordKey>, Option<String>) {
+    pub fn resolve(&self, file_idx: usize, ref_str: &str) -> (Option<RecordKey>, Option<String>) {
         let key = (file_idx, ref_str.to_string());
         if let Some(res) = self.resolved.borrow().get(&key) {
             return res.clone();
@@ -4325,13 +4337,7 @@ impl Checker {
     }
 
     #[must_use]
-    pub fn _resolve(
-
-
-        &self,
-        file_idx: usize,
-        ref_str: &str,
-    ) -> (Option<RecordKey>, Option<String>) {
+    pub fn _resolve(&self, file_idx: usize, ref_str: &str) -> (Option<RecordKey>, Option<String>) {
         let Some(caps) = ref_regex().captures(ref_str) else {
             return (
                 None,
@@ -4453,7 +4459,12 @@ impl Checker {
         {
             let places: Vec<String> = found
                 .iter()
-                .map(|r| rel_spec_file(&self.roots[self.files[r.file_idx].root_idx], &self.files[r.file_idx]))
+                .map(|r| {
+                    rel_spec_file(
+                        &self.roots[self.files[r.file_idx].root_idx],
+                        &self.files[r.file_idx],
+                    )
+                })
                 .collect();
             return (
                 None,
@@ -4702,10 +4713,8 @@ impl Checker {
                 premise_edges.insert(rkey.clone(), Vec::new());
             }
 
-            let mut seen: HashMap<
-                (String, RecordKey, Option<String>, Vec<PathElem>),
-                String,
-            > = HashMap::new();
+            let mut seen: HashMap<(String, RecordKey, Option<String>, Vec<PathElem>), String> =
+                HashMap::new();
 
             for (kind, ref_str, path) in parse_refs(&rec.data, &rec.path) {
                 let (target_opt, why_opt) = self.resolve(f_idx, &ref_str);
@@ -4821,7 +4830,9 @@ impl Checker {
                     self.reject(
                         f_idx,
                         &path,
-                        format!("{what}: reference '{ref_str}' reaches {problem} (license gate, D13)"),
+                        format!(
+                            "{what}: reference '{ref_str}' reaches {problem} (license gate, D13)"
+                        ),
                         false,
                     );
                 }
@@ -4928,7 +4939,10 @@ impl Checker {
             names.sort();
             let names_str = names.join(", ");
             for rkey in &scc {
-                let rec = self.files[rkey.file_idx].get_record(&rkey.id).unwrap().clone();
+                let rec = self.files[rkey.file_idx]
+                    .get_record(&rkey.id)
+                    .unwrap()
+                    .clone();
                 let what = what_record(&rec);
                 if let Some(es) = edges.get(rkey) {
                     for (target, path) in es {
@@ -4936,7 +4950,9 @@ impl Checker {
                             self.reject(
                                 rkey.file_idx,
                                 path,
-                                format!("{what}: its inference premises form a cycle among {names_str}"),
+                                format!(
+                                    "{what}: its inference premises form a cycle among {names_str}"
+                                ),
                                 false,
                             );
                         }
@@ -4956,10 +4972,10 @@ impl Checker {
 
         while let Some(cur) = queue.pop_front() {
             let r_idx = self.files[cur.file_idx].root_idx;
-            if !out_map.contains_key(&r_idx) {
+            out_map.entry(r_idx).or_insert_with(|| {
                 out_order.push(r_idx);
-                out_map.insert(r_idx, cur.clone());
-            }
+                cur.clone()
+            });
             let refs: Vec<_> = {
                 let file = &self.files[cur.file_idx];
                 let rec = file.get_record(&cur.id).unwrap();
@@ -5045,9 +5061,7 @@ impl Checker {
                         .and_then(Value::as_object)
                         .map(|m| {
                             m.iter()
-                                .filter_map(|(k, val)| {
-                                    Some((k.clone(), val.as_str()?.to_string()))
-                                })
+                                .filter_map(|(k, val)| Some((k.clone(), val.as_str()?.to_string())))
                                 .collect()
                         })
                         .unwrap_or_default();
@@ -5423,18 +5437,12 @@ impl Checker {
             }
         }
         out.sort_by(|a, b| {
-            (
-                a.path.as_str(),
-                a.line,
-                a.column,
-                a.message.as_str(),
-            )
-                .cmp(&(
-                    b.path.as_str(),
-                    b.line,
-                    b.column,
-                    b.message.as_str(),
-                ))
+            (a.path.as_str(), a.line, a.column, a.message.as_str()).cmp(&(
+                b.path.as_str(),
+                b.line,
+                b.column,
+                b.message.as_str(),
+            ))
         });
         out
     }
@@ -5655,7 +5663,11 @@ pub fn status_roots(
             "no record".to_string()
         };
 
-        text.push(format!("{}:{rel} ({}): {summary}", root.label(), f.spec_id()));
+        text.push(format!(
+            "{}:{rel} ({}): {summary}",
+            root.label(),
+            f.spec_id()
+        ));
         for r in &rows {
             let mut notes = Vec::new();
             if let Some(v) = &r.verdict {

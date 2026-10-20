@@ -23,19 +23,23 @@ use std::sync::LazyLock;
 pub const OPT_OUT: &str = "hw-fact-ok:";
 
 /// Directories skipped during recursive directory traversal.
-pub const SKIP_DIRS: &[&str] = &[".git", "__pycache__", ".pytest_cache", "node_modules", "target"];
+pub const SKIP_DIRS: &[&str] = &[
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    "node_modules",
+    "target",
+];
 
 static HEX_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?-u)\b0[xX][0-9A-Fa-f]{2,}(?:_[0-9A-Fa-f]+)*\b").expect("valid HEX_RE")
 });
 
-static REG_CORE_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+[nx]?").expect("valid REG_CORE_RE")
-});
+static REG_CORE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+[nx]?").expect("valid REG_CORE_RE"));
 
-static SHELL_VAR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}").expect("valid SHELL_VAR_RE")
-});
+static SHELL_VAR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}").expect("valid SHELL_VAR_RE"));
 
 static FRONTMATTER_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?s)\A---\n(.*?)\n---\n").expect("valid FRONTMATTER_RE"));
@@ -199,7 +203,11 @@ pub fn findings(text: &str) -> Vec<(usize, usize, String)> {
 #[must_use]
 pub fn in_default_scope(path: &Path, text: &str) -> bool {
     if path.extension().and_then(|e| e.to_str()) == Some("md")
-        && path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()) == Some("agents")
+        && path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            == Some("agents")
     {
         return true;
     }
@@ -377,7 +385,7 @@ pub fn run_prose_facts_cmd(
                         checked += 1;
                         let disp = p
                             .parent()
-                            .and_then(|_| Some(f.to_string_lossy().into_owned()))
+                            .map(|_| f.to_string_lossy().into_owned())
                             .unwrap_or_else(|| f.to_string_lossy().into_owned());
                         findings_list.extend(scan_file(&f, &disp));
                     }
@@ -394,8 +402,8 @@ pub fn run_prose_facts_cmd(
     let code = if ok { EXIT_OK } else { EXIT_DOMAIN_FAILURE };
 
     if json_mode {
-        let env = DiagnosticEnvelope::from_findings(findings_list)
-            .with_field("checked", json!(checked));
+        let env =
+            DiagnosticEnvelope::from_findings(findings_list).with_field("checked", json!(checked));
         let _ = writeln!(stdout, "{}", env.to_json_string());
     } else if ok {
         let _ = writeln!(

@@ -7,8 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use driver_lab::eval::{
-    bank_findings, build_bwrap_args_with_options, build_macos_sandbox_profile,
-    check_bank, compile_and_run_tests, export_preambles, load_bank, normalize, validate,
+    build_bwrap_args_with_options, check_bank, compile_and_run_tests, export_preambles, load_bank,
+    normalize, validate,
 };
 use serde_json::{json, Value};
 use tempfile::TempDir;
@@ -40,25 +40,27 @@ fn run_eval_cli(args: &[&str]) -> (i32, String, String) {
 
 #[test]
 fn test_prelude_compiles_and_passes_self_tests() {
-
     let hw_prelude = repo_root().join("skills/spec-eval/rust/hw_eval_prelude.rs");
     let tmp = TempDir::new().unwrap();
     let exe = tmp.path().join("prelude_tests");
     let build = std::process::Command::new("rustc")
-        .args(&["--edition", "2021", "--test", "-o"])
+        .args(["--edition", "2021", "--test", "-o"])
         .arg(&exe)
         .arg(&hw_prelude)
         .output()
         .unwrap();
-    assert!(build.status.success(), "{}", String::from_utf8_lossy(&build.stderr));
-    
+    assert!(
+        build.status.success(),
+        "{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+
     let out = std::process::Command::new(exe)
         .arg("--test-threads=1")
         .output()
         .unwrap();
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(stdout.contains("6 passed; 0 failed"));
-
 }
 
 // ===========================================================================
@@ -81,7 +83,6 @@ fn test_legacy_bank_normalizes_and_passes() {
 
 #[test]
 fn test_legacy_bank_normalizes_fields_exact() {
-
     let bank = load_bank(&fixtures_dir().join("legacy_item.json")).unwrap();
     let item = normalize(&bank[0]);
     assert_eq!(item["tier"].as_u64().unwrap(), 2);
@@ -90,8 +91,7 @@ fn test_legacy_bank_normalizes_fields_exact() {
     let doc_pages = item["doc_pages_primary"].as_array().unwrap();
     assert_eq!(doc_pages.len(), 1);
     assert_eq!(doc_pages[0].as_u64().unwrap(), 3);
-    assert_eq!(item["use_hw_prelude"].as_bool().unwrap(), false);
-
+    assert!(!item["use_hw_prelude"].as_bool().unwrap());
 }
 
 #[test]
@@ -103,7 +103,10 @@ fn test_normalize_does_not_overwrite_present_v2_fields() {
         "fn_signature": "new",
     });
     let norm = normalize(&raw);
-    assert_eq!(norm.get("stratum").and_then(Value::as_str), Some("out-of-spec"));
+    assert_eq!(
+        norm.get("stratum").and_then(Value::as_str),
+        Some("out-of-spec")
+    );
     assert_eq!(
         norm.get("fn_signature").and_then(Value::as_str),
         Some("new")
@@ -112,20 +115,23 @@ fn test_normalize_does_not_overwrite_present_v2_fields() {
 
 #[test]
 fn test_schema_rejects_bad_id() {
-
     let mut bank = load_bank(&fixtures_dir().join("synthetic_bank.json")).unwrap();
     let dup = bank[0].clone();
     bank.push(dup);
     let errs = check_bank(&bank);
-    assert!(errs.iter().any(|e| e.contains("duplicate")), "expected duplicate error, got {:?}", errs);
-
+    assert!(
+        errs.iter().any(|e| e.contains("duplicate")),
+        "expected duplicate error, got {:?}",
+        errs
+    );
 }
 
 #[test]
 fn test_schema_rejects_negative_without_abstain_probe() {
-    let raw: Value =
-        serde_json::from_str(&fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap())
-            .unwrap();
+    let raw: Value = serde_json::from_str(
+        &fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap(),
+    )
+    .unwrap();
     let mut neg = raw["items"]
         .as_array()
         .unwrap()
@@ -135,7 +141,9 @@ fn test_schema_rejects_negative_without_abstain_probe() {
         .clone();
     neg.as_object_mut().unwrap().remove("abstain_probe");
     let bank = json!({ "items": [neg] });
-    let errs = driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap()).unwrap();
+    let errs =
+        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
+            .unwrap();
     assert!(
         errs.iter().any(|e| e.contains("abstain_probe")),
         "expected abstain_probe error, got {errs:?}"
@@ -144,13 +152,16 @@ fn test_schema_rejects_negative_without_abstain_probe() {
 
 #[test]
 fn test_schema_rejects_unknown_extra_property() {
-    let raw: Value =
-        serde_json::from_str(&fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap())
-            .unwrap();
+    let raw: Value = serde_json::from_str(
+        &fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap(),
+    )
+    .unwrap();
     let mut item = raw["items"][0].clone();
     item["surprise_field"] = json!(123);
     let bank = json!({ "items": [item] });
-    let errs = driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap()).unwrap();
+    let errs =
+        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
+            .unwrap();
     assert!(
         errs.iter().any(|e| e.contains("surprise_field")),
         "expected surprise_field error, got {errs:?}"
@@ -159,41 +170,44 @@ fn test_schema_rejects_unknown_extra_property() {
 
 #[test]
 fn test_validator_rejects_unknown_schema_keyword() {
-
     let bad_schema = json!({ "type": "object", "patternProperties": {} });
     let errs = validate(&json!({}), &bad_schema).unwrap_err();
     assert!(
         errs.0.contains("patternProperties"),
-        "expected patternProperties error, got {:?}", errs
+        "expected patternProperties error, got {:?}",
+        errs
     );
-
 }
 
 #[test]
 fn test_bank_findings_flags_weak_test_module() {
-
     let tmp = TempDir::new().unwrap();
     let mut bank = load_bank(&fixtures_dir().join("synthetic_bank.json")).unwrap();
     bank[0]["trap_rust"] = bank[0]["reference_rust"].clone();
     let bank_path = tmp.path().join("bank.json");
-    std::fs::write(&bank_path, serde_json::to_string(&json!({"items": bank})).unwrap()).unwrap();
-    
+    std::fs::write(
+        &bank_path,
+        serde_json::to_string(&json!({"items": bank})).unwrap(),
+    )
+    .unwrap();
+
     let (code, out, err) = run_eval_cli(&[
         "grade-code",
-        "--bank", bank_path.to_str().unwrap(),
+        "--bank",
+        bank_path.to_str().unwrap(),
         "--self-test",
     ]);
     assert_eq!(code, 1, "out: {out}, err: {err}");
     assert!(out.contains("the harness is too weak"));
     assert!(out.contains("FAIL zx-uart-divisor"));
-
 }
 
 #[test]
 fn test_bank_findings_clean_on_synthetic_bank() {
-    let raw: Value =
-        serde_json::from_str(&fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap())
-            .unwrap();
+    let raw: Value = serde_json::from_str(
+        &fs::read_to_string(fixtures_dir().join("synthetic_bank.json")).unwrap(),
+    )
+    .unwrap();
     let items: Vec<Value> = raw["items"]
         .as_array()
         .unwrap()
@@ -201,7 +215,11 @@ fn test_bank_findings_clean_on_synthetic_bank() {
         .map(normalize)
         .collect();
     let bank = json!({ "items": items });
-    assert_eq!(driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap()).unwrap(), vec![] as Vec<String>);
+    assert_eq!(
+        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
+            .unwrap(),
+        vec![] as Vec<String>
+    );
 }
 
 // ===========================================================================
@@ -219,41 +237,50 @@ fn test_self_test_passes_on_synthetic_and_legacy_banks() {
 
 #[test]
 fn test_self_test_catches_broken_reference_solution() {
-
     let tmp = TempDir::new().unwrap();
     let mut bank = load_bank(&fixtures_dir().join("synthetic_bank.json")).unwrap();
     bank[0]["trap_rust"] = json!("pub fn nope( {");
     let bank_path = tmp.path().join("bank.json");
-    std::fs::write(&bank_path, serde_json::to_string(&json!({"items": bank})).unwrap()).unwrap();
-    
+    std::fs::write(
+        &bank_path,
+        serde_json::to_string(&json!({"items": bank})).unwrap(),
+    )
+    .unwrap();
+
     let (code, out, _err) = run_eval_cli(&[
         "grade-code",
-        "--bank", bank_path.to_str().unwrap(),
+        "--bank",
+        bank_path.to_str().unwrap(),
         "--self-test",
     ]);
     assert_eq!(code, 1);
     assert!(out.contains("trap does not compile"));
-
 }
 
 #[test]
 fn test_self_test_catches_non_panicking_negative_ref() {
-
     let tmp = TempDir::new().unwrap();
     let mut bank = load_bank(&fixtures_dir().join("synthetic_bank.json")).unwrap();
-    let oos_idx = bank.iter().position(|i| i["stratum"] == "out-of-spec").unwrap();
+    let oos_idx = bank
+        .iter()
+        .position(|i| i["stratum"] == "out-of-spec")
+        .unwrap();
     bank[oos_idx]["abstain_probe"] = json!("enable_crc_offload(&mut NoSuchBus)");
     let bank_path = tmp.path().join("bank.json");
-    std::fs::write(&bank_path, serde_json::to_string(&json!({"items": bank})).unwrap()).unwrap();
-    
+    std::fs::write(
+        &bank_path,
+        serde_json::to_string(&json!({"items": bank})).unwrap(),
+    )
+    .unwrap();
+
     let (code, out, err) = run_eval_cli(&[
         "grade-code",
-        "--bank", bank_path.to_str().unwrap(),
+        "--bank",
+        bank_path.to_str().unwrap(),
         "--self-test",
     ]);
     assert_eq!(code, 1, "out: {out}, err: {err}");
     assert!(out.contains("do not compile"));
-
 }
 
 // ===========================================================================
@@ -262,21 +289,25 @@ fn test_self_test_catches_non_panicking_negative_ref() {
 
 #[test]
 fn test_export_preambles_writes_all_arms_with_abstain_rule_and_prelude_summary() {
-
     let tmp = TempDir::new().unwrap();
     let bank_path = fixtures_dir().join("synthetic_bank.json");
     let out_file = tmp.path().join("code_preambles.json");
     let mut stderr = Vec::new();
-    assert_eq!(export_preambles(&bank_path, &out_file, None, None, &mut stderr), 0);
+    assert_eq!(
+        export_preambles(&bank_path, &out_file, None, None, &mut stderr),
+        0
+    );
     let text = std::fs::read_to_string(&out_file).unwrap();
     let table: std::collections::BTreeMap<String, Value> = serde_json::from_str(&text).unwrap();
     assert_eq!(table.len(), 5);
     for entry in table.values() {
         let mut keys: Vec<_> = entry.as_object().unwrap().keys().cloned().collect();
         keys.sort();
-        assert_eq!(keys, vec!["preamble", "signature", "tier", "use_hw_prelude"]);
+        assert_eq!(
+            keys,
+            vec!["preamble", "signature", "tier", "use_hw_prelude"]
+        );
     }
-
 }
 
 // ===========================================================================
@@ -285,7 +316,6 @@ fn test_export_preambles_writes_all_arms_with_abstain_rule_and_prelude_summary()
 
 #[test]
 fn test_end_to_end_grading_and_report_sweep() {
-
     let tmp = TempDir::new().unwrap();
     let bank_path = fixtures_dir().join("synthetic_bank.json");
     let responses_path = fixtures_dir().join("sweep");
@@ -294,11 +324,16 @@ fn test_end_to_end_grading_and_report_sweep() {
 
     let (code, _out, err) = run_eval_cli(&[
         "grade-code",
-        "--bank", bank_path.to_str().unwrap(),
-        "--raw", responses_path.to_str().unwrap(),
-        "--out", out_jsonl.to_str().unwrap(),
-        "--report", out_report.to_str().unwrap(),
-        "--abstain-arms", "A",
+        "--bank",
+        bank_path.to_str().unwrap(),
+        "--raw",
+        responses_path.to_str().unwrap(),
+        "--out",
+        out_jsonl.to_str().unwrap(),
+        "--report",
+        out_report.to_str().unwrap(),
+        "--abstain-arms",
+        "A",
     ]);
     assert_eq!(code, 0, "grade-code failed: {err}");
 
@@ -343,9 +378,11 @@ fn test_end_to_end_grading_and_report_sweep() {
             .unwrap_or_else(|| panic!("missing row for {k:?}"))["outcome"]
             .as_str()
             .unwrap();
-        assert_eq!(got, want_outcome, "for {k:?}: got {got}, want {want_outcome}");
+        assert_eq!(
+            got, want_outcome,
+            "for {k:?}: got {got}, want {want_outcome}"
+        );
     }
-
 }
 
 // ===========================================================================
@@ -358,13 +395,16 @@ fn test_env5_bwrap_command_line_construction_and_home_masking() {
     let bin = Path::new("/tmp/driver-lab-eval-scratch-123/cand_test");
 
     // 1. Standard Linux home under /home/user
-    let args_std = build_bwrap_args_with_options(bin, scratch, true, Some(Path::new("/home/alice")));
+    let args_std =
+        build_bwrap_args_with_options(bin, scratch, true, Some(Path::new("/home/alice")));
     assert!(args_std.contains(&std::ffi::OsString::from("--unshare-all")));
     assert!(args_std.contains(&std::ffi::OsString::from("--die-with-parent")));
     assert!(args_std.contains(&std::ffi::OsString::from("--clearenv")));
     assert!(args_std.contains(&std::ffi::OsString::from("--ro-bind")));
     // Verify /home is never mounted
-    assert!(!args_std.iter().any(|a| a.to_string_lossy().contains("/home")));
+    assert!(!args_std
+        .iter()
+        .any(|a| a.to_string_lossy().contains("/home")));
 
     // 2. When $HOME is under /usr (e.g., /usr/local/someorg/home/alice), bwrap must mask
     // the parent directory under /usr with --tmpfs so --ro-bind /usr /usr does not leak $HOME.
@@ -390,7 +430,6 @@ fn test_env5_bwrap_command_line_construction_and_home_masking() {
 
 #[test]
 fn test_env5_macos_sandbox_exec_profile_denies_network_and_home() {
-
     let scratch = std::path::Path::new("/private/tmp/eval-scratch");
     let home = std::path::Path::new("/Users/tester");
     let profile = driver_lab::eval::build_macos_sandbox_profile(scratch, Some(home));
@@ -399,10 +438,10 @@ fn test_env5_macos_sandbox_exec_profile_denies_network_and_home() {
     assert!(profile.contains("(deny file-write* (subpath \"/Users/tester\"))"));
     assert!(profile.contains("(allow file-write*\n"));
     assert!(profile.contains("  (subpath \"/private/tmp/eval-scratch\"))"));
-
 }
 
 #[test]
+#[ignore = "requires bubblewrap user namespaces; run explicitly in CI via cargo test -- --ignored"]
 fn test_env5_live_sandbox_blocks_home_and_network_in_candidate_tests() {
     let host_home = std::env::var("HOME").unwrap_or_else(|_| "/nonexistent".to_string());
     let candidate_test = format!(
@@ -462,8 +501,57 @@ mod _env5_containment_test {{
 
 #[test]
 fn test_cli_grade_facts() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let bank_path = tmp.path().join("bank.json");
+    let cand_path = tmp.path().join("cand.json");
+    let out_path = tmp.path().join("out.json");
 
-    assert!(true);
+    let bank_json = serde_json::json!({
+        "bank": "test",
+        "version": 1,
+        "items": [
+            {
+                "id": "q1",
+                "tier": 2,
+                "stratum": "in-spec-scalar",
+                "fn_signature": "fn test()",
+                "task_prompt": "task",
+                "reference_rust": "fn test() {}",
+                "trap_rust": "fn eval() {}",
+                "test_harness": "#[cfg(test)]\nmod tests {\n#[test]\nfn a(){}\n}",
+                "doc_pages_primary": [1],
+                "use_hw_prelude": false,
+            }
+        ]
+    });
+    std::fs::write(&bank_path, serde_json::to_string(&bank_json).unwrap()).unwrap();
 
+    let cand_json = serde_json::json!({
+        "item_id": "q1",
+        "rust_code": "fn test() {}"
+    });
+    std::fs::write(
+        &cand_path,
+        serde_json::to_string(&cand_json).unwrap() + "\n",
+    )
+    .unwrap();
+
+    let (code, _stdout, stderr) = run_eval_cli(&[
+        "grade-facts",
+        "--bank",
+        bank_path.to_str().unwrap(),
+        "--raw",
+        cand_path.to_str().unwrap(),
+        "--out",
+        out_path.to_str().unwrap(),
+    ]);
+    assert_eq!(code, 0, "stderr: {}", stderr);
+
+    let out_text = std::fs::read_to_string(&out_path).unwrap();
+    let out_json: serde_json::Value =
+        serde_json::from_str(out_text.lines().next().unwrap()).unwrap();
+    assert_eq!(
+        out_json.get("outcome").unwrap().as_str().unwrap(),
+        "test-fail"
+    );
 }
-

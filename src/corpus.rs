@@ -232,10 +232,7 @@ fn disposition_problem(
     }
 
     let root_rank = checker.roots[root_idx].rank;
-    let root_layer = checker.roots[root_idx]
-        .layer
-        .as_deref()
-        .unwrap_or("public");
+    let root_layer = checker.roots[root_idx].layer.as_deref().unwrap_or("public");
     let layer_files: Vec<usize> = matching_files
         .into_iter()
         .filter(|&f_idx| checker.roots[checker.files[f_idx].root_idx].rank <= root_rank)
@@ -455,9 +452,7 @@ pub fn run_corpus_cmd(
         .into_iter()
         .map(|p| {
             if p.file_name().and_then(|n| n.to_str()) == Some(CORPUS) && p.is_file() {
-                p.parent()
-                    .unwrap_or_else(|| Path::new("."))
-                    .to_path_buf()
+                p.parent().unwrap_or_else(|| Path::new(".")).to_path_buf()
             } else {
                 p
             }

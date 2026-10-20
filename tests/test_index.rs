@@ -84,7 +84,9 @@ fn default_outline() -> Vec<OutlineSpec> {
 /// `PDFDocEncoding`, matching `pypdf`'s behavior on e.g. `"soft\u{00ad}hyphen"`) or `UTF-16BE`
 /// with `FE FF` BOM.
 fn encode_pdf_title_bytes(s: &str) -> Vec<u8> {
-    if s.chars().all(|c| (c as u32) <= 0xFF && (c as u32) >= 0x20 || c == '\n' || c == '\t') {
+    if s.chars()
+        .all(|c| (c as u32) <= 0xFF && (c as u32) >= 0x20 || c == '\n' || c == '\t')
+    {
         s.chars().map(|c| c as u8).collect()
     } else {
         let mut out = vec![0xFE, 0xFF];
@@ -298,7 +300,12 @@ fn copy_dir_recursive(src: &Path, dst: &Path) {
 #[test]
 fn test_pdf_outline_becomes_sections() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     let res = fx.run_index("widget-trm");
     assert_eq!(res.exit_code, ExitCode::Pass, "{res:?}");
     let out_path = res.path.as_ref().unwrap();
@@ -434,7 +441,12 @@ fn test_hostile_titles_load_again() {
 #[test]
 fn test_output_is_deterministic_and_carries_the_marker_header() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     let first = fx.run_index("widget-trm");
     let path_a = first.path.unwrap();
     let text_a = fs::read_to_string(&path_a).unwrap();
@@ -499,14 +511,22 @@ fn test_index_holds_no_page_text_and_no_dotfiles_in_index_dir() {
     // ENV-3: verify no dotfile exists inside `<root>/index/`.
     for entry in fs::read_dir(fx.root.join("index")).unwrap() {
         let name = entry.unwrap().file_name().to_string_lossy().into_owned();
-        assert!(!name.starts_with('.'), "unexpected dotfile in index/: {name}");
+        assert!(
+            !name.starts_with('.'),
+            "unexpected dotfile in index/: {name}"
+        );
     }
 }
 
 #[test]
 fn test_refuses_to_write_through_a_link() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     let outside = fx.docs.join("outside.txt");
     fs::write(&outside, "keep me").unwrap();
 
@@ -531,7 +551,12 @@ fn test_refuses_to_write_through_a_link() {
 #[test]
 fn test_refuses_when_index_is_a_file() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     fs::write(fx.root.join("index"), "not a directory").unwrap();
     let res = fx.run_index("widget-trm");
     assert_eq!(res.exit_code, ExitCode::UsageError);
@@ -540,7 +565,8 @@ fn test_refuses_when_index_is_a_file() {
 #[test]
 fn test_markdown_titles_are_plain_text() {
     let fx = TestFixture::new();
-    let text = b"# The **bold** [link](https://example.invalid/x) and `code`\n\nbody\r\nmore\x0cstill\n";
+    let text =
+        b"# The **bold** [link](https://example.invalid/x) and `code`\n\nbody\r\nmore\x0cstill\n";
     fx.install(text, "widget-trm", None, "pdf");
     let res = fx.run_index("widget-trm");
     assert_eq!(res.exit_code, ExitCode::Pass);
@@ -808,8 +834,17 @@ fn test_cyclic_outline_stops() {
 #[test]
 fn test_refuses_bytes_with_another_hash() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
-    fs::write(fx.docs.join("widget-trm"), make_pdf(121, &default_outline())).unwrap();
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
+    fs::write(
+        fx.docs.join("widget-trm"),
+        make_pdf(121, &default_outline()),
+    )
+    .unwrap();
     let res = fx.run_index("widget-trm");
     assert_eq!(res.exit_code, ExitCode::DomainFailure);
     assert!(!fx.root.join("index").exists());
@@ -818,7 +853,11 @@ fn test_refuses_bytes_with_another_hash() {
 #[test]
 fn test_refuses_a_document_without_sha256() {
     let fx = TestFixture::new();
-    fs::write(fx.docs.join("widget-trm"), make_pdf(120, &default_outline())).unwrap();
+    fs::write(
+        fx.docs.join("widget-trm"),
+        make_pdf(120, &default_outline()),
+    )
+    .unwrap();
     let res = fx.run_index("widget-trm");
     assert_eq!(res.exit_code, ExitCode::UsageError);
     assert!(res.to_json_value().to_string().contains("has no sha256"));
@@ -845,7 +884,12 @@ fn test_refuses_a_pdf_without_outline() {
 fn test_index_check_warnings_and_errors() {
     // 1. Clean index checks with 0 findings.
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     assert_eq!(fx.run_index("widget-trm").exit_code, ExitCode::Pass);
     assert!(fx.check_indexes().is_empty());
 
@@ -866,11 +910,7 @@ fn test_index_check_warnings_and_errors() {
     fs::write(&idx_path, &orig_text).unwrap();
 
     // 3. Page count mismatch warns.
-    fs::write(
-        &idx_path,
-        orig_text.replace("pages: 120\n", "pages: 121\n"),
-    )
-    .unwrap();
+    fs::write(&idx_path, orig_text.replace("pages: 120\n", "pages: 121\n")).unwrap();
     let findings = fx.check_indexes();
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].level, Level::Warning);
@@ -894,9 +934,9 @@ fn test_index_check_warnings_and_errors() {
     let copy_path = fx.root.join("index/copy.index.yaml");
     fs::write(&copy_path, &orig_text).unwrap();
     let findings = fx.check_indexes();
-    assert!(findings
-        .iter()
-        .any(|f| f.level == Level::Warning && f.message.contains("a second index for document 'widget-trm'")));
+    assert!(findings.iter().any(|f| f.level == Level::Warning
+        && f.message
+            .contains("a second index for document 'widget-trm'")));
     fs::remove_file(&copy_path).unwrap();
 
     // 6. Near-miss filename `.index.yml` is an error.
@@ -920,11 +960,7 @@ fn test_index_check_warnings_and_errors() {
     fs::rename(&misplaced, &idx_path).unwrap();
 
     // 8. Malformed index (`source: word`) is an error.
-    fs::write(
-        &idx_path,
-        orig_text.replace("source: pdf", "source: word"),
-    )
-    .unwrap();
+    fs::write(&idx_path, orig_text.replace("source: pdf", "source: word")).unwrap();
     let findings = fx.check_indexes();
     assert!(!findings.is_empty());
     assert!(findings.iter().all(|f| f.level == Level::Error));
@@ -933,7 +969,12 @@ fn test_index_check_warnings_and_errors() {
 #[test]
 fn test_links_by_section_heading_and_pdf_page() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
     assert_eq!(fx.run_index("widget-trm").exit_code, ExitCode::Pass);
 
     let linked = links_for_root_dir(&fx.root);
@@ -988,7 +1029,11 @@ fn test_section_number_matches_whole_components() {
     );
     let soc_path = fx.root.join("widgetsoc.spec.yaml");
     let text = fs::read_to_string(&soc_path).unwrap();
-    fs::write(&soc_path, text.replace("section: \"6.1\"", "section: \"6.10\"")).unwrap();
+    fs::write(
+        &soc_path,
+        text.replace("section: \"6.1\"", "section: \"6.10\""),
+    )
+    .unwrap();
     assert_eq!(fx.run_index("widget-trm").exit_code, ExitCode::Pass);
 
     let linked = links_for_root_dir(&fx.root);
@@ -1024,7 +1069,8 @@ fn test_bf_usb_3_empty_password_encrypted_pdfs_succeed_and_password_protected_fa
         .unwrap();
         doc.encrypt(&state).unwrap();
         let bytes = save_pdf_bytes(doc);
-        let (pages, sections) = from_pdf(&bytes).expect("V1 RC4-40 empty user password should decrypt");
+        let (pages, sections) =
+            from_pdf(&bytes).expect("V1 RC4-40 empty user password should decrypt");
         assert_eq!(pages, 120);
         assert_eq!(sections.len(), 5);
         assert_eq!(sections[1].title, "6 UART");
@@ -1195,10 +1241,8 @@ fn test_bf_usb_4_imx_10_arm_20_section_number_extraction_positive_and_negative()
     ];
     let pdf_bytes = make_pdf(80, &outline);
     let (_, sections) = from_pdf(&pdf_bytes).unwrap();
-    let nums: BTreeMap<String, Option<String>> = sections
-        .into_iter()
-        .map(|s| (s.title, s.number))
-        .collect();
+    let nums: BTreeMap<String, Option<String>> =
+        sections.into_iter().map(|s| (s.title, s.number)).collect();
     assert_eq!(nums["Part 1 System Overview"].as_deref(), Some("Part 1"));
     assert_eq!(nums["Chapter 1. Introduction"].as_deref(), Some("1"));
     assert_eq!(nums["A1 Memory Map"].as_deref(), Some("A1"));
@@ -1581,10 +1625,7 @@ fn test_pdf_page_labels_extraction_and_string_decoding() {
         "Hi"
     );
     assert_eq!(decode_pdf_string(&[0xEF, 0xBB, 0xBF, b'U', b'8']), "U8");
-    assert_eq!(
-        title(&decode_pdf_string(b"soft\xADhyphen")),
-        "soft hyphen"
-    );
+    assert_eq!(title(&decode_pdf_string(b"soft\xADhyphen")), "soft hyphen");
     let doc_loaded = load_pdf_document(&bytes).unwrap();
     assert_eq!(extract_page_labels(&doc_loaded, 8).len(), 8);
 }
@@ -1592,7 +1633,12 @@ fn test_pdf_page_labels_extraction_and_string_decoding() {
 #[test]
 fn test_cli_driver_lab_index_subcommand() {
     let fx = TestFixture::new();
-    fx.install(&make_pdf(120, &default_outline()), "widget-trm", Some(120), "pdf");
+    fx.install(
+        &make_pdf(120, &default_outline()),
+        "widget-trm",
+        Some(120),
+        "pdf",
+    );
 
     let mut out = Vec::new();
     let mut err = Vec::new();

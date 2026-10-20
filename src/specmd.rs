@@ -59,10 +59,6 @@ static REF_DEF_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
         .expect("valid REF_DEF_LINE_RE")
 });
 
-static HTML_TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^<(/?)([A-Za-z][\w-]*)\s*[^>]*>$").expect("valid HTML_TAG_RE")
-});
-
 static EXCESS_BACKTICKS_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"`{33,}").expect("valid EXCESS_BACKTICKS_RE"));
 
@@ -247,201 +243,24 @@ pub fn allowed_link(url: &str) -> bool {
     url.starts_with('#') || ALLOWED_LINK_RE.is_match(url)
 }
 
-fn line_at_byte(text: &str, byte_offset: usize) -> usize {
-    let clamped = byte_offset.min(text.len());
-    1 + text.as_bytes()[..clamped]
-        .iter()
-        .filter(|&&b| b == b'\n')
-        .count()
-}
-
-fn is_register_subscript(text: &str, range: &Range<usize>, raw_html: &str) -> bool {
-    let bytes = raw_html.as_bytes();
-    if bytes.len() == 3 && bytes[0] == b'<' && bytes[2] == b'>' && bytes[1].is_ascii_lowercase() {
-        if range.start > 0 {
-            let prev = text.as_bytes()[range.start - 1];
-            return prev.is_ascii_alphanumeric() || prev == b'_';
-        }
-    }
-    false
-}
-
-/// Checks whether unescaped bracket nesting (`[` / `![` vs `]`) outside code spans/fences
-/// reaches or exceeds `limit`, returning the 1-based line number where `limit` was reached.
-fn check_excessive_bracket_nesting(
-    text: &str,
-    code_ranges: &[Range<usize>],
-    limit: usize,
-) -> Option<(usize, bool)> {
-    let bytes = text.as_bytes();
-    let mut i = 0usize;
-    let mut depth = 0usize;
-    let mut max_depth = 0usize;
-    let mut limit_line = None;
-    let mut code_idx = 0usize;
-
-    while i < bytes.len() {
-        while code_idx < code_ranges.len() && code_ranges[code_idx].end <= i {
-            code_idx += 1;
-        }
-        if code_idx < code_ranges.len() && code_ranges[code_idx].start <= i {
-            i = code_ranges[code_idx].end;
-            continue;
-        }
-        if bytes[i] == b'\\' && i + 1 < bytes.len() {
-            i += 2;
-            continue;
-        }
-        if bytes[i] == b'!' && i + 1 < bytes.len() && bytes[i + 1] == b'[' {
-            depth += 1;
-            if depth > max_depth {
-                max_depth = depth;
-                if depth > limit && limit_line.is_none() {
-                    limit_line = Some(line_at_byte(text, i));
-                }
-            }
-            i += 2;
-            continue;
-        }
-        if bytes[i] == b'[' {
-            depth += 1;
-            if depth > max_depth {
-                max_depth = depth;
-                if depth > limit && limit_line.is_none() {
-                    limit_line = Some(line_at_byte(text, i));
-                }
-            }
-            i += 1;
-            continue;
-        }
-        if bytes[i] == b']' {
-            depth = depth.saturating_sub(1);
-            i += 1;
-            continue;
-        }
-        i += 1;
-    }
-
-    limit_line.map(|line| (line, max_depth >= PARSER_MAX_NESTING))
-}
-
-/// Checks whether any line has `>= limit` nested blockquote markers `>`.
-fn check_excessive_blockquote_line(
-    text: &str,
-    code_ranges: &[Range<usize>],
-    limit: usize,
-) -> Option<(usize, bool)> {
-    let mut offset = 0usize;
-    let mut code_idx = 0usize;
-    for (idx, line) in text.split('\n').enumerate() {
-        let line_no = idx + 1;
-        while code_idx < code_ranges.len() && code_ranges[code_idx].end <= offset {
-            code_idx += 1;
-        }
-        let in_code = code_idx < code_ranges.len() && code_ranges[code_idx].start <= offset;
-        if !in_code {
-            let mut rest = line;
-            let mut count = 0usize;
-            loop {
-                let trimmed = rest.trim_start_matches(' ');
-                if rest.len() - trimmed.len() > 3 {
-                    break;
-                }
-                if let Some(after) = trimmed.strip_prefix('>') {
-                    count += 1;
-                    rest = after.strip_prefix(' ').unwrap_or(after);
-                } else {
-                    break;
-                }
-            }
-            if count >= limit {
-                return Some((line_no, count >= PARSER_MAX_NESTING));
-            }
-        }
-        offset += line.len() + 1;
-    }
-    None
-}
-
-/// Checks whether a fenced code block slice in `text` was closed by an explicit closing fence line.
-fn is_fenced_block_closed(
-    text: &str,
-    block_range: &Range<usize>,
-    last_text_end: Option<usize>,
-) -> bool {
-    let slice = &text[block_range.start..block_range.end];
-    let trimmed = slice.trim_end_matches(['\r', '\n']);
-    if !trimmed.contains('\n') {
-        // Only the opening fence line is present.
-        return false;
-    }
-    let last_line_start_rel = trimmed.rfind('\n').map_or(0, |pos| pos + 1);
-    let last_line = &trimmed[last_line_start_rel..];
-
-    // If `pulldown-cmark` emitted `Event::Text` covering the last line, then the last line was
-    // treated as code content rather than a closing fence.
-    let abs_last_line_start = block_range.start + last_line_start_rel;
-    if let Some(text_end) = last_text_end {
-        if text_end > abs_last_line_start {
-            return false;
-        }
-    }
-
-    // Also verify the last line has a closing fence marker (`>= 3` backticks or tildes)
-    // after any container prefixes (`>` or list indentation).
-    let first_line = trimmed.lines().next().unwrap_or("");
-    let open_marker = first_line
-        .chars()
-        .find(|&c| c == '`' || c == '~')
-        .unwrap_or('`');
-    let open_len = first_line
-        .chars()
-        .skip_while(|&c| c != open_marker)
-        .take_while(|&c| c == open_marker)
-        .count();
-
-    let mut candidate = last_line;
-    while let Some(pos) = candidate.find('>') {
-        let prefix = &candidate[..pos];
-        if prefix.bytes().all(|b| b == b' ') && prefix.len() <= 3 {
-            candidate = &candidate[pos + 1..];
-        } else {
-            break;
-        }
-    }
-    let candidate_trimmed = candidate.trim_start_matches(' ');
-    if candidate_trimmed.starts_with('\t') {
-        return false;
-    }
-    let close_len = candidate_trimmed
-        .chars()
-        .take_while(|&c| c == open_marker)
-        .count();
-    let after_close = &candidate_trimmed[close_len..];
-    close_len >= open_len.max(3) && after_close.trim_matches([' ', '\t']).is_empty()
-}
-
-/// Runs Spec Markdown safety and containment checks on a single decoded string `text`.
-///
-/// When `lint` is `true`, also emits `Level::Warning` findings for retired v1 provenance
-/// tags (`[databook]`, `[src:...]`, etc.) outside code spans and code blocks.
-#[must_use]
-
-fn line_at_byte_comrak(text: &str, byte_offset: usize) -> usize {
-    let clamped = byte_offset.min(text.len());
-    1 + text.as_bytes()[..clamped].iter().filter(|&&b| b == b'\n').count()
-}
-
-fn collect_covered_lines<'a>(node: &'a AstNode<'a>, covered: &mut Vec<Range<usize>>, in_code_ranges: &mut Vec<Range<usize>>) {
+fn collect_covered_lines<'a>(
+    node: &'a AstNode<'a>,
+    covered: &mut Vec<Range<usize>>,
+    in_code_ranges: &mut Vec<Range<usize>>,
+) {
     let ast = node.data.borrow();
     let sourcepos = ast.sourcepos;
     if sourcepos.start.line > 0 && sourcepos.end.line >= sourcepos.start.line {
         match &ast.value {
-            NodeValue::Paragraph | NodeValue::Heading(_) | NodeValue::CodeBlock(_) | NodeValue::HtmlBlock(_) | NodeValue::ThematicBreak => {
-                covered.push(sourcepos.start.line .. sourcepos.end.line + 1);
+            NodeValue::Paragraph
+            | NodeValue::Heading(_)
+            | NodeValue::CodeBlock(_)
+            | NodeValue::HtmlBlock(_)
+            | NodeValue::ThematicBreak => {
+                covered.push(sourcepos.start.line..sourcepos.end.line + 1);
             }
             NodeValue::Code(_) => {
-                in_code_ranges.push(sourcepos.start.line .. sourcepos.end.line + 1);
+                in_code_ranges.push(sourcepos.start.line..sourcepos.end.line + 1);
             }
             _ => {}
         }
@@ -494,10 +313,21 @@ fn walk_findings<'a>(
             } else {
                 // Fenced block: check if closed properly
                 let literal_newlines = cb.literal.chars().filter(|&c| c == '\n').count();
-                let end_line_text = text.lines().nth(ast.sourcepos.end.line.saturating_sub(1)).unwrap_or("");
-                let fence_str = std::iter::repeat(cb.fence_char as char).take(cb.fence_length).collect::<String>();
-                if ast.sourcepos.end.line <= ast.sourcepos.start.line + literal_newlines || !end_line_text.contains(&fence_str) {
-                    out.push(TextFinding::new(line, "fence", "unclosed code fence", Level::Error));
+                let end_line_text = text
+                    .lines()
+                    .nth(ast.sourcepos.end.line.saturating_sub(1))
+                    .unwrap_or("");
+                let fence_str =
+                    std::iter::repeat_n(cb.fence_char as char, cb.fence_length).collect::<String>();
+                if ast.sourcepos.end.line <= ast.sourcepos.start.line + literal_newlines
+                    || !end_line_text.contains(&fence_str)
+                {
+                    out.push(TextFinding::new(
+                        line,
+                        "fence",
+                        "unclosed code fence",
+                        Level::Error,
+                    ));
                 }
             }
         }
@@ -505,7 +335,12 @@ fn walk_findings<'a>(
             out.push(TextFinding::new(line, "html", "raw HTML", Level::Error));
         }
         NodeValue::Heading(_) => {
-            out.push(TextFinding::new(line, "heading", "heading inside a field", Level::Error));
+            out.push(TextFinding::new(
+                line,
+                "heading",
+                "heading inside a field",
+                Level::Error,
+            ));
             if *in_inline == 0 {
                 *inline_first_line = line;
                 inline_decoded.clear();
@@ -524,11 +359,27 @@ fn walk_findings<'a>(
             *in_inline += 1;
         }
         NodeValue::Link(link) => {
-            let url = if link.url.starts_with("mailto:") { link.url.clone() } else if link.url.contains('@') && !link.url.contains("://") { format!("mailto:{}", link.url) } else { link.url.clone() };
+            let url = if link.url.starts_with("mailto:") {
+                link.url.clone()
+            } else if link.url.contains('@') && !link.url.contains("://") {
+                format!("mailto:{}", link.url)
+            } else {
+                link.url.clone()
+            };
             if !allowed_link(&url) {
-                out.push(TextFinding::new(line, "link", format!("disallowed link destination '{}'", url), Level::Error));
+                out.push(TextFinding::new(
+                    line,
+                    "link",
+                    format!("disallowed link destination '{}'", url),
+                    Level::Error,
+                ));
             }
-            if text.lines().nth(line.saturating_sub(1)).unwrap_or("").contains(&link.url) {
+            if text
+                .lines()
+                .nth(line.saturating_sub(1))
+                .unwrap_or("")
+                .contains(&link.url)
+            {
                 // Approximate autolink check
                 inline_decoded.push_str(BREAK);
                 inline_visible.push_str(BREAK);
@@ -536,7 +387,12 @@ fn walk_findings<'a>(
         }
         NodeValue::Image(img) => {
             if !allowed_link(&img.url) {
-                out.push(TextFinding::new(line, "link", format!("disallowed link destination '{}'", img.url), Level::Error));
+                out.push(TextFinding::new(
+                    line,
+                    "link",
+                    format!("disallowed link destination '{}'", img.url),
+                    Level::Error,
+                ));
             }
             inline_decoded.push_str(BREAK);
             inline_visible.push_str(BREAK);
@@ -560,22 +416,50 @@ fn walk_findings<'a>(
                 inline_visible.push_str(BREAK);
             }
         }
-        NodeValue::SoftBreak | NodeValue::LineBreak => {
-            if *in_inline > 0 {
-                inline_decoded.push('\n');
-                inline_visible.push('\n');
-            }
+        NodeValue::SoftBreak | NodeValue::LineBreak if *in_inline > 0 => {
+            inline_decoded.push('\n');
+            inline_visible.push('\n');
         }
         _ => {}
     }
 
     for child in node.children() {
         if let NodeValue::Image(_) = child.data.borrow().value {
-            walk_findings(child, text, out, in_inline, inline_decoded, inline_visible, lint, inline_first_line, open_html_tags);
+            walk_findings(
+                child,
+                text,
+                out,
+                in_inline,
+                inline_decoded,
+                inline_visible,
+                lint,
+                inline_first_line,
+                open_html_tags,
+            );
         } else if let NodeValue::Link(_) = child.data.borrow().value {
-            walk_findings(child, text, out, in_inline, inline_decoded, inline_visible, lint, inline_first_line, open_html_tags);
+            walk_findings(
+                child,
+                text,
+                out,
+                in_inline,
+                inline_decoded,
+                inline_visible,
+                lint,
+                inline_first_line,
+                open_html_tags,
+            );
         } else {
-            walk_findings(child, text, out, in_inline, inline_decoded, inline_visible, lint, inline_first_line, open_html_tags);
+            walk_findings(
+                child,
+                text,
+                out,
+                in_inline,
+                inline_decoded,
+                inline_visible,
+                lint,
+                inline_first_line,
+                open_html_tags,
+            );
         }
     }
 
@@ -591,15 +475,33 @@ fn walk_findings<'a>(
 
     if flush {
         if !inline_decoded.is_empty() {
-            for m in FOOTNOTE_INLINE_RE.find_iter(&inline_decoded) {
-                let mline = *inline_first_line + inline_decoded.as_bytes()[..m.start()].iter().filter(|&&b| b == b'\n').count();
-                out.push(TextFinding::new(mline, "footnote", "footnote reference or definition inside a field", Level::Error));
+            for m in FOOTNOTE_INLINE_RE.find_iter(inline_decoded) {
+                let mline = *inline_first_line
+                    + inline_decoded.as_bytes()[..m.start()]
+                        .iter()
+                        .filter(|&&b| b == b'\n')
+                        .count();
+                out.push(TextFinding::new(
+                    mline,
+                    "footnote",
+                    "footnote reference or definition inside a field",
+                    Level::Error,
+                ));
             }
         }
         if lint && !inline_visible.is_empty() {
-            for m in V1_TAG_RE.find_iter(&inline_visible) {
-                let mline = *inline_first_line + inline_visible.as_bytes()[..m.start()].iter().filter(|&&b| b == b'\n').count();
-                out.push(TextFinding::new(mline, "v1-tag", format!("retired provenance tag '{}' in author text", m.as_str()), Level::Warning));
+            for m in V1_TAG_RE.find_iter(inline_visible) {
+                let mline = *inline_first_line
+                    + inline_visible.as_bytes()[..m.start()]
+                        .iter()
+                        .filter(|&&b| b == b'\n')
+                        .count();
+                out.push(TextFinding::new(
+                    mline,
+                    "v1-tag",
+                    format!("retired provenance tag '{}' in author text", m.as_str()),
+                    Level::Warning,
+                ));
             }
         }
         inline_decoded.clear();
@@ -638,7 +540,9 @@ pub fn findings(text: &str, lint: bool) -> Vec<TextFinding> {
     for (idx, raw_line) in text.split('\n').enumerate() {
         let line_no = idx + 1;
         if REF_DEF_LINE_RE.is_match(raw_line) {
-            let is_covered = covered_ranges.iter().any(|r| r.start <= line_no && line_no < r.end);
+            let is_covered = covered_ranges
+                .iter()
+                .any(|r| r.start <= line_no && line_no < r.end);
             if !is_covered {
                 out.push(TextFinding::new(
                     line_no,
@@ -688,10 +592,8 @@ fn walk_text_blocks<'a>(node: &'a AstNode<'a>, skip_html: bool, blocks: &mut Vec
             blocks.push((ast.sourcepos.start.line, buf));
             return; // Children handled by walk_inline_text
         }
-        NodeValue::HtmlBlock(hb) => {
-            if !skip_html {
-                blocks.push((ast.sourcepos.start.line, hb.literal.clone()));
-            }
+        NodeValue::HtmlBlock(hb) if !skip_html => {
+            blocks.push((ast.sourcepos.start.line, hb.literal.clone()));
         }
         _ => {}
     }
@@ -796,35 +698,53 @@ pub fn placeholder(text: &str, skip_html: bool) -> Option<String> {
 
 pub type ConstructMap = BTreeMap<(usize, String, String), usize>;
 
-fn walk_constructs<'a>(node: &'a AstNode<'a>, text: &str, result: &mut ConstructMap) {
+fn walk_constructs<'a>(node: &'a AstNode<'a>, result: &mut ConstructMap) {
     let ast = node.data.borrow();
     let zero_line = ast.sourcepos.start.line.saturating_sub(1);
     match &ast.value {
         NodeValue::Heading(_) => {
-            *result.entry((zero_line, "heading_open".to_string(), String::new())).or_insert(0) += 1;
+            *result
+                .entry((zero_line, "heading_open".to_string(), String::new()))
+                .or_insert(0) += 1;
         }
         NodeValue::CodeBlock(cb) => {
             if cb.fenced {
-                *result.entry((zero_line, "fence".to_string(), cb.literal.clone())).or_insert(0) += 1;
+                *result
+                    .entry((zero_line, "fence".to_string(), cb.literal.clone()))
+                    .or_insert(0) += 1;
             }
         }
         NodeValue::HtmlBlock(_) => {
-            *result.entry((zero_line, "html_block".to_string(), String::new())).or_insert(0) += 1;
+            *result
+                .entry((zero_line, "html_block".to_string(), String::new()))
+                .or_insert(0) += 1;
         }
         NodeValue::Link(link) => {
-            let href = if link.url.starts_with("mailto:") { link.url.clone() } else if link.url.contains('@') && !link.url.contains("://") { format!("mailto:{}", link.url) } else { link.url.clone() };
-            *result.entry((zero_line, "link_open".to_string(), href)).or_insert(0) += 1;
+            let href = if link.url.starts_with("mailto:") {
+                link.url.clone()
+            } else if link.url.contains('@') && !link.url.contains("://") {
+                format!("mailto:{}", link.url)
+            } else {
+                link.url.clone()
+            };
+            *result
+                .entry((zero_line, "link_open".to_string(), href))
+                .or_insert(0) += 1;
         }
         NodeValue::Image(img) => {
-            *result.entry((zero_line, "image".to_string(), img.url.clone())).or_insert(0) += 1;
+            *result
+                .entry((zero_line, "image".to_string(), img.url.clone()))
+                .or_insert(0) += 1;
         }
         NodeValue::HtmlInline(_) => {
-            *result.entry((zero_line, "html_inline".to_string(), String::new())).or_insert(0) += 1;
+            *result
+                .entry((zero_line, "html_inline".to_string(), String::new()))
+                .or_insert(0) += 1;
         }
         _ => {}
     }
     for child in node.children() {
-        walk_constructs(child, text, result);
+        walk_constructs(child, result);
     }
 }
 
@@ -834,7 +754,7 @@ pub fn constructs(text: &str) -> ConstructMap {
     let mut opts = Options::default();
     opts.extension.table = true;
     let root = parse_document(&arena, text, &opts);
-    walk_constructs(root, text, &mut result);
+    walk_constructs(root, &mut result);
 
     let mut covered_ranges = Vec::new();
     let mut in_code_ranges = Vec::new();
@@ -843,9 +763,13 @@ pub fn constructs(text: &str) -> ConstructMap {
     for (idx, raw_line) in text.split('\n').enumerate() {
         if REF_DEF_LINE_RE.is_match(raw_line) {
             let line_no = idx + 1;
-            let is_covered = covered_ranges.iter().any(|r| r.start <= line_no && line_no < r.end);
+            let is_covered = covered_ranges
+                .iter()
+                .any(|r| r.start <= line_no && line_no < r.end);
             if !is_covered {
-                *result.entry((idx, "reference".to_string(), String::new())).or_insert(0) += 1;
+                *result
+                    .entry((idx, "reference".to_string(), String::new()))
+                    .or_insert(0) += 1;
             }
         }
     }
@@ -885,9 +809,8 @@ pub fn check_view(text: &str, expected: &ConstructMap) -> Result<(), String> {
                     .lines()
                     .nth(ast.sourcepos.end.line.saturating_sub(1))
                     .unwrap_or("");
-                let fence_str = std::iter::repeat(cb.fence_char as char)
-                    .take(cb.fence_length)
-                    .collect::<String>();
+                let fence_str =
+                    std::iter::repeat_n(cb.fence_char as char, cb.fence_length).collect::<String>();
                 if ast.sourcepos.end.line <= ast.sourcepos.start.line + literal_newlines
                     || !end_line_text.contains(&fence_str)
                 {

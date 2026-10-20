@@ -128,6 +128,14 @@ fi
 SPEC_CMD=("$DL_BIN")
 STUBGEN_CMD=("$DL_BIN" stubgen)
 
+if [ -n "${TOOL_COMMIT:-}" ] && [ "$TOOL_COMMIT" != "0000000000000000000000000000000000000000" ]; then
+  dl_ver=$("$DL_BIN" --version 2>&1 || true)
+  if ! printf '%s\n' "$dl_ver" | grep -qF "$TOOL_COMMIT"; then
+    echo "missing precondition: $DL_BIN ($dl_ver) does not match TOOL_COMMIT ($TOOL_COMMIT)" >&2
+    exit 3
+  fi
+fi
+
 for f in "${needed[@]}"; do
   if [ ! -f "$f" ]; then
     echo "missing precondition: $f (is $dl a driver-lab checkout at the pinned commit?)" >&2
@@ -206,53 +214,7 @@ check_specs() {
 
 # Print "name<TAB>commit" lines for every repos entry with a commit in the given spec files.
 discover_repo_pins() {
-  python3 - "$@" <<'PYEOF'
-import re
-import sys
-
-try:
-    import yaml
-except ImportError:
-    yaml = None
-
-seen = []
-for path in sys.argv[1:]:
-    try:
-        text = open(path, encoding="utf-8").read()
-    except OSError:
-        continue
-    if yaml is not None:
-        try:
-            data = yaml.safe_load(text)
-        except Exception:
-            data = None
-        if isinstance(data, dict):
-            repos = (data.get("resources") or {}).get("repos") or []
-            if isinstance(repos, list):
-                for entry in repos:
-                    if isinstance(entry, dict):
-                        name = entry.get("name")
-                        commit = entry.get("commit")
-                        if isinstance(name, str) and isinstance(commit, str) and name and commit:
-                            pair = (name, commit)
-                            if pair not in seen:
-                                seen.append(pair)
-            continue
-    cur_name = None
-    for raw in text.splitlines():
-        m_name = re.match(r"^\s*-\s*name:\s*['\"]?([A-Za-z0-9_.-]+)['\"]?\s*$", raw)
-        if m_name:
-            cur_name = m_name.group(1)
-            continue
-        m_commit = re.match(r"^\s*commit:\s*['\"]?([0-9a-fA-F]{40})['\"]?\s*$", raw)
-        if m_commit and cur_name:
-            pair = (cur_name, m_commit.group(1))
-            if pair not in seen:
-                seen.append(pair)
-            cur_name = None
-for name, commit in seen:
-    print(f"{name}\t{commit}")
-PYEOF
+  "${SPEC_CMD[@]}" resolve --list-repos "$@"
 }
 
 check_resolve() {

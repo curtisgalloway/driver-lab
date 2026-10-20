@@ -8,10 +8,19 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 pub fn escape(value: &str) -> String {
-    let mut text = value.replace('\n', " ").replace('\r', " ");
+    let mut text = value.replace(['\n', '\r'], " ");
     text = text.trim_start().to_string();
     let lower = text.to_lowercase();
-    if text.contains('@') || text.contains(':') || text.contains('|') || text.contains('*') || text.contains('_') || text.contains('`') || text.contains('<') || text.contains('[') || lower.contains("www.") {
+    if text.contains('@')
+        || text.contains(':')
+        || text.contains('|')
+        || text.contains('*')
+        || text.contains('_')
+        || text.contains('`')
+        || text.contains('<')
+        || text.contains('[')
+        || lower.contains("www.")
+    {
         return code(&text);
     }
     let mut escaped = String::new();
@@ -25,7 +34,7 @@ pub fn escape(value: &str) -> String {
 }
 
 pub fn code(value: &str) -> String {
-    let text = value.replace('\n', " ").replace('\r', " ");
+    let text = value.replace(['\n', '\r'], " ");
     let mut max_backticks = 0;
     let mut current = 0;
     for c in text.chars() {
@@ -39,7 +48,10 @@ pub fn code(value: &str) -> String {
         }
     }
     let fence = "`".repeat(max_backticks + 1);
-    let pad = if text.starts_with('`') || text.ends_with('`') || (text.starts_with(' ') && text.ends_with(' ') && !text.trim().is_empty()) {
+    let pad = if text.starts_with('`')
+        || text.ends_with('`')
+        || (text.starts_with(' ') && text.ends_with(' ') && !text.trim().is_empty())
+    {
         " "
     } else {
         ""
@@ -65,6 +77,12 @@ pub struct View {
     pub line: usize,
 }
 
+impl Default for View {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl View {
     pub fn new() -> Self {
         Self {
@@ -87,8 +105,14 @@ impl View {
     }
 
     pub fn heading(&mut self, level: usize, value: &str) {
-        *self.expected.entry((self.line, "heading_open".to_string(), String::new())).or_insert(0) += 1;
-        self.extend(vec![format!("{} {}", "#".repeat(level), value), String::new()]);
+        *self
+            .expected
+            .entry((self.line, "heading_open".to_string(), String::new()))
+            .or_insert(0) += 1;
+        self.extend(vec![
+            format!("{} {}", "#".repeat(level), value),
+            String::new(),
+        ]);
     }
 
     pub fn author(&mut self, value: &str, label: &str) {
@@ -110,8 +134,14 @@ impl View {
         if !content.is_empty() && !content.ends_with('\n') {
             content.push('\n');
         }
-        *self.expected.entry((self.line, "fence".to_string(), content.clone())).or_insert(0) += 1;
-        self.extend(vec![format!("{}\n{}{}", fence, content, fence), String::new()]);
+        *self
+            .expected
+            .entry((self.line, "fence".to_string(), content.clone()))
+            .or_insert(0) += 1;
+        self.extend(vec![
+            format!("{}\n{}{}", fence, content, fence),
+            String::new(),
+        ]);
     }
 }
 
@@ -119,9 +149,70 @@ pub fn _author(out: &mut View, value: &str, label: &str) {
     out.author(value, label);
 }
 
-pub fn source_commits(_groups: &[Vec<&SpecFile>], _source_commit: Option<&str>) -> Result<HashMap<PathBuf, String>, String> {
-    let commits = HashMap::new();
+pub fn source_commits_list(
+    checker: &Checker,
+    groups: &[Vec<&SpecFile>],
+    values: &[String],
+) -> Result<HashMap<PathBuf, String>, String> {
+    let mut given: HashMap<PathBuf, (usize, String)> = HashMap::new();
+    for group in groups {
+        for f in group {
+            let root = &checker.roots[f.root_idx];
+            let abs = root
+                .given
+                .canonicalize()
+                .unwrap_or_else(|_| root.given.clone());
+            given
+                .entry(abs)
+                .or_insert_with(|| (root.order, root.given.to_string_lossy().into_owned()));
+        }
+    }
+    let mut shown_vec: Vec<(usize, String)> = given.values().cloned().collect();
+    shown_vec.sort();
+    let shown = shown_vec
+        .into_iter()
+        .map(|(_, label)| label)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut commits: HashMap<PathBuf, String> = HashMap::new();
+    for value in values {
+        let (root, sha) = if let Some((name, s)) = value.rsplit_once('=') {
+            let r = std::path::Path::new(name)
+                .canonicalize()
+                .unwrap_or_else(|_| PathBuf::from(name));
+            if name.is_empty() || !given.contains_key(&r) {
+                return Err(format!(
+                    "--source-commit ROOT must name a rendered root directory (rendered: {shown})"
+                ));
+            }
+            (r, s)
+        } else {
+            if given.len() != 1 {
+                return Err("bare --source-commit requires exactly one rendered root".to_string());
+            }
+            (given.keys().next().unwrap().clone(), value.as_str())
+        };
+        if sha.len() != 40 || !sha.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f')) {
+            return Err("commit must be 40 lowercase hex characters".to_string());
+        }
+        if commits.contains_key(&root) {
+            return Err("--source-commit given twice for a root".to_string());
+        }
+        commits.insert(root, sha.to_string());
+    }
     Ok(commits)
+}
+
+pub fn source_commits(
+    checker: &Checker,
+    groups: &[Vec<&SpecFile>],
+    source_commit: Option<&str>,
+) -> Result<HashMap<PathBuf, String>, String> {
+    let values: Vec<String> = match source_commit {
+        Some(s) if !s.is_empty() => s.split('\n').map(ToString::to_string).collect(),
+        _ => Vec::new(),
+    };
+    source_commits_list(checker, groups, &values)
 }
 
 pub fn render(
@@ -135,20 +226,28 @@ pub fn render(
     if merged {
         for root in &checker.roots {
             if root.context && !root.untrusted.is_empty() {
-                return Err("cannot render merged input: context root does not check clean".to_string());
+                return Err(
+                    "cannot render merged input: context root does not check clean".to_string(),
+                );
             }
         }
     }
 
-    let selected: Vec<&SpecFile> = checker.files.iter()
+    let selected: Vec<&SpecFile> = checker
+        .files
+        .iter()
         .filter(|f| {
             let root = &checker.roots[f.root_idx];
-            !root.context && spec_id.map_or(true, |sid| f.spec_id() == sid)
+            !root.context && spec_id.is_none_or(|sid| f.spec_id() == sid)
         })
         .collect();
 
     if selected.is_empty() {
-        return Err(if spec_id.is_some() { "no checked spec matches --spec".to_string() } else { "no specs to render".to_string() });
+        return Err(if spec_id.is_some() {
+            "no checked spec matches --spec".to_string()
+        } else {
+            "no specs to render".to_string()
+        });
     }
 
     let mut ids = Vec::new();
@@ -162,7 +261,13 @@ pub fn render(
     let mut groups: Vec<Vec<&SpecFile>> = Vec::new();
     if merged {
         for sid in &ids {
-            groups.push(checker.files.iter().filter(|f| f.spec_id() == *sid).collect());
+            groups.push(
+                checker
+                    .files
+                    .iter()
+                    .filter(|f| f.spec_id() == *sid)
+                    .collect(),
+            );
         }
     } else {
         for f in &selected {
@@ -170,10 +275,10 @@ pub fn render(
         }
     }
 
-    let commits = source_commits(&groups, source_commit)?;
+    let commits = source_commits(checker, &groups, source_commit)?;
 
     let mut out = View::new();
-    
+
     // Status map: root_idx + path -> StatusRow
     let mut status_map: HashMap<(usize, String), HashMap<String, &StatusRow>> = HashMap::new();
     for (f_idx, entry) in &checker.status {
@@ -189,31 +294,50 @@ pub fn render(
             let root = &checker.roots[f.root_idx];
             (f.is_overlay(), root.rank, root.order, f.path.clone())
         });
-        
+        for file in group.iter() {
+            crate::render_html::refuse_unsafe_fields(file)?;
+        }
+
         let base = group[0];
         let base_id = base.spec_id();
         let base_kind = base.kind();
-        
+
         if !out.lines.is_empty() {
             out.extend(vec!["Generated view:".to_string(), String::new()]);
         }
         out.extend(vec![
             format!("Generated by {}. Do not edit.", code("spec.py render")),
             String::new(),
-            format!("Canonical form {}; driver-lab {}.", code(crate::records::CANONICAL), escape(tool_commit.unwrap_or("unavailable"))),
-            String::new()
+            format!(
+                "Canonical form {}; driver-lab {}.",
+                code(crate::records::CANONICAL),
+                escape(tool_commit.unwrap_or("unavailable"))
+            ),
+            String::new(),
         ]);
-        
+
         for file in group.iter() {
             let root = &checker.roots[file.root_idx];
-            let relative = file.path.strip_prefix(&root.given).unwrap_or(&file.path).to_string_lossy().into_owned();
+            let relative = file
+                .path
+                .strip_prefix(&root.given)
+                .unwrap_or(&file.path)
+                .to_string_lossy()
+                .into_owned();
             let digest = "unavailable"; // Skipped hash reading
             out.extend(vec![
-                format!("Source {}; commit {}; SHA256 {}.", 
-                    code(&format!("{}:{}", root.label(), relative)), 
-                    escape(commits.get(&root.given.canonicalize().unwrap_or(root.given.clone())).map(|s| s.as_str()).unwrap_or("unavailable")),
-                    code(&digest)),
-                String::new()
+                format!(
+                    "Source {}; commit {}; SHA256 {}.",
+                    code(&format!("{}:{}", root.label(), relative)),
+                    escape(
+                        commits
+                            .get(&root.given.canonicalize().unwrap_or(root.given.clone()))
+                            .map(|s| s.as_str())
+                            .unwrap_or("unavailable")
+                    ),
+                    code(digest)
+                ),
+                String::new(),
             ]);
         }
 
@@ -230,10 +354,14 @@ pub fn render(
                 out.append(String::new());
             }
         }
-        
-        let name = base.data.get("name").and_then(|v| v.as_str()).unwrap_or(&base_id);
+
+        let name = base
+            .data
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&base_id);
         out.heading(1, &escape(name));
-        
+
         let mut triggers = Vec::new();
         if let Some(arr) = base.data.get("triggers").and_then(|v| v.as_array()) {
             for v in arr {
@@ -243,32 +371,60 @@ pub fn render(
             }
         }
         out.extend(vec![
-            format!("{} · {} · triggers: {}", code(&base_id), escape(base_kind), triggers.join(", ")),
-            String::new()
+            format!(
+                "{} · {} · triggers: {}",
+                code(&base_id),
+                escape(base_kind),
+                triggers.join(", ")
+            ),
+            String::new(),
         ]);
-        
-        for key in &["aliases", "not_triggers", "parts", "variant_of", "cache", "overlays"] {
+
+        for key in &[
+            "aliases",
+            "not_triggers",
+            "parts",
+            "variant_of",
+            "cache",
+            "overlays",
+        ] {
             if let Some(val) = base.data.get(*key) {
-                out.extend(vec![format!("{}: {}", escape(&key), escape(&_value(val))), String::new()]);
+                out.extend(vec![
+                    format!("{}: {}", escape(key), escape(&_value(val))),
+                    String::new(),
+                ]);
             }
         }
-        
+
         // Check for Context (not facts)
         let mut has_context = false;
         for file in group.iter() {
-            if file.data.get("orientation").is_some() || file.data.get("milestones").is_some() || file.data.get("notes").is_some() {
+            if file.data.get("orientation").is_some()
+                || file.data.get("milestones").is_some()
+                || file.data.get("notes").is_some()
+            {
                 has_context = true;
                 break;
             }
         }
-        
+
         if has_context {
             out.heading(2, "Context (not facts)");
             for (i, file) in group.iter().enumerate() {
-                if file.data.get("orientation").is_some() || file.data.get("milestones").is_some() || file.data.get("notes").is_some() {
+                if file.data.get("orientation").is_some()
+                    || file.data.get("milestones").is_some()
+                    || file.data.get("notes").is_some()
+                {
                     let root = &checker.roots[file.root_idx];
                     if file.is_overlay() {
-                        out.heading(3, &format!("Overlay: {} ({})", escape(root.layer.as_deref().unwrap_or("")), escape(&root.label())));
+                        out.heading(
+                            3,
+                            &format!(
+                                "Overlay: {} ({})",
+                                escape(root.layer.as_deref().unwrap_or("")),
+                                escape(&root.label())
+                            ),
+                        );
                     }
                     if i != 0 && !file.is_overlay() {
                         out.extend(vec!["Context (not facts):".to_string(), String::new()]);
@@ -285,7 +441,7 @@ pub fn render(
                 }
             }
         }
-        
+
         // Sections
         let target_kind = checker
             .files
@@ -304,12 +460,16 @@ pub fn render(
                     }
                 }
             }
-            if !has_section { continue; }
-            
+            if !has_section {
+                continue;
+            }
+
             let mut cap = section.to_string();
-            if let Some(r) = cap.get_mut(0..1) { r.make_ascii_uppercase(); }
+            if let Some(r) = cap.get_mut(0..1) {
+                r.make_ascii_uppercase();
+            }
             out.heading(2, &cap);
-            
+
             for file in group.iter() {
                 let mut facts = Vec::new();
                 for (_, rec) in &file.records {
@@ -319,19 +479,29 @@ pub fn render(
                 }
                 if !facts.is_empty() && file.is_overlay() {
                     let root = &checker.roots[file.root_idx];
-                    out.heading(3, &format!("Overlay: {} ({})", escape(root.layer.as_deref().unwrap_or("")), escape(&root.label())));
+                    out.heading(
+                        3,
+                        &format!(
+                            "Overlay: {} ({})",
+                            escape(root.layer.as_deref().unwrap_or("")),
+                            escape(&root.label())
+                        ),
+                    );
                 }
                 for rec in facts {
                     _fact(&mut out, checker, rec, file, &status_map, with_status);
                 }
             }
         }
-        
+
         for kind in &["instances", "variants"] {
             for file in group.iter() {
                 let mut rows = Vec::new();
                 for (_, rec) in &file.records {
-                    if let Some(k) = rec.path.get(0).and_then(|p| match p { crate::records::PathElem::Key(key) => Some(key), _ => None }) {
+                    if let Some(k) = rec.path.first().and_then(|p| match p {
+                        crate::records::PathElem::Key(key) => Some(key),
+                        _ => None,
+                    }) {
                         if k == kind {
                             rows.push(rec);
                         }
@@ -339,7 +509,9 @@ pub fn render(
                 }
                 if !rows.is_empty() {
                     let mut cap = kind.to_string();
-                    if let Some(r) = cap.get_mut(0..1) { r.make_ascii_uppercase(); }
+                    if let Some(r) = cap.get_mut(0..1) {
+                        r.make_ascii_uppercase();
+                    }
                     let root = &checker.roots[file.root_idx];
                     out.heading(2, &format!("{}: {}", cap, escape(&root.label())));
                     for rec in rows {
@@ -348,7 +520,7 @@ pub fn render(
                 }
             }
         }
-        
+
         for file in group.iter() {
             if let Some(arr) = file.data.get("notices").and_then(|v| v.as_array()) {
                 let root = &checker.roots[file.root_idx];
@@ -379,7 +551,14 @@ fn escape_cell(value: &str) -> String {
     escape(value).replace('|', "\\|")
 }
 
-pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFile, status_map: &HashMap<(usize, String), HashMap<String, &StatusRow>>, with_status: bool) {
+pub fn _fact(
+    out: &mut View,
+    _checker: &Checker,
+    rec: &SpecRecord,
+    file: &SpecFile,
+    status_map: &HashMap<(usize, String), HashMap<String, &StatusRow>>,
+    with_status: bool,
+) {
     let data = &rec.data;
     let title = data
         .get("title")
@@ -397,7 +576,7 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
         .and_then(|v| v.as_str())
         .unwrap_or(&rec.id);
     out.heading(4, &escape(title));
-    
+
     if let Some(claim) = data.get("claim").and_then(|v| v.as_str()) {
         _author(out, claim, "Claim");
     } else {
@@ -405,13 +584,18 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
             // Simplified register formatting
             let offset = reg.get("offset").and_then(|v| v.as_str()).unwrap_or("");
             let name = reg.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            out.extend(vec![format!("Register {} at {}.", code(name), code(offset)), String::new()]);
+            out.extend(vec![
+                format!("Register {} at {}.", code(name), code(offset)),
+                String::new(),
+            ]);
         }
         // dump keys
         if let Value::Object(obj) = data {
             for (key, value) in obj {
-                if !["id", "support", "note", "todo", "title", "name", "data"].contains(&key.as_str()) {
-                    out.append(format!("- {}: {}", escape(&key), escape(&_value(&value))));
+                if !["id", "support", "note", "todo", "title", "name", "data"]
+                    .contains(&key.as_str())
+                {
+                    out.append(format!("- {}: {}", escape(key), escape(&_value(value))));
                 }
             }
         }
@@ -420,7 +604,10 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
     if let Some(layout) = data.get("data").and_then(|v| v.get("layout")) {
         let name = layout.get("name").and_then(|v| v.as_str()).unwrap_or("");
         let size = layout.get("size").and_then(|v| v.as_i64()).unwrap_or(0);
-        out.extend(vec![format!("Layout {} ({} B).", code(name), size), String::new()]);
+        out.extend(vec![
+            format!("Layout {} ({} B).", code(name), size),
+            String::new(),
+        ]);
     }
     if let Some(conn) = data.get("data").and_then(|v| v.get("connector")) {
         let cname = conn
@@ -532,27 +719,36 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
         }
     }
     if let Some(qty) = data.get("data").and_then(|v| v.get("quantity")) {
-        out.extend(vec![format!("Quantity: {}.", escape(&_value(qty))), String::new()]);
+        out.extend(vec![
+            format!("Quantity: {}.", escape(&_value(qty))),
+            String::new(),
+        ]);
     }
-    
+
     out.extend(vec!["Provenance (generated):".to_string(), String::new()]);
-    
+
     if let Some(todo) = data.get("todo") {
         let check = todo.get("check").and_then(|v| v.as_str()).unwrap_or("");
         let text = todo.get("text").and_then(|v| v.as_str()).unwrap_or("");
-        out.append(format!("- TODO (verify on {}): {}", escape(check), escape(text)));
+        out.append(format!(
+            "- TODO (verify on {}): {}",
+            escape(check),
+            escape(text)
+        ));
         if let Some(method) = todo.get("method").and_then(|v| v.as_str()) {
             out.append(format!("- method: {}", escape(method)));
         }
     }
-    
+
     let mut text = format!("- {}", code(&rec.full));
     if data.get("critical").is_some() {
         text.push_str(" · bring-up critical");
     }
-    
+
     if with_status {
-        if let Some(rows) = status_map.get(&(file.root_idx, file.path.to_string_lossy().into_owned())) {
+        if let Some(rows) =
+            status_map.get(&(file.root_idx, file.path.to_string_lossy().into_owned()))
+        {
             if let Some(row) = rows.get(&rec.id) {
                 if let Some(verdict) = &row.verdict {
                     text.push_str(&format!(" · {} ...", escape(verdict))); // simplified date
@@ -562,11 +758,11 @@ pub fn _fact(out: &mut View, _checker: &Checker, rec: &SpecRecord, file: &SpecFi
         }
     }
     out.extend(vec![text, String::new()]);
-    
+
     if let Some(req) = data.get("requirement").and_then(|v| v.as_str()) {
         out.extend(vec![format!("Requirement: {}", code(req)), String::new()]);
     }
-    
+
     if let Some(note) = data.get("note").and_then(|v| v.as_str()) {
         _author(out, note, "Fact note");
     }
@@ -602,7 +798,11 @@ pub fn run_render_cmd(
                 key: Value::Null,
                 "findings": [{"message": msg}],
             });
-            let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+            let _ = writeln!(
+                stdout,
+                "{}",
+                serde_json::to_string(&payload).unwrap_or_default()
+            );
         } else {
             let label = match kind {
                 "usage" => "usage error",
@@ -691,7 +891,11 @@ pub fn run_render_cmd(
                 key: Value::Null,
                 "findings": ordered,
             });
-            let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+            let _ = writeln!(
+                stdout,
+                "{}",
+                serde_json::to_string(&payload).unwrap_or_default()
+            );
         } else {
             for f in &ordered {
                 let _ = writeln!(stdout, "{}", visible_name(&f.to_string()));
@@ -700,7 +904,12 @@ pub fn run_render_cmd(
         return EXIT_DOMAIN_FAILURE;
     }
 
-    let source_commit = args.source_commits.first().map(String::as_str);
+    let joined_commits = args.source_commits.join("\n");
+    let source_commit = if args.source_commits.is_empty() {
+        None
+    } else {
+        Some(joined_commits.as_str())
+    };
     let tool_commit = args.tool_commit.as_deref();
     let rendered = match args.format {
         RenderFormat::Md => render(
@@ -719,9 +928,12 @@ pub fn run_render_cmd(
             source_commit,
             tool_commit,
         ),
-        RenderFormat::Atlas => crate::render_html::render_atlas_checker(
+        RenderFormat::Atlas => crate::explorer::atlas::page(
             &checker,
             args.spec.as_deref().unwrap_or(""),
+            merged,
+            &args.source_commits,
+            tool_commit.unwrap_or("unavailable"),
         ),
     };
 
@@ -744,7 +956,11 @@ pub fn run_render_cmd(
                     key: view,
                     "findings": ordered,
                 });
-                let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+                let _ = writeln!(
+                    stdout,
+                    "{}",
+                    serde_json::to_string(&payload).unwrap_or_default()
+                );
             } else if args.out.is_none() {
                 let _ = writeln!(stdout, "{}", view.trim_end_matches('\n'));
             }
@@ -752,8 +968,11 @@ pub fn run_render_cmd(
         }
         Err(msg) => {
             if msg.contains("no checked spec matches --spec")
+                || msg.contains("no spec ")
+                || msg.contains("no specs to render")
                 || msg.contains("unknown spec")
                 || msg.contains("--source-commit")
+                || msg.contains("commit must be 40 lowercase hex")
             {
                 return emit_fail("usage", EXIT_USAGE_ERROR, &msg, stdout, stderr);
             }
@@ -763,7 +982,11 @@ pub fn run_render_cmd(
                     key: Value::Null,
                     "findings": [{"message": msg}],
                 });
-                let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+                let _ = writeln!(
+                    stdout,
+                    "{}",
+                    serde_json::to_string(&payload).unwrap_or_default()
+                );
             } else {
                 let _ = writeln!(stdout, "{}", visible_name(&msg));
             }

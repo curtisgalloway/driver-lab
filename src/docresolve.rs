@@ -35,7 +35,7 @@ impl PdfPages {
 
     fn extract(&mut self, number: usize) -> Result<Vec<String>, String> {
         let mut cmd = Command::new("pdftotext");
-        cmd.args(&[
+        cmd.args([
             "-f",
             &number.to_string(),
             "-l",
@@ -53,7 +53,10 @@ impl PdfPages {
         let res = run_bounded(&mut cmd, limits).map_err(|e| e.to_string())?;
         if res.status != 0 {
             let stderr = String::from_utf8_lossy(&res.stderr);
-            return Err(format!("ResolutionError: PDF extraction failed: {}", stderr.trim()));
+            return Err(format!(
+                "ResolutionError: PDF extraction failed: {}",
+                stderr.trim()
+            ));
         }
         self.size += res.stdout.len();
         let text = String::from_utf8_lossy(&res.stdout);
@@ -63,7 +66,11 @@ impl PdfPages {
 
 pub fn locator_pattern(kind: &str, value: &str) -> Regex {
     let trimmed = value.trim().trim_end_matches(['.', ':']).trim();
-    let base = if trimmed.is_empty() { value.trim() } else { trimmed };
+    let base = if trimmed.is_empty() {
+        value.trim()
+    } else {
+        trimmed
+    };
     let kind_lower = kind.to_lowercase();
     let mut raw_tokens: Vec<&str> = base.split_whitespace().collect();
     if (kind_lower == "table" || kind_lower == "figure")
@@ -74,14 +81,27 @@ pub fn locator_pattern(kind: &str, value: &str) -> Regex {
         raw_tokens.insert(0, &kind_lower);
     }
 
+    let num_tokens = raw_tokens.len();
+    let num_idx = usize::from(kind_lower == "table" || kind_lower == "figure");
     let token_regexes: Vec<String> = raw_tokens
         .into_iter()
-        .map(|token| {
-            token
+        .enumerate()
+        .map(|(idx, token)| {
+            let cleaned = if idx == num_idx {
+                token.trim_end_matches(['.', ':'])
+            } else {
+                token
+            };
+            let joined = cleaned
                 .split(['-', '–'])
                 .map(regex::escape)
                 .collect::<Vec<_>>()
-                .join("[-–]")
+                .join("[-–]");
+            if idx == num_idx && idx + 1 < num_tokens {
+                format!("{joined}[.:]?")
+            } else {
+                joined
+            }
         })
         .collect();
     let token_str = token_regexes.join(r"\s+");
@@ -89,7 +109,10 @@ pub fn locator_pattern(kind: &str, value: &str) -> Regex {
         r"(?i)(?:^|[^\w.])(?:{})(?:$|[^\w.\-–]|\.(?:\W|$)|[-–](?:\D|$))",
         token_str
     );
-    RegexBuilder::new(&pat).case_insensitive(true).build().unwrap()
+    RegexBuilder::new(&pat)
+        .case_insensitive(true)
+        .build()
+        .unwrap()
 }
 
 pub enum DocReader {
@@ -107,7 +130,14 @@ pub struct CitationItem {
     pub source: Vec<(usize, usize, String)>,
 }
 
-pub const DOC_CLASSES: &[&str] = &["databook", "datasheet", "errata", "appnote", "standard", "doc"];
+pub const DOC_CLASSES: &[&str] = &[
+    "databook",
+    "datasheet",
+    "errata",
+    "appnote",
+    "standard",
+    "doc",
+];
 
 pub fn supports<'a>(
     data: &'a Value,
@@ -188,8 +218,12 @@ where
     let mut has_unextracted_own_doc = false;
     let mut supports_list = Vec::new();
     supports(record, base.clone(), false, &mut supports_list);
-    
-    let fact_id = record.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    let fact_id = record
+        .get("id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let mut expected_support = base.clone();
     expected_support.push("support".to_string());
 
@@ -211,7 +245,7 @@ where
                 continue;
             }
         };
-        
+
         let at_locators = match support.get("at").and_then(|v| v.as_array()) {
             Some(arr) => arr.clone(),
             None => Vec::new(),
@@ -241,20 +275,24 @@ where
                         has_unextracted_own_doc = true;
                     }
                     item.status = "skipped".to_string();
-                    add(where_at.clone(), format!("{}: {}: PDF evidence skipped: document is not declared", fact_id, name), "warning");
+                    add(
+                        where_at.clone(),
+                        format!(
+                            "{}: {}: PDF evidence skipped: document is not declared",
+                            fact_id, name
+                        ),
+                        "warning",
+                    );
                     items.push(item);
                     continue;
                 }
             };
 
             let has_pdf_url = ["url", "retrieval"].iter().any(|k| {
-                doc_info
-                    .get(*k)
-                    .and_then(|v| v.as_str())
-                    .is_some_and(|u| {
-                        let path_part = u.split(['?', '#']).next().unwrap_or(u);
-                        path_part.to_ascii_lowercase().ends_with(".pdf")
-                    })
+                doc_info.get(*k).and_then(|v| v.as_str()).is_some_and(|u| {
+                    let path_part = u.split(['?', '#']).next().unwrap_or(u);
+                    path_part.to_ascii_lowercase().ends_with(".pdf")
+                })
             });
             let is_pdf_doc = doc_info.get("page_numbering").and_then(|v| v.as_str()) == Some("pdf")
                 || doc_info.get("pages").is_some()
@@ -292,14 +330,17 @@ where
                         return Ok(());
                     }
                 };
-                
+
                 let page_numbering = doc_info.get("page_numbering").and_then(|v| v.as_str());
                 if page_numbering != Some("pdf") {
                     return Err("LimitExceeded: page_numbering is not pdf".to_string());
                 }
-                
+
                 let bounds = if let Some(pages) = locator.get("pages").and_then(|v| v.as_array()) {
-                    vec![pages.get(0).unwrap_or(&Value::Null).clone(), pages.get(1).unwrap_or(&Value::Null).clone()]
+                    vec![
+                        pages.first().unwrap_or(&Value::Null).clone(),
+                        pages.get(1).unwrap_or(&Value::Null).clone(),
+                    ]
                 } else {
                     let page = locator.get("page").unwrap_or(&Value::Null).clone();
                     vec![page.clone(), page]
@@ -309,27 +350,44 @@ where
                 for b in &bounds {
                     let s = match b.as_str() {
                         Some(s) if s.is_ascii() && s.chars().all(|c| c.is_ascii_digit()) => s,
-                        _ => return Err("LimitExceeded: locator needs numeric PDF page(s)".to_string()),
+                        _ => {
+                            return Err(
+                                "LimitExceeded: locator needs numeric PDF page(s)".to_string()
+                            )
+                        }
                     };
                     let stripped = s.trim_start_matches('0');
                     let norm = if stripped.is_empty() { "0" } else { stripped };
                     if norm.len() > 10 || (norm.len() == 10 && norm > "2147483647") {
-                        return Err("ResolutionError: PDF page exceeds extractor integer range".to_string());
+                        return Err(
+                            "ResolutionError: PDF page exceeds extractor integer range".to_string()
+                        );
                     }
                     normalized.push(norm.to_string());
                 }
 
                 let first: usize = normalized[0].parse().unwrap();
                 let last: usize = normalized[1].parse().unwrap();
-                let count = doc_info.get("pages").and_then(|v| v.as_u64()).map(|n| n as usize);
+                let count = doc_info
+                    .get("pages")
+                    .and_then(|v| v.as_u64())
+                    .map(|n| n as usize);
 
-                if first < 1 || last < first || count.map_or(false, |c| last > c) {
-                    return Err("ResolutionError: PDF page range outside declared pages".to_string());
+                if first < 1 || last < first || count.is_some_and(|c| last > c) {
+                    return Err(
+                        "ResolutionError: PDF page range outside declared pages".to_string()
+                    );
                 }
 
                 let mut lines = Vec::new();
                 for page in first..=last {
-                    let page_lines = reader.page(page).map_err(|e| if e.starts_with("ResolutionError:") { e } else { format!("ResolutionError: {}", e) })?;
+                    let page_lines = reader.page(page).map_err(|e| {
+                        if e.starts_with("ResolutionError:") {
+                            e
+                        } else {
+                            format!("ResolutionError: {}", e)
+                        }
+                    })?;
                     for (n, line) in page_lines.iter().enumerate() {
                         item.source.push((page, n + 1, line.clone()));
                     }
@@ -337,7 +395,9 @@ where
                 }
 
                 if !lines.iter().any(|l| !l.trim().is_empty()) {
-                    return Err("LimitExceeded: cited PDF pages have no extractable text".to_string());
+                    return Err(
+                        "LimitExceeded: cited PDF pages have no extractable text".to_string()
+                    );
                 }
 
                 let text = lines.join("\n");
@@ -347,10 +407,10 @@ where
                         if pattern.is_match(&text) {
                             continue;
                         }
-                        
+
                         let mut nearby = Vec::new();
                         for &page in &[first.saturating_sub(1), last + 1] {
-                            if page < 1 || count.map_or(false, |c| page > c) {
+                            if page < 1 || count.is_some_and(|c| page > c) {
                                 continue;
                             }
                             if let Ok(page_lines) = reader.page(page) {
@@ -360,21 +420,28 @@ where
                                 }
                             }
                         }
-                        
+
                         let suffix = if !nearby.is_empty() {
                             format!("; found on adjacent PDF page(s): {}", nearby.join(", "))
                         } else {
                             "".to_string()
                         };
-                        
+
                         let mut warn_where = where_at.clone();
                         warn_where.push(kind.to_string());
-                        add(warn_where, format!("{}: {}: {} {:?} absent from cited PDF pages{}", fact_id, name, kind, locator_kind, suffix), "warning");
+                        add(
+                            warn_where,
+                            format!(
+                                "{}: {}: {} {:?} absent from cited PDF pages{}",
+                                fact_id, name, kind, locator_kind, suffix
+                            ),
+                            "warning",
+                        );
                     }
                 }
 
                 item.status = "resolved".to_string();
-                
+
                 if is_own_support {
                     pdf_own_lines.extend(lines.iter().cloned());
                     own_lines.extend(lines);
@@ -393,12 +460,34 @@ where
                 Err(e) => {
                     if e.starts_with("LimitExceeded:") {
                         item.status = "skipped".to_string();
-                        add(where_at.clone(), format!("{}: {}: PDF evidence skipped: {}", fact_id, name, e.trim_start_matches("LimitExceeded: ").trim()), "warning");
+                        add(
+                            where_at.clone(),
+                            format!(
+                                "{}: {}: PDF evidence skipped: {}",
+                                fact_id,
+                                name,
+                                e.trim_start_matches("LimitExceeded: ").trim()
+                            ),
+                            "warning",
+                        );
                     } else if e.starts_with("ResolutionError:") {
-                        add(where_at.clone(), format!("{}: {}: {}", fact_id, name, e.trim_start_matches("ResolutionError: ").trim()), "error");
+                        add(
+                            where_at.clone(),
+                            format!(
+                                "{}: {}: {}",
+                                fact_id,
+                                name,
+                                e.trim_start_matches("ResolutionError: ").trim()
+                            ),
+                            "error",
+                        );
                     } else {
                         item.status = "skipped".to_string();
-                        add(where_at.clone(), format!("{}: {}: PDF evidence skipped: {}", fact_id, name, e), "warning");
+                        add(
+                            where_at.clone(),
+                            format!("{}: {}: PDF evidence skipped: {}", fact_id, name, e),
+                            "warning",
+                        );
                     }
                 }
             }
@@ -406,7 +495,7 @@ where
             items.push(item);
         }
     }
-    
+
     DocCitationsResult {
         items,
         own_lines,
@@ -426,4 +515,112 @@ pub fn hex_values(text: &str) -> Vec<String> {
         values.push(cap[0].to_string());
     }
     values
+}
+
+/// Extracts and normalizes hex values in document text (`0x...` and vendor `h`-suffix notation)
+/// to integer `u64` values (`BF-IMX-ISS-7`, `BF-IMX-16`).
+pub fn hex_values_u64(text: &str) -> std::collections::BTreeSet<u64> {
+    let mut set = std::collections::BTreeSet::new();
+    let re1 = Regex::new(r"(?i)\b0x([0-9a-f](?:[0-9a-f_']*[0-9a-f])?)(?:u(?:ll|l)?|(?:ll|l)u?)?\b")
+        .unwrap();
+    for cap in re1.captures_iter(text) {
+        if let Some(m) = cap.get(1) {
+            let s = m.as_str().replace(['_', '\''], "");
+            if let Ok(v) = u64::from_str_radix(&s, 16) {
+                set.insert(v);
+            }
+        }
+    }
+    let re2 = Regex::new(r"\b([0-9][0-9A-Fa-f_]*|[0-9A-F][0-9A-F_]+)[hH]\b").unwrap();
+    for cap in re2.captures_iter(text) {
+        if let Some(m) = cap.get(1) {
+            let s = m.as_str().replace('_', "");
+            if let Ok(v) = u64::from_str_radix(&s, 16) {
+                set.insert(v);
+            }
+        }
+    }
+    set
+}
+
+/// Checks whether a cited `section` locator on `[first_page, last_page]` is covered by a verified
+/// `<root>/index/<doc>.index.yaml` entry (`BF-IMX-ISS-6` part 1, `BF-IMX-17`).
+pub fn section_covered_by_index(
+    index_data: &Value,
+    expected_doc_sha256: Option<&str>,
+    section_locator: &str,
+    first_page: usize,
+    last_page: usize,
+) -> Result<bool, String> {
+    let idx_sha = index_data
+        .get("sha256")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    if let Some(expected) = expected_doc_sha256 {
+        if !expected.is_empty() && idx_sha != expected {
+            return Err(format!(
+                "stale index: index sha256 ({idx_sha}) does not match document sha256 ({expected})"
+            ));
+        }
+    }
+    let Some(sections) = index_data.get("sections").and_then(Value::as_array) else {
+        return Ok(false);
+    };
+    let (cited_title, cited_num) = crate::index::normalize_cited_section(section_locator);
+
+    for entry in sections {
+        let Some(obj) = entry.as_object() else {
+            continue;
+        };
+        let (start_p, end_p) = if let Some(arr) = obj.get("pages").and_then(Value::as_array) {
+            if arr.len() == 2 {
+                (
+                    arr[0].as_u64().map(|n| n as usize),
+                    arr[1].as_u64().map(|n| n as usize),
+                )
+            } else {
+                (None, None)
+            }
+        } else {
+            let sp = obj
+                .get("start_page")
+                .or_else(|| obj.get("page"))
+                .and_then(Value::as_u64)
+                .map(|n| n as usize);
+            let ep = obj
+                .get("end_page")
+                .and_then(Value::as_u64)
+                .map(|n| n as usize)
+                .or(sp);
+            (sp, ep)
+        };
+        let (Some(sp), Some(ep)) = (start_p, end_p) else {
+            continue;
+        };
+        if !(sp <= first_page && last_page <= ep) {
+            continue;
+        }
+        let num_match = cited_num.as_ref().is_some_and(|cn| {
+            obj.get("number")
+                .and_then(Value::as_str)
+                .and_then(|s| {
+                    crate::index::normalize_cited_section(s)
+                        .1
+                        .or_else(|| Some(s.trim().to_string()))
+                })
+                .as_ref()
+                .is_some_and(|sn| sn.eq_ignore_ascii_case(cn))
+        });
+        let title_match = !cited_title.is_empty()
+            && obj
+                .get("title")
+                .and_then(Value::as_str)
+                .map(|s| crate::index::normalize_cited_section(s).0)
+                .as_deref()
+                .is_some_and(|st| st.eq_ignore_ascii_case(&cited_title));
+        if num_match || title_match {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }

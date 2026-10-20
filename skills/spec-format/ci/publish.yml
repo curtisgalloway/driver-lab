@@ -11,7 +11,6 @@ permissions:
   contents: read
 env:
   TOOL_COMMIT: '0000000000000000000000000000000000000000'
-  PYTHONDONTWRITEBYTECODE: '1'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,12 +31,14 @@ jobs:
           path: tooling
           persist-credentials: false
       - name: Build pinned driver-lab renderer
+        working-directory: tooling
         env:
           DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
           if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
-            cargo build --release --locked --manifest-path tooling/Cargo.toml
-            echo "DRIVER_LAB_BIN=$PWD/tooling/target/release/driver-lab" >> "$GITHUB_ENV"
+            cargo build --release --locked
+            target/release/driver-lab --version | grep -F "$TOOL_COMMIT"
+            echo "DRIVER_LAB_BIN=$PWD/target/release/driver-lab" >> "$GITHUB_ENV"
           fi
       - name: Build both views and repeat containment checks
         env:
@@ -82,12 +83,14 @@ jobs:
           path: tooling
           persist-credentials: false
       - name: Build pinned driver-lab renderer
+        working-directory: tooling
         env:
           DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
           if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
-            cargo build --release --locked --manifest-path tooling/Cargo.toml
-            echo "DRIVER_LAB_BIN=$PWD/tooling/target/release/driver-lab" >> "$GITHUB_ENV"
+            cargo build --release --locked
+            target/release/driver-lab --version | grep -F "$TOOL_COMMIT"
+            echo "DRIVER_LAB_BIN=$PWD/target/release/driver-lab" >> "$GITHUB_ENV"
           fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:

@@ -33,6 +33,8 @@ jobs:
 
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       # driver-lab (spec format CLI) and the self-test's fixtures live in driver-lab. Pinned to a
       # commit on its main branch so an upstream edit cannot change what runs here unreviewed;
@@ -50,11 +52,13 @@ jobs:
       # Build the pinned driver-lab Rust CLI binary from Cargo.lock; checks.sh runs this binary
       # via DRIVER_LAB_BIN.
       - name: Build pinned driver-lab CLI
+        working-directory: .driver-lab
         env:
           DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
-          cargo build --release --locked --manifest-path .driver-lab/Cargo.toml
-          echo "DRIVER_LAB_BIN=$PWD/.driver-lab/target/release/driver-lab" >> "$GITHUB_ENV"
+          cargo build --release --locked
+          target/release/driver-lab --version | grep -F "$TOOL_COMMIT"
+          echo "DRIVER_LAB_BIN=$PWD/target/release/driver-lab" >> "$GITHUB_ENV"
 
       - name: Root marker, specs and verification records (driver-lab check --require-license --require-verified)
         run: scripts/checks.sh --mode "$CHECKS_MODE" check .driver-lab

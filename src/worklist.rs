@@ -5,8 +5,8 @@
 
 use crate::diagnostic::{visible_name, EXIT_DOMAIN_FAILURE, EXIT_OK, EXIT_USAGE_ERROR};
 use crate::records::{
-    has_support, load_schemas, Checker, PathElem, RootInfo, SpecFile, SpecRecord,
-    SpecStatusEntry, StatusReport, STATUSES, SUMMARY,
+    has_support, load_schemas, Checker, PathElem, RootInfo, SpecFile, SpecRecord, SpecStatusEntry,
+    StatusReport, STATUSES, SUMMARY,
 };
 use crate::{Cli, StatusArgs, TodoArgs};
 use serde::{Deserialize, Serialize};
@@ -522,10 +522,7 @@ pub fn run_todo_cmd(
         })
         .collect();
     let mut tail = format!("{} TODO(s): {}", items.len(), parts.join(", "));
-    let crit = summary
-        .get("critical")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let crit = summary.get("critical").and_then(Value::as_u64).unwrap_or(0);
     if crit > 0 {
         tail.push_str(&format!(" ({crit} critical)"));
     }
@@ -691,7 +688,11 @@ pub fn run_status_cmd(
             "no record".to_string()
         };
 
-        text.push(format!("{}:{rel} ({}): {summary}", root.label(), f.spec_id()));
+        text.push(format!(
+            "{}:{rel} ({}): {summary}",
+            root.label(),
+            f.spec_id()
+        ));
         for r in &rows {
             let mut notes = Vec::new();
             if let Some(v) = &r.verdict {

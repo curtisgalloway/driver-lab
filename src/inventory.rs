@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{sandbox::ScratchResolver, Cli, InventoryArgs};
 use std::collections::HashMap;
 use std::io::Write;
-use crate::{Cli, InventoryArgs, sandbox::ScratchResolver};
 
 pub fn strip_comments(text: &str) -> String {
     let mut out = String::new();
@@ -12,7 +12,7 @@ pub fn strip_comments(text: &str) -> String {
     let mut in_line = false;
     let mut in_string = false;
     let mut in_char = false;
-    
+
     while let Some(c) = chars.next() {
         if in_block {
             if c == '*' && chars.peek() == Some(&'/') {
@@ -28,14 +28,18 @@ pub fn strip_comments(text: &str) -> String {
         } else if in_string {
             out.push(c);
             if c == '\\' {
-                if let Some(n) = chars.next() { out.push(n); }
+                if let Some(n) = chars.next() {
+                    out.push(n);
+                }
             } else if c == '"' {
                 in_string = false;
             }
         } else if in_char {
             out.push(c);
             if c == '\\' {
-                if let Some(n) = chars.next() { out.push(n); }
+                if let Some(n) = chars.next() {
+                    out.push(n);
+                }
             } else if c == '\'' {
                 in_char = false;
             }
@@ -66,32 +70,83 @@ pub fn strip_comments(text: &str) -> String {
 enum Token {
     Int(u32, bool),
     Name(String),
-    Plus, Minus, Star, Slash, Percent,
-    Shl, Shr, Amp, Pipe, Caret, Tilde,
-    LParen, RParen, Comma,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Percent,
+    Shl,
+    Shr,
+    Amp,
+    Pipe,
+    Caret,
+    Tilde,
+    LParen,
+    RParen,
+    Comma,
 }
 
 fn tokenize(source: &str, names: &HashMap<String, u32>) -> Result<Vec<Token>, String> {
     let mut tokens = Vec::new();
     let mut chars = source.char_indices().peekable();
 
-    while let Some(&(i, c)) = chars.peek() {
+    while let Some(&(_i, c)) = chars.peek() {
         if c.is_ascii_whitespace() {
             chars.next();
             continue;
         }
 
-        if c == '+' { chars.next(); tokens.push(Token::Plus); continue; }
-        if c == '-' { chars.next(); tokens.push(Token::Minus); continue; }
-        if c == '*' { chars.next(); tokens.push(Token::Star); continue; }
-        if c == '/' { chars.next(); tokens.push(Token::Slash); continue; }
-        if c == '%' { chars.next(); tokens.push(Token::Percent); continue; }
-        if c == '~' { chars.next(); tokens.push(Token::Tilde); continue; }
-        if c == '^' { chars.next(); tokens.push(Token::Caret); continue; }
-        if c == '(' { chars.next(); tokens.push(Token::LParen); continue; }
-        if c == ')' { chars.next(); tokens.push(Token::RParen); continue; }
-        if c == ',' { chars.next(); tokens.push(Token::Comma); continue; }
-        
+        if c == '+' {
+            chars.next();
+            tokens.push(Token::Plus);
+            continue;
+        }
+        if c == '-' {
+            chars.next();
+            tokens.push(Token::Minus);
+            continue;
+        }
+        if c == '*' {
+            chars.next();
+            tokens.push(Token::Star);
+            continue;
+        }
+        if c == '/' {
+            chars.next();
+            tokens.push(Token::Slash);
+            continue;
+        }
+        if c == '%' {
+            chars.next();
+            tokens.push(Token::Percent);
+            continue;
+        }
+        if c == '~' {
+            chars.next();
+            tokens.push(Token::Tilde);
+            continue;
+        }
+        if c == '^' {
+            chars.next();
+            tokens.push(Token::Caret);
+            continue;
+        }
+        if c == '(' {
+            chars.next();
+            tokens.push(Token::LParen);
+            continue;
+        }
+        if c == ')' {
+            chars.next();
+            tokens.push(Token::RParen);
+            continue;
+        }
+        if c == ',' {
+            chars.next();
+            tokens.push(Token::Comma);
+            continue;
+        }
+
         if c == '<' {
             chars.next();
             if let Some(&(_, '<')) = chars.peek() {
@@ -144,7 +199,7 @@ fn tokenize(source: &str, names: &HashMap<String, u32>) -> Result<Vec<Token>, St
                     break;
                 }
             }
-            
+
             let num_str_lower = num_str.to_lowercase();
             let mut num_part = num_str_lower.as_str();
             let mut unsigned = false;
@@ -167,17 +222,19 @@ fn tokenize(source: &str, names: &HashMap<String, u32>) -> Result<Vec<Token>, St
             let value = if base == 16 {
                 if num_part.len() > 2 {
                     i64::from_str_radix(&num_part[2..], 16).map_err(|_| "invalid hex")?
-                } else { 0 }
+                } else {
+                    0
+                }
             } else if base == 8 {
                 i64::from_str_radix(num_part, 8).map_err(|_| "invalid octal")?
             } else {
-                i64::from_str_radix(num_part, 10).map_err(|_| "invalid decimal")?
+                num_part.parse::<i64>().map_err(|_| "invalid decimal")?
             };
-            
+
             if base != 10 && value > 0x7fffffff {
                 unsigned = true;
             }
-            if value < 0 || value > 0xffffffff {
+            if !(0..=0xffffffff).contains(&value) {
                 return Err("integer outside unsigned 32-bit range".into());
             }
             tokens.push(Token::Int(value as u32, unsigned));
@@ -194,7 +251,12 @@ fn tokenize(source: &str, names: &HashMap<String, u32>) -> Result<Vec<Token>, St
                     break;
                 }
             }
-            if !names.contains_key(&name) && name != "BIT" && name != "BIT_ULL" && name != "GENMASK" && name != "GENMASK_ULL" {
+            if !names.contains_key(&name)
+                && name != "BIT"
+                && name != "BIT_ULL"
+                && name != "GENMASK"
+                && name != "GENMASK_ULL"
+            {
                 return Err(format!("unsupported name: {}", name));
             }
             tokens.push(Token::Name(name));
@@ -231,12 +293,16 @@ impl<'a> Parser<'a> {
 
     fn next(&mut self) -> Option<&Token> {
         let t = self.tokens.get(self.pos);
-        if t.is_some() { self.pos += 1; }
+        if t.is_some() {
+            self.pos += 1;
+        }
         t
     }
 
     fn parse_expr(&mut self, prec: u8, depth: usize) -> Result<(i64, bool), String> {
-        if depth > 32 { return Err("expression nesting".into()); }
+        if depth > 32 {
+            return Err("expression nesting".into());
+        }
         let mut left = self.parse_prefix(depth)?;
 
         while let Some(t) = self.peek() {
@@ -252,7 +318,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_prefix(&mut self, depth: usize) -> Result<(i64, bool), String> {
-        if depth > 32 { return Err("expression nesting".into()); }
+        if depth > 32 {
+            return Err("expression nesting".into());
+        }
         let t = self.next().ok_or("unexpected EOF")?.clone();
         match t {
             Token::Int(v, u) => Ok((v as i64, u)),
@@ -291,7 +359,7 @@ impl<'a> Parser<'a> {
             Token::Minus => {
                 let (v, u) = self.parse_prefix(depth + 1)?;
                 let val = -v;
-                if val < 0 || val > 0xffffffff {
+                if !(0..=0xffffffff).contains(&val) {
                     return Err("integer outside unsigned 32-bit range".into());
                 }
                 Ok((val, u))
@@ -299,7 +367,7 @@ impl<'a> Parser<'a> {
             Token::Tilde => {
                 let (v, u) = self.parse_prefix(depth + 1)?;
                 let val = !v;
-                if val < 0 || val > 0xffffffff {
+                if !(0..=0xffffffff).contains(&val) {
                     return Err("integer outside unsigned 32-bit range".into());
                 }
                 Ok((val, u))
@@ -319,7 +387,7 @@ impl<'a> Parser<'a> {
         if name == "BIT" || name == "BIT_ULL" {
             if args.len() == 1 {
                 let v = args[0].0;
-                if v >= 0 && v <= 31 {
+                if (0..=31).contains(&v) {
                     Ok(((1_i64 << v), true))
                 } else {
                     Err("shift bound".into())
@@ -344,7 +412,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn apply_binop(&self, op: Token, left: (i64, bool), right: (i64, bool)) -> Result<(i64, bool), String> {
+    fn apply_binop(
+        &self,
+        op: Token,
+        left: (i64, bool),
+        right: (i64, bool),
+    ) -> Result<(i64, bool), String> {
         let (lv, lu) = left;
         let (rv, ru) = right;
         let unsigned = match op {
@@ -352,7 +425,7 @@ impl<'a> Parser<'a> {
             _ => lu || ru,
         };
 
-        if matches!(op, Token::Shl | Token::Shr) && (rv < 0 || rv > 31) {
+        if matches!(op, Token::Shl | Token::Shr) && !(0..=31).contains(&rv) {
             return Err("shift bound".into());
         }
         if matches!(op, Token::Slash | Token::Percent) && rv == 0 {
@@ -363,16 +436,20 @@ impl<'a> Parser<'a> {
             Token::Plus => lv + rv,
             Token::Minus => lv - rv,
             Token::Star => lv * rv,
-            Token::Slash => if unsigned {
-                (lv as u32 / rv as u32) as i64
-            } else {
-                lv.div_euclid(rv)
-            },
-            Token::Percent => if unsigned {
-                (lv as u32 % rv as u32) as i64
-            } else {
-                lv.rem_euclid(rv)
-            },
+            Token::Slash => {
+                if unsigned {
+                    (lv as u32 / rv as u32) as i64
+                } else {
+                    lv.div_euclid(rv)
+                }
+            }
+            Token::Percent => {
+                if unsigned {
+                    (lv as u32 % rv as u32) as i64
+                } else {
+                    lv.rem_euclid(rv)
+                }
+            }
             Token::Shl => lv << rv,
             Token::Shr => lv >> rv,
             Token::Amp => lv & rv,
@@ -381,13 +458,14 @@ impl<'a> Parser<'a> {
             _ => unreachable!(),
         };
 
-        if matches!(op, Token::Plus | Token::Minus | Token::Star | Token::Shl) {
-            if !unsigned && val > 0x7fffffff {
-                return Err("possible signed overflow".into());
-            }
+        if matches!(op, Token::Plus | Token::Minus | Token::Star | Token::Shl)
+            && !unsigned
+            && val > 0x7fffffff
+        {
+            return Err("possible signed overflow".into());
         }
 
-        if val < 0 || val > 0xffffffff {
+        if !(0..=0xffffffff).contains(&val) {
             return Err("integer outside unsigned 32-bit range".into());
         }
 
@@ -402,10 +480,7 @@ pub fn integer(expression: &str, names: &HashMap<String, u32>) -> Result<Option<
         return Err("expression length bound".into());
     }
 
-    let tokens = match tokenize(&source, names) {
-        Ok(t) => t,
-        Err(e) => return Err(e),
-    };
+    let tokens = tokenize(&source, names)?;
 
     if tokens.is_empty() {
         return Ok(None);

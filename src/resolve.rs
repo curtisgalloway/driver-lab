@@ -1,30 +1,34 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::diagnostic::ExitCode;
+use crate::diagnostic::{ExitCode, Finding};
 use crate::docresolve::{citations_with_status, DocReader, PdfPages, DOC_CLASSES};
-use crate::git_source::{Resolver, OperationalError, collect_spec_files_from_targets};
-use crate::yaml_strict::{load_file, Loaded, PathSegment};
+use crate::git_source::{
+    collect_spec_files_from_targets, display_line, is_valid_commit_oid, node_range, symbol_in,
+    GitError, OperationalError, PreconditionError, Resolver,
+};
 use crate::sandbox::ScratchResolver;
+use crate::yaml_strict::{load_file, Loaded, PathSegment};
 use crate::{Cli, ResolveArgs, ShowArgs};
 use regex::Regex;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use std::io::Write;
 
 pub fn hex_values(text: &str) -> BTreeSet<u64> {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {
-        Regex::new(r"(?i)\b0x([0-9a-f](?:[0-9a-f_']*[0-9a-f])?)(?:u(?:ll|l)?|(?:ll|l)u?)?\b").unwrap()
+        Regex::new(r"(?i)\b0x([0-9a-f](?:[0-9a-f_']*[0-9a-f])?)(?:u(?:ll|l)?|(?:ll|l)u?)?\b")
+            .unwrap()
     });
     let mut set = BTreeSet::new();
     for cap in re.captures_iter(text) {
         if let Some(m) = cap.get(1) {
-            let s = m.as_str().replace('_', "").replace('\'', "");
+            let s = m.as_str().replace(['_', '\''], "");
             if let Ok(v) = u64::from_str_radix(&s, 16) {
                 set.insert(v);
             }
@@ -33,10 +37,7 @@ pub fn hex_values(text: &str) -> BTreeSet<u64> {
     set
 }
 
-pub fn anchors<'a>(
-    data: &'a Value,
-    base: Vec<String>,
-) -> Vec<(&'a Map<String, Value>, Vec<String>)> {
+pub fn anchors(data: &Value, base: Vec<String>) -> Vec<(&Map<String, Value>, Vec<String>)> {
     let mut entries = Vec::new();
     crate::docresolve::supports(data, base, true, &mut entries);
     let mut res = Vec::new();
@@ -47,7 +48,9 @@ pub fn anchors<'a>(
                     for (a, anchor) in arr.iter().enumerate() {
                         if let Some(anchor_map) = anchor.as_object() {
                             let mut p = path.clone();
-                            if p.last().map(|s| s.as_str()) == Some("impl") || p.last().map(|s| s.as_str()) == Some("ref") {
+                            if p.last().map(|s| s.as_str()) == Some("impl")
+                                || p.last().map(|s| s.as_str()) == Some("ref")
+                            {
                                 p.push(a.to_string());
                             } else {
                                 p.push("anchors".to_string());
@@ -69,19 +72,26 @@ pub fn check_url(url: &Value) -> Result<(), OperationalError> {
             return Ok(());
         }
     }
-    Err(OperationalError::fail("repository URL must be an https:// URL"))
+    Err(OperationalError::fail(
+        "repository URL must be an https:// URL",
+    ))
 }
 
 pub fn check_commit(commit: &Value) -> Result<(), OperationalError> {
     if let Some(s) = commit.as_str() {
-        if crate::git_source::is_valid_commit_oid(s) {
+        if is_valid_commit_oid(s) {
             return Ok(());
         }
     }
-    Err(OperationalError::fail("pin must be a full lowercase commit id"))
+    Err(OperationalError::fail(
+        "pin must be a full lowercase commit id",
+    ))
 }
 
-pub fn listed_file<'a>(entry: &'a Map<String, Value>, anchor: &Map<String, Value>) -> Result<&'a Map<String, Value>, OperationalError> {
+pub fn listed_file<'a>(
+    entry: &'a Map<String, Value>,
+    anchor: &Map<String, Value>,
+) -> Result<&'a Map<String, Value>, OperationalError> {
     let path = anchor.get("path").and_then(|v| v.as_str()).unwrap_or("");
     let mut listed = None;
     if let Some(files) = entry.get("files").and_then(|v| v.as_array()) {
@@ -89,86 +99,155 @@ pub fn listed_file<'a>(entry: &'a Map<String, Value>, anchor: &Map<String, Value
             if let Some(fmap) = f.as_object() {
                 if fmap.get("path").and_then(|v| v.as_str()) == Some(path) {
                     if listed.is_some() {
-                        return Err(OperationalError::fail(format!("{path}: must occur exactly once in the closed files list")));
+                        return Err(OperationalError::fail(format!(
+                            "{path}: must occur exactly once in the closed files list"
+                        )));
                     }
                     listed = Some(fmap);
                 }
             }
         }
     }
-    listed.ok_or_else(|| OperationalError::fail(format!("{path}: must occur exactly once in the closed files list")))
+    listed.ok_or_else(|| {
+        OperationalError::fail(format!(
+            "{path}: must occur exactly once in the closed files list"
+        ))
+    })
 }
 
-pub fn check_anchor(entry: &Map<String, Value>, anchor: &Map<String, Value>) -> Result<(), OperationalError> {
+pub fn check_anchor(
+    entry: &Map<String, Value>,
+    anchor: &Map<String, Value>,
+) -> Result<(), OperationalError> {
     if anchor.contains_key("stale") {
-        return Err(OperationalError::fail("stale anchor; re-verify before resolving"));
+        return Err(OperationalError::fail(
+            "stale anchor; re-verify before resolving",
+        ));
     }
     check_url(entry.get("url").unwrap_or(&Value::Null))?;
     check_commit(entry.get("commit").unwrap_or(&Value::Null))?;
     listed_file(entry, anchor)?;
-    
+
     if let Some(lines) = anchor.get("lines").and_then(|v| v.as_array()) {
         if lines.len() == 2 {
             let s = lines[0].as_u64().unwrap_or(0);
             let e = lines[1].as_u64().unwrap_or(0);
             if !(1 <= s && s <= e) {
-                return Err(OperationalError::fail("line range must be positive and ordered"));
+                return Err(OperationalError::fail(
+                    "line range must be positive and ordered",
+                ));
             }
         }
     }
     Ok(())
 }
 
-fn display_line(line: &str) -> String {
-    line.to_string()
+/// Collects unique `(name, commit)` pairs from `resources.repos` across `target_files`,
+/// parsed strictly with `yaml_strict::load_file` (`BF-GW-23`).
+pub fn discover_repo_pins(target_files: &[PathBuf]) -> Vec<(String, String)> {
+    let mut seen = Vec::new();
+    for path in target_files {
+        let loaded = load_file(path);
+        let Some(data) = &loaded.data else {
+            continue;
+        };
+        let Some(repos) = data
+            .get("resources")
+            .and_then(|v| v.get("repos"))
+            .and_then(Value::as_array)
+        else {
+            continue;
+        };
+        for entry in repos {
+            let Some(m) = entry.as_object() else {
+                continue;
+            };
+            let Some(name) = m.get("name").and_then(Value::as_str) else {
+                continue;
+            };
+            let Some(commit) = m.get("commit").and_then(Value::as_str) else {
+                continue;
+            };
+            if !name.is_empty() && is_valid_commit_oid(commit) {
+                let pair = (name.to_string(), commit.to_string());
+                if !seen.contains(&pair) {
+                    seen.push(pair);
+                }
+            }
+        }
+    }
+    seen
 }
 
-pub fn run_resolve_cmd(cli: &Cli, args: &ResolveArgs, scratch: &ScratchResolver, stdout: &mut dyn Write, _stderr: &mut dyn Write) -> i32 {
-    let timeout = 300;
-    let limit_mb = 50;
-    
+pub fn run_resolve_cmd(
+    cli: &Cli,
+    args: &ResolveArgs,
+    scratch: &ScratchResolver,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
     let target_files = match collect_spec_files_from_targets(&args.targets) {
         Ok(t) => t,
-        Err(e) => return return_error(e.0, cli.json, stdout),
+        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
     };
+
+    if args.list_repos {
+        let pins = discover_repo_pins(&target_files);
+        if cli.json {
+            let items: Vec<Value> = pins
+                .iter()
+                .map(|(n, c)| json!({"name": n, "commit": c}))
+                .collect();
+            let _ = writeln!(
+                stdout,
+                "{}",
+                serde_json::to_string_pretty(&json!({"ok": true, "repos": items})).unwrap()
+            );
+        } else {
+            for (name, commit) in pins {
+                let _ = writeln!(stdout, "{name}\t{commit}");
+            }
+        }
+        return ExitCode::Pass as i32;
+    }
 
     let mut resolver = match Resolver::new(
         &args.repos,
         args.docs_dir.clone(),
         args.root.clone(),
-        timeout,
-        limit_mb,
+        args.timeout,
+        args.limit_mb,
         cli.offline,
         scratch,
     ) {
         Ok(r) => r,
-        Err(e) => return return_error(e.0, cli.json, stdout),
+        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
     };
 
-    let (code, res) = run_impl(cli, false, &target_files, &mut resolver);
-    print_result(res, cli.json, stdout);
-    code
+    match run_impl(cli, false, &target_files, &mut resolver) {
+        Ok((code, res)) => {
+            print_result(&res, cli.json, stdout, stderr);
+            code
+        }
+        Err(pre) => return_error(
+            pre.message,
+            ExitCode::SandboxError,
+            cli.json,
+            stdout,
+            stderr,
+        ),
+    }
 }
 
-pub fn run_show_cmd(cli: &Cli, args: &ShowArgs, scratch: &ScratchResolver, stdout: &mut dyn Write, _stderr: &mut dyn Write) -> i32 {
-    let timeout = 300;
-    let limit_mb = 50;
-
-    let mut resolver = match Resolver::new(
-        &args.repos,
-        args.docs_dir.clone(),
-        args.root.clone(),
-        timeout,
-        limit_mb,
-        cli.offline,
-        scratch,
-    ) {
-        Ok(r) => r,
-        Err(e) => return return_error(e.0, cli.json, stdout),
-    };
-
-    let raw_targets = if PathBuf::from(&args.fact_ref).exists() {
-        vec![PathBuf::from(&args.fact_ref)]
+pub fn run_show_cmd(
+    cli: &Cli,
+    args: &ShowArgs,
+    scratch: &ScratchResolver,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let raw_targets = if !args.targets.is_empty() {
+        args.targets.clone()
     } else if let Some(ref r) = args.root {
         vec![r.clone()]
     } else {
@@ -179,15 +258,45 @@ pub fn run_show_cmd(cli: &Cli, args: &ShowArgs, scratch: &ScratchResolver, stdou
     } else {
         match collect_spec_files_from_targets(&raw_targets) {
             Ok(t) => t,
-            Err(e) => return return_error(e.0, cli.json, stdout),
+            Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
         }
     };
-    let (code, res) = run_impl(cli, true, &target_files, &mut resolver);
-    print_result(res, cli.json, stdout);
-    code
+
+    let mut resolver = match Resolver::new(
+        &args.repos,
+        args.docs_dir.clone(),
+        args.root.clone(),
+        args.timeout,
+        args.limit_mb,
+        cli.offline,
+        scratch,
+    ) {
+        Ok(r) => r,
+        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
+    };
+
+    match run_impl(cli, true, &target_files, &mut resolver) {
+        Ok((code, res)) => {
+            print_result(&res, cli.json, stdout, stderr);
+            code
+        }
+        Err(pre) => return_error(
+            pre.message,
+            ExitCode::SandboxError,
+            cli.json,
+            stdout,
+            stderr,
+        ),
+    }
 }
 
-fn return_error(msg: String, json_out: bool, stdout: &mut dyn Write) -> i32 {
+fn return_error(
+    msg: String,
+    code: ExitCode,
+    json_out: bool,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
     if json_out {
         let out = json!({
             "ok": false,
@@ -201,24 +310,27 @@ fn return_error(msg: String, json_out: bool, stdout: &mut dyn Write) -> i32 {
         });
         let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&out).unwrap());
     } else {
-        let _ = writeln!(stdout, "error: {}", msg);
+        let prefix = match code {
+            ExitCode::UsageError => "usage error",
+            ExitCode::SandboxError => "missing precondition",
+            _ => "error",
+        };
+        let _ = writeln!(stderr, "{prefix}: {msg}");
     }
-    ExitCode::UsageError as i32
+    code as i32
 }
 
-fn print_result(res: Value, json_out: bool, stdout: &mut dyn Write) {
+fn print_result(res: &Value, json_out: bool, stdout: &mut dyn Write, _stderr: &mut dyn Write) {
     if json_out {
         let mut out = res.clone();
         if let Some(map) = out.as_object_mut() {
             map.remove("_text");
         }
         let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&out).unwrap());
-    } else {
-        if let Some(arr) = res.get("_text").and_then(|v| v.as_array()) {
-            for line in arr {
-                if let Some(s) = line.as_str() {
-                    let _ = writeln!(stdout, "{}", s);
-                }
+    } else if let Some(arr) = res.get("_text").and_then(Value::as_array) {
+        for line in arr {
+            if let Some(s) = line.as_str() {
+                let _ = writeln!(stdout, "{s}");
             }
         }
     }
@@ -227,7 +339,7 @@ fn print_result(res: Value, json_out: bool, stdout: &mut dyn Write) {
 fn records(data: &Value) -> Vec<(&Value, Vec<String>)> {
     let mut res = Vec::new();
     for group in ["facts", "instances", "variants"] {
-        if let Some(arr) = data.get(group).and_then(|v| v.as_array()) {
+        if let Some(arr) = data.get(group).and_then(Value::as_array) {
             for (i, rec) in arr.iter().enumerate() {
                 if rec.is_object() {
                     res.push((rec, vec![group.to_string(), i.to_string()]));
@@ -252,25 +364,48 @@ fn mark_for_at(loaded: &Loaded, at: &[String]) -> crate::yaml_strict::Mark {
     loaded.mark(&segs, None)
 }
 
-fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut Resolver) -> (i32, Value) {
+fn run_impl(
+    _cli: &Cli,
+    is_show: bool,
+    target_files: &[PathBuf],
+    resolver: &mut Resolver,
+) -> Result<(i32, Value), PreconditionError> {
     let mut findings_out = Vec::new();
     let mut anchors_out = Vec::new();
     let mut document_citations_out = Vec::new();
     let mut facts_out = Vec::new();
+    let mut declared_repo_names = BTreeSet::new();
 
     for path in target_files {
         let loaded = load_file(path);
+        for lf in loaded.findings() {
+            findings_out.push(json!({
+                "path": lf.path,
+                "line": lf.line,
+                "column": lf.col,
+                "level": lf.level.as_str(),
+                "message": lf.message,
+            }));
+        }
         let Some(data) = &loaded.data else {
             continue;
         };
         let path_str = path.to_string_lossy().to_string();
 
         let mut by_name = BTreeMap::new();
-        if let Some(repos) = data.get("resources").and_then(|v| v.get("repos")).and_then(|v| v.as_array()) {
+        if let Some(repos) = data
+            .get("resources")
+            .and_then(|v| v.get("repos"))
+            .and_then(Value::as_array)
+        {
             for entry in repos {
                 if let Some(m) = entry.as_object() {
-                    if let Some(name) = m.get("name").and_then(|v| v.as_str()) {
-                        by_name.entry(name.to_string()).or_insert_with(Vec::new).push(m.clone());
+                    if let Some(name) = m.get("name").and_then(Value::as_str) {
+                        declared_repo_names.insert(name.to_string());
+                        by_name
+                            .entry(name.to_string())
+                            .or_insert_with(Vec::new)
+                            .push(m.clone());
                     }
                 }
             }
@@ -287,29 +422,35 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                     let Some(doc_name) = doc.get("name").and_then(|v| v.as_str()) else {
                         continue;
                     };
-                    let reader = if let Some(expected_sha) = doc.get("sha256").and_then(|v| v.as_str()) {
+                    let reader = if let Some(expected_sha) =
+                        doc.get("sha256").and_then(|v| v.as_str())
+                    {
                         let doc_path = docs_dir.join(doc_name);
                         let check_res: Result<DocReader, String> = (|| {
-                            let meta = fs::symlink_metadata(&doc_path)
-                                .map_err(|_| format!("document {doc_name}: missing regular file"))?;
+                            let meta = fs::symlink_metadata(&doc_path).map_err(|_| {
+                                format!("document {doc_name}: missing regular file")
+                            })?;
                             if meta.file_type().is_symlink() || !meta.is_file() {
                                 return Err(format!("document {doc_name}: missing regular file"));
                             }
-                            let mut file = fs::File::open(&doc_path)
-                                .map_err(|_| format!("document {doc_name}: missing regular file"))?;
+                            let mut file = fs::File::open(&doc_path).map_err(|_| {
+                                format!("document {doc_name}: missing regular file")
+                            })?;
                             let mut hasher = Sha256::new();
                             let mut magic = [0u8; 5];
                             let mut magic_len = 0usize;
                             let mut buf = [0u8; 65536];
                             loop {
-                                let n = std::io::Read::read(&mut file, &mut buf)
-                                    .map_err(|_| format!("document {doc_name}: missing regular file"))?;
+                                let n = std::io::Read::read(&mut file, &mut buf).map_err(|_| {
+                                    format!("document {doc_name}: missing regular file")
+                                })?;
                                 if n == 0 {
                                     break;
                                 }
                                 if magic_len < 5 {
                                     let take = (5 - magic_len).min(n);
-                                    magic[magic_len..magic_len + take].copy_from_slice(&buf[..take]);
+                                    magic[magic_len..magic_len + take]
+                                        .copy_from_slice(&buf[..take]);
                                     magic_len += take;
                                 }
                                 hasher.update(&buf[..n]);
@@ -370,17 +511,22 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
         }
 
         for (record, base) in records(data) {
+            let record_id = record.get("id").and_then(Value::as_str).unwrap_or("");
             let mut display = json!({
                 "id": record.get("id").unwrap_or(&Value::Null),
                 "claim": record.get("claim").unwrap_or_else(|| record.get("name").unwrap_or(&Value::Null)),
                 "citations": []
             });
-            let citations = display.get_mut("citations").unwrap().as_array_mut().unwrap();
+            let citations = display
+                .get_mut("citations")
+                .unwrap()
+                .as_array_mut()
+                .unwrap();
             let mut own_lines: Vec<String> = Vec::new();
             let mut pdf_own_lines: Vec<String> = Vec::new();
 
             for (anchor, at) in anchors(record, base.clone()) {
-                let repo_name = anchor.get("repo").and_then(|v| v.as_str()).unwrap_or("");
+                let repo_name = anchor.get("repo").and_then(Value::as_str).unwrap_or("");
                 let mut item = json!({
                     "repo": repo_name,
                     "path": anchor.get("path").unwrap_or(&Value::Null),
@@ -389,80 +535,183 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                     "source": []
                 });
 
-                let mut resolve_err = None;
+                let mut resolve_err: Option<(String, bool)> = None;
 
                 if anchor.contains_key("stale") {
-                    resolve_err = Some("stale anchor; re-verify before resolving".to_string());
+                    resolve_err = Some((
+                        "stale anchor; re-verify before resolving".to_string(),
+                        false,
+                    ));
                 } else {
                     let choices = by_name.get(repo_name).cloned().unwrap_or_default();
                     if choices.len() != 1 {
-                        resolve_err = Some("anchor repo must name exactly one repos entry".to_string());
+                        resolve_err = Some((
+                            "anchor repo must name exactly one repos entry".to_string(),
+                            false,
+                        ));
                     } else {
                         let entry = &choices[0];
-                        if let Err(e) = check_url(entry.get("url").unwrap_or(&Value::Null)) {
-                            resolve_err = Some(e.message);
-                        } else if let Err(e) = check_commit(entry.get("commit").unwrap_or(&Value::Null)) {
-                            resolve_err = Some(e.message);
+                        if let Err(e) = check_anchor(entry, anchor) {
+                            resolve_err = Some((e.message, e.skip));
                         } else {
-                            let url = entry.get("url").and_then(|v| v.as_str()).unwrap_or("");
-                            let commit = entry.get("commit").and_then(|v| v.as_str()).unwrap_or("");
+                            let url = entry.get("url").and_then(Value::as_str).unwrap_or("");
+                            let commit = entry.get("commit").and_then(Value::as_str).unwrap_or("");
                             let mut blob_bytes = resolver.blob_bytes;
                             match resolver.open_repo(repo_name, url, commit) {
                                 Ok(repo) => {
-                                    let p = anchor.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                                    let p =
+                                        anchor.get("path").and_then(Value::as_str).unwrap_or("");
                                     if !anchor.contains_key("search") {
                                         match repo.read_text(p, &mut blob_bytes) {
                                             Ok(text) => {
                                                 resolver.blob_bytes = blob_bytes;
-                                                let lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
-                                                let mut start = 1;
-                                                let mut end = lines.len();
-                                                if let Some(arr) = anchor.get("lines").and_then(|v| v.as_array()) {
-                                                    if arr.len() == 2 {
-                                                        start = arr[0].as_u64().unwrap_or(0) as usize;
-                                                        end = arr[1].as_u64().unwrap_or(0) as usize;
+                                                let lines: Vec<String> =
+                                                    text.lines().map(ToString::to_string).collect();
+                                                let explicit_span = anchor
+                                                    .get("lines")
+                                                    .and_then(Value::as_array)
+                                                    .filter(|a| a.len() == 2)
+                                                    .map(|a| {
+                                                        (
+                                                            a[0].as_u64().unwrap_or(0) as usize,
+                                                            a[1].as_u64().unwrap_or(0) as usize,
+                                                        )
+                                                    });
+                                                let span_res: Result<
+                                                    (usize, usize),
+                                                    OperationalError,
+                                                > = if let Some(node_name) =
+                                                    anchor.get("node").and_then(Value::as_str)
+                                                {
+                                                    match node_range(&lines, node_name) {
+                                                        Ok(nspan) => {
+                                                            if let Some(espan) = explicit_span {
+                                                                if !(nspan.0 <= espan.0
+                                                                    && espan.0 <= espan.1
+                                                                    && espan.1 <= nspan.1)
+                                                                {
+                                                                    Err(OperationalError::fail(
+                                                                        "cited lines are outside the DT node",
+                                                                    ))
+                                                                } else {
+                                                                    Ok(espan)
+                                                                }
+                                                            } else {
+                                                                Ok(nspan)
+                                                            }
+                                                        }
+                                                        Err(e) => Err(e),
                                                     }
-                                                }
-                                                if start > 0 && start <= end && end <= lines.len() {
-                                                    let cited_slice = &lines[start - 1..end];
-                                                    let source_arr = item.get_mut("source").unwrap().as_array_mut().unwrap();
-                                                    for (idx, line) in cited_slice.iter().enumerate() {
-                                                        source_arr.push(json!([start + idx, line]));
-                                                    }
-                                                    item["status"] = json!("resolved");
-                                                    item["commit"] = json!(commit);
-                                                    if at.len() == base.len() + 4
-                                                        && at[..base.len()] == base[..]
-                                                        && at[base.len()] == "support"
-                                                    {
-                                                        own_lines.extend(cited_slice.iter().cloned());
-                                                    }
+                                                } else if let Some(espan) = explicit_span {
+                                                    Ok(espan)
                                                 } else {
-                                                    resolve_err = Some(format!("line range is outside the file's {} lines", lines.len()));
+                                                    Ok((1, lines.len()))
+                                                };
+
+                                                match span_res {
+                                                    Ok((start, end)) => {
+                                                        if start == 0
+                                                            || start > end
+                                                            || end > lines.len()
+                                                        {
+                                                            resolve_err = Some((
+                                                                format!(
+                                                                    "line range is outside the file's {} lines",
+                                                                    lines.len()
+                                                                ),
+                                                                false,
+                                                            ));
+                                                        } else if let Some(sym) = anchor
+                                                            .get("symbol")
+                                                            .and_then(Value::as_str)
+                                                        {
+                                                            if !symbol_in(sym, &lines, (start, end))
+                                                            {
+                                                                resolve_err = Some((
+                                                                    format!(
+                                                                        "symbol '{sym}' is not near the cited range"
+                                                                    ),
+                                                                    false,
+                                                                ));
+                                                            }
+                                                        }
+                                                        if resolve_err.is_none() {
+                                                            let source_arr = item
+                                                                .get_mut("source")
+                                                                .unwrap()
+                                                                .as_array_mut()
+                                                                .unwrap();
+                                                            for (idx, line) in lines[start - 1..end]
+                                                                .iter()
+                                                                .enumerate()
+                                                            {
+                                                                source_arr.push(json!([
+                                                                    start + idx,
+                                                                    line
+                                                                ]));
+                                                            }
+                                                            if at.len() == base.len() + 4
+                                                                && at[..base.len()] == base[..]
+                                                                && at
+                                                                    .get(base.len())
+                                                                    .map(String::as_str)
+                                                                    == Some("support")
+                                                            {
+                                                                own_lines.extend(
+                                                                    lines[start - 1..end]
+                                                                        .iter()
+                                                                        .cloned(),
+                                                                );
+                                                            }
+                                                            item["status"] = json!("resolved");
+                                                            item["commit"] = json!(commit);
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        resolve_err = Some((e.message, e.skip));
+                                                    }
                                                 }
                                             }
-                                            Err(_) => resolve_err = Some("git error".to_string()),
+                                            Err(GitError::Precondition(pre)) => return Err(pre),
+                                            Err(GitError::Operational(op)) => {
+                                                resolve_err = Some((op.message, op.skip));
+                                            }
                                         }
                                     } else {
                                         item["status"] = json!("resolved");
-                                        item["search"] = anchor.get("search").unwrap_or(&Value::Null).clone();
+                                        item["search"] =
+                                            anchor.get("search").unwrap_or(&Value::Null).clone();
                                     }
                                 }
-                                Err(_) => resolve_err = Some("git error".to_string()),
+                                Err(GitError::Precondition(pre)) => return Err(pre),
+                                Err(GitError::Operational(op)) => {
+                                    resolve_err = Some((op.message, op.skip));
+                                }
                             }
                         }
                     }
                 }
 
-                if let Some(err) = resolve_err {
+                if let Some((err, skip)) = resolve_err {
                     let mark = mark_for_at(&loaded, &at);
-                    findings_out.push(json!({
-                        "path": path_str,
-                        "line": mark.line,
-                        "column": mark.column,
-                        "level": "error",
-                        "message": format!("{}: {}", record.get("id").and_then(|v| v.as_str()).unwrap_or(""), err)
-                    }));
+                    if skip {
+                        item["status"] = json!("skipped");
+                        findings_out.push(json!({
+                            "path": path_str,
+                            "line": mark.line,
+                            "column": mark.column,
+                            "level": "warning",
+                            "message": format!("{record_id}: resolution skipped: {err}")
+                        }));
+                    } else {
+                        findings_out.push(json!({
+                            "path": path_str,
+                            "line": mark.line,
+                            "column": mark.column,
+                            "level": "error",
+                            "message": format!("{record_id}: {err}")
+                        }));
+                    }
                 } else {
                     item["status"] = json!("resolved");
                 }
@@ -573,14 +822,33 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
         }
     }
 
-    let errors = findings_out.iter().filter(|f| f.get("level").and_then(|v| v.as_str()).unwrap_or("error") == "error").count();
-    
+    let default_path = target_files
+        .first()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let mut unused_findings: Vec<Finding> = Vec::new();
+    resolver.check_unused_repos(&declared_repo_names, &default_path, &mut unused_findings);
+    for uf in unused_findings {
+        findings_out.push(json!({
+            "path": uf.path,
+            "line": uf.line,
+            "column": uf.col,
+            "level": uf.level.as_str(),
+            "message": uf.message,
+        }));
+    }
+
+    let errors = findings_out
+        .iter()
+        .filter(|f| f.get("level").and_then(Value::as_str).unwrap_or("error") == "error")
+        .count();
+
     let mut resolved = 0;
     let mut skipped = 0;
     for a in &anchors_out {
-        if a.get("status").and_then(|v| v.as_str()) == Some("resolved") {
+        if a.get("status").and_then(Value::as_str) == Some("resolved") {
             resolved += 1;
-        } else if a.get("status").and_then(|v| v.as_str()) == Some("skipped") {
+        } else if a.get("status").and_then(Value::as_str) == Some("skipped") {
             skipped += 1;
         }
     }
@@ -620,15 +888,22 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
 
     let mut text_lines = Vec::new();
     for fact in facts_out {
-        text_lines.push(format!("{}: {}", fact.get("id").and_then(|v| v.as_str()).unwrap_or(""), fact.get("claim").and_then(|v| v.as_str()).unwrap_or("")));
-        if let Some(citations) = fact.get("citations").and_then(|v| v.as_array()) {
+        text_lines.push(format!(
+            "{}: {}",
+            fact.get("id").and_then(Value::as_str).unwrap_or(""),
+            fact.get("claim").and_then(Value::as_str).unwrap_or("")
+        ));
+        if let Some(citations) = fact.get("citations").and_then(Value::as_array) {
             for citation in citations {
                 if citation.get("doc").is_some() {
                     text_lines.push(format!(
                         "  {} {} [{}]",
                         citation.get("doc").and_then(|v| v.as_str()).unwrap_or(""),
                         citation.get("locator").unwrap_or(&Value::Null),
-                        citation.get("status").and_then(|v| v.as_str()).unwrap_or("")
+                        citation
+                            .get("status")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
                     ));
                     if let Some(src) = citation.get("source").and_then(|v| v.as_array()) {
                         for src_item in src {
@@ -646,12 +921,21 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
                     }
                     continue;
                 }
-                text_lines.push(format!("  {}:{} [{}]", citation.get("repo").and_then(|v| v.as_str()).unwrap_or(""), citation.get("path").and_then(|v| v.as_str()).unwrap_or(""), citation.get("status").and_then(|v| v.as_str()).unwrap_or("")));
-                if let Some(src) = citation.get("source").and_then(|v| v.as_array()) {
+                text_lines.push(format!(
+                    "  {}:{} [{}]",
+                    citation.get("repo").and_then(Value::as_str).unwrap_or(""),
+                    citation.get("path").and_then(Value::as_str).unwrap_or(""),
+                    citation.get("status").and_then(Value::as_str).unwrap_or("")
+                ));
+                if let Some(src) = citation.get("source").and_then(Value::as_array) {
                     for src_item in src {
                         if let Some(arr) = src_item.as_array() {
                             if arr.len() == 2 {
-                                text_lines.push(format!("  {}: {}", arr[0].as_u64().unwrap_or(0), display_line(arr[1].as_str().unwrap_or(""))));
+                                text_lines.push(format!(
+                                    "  {}: {}",
+                                    arr[0].as_u64().unwrap_or(0),
+                                    display_line(arr[1].as_str().unwrap_or(""))
+                                ));
                             }
                         }
                     }
@@ -659,7 +943,11 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
             }
         }
     }
-    for f in result.get("findings").and_then(|v| v.as_array()).unwrap_or(&Vec::new()) {
+    for f in result
+        .get("findings")
+        .and_then(|v| v.as_array())
+        .unwrap_or(&Vec::new())
+    {
         text_lines.push(format!(
             "{}:{}:{}: {}: {}",
             f.get("path").and_then(|v| v.as_str()).unwrap_or(""),
@@ -669,19 +957,21 @@ fn run_impl(_cli: &Cli, is_show: bool, target_files: &[PathBuf], resolver: &mut 
             f.get("message").and_then(|v| v.as_str()).unwrap_or("")
         ));
     }
-    text_lines.push(format!("{} anchor(s) resolved, {} skipped", resolved, skipped));
+    text_lines.push(format!("{resolved} anchor(s) resolved, {skipped} skipped"));
     if !result
         .get("document_citations")
         .and_then(|v| v.as_array())
-        .map_or(true, Vec::is_empty)
+        .is_none_or(Vec::is_empty)
     {
         text_lines.push(format!(
-            "{} document citation(s) resolved, {} skipped",
-            documents_resolved, documents_skipped
+            "{documents_resolved} document citation(s) resolved, {documents_skipped} skipped"
         ));
     }
 
-    result.as_object_mut().unwrap().insert("_text".to_string(), json!(text_lines));
+    result
+        .as_object_mut()
+        .unwrap()
+        .insert("_text".to_string(), json!(text_lines));
 
-    (if errors > 0 { 1 } else { 0 }, result)
+    Ok((if errors > 0 { 1 } else { 0 }, result))
 }

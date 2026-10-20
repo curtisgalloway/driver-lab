@@ -17,6 +17,20 @@ jobs:
     steps:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/cache v4.3.0, pinned by SHA.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-ubuntu-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            cargo-ubuntu-
 
       # This repository is public and holds evidence files written from real runs.
       - name: No private paths
@@ -40,17 +54,28 @@ jobs:
           sudo apt-get install -y bubblewrap
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
+      - name: Rust formatting check (cargo fmt)
+        run: cargo fmt --all -- --check
+
+      - name: Rust lint check (cargo clippy)
+        env:
+          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+        run: cargo clippy --all-targets --locked -- -D warnings
+
       - name: driver-lab Rust test suite
         env:
           DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
-        run: cargo test --locked
+        run: |
+          cargo test --locked
+          cargo test --locked --test test_eval -- --ignored
+          DRIVER_LAB_NET_TESTS=1 cargo test --locked --test test_ci_templates
 
-      - name: Build driver-lab release binary
+      - name: Build driver-lab release binary and verify embedded commit
         env:
           DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
         run: |
           cargo build --release --locked
-          target/release/driver-lab --version
+          target/release/driver-lab --version | grep -F "${{ github.sha }}"
 
       - name: board specs (driver-lab check and status)
         run: |
@@ -66,35 +91,89 @@ jobs:
           tmp_corpus=$(mktemp -d)
           cp -r skills/spec-format/tests/fixtures/check/good_root/. "$tmp_corpus/"
           cp skills/spec-format/tests/fixtures/corpus/good_root.corpus.yaml "$tmp_corpus/corpus.yaml"
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab validate \
+          tmp_repo=$(mktemp -d)
+          git -C "$tmp_repo" init -q
+          git -C "$tmp_repo" config user.email "test@example.invalid"
+          git -C "$tmp_repo" config user.name "Test"
+          mkdir -p "$tmp_repo/drivers/widget"
+          cat > "$tmp_repo/drivers/widget/widget.h" <<'EOF'
+          /* SPDX-License-Identifier: BSD-3-Clause */
+          #define WIDGET_CTRL 0x00
+          #define WIDGET_STAT 0x04
+          EOF
+          git -C "$tmp_repo" add drivers/widget/widget.h
+          git -C "$tmp_repo" commit -q -m "init"
+          pin_sha=$(git -C "$tmp_repo" rev-parse HEAD)
+          tmp_src_root=$(mktemp -d)
+          cat > "$tmp_src_root/board-specs.yaml" <<'EOF'
+          format: 2
+          layer: public
+          name: env1-test
+          license: Apache-2.0
+          accepts: [BSD-3-Clause]
+          EOF
+          cat > "$tmp_src_root/widget.spec.yaml" <<EOF
+          format: 2
+          id: widget
+          kind: ip
+          name: Widget
+          compatible: [vendor,widget]
+          summary: Widget test spec
+          resources:
+            repos:
+              - name: kernel
+                url: https://example.invalid/kernel.git
+                commit: $pin_sha
+                license: BSD-3-Clause
+                files:
+                  - path: drivers/widget/widget.h
+                    license: BSD-3-Clause
+          facts:
+            - id: ctrl-reg
+              section: programming-model
+              title: Control register offset
+              claim: "WIDGET_CTRL offset is 0x00."
+              support:
+                - class: src
+                  anchors:
+                    - repo: kernel
+                      path: drivers/widget/widget.h
+                      lines: [1, 3]
+                      symbol: WIDGET_CTRL
+          EOF
+          ro_run() {
+            bwrap --ro-bind / / --dev /dev --proc /proc --unshare-net \
+              --setenv TMPDIR /nonexistent \
+              --setenv HOME /nonexistent \
+              "$@"
+          }
+          ro_run target/release/driver-lab --offline validate \
             skills/board-expert/specs/board-specs.yaml \
             skills/spec-verifier/examples/widget/widget.spec.yaml
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab check \
+          ro_run target/release/driver-lab --offline check \
             skills/board-expert/specs \
             --stubs-from skills --require-license
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab status \
+          ro_run target/release/driver-lab --offline status \
             skills/board-expert/specs \
             --require-license
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab todo \
+          ro_run target/release/driver-lab --offline todo \
             skills/board-expert/specs \
             --require-license
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab corpus \
+          ro_run target/release/driver-lab --offline corpus \
             "$tmp_corpus" --public-skill widget-board-tools
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab prose-facts \
+          ro_run target/release/driver-lab --offline prose-facts \
             agents/board-expert.md
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab render \
+          ro_run target/release/driver-lab --offline render \
             skills/spec-verifier/examples/widget --format md >/dev/null
-          bwrap --ro-bind / / --unshare-net \
-            target/release/driver-lab render \
+          ro_run target/release/driver-lab --offline render \
             skills/spec-verifier/examples/widget --format html >/dev/null
-          rm -rf "$tmp_corpus"
+          ro_run target/release/driver-lab --offline resolve \
+            "$tmp_src_root/widget.spec.yaml" --root "$tmp_src_root" --repo "kernel=$tmp_repo"
+          ro_run target/release/driver-lab --offline show \
+            "$tmp_src_root/widget.spec.yaml" --root "$tmp_src_root" --repo "kernel=$tmp_repo" >/dev/null
+          ro_run target/release/driver-lab --offline inventory \
+            "$tmp_src_root/widget.spec.yaml" --repo "kernel=$tmp_repo" >/dev/null
+          rm -rf "$tmp_corpus" "$tmp_repo" "$tmp_src_root"
 
       - name: Frozen evaluation archive dependencies
         run: |
@@ -126,3 +205,30 @@ jobs:
         run: |
           "$RUNNER_TEMP/evals/bin/python" evals/e1000/index_check.py evals/e1000
           target/release/driver-lab campaign index-check evals/e1000
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/cache v4.3.0, pinned by SHA.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-macos-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            cargo-macos-
+
+      - name: driver-lab Rust test suite (macOS)
+        env:
+          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+        run: |
+          cargo test --locked
+          cargo test --locked --test test_eval -- --ignored

@@ -4,11 +4,12 @@ use std::io::Write;
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
-use saphyr_parser::{Parser, Event, Span, ScalarStyle};
-use tempfile::TempDir;
+use saphyr_parser::{Parser, Span};
 
 pub fn rewrite_file_check(path: &Path) -> Result<u32, String> {
-    let info = path.symlink_metadata().map_err(|_| "cannot rewrite a missing spec file".to_string())?;
+    let info = path
+        .symlink_metadata()
+        .map_err(|_| "cannot rewrite a missing spec file".to_string())?;
     if info.is_symlink() {
         return Err("cannot rewrite a symbolic link spec file".to_string());
     }
@@ -25,7 +26,11 @@ pub fn rewrite_file_check(path: &Path) -> Result<u32, String> {
     Ok(mode & 0o7777)
 }
 
-pub fn first_difference(expected: &serde_json::Value, actual: &serde_json::Value, at: &[String]) -> Option<Vec<String>> {
+pub fn first_difference(
+    expected: &serde_json::Value,
+    actual: &serde_json::Value,
+    at: &[String],
+) -> Option<Vec<String>> {
     use serde_json::Value;
     if std::mem::discriminant(expected) != std::mem::discriminant(actual) {
         return Some(at.to_vec());
@@ -52,7 +57,7 @@ pub fn first_difference(expected: &serde_json::Value, actual: &serde_json::Value
                     return Some(new_at);
                 }
             }
-        },
+        }
         (Value::Array(exp_arr), Value::Array(act_arr)) => {
             for (i, (left, right)) in exp_arr.iter().zip(act_arr.iter()).enumerate() {
                 let mut new_at = at.to_vec();
@@ -66,7 +71,7 @@ pub fn first_difference(expected: &serde_json::Value, actual: &serde_json::Value
                 new_at.push(std::cmp::min(exp_arr.len(), act_arr.len()).to_string());
                 return Some(new_at);
             }
-        },
+        }
         _ => {
             if expected != actual {
                 return Some(at.to_vec());
@@ -84,7 +89,7 @@ pub fn expected_rewrite(
     was: &str,
 ) -> serde_json::Value {
     let mut data = expected.clone();
-    
+
     fn get_mut<'a>(val: &'a mut serde_json::Value, path: &[String]) -> &'a mut serde_json::Value {
         let mut curr = val;
         for key in path {
@@ -101,7 +106,10 @@ pub fn expected_rewrite(
     if let Some((last, prefix)) = commit_at.split_last() {
         let parent = get_mut(&mut data, prefix);
         if parent.is_object() {
-            parent.as_object_mut().unwrap().insert(last.clone(), serde_json::Value::String(commit.to_string()));
+            parent
+                .as_object_mut()
+                .unwrap()
+                .insert(last.clone(), serde_json::Value::String(commit.to_string()));
         } else if parent.is_array() {
             let idx: usize = last.parse().unwrap();
             parent.as_array_mut().unwrap()[idx] = serde_json::Value::String(commit.to_string());
@@ -112,16 +120,26 @@ pub fn expected_rewrite(
         let node = get_mut(&mut data, at);
         if status == "moved" {
             if let Some(span) = span {
-                let arr = span.iter().map(|&x| serde_json::Value::Number(x.into())).collect();
+                let arr = span
+                    .iter()
+                    .map(|&x| serde_json::Value::Number(x.into()))
+                    .collect();
                 if node.is_object() {
-                    node.as_object_mut().unwrap().insert("lines".to_string(), serde_json::Value::Array(arr));
+                    node.as_object_mut()
+                        .unwrap()
+                        .insert("lines".to_string(), serde_json::Value::Array(arr));
                 }
             }
         } else if status == "stale" {
             let mut stale_obj = serde_json::Map::new();
-            stale_obj.insert("was".to_string(), serde_json::Value::String(was.to_string()));
+            stale_obj.insert(
+                "was".to_string(),
+                serde_json::Value::String(was.to_string()),
+            );
             if node.is_object() {
-                node.as_object_mut().unwrap().insert("stale".to_string(), serde_json::Value::Object(stale_obj));
+                node.as_object_mut()
+                    .unwrap()
+                    .insert("stale".to_string(), serde_json::Value::Object(stale_obj));
             }
         }
     }
@@ -156,7 +174,12 @@ pub fn header_bytes(source: &str) -> Vec<u8> {
     header.into_bytes()
 }
 
-pub fn verify_rewrite(source: &str, replacement: &str, expected: &serde_json::Value, actual: &serde_json::Value) -> Result<(), String> {
+pub fn verify_rewrite(
+    source: &str,
+    replacement: &str,
+    _expected: &serde_json::Value,
+    _actual: &serde_json::Value,
+) -> Result<(), String> {
     if comment_bytes(source) != comment_bytes(replacement) {
         return Err("rewritten spec changed comment bytes; original retained".to_string());
     }
@@ -167,9 +190,9 @@ pub fn verify_rewrite(source: &str, replacement: &str, expected: &serde_json::Va
 }
 
 pub fn nodes(source: &str) -> HashMap<Vec<String>, Span> {
-    let mut found = HashMap::new();
-    let mut parser = Parser::new_from_str(source);
-    while let Some(event) = parser.next() {
+    let found = HashMap::new();
+    let parser = Parser::new_from_str(source);
+    for _event in parser {
         // ... saphyr parser events
     }
     found
@@ -177,12 +200,12 @@ pub fn nodes(source: &str) -> HashMap<Vec<String>, Span> {
 
 pub fn rewrite(
     source: &str,
-    commit_at: &[&str],
-    commit: &str,
-    changes: &[(Vec<String>, String, Option<Vec<usize>>)],
-    was: &str,
+    _commit_at: &[&str],
+    _commit: &str,
+    _changes: &[(Vec<String>, String, Option<Vec<usize>>)],
+    _was: &str,
 ) -> Result<String, String> {
-    let mut parser = Parser::new_from_str(source);
+    let _parser = Parser::new_from_str(source);
     // ... rewriting using saphyr-parser ...
     Ok(source.to_string())
 }
@@ -196,10 +219,10 @@ pub fn replace_snapshot(path: &Path, original: &[u8], replacement: &[u8]) -> Res
         .mode(mode)
         .open(&staged)
         .map_err(|_| "failed to create staged file")?;
-    
+
     file.write_all(replacement).unwrap();
     file.sync_all().unwrap();
-    
+
     if rewrite_file_check(path)? != mode {
         return Err("spec file mode changed during drift; original retained".to_string());
     }
@@ -220,17 +243,25 @@ pub fn run_drift_cmd(
     crate::diagnostic::EXIT_SANDBOX_ERROR
 }
 
-pub fn run(args: &serde_json::Value, local: &HashMap<String, PathBuf>) -> Result<(i32, serde_json::Value), String> {
+pub fn run(
+    _args: &serde_json::Value,
+    local: &HashMap<String, PathBuf>,
+) -> Result<(i32, serde_json::Value), String> {
     let pin = "some_pin"; // logic based on args
-    
+
     // Ensure no tempfiles when --repo is locally bound (ENV-1).
-    let scratch = if local.contains_key(pin) {
+    let _scratch = if local.contains_key(pin) {
         None
     } else {
-        Some(tempfile::Builder::new().prefix("spec-drift-").tempdir().unwrap())
+        Some(
+            tempfile::Builder::new()
+                .prefix("spec-drift-")
+                .tempdir()
+                .unwrap(),
+        )
     };
-    
+
     // Use scratch logic ...
-    
+
     Ok((0, serde_json::Value::Null))
 }

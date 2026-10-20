@@ -259,7 +259,10 @@ pub fn read_pdf_metadata(bytes: &[u8], max_depth: usize) -> Result<PdfMetadata, 
 }
 
 /// Dereferences an [`Object`] through up to [`MAX_DEREF_HOPS`] indirect references.
-fn deref_object<'a>(doc: &'a Document, mut obj: &'a Object) -> Option<(&'a Object, Option<ObjectId>)> {
+fn deref_object<'a>(
+    doc: &'a Document,
+    mut obj: &'a Object,
+) -> Option<(&'a Object, Option<ObjectId>)> {
     let mut last_id = None;
     for _ in 0..MAX_DEREF_HOPS {
         match obj {
@@ -274,7 +277,10 @@ fn deref_object<'a>(doc: &'a Document, mut obj: &'a Object) -> Option<(&'a Objec
 }
 
 /// Dereferences an [`Object`] expecting a [`Dictionary`].
-fn deref_dict<'a>(doc: &'a Document, obj: &'a Object) -> Option<(&'a Dictionary, Option<ObjectId>)> {
+fn deref_dict<'a>(
+    doc: &'a Document,
+    obj: &'a Object,
+) -> Option<(&'a Dictionary, Option<ObjectId>)> {
     let (resolved, id) = deref_object(doc, obj)?;
     match resolved {
         Object::Dictionary(d) => Some((d, id)),
@@ -322,7 +328,7 @@ fn format_alpha(n: usize, uppercase: bool) -> String {
     let repeat = ((n - 1) / 26) + 1;
     let base = if uppercase { b'A' } else { b'a' };
     let ch = char::from(base + idx as u8);
-    std::iter::repeat(ch).take(repeat).collect()
+    std::iter::repeat_n(ch, repeat).collect()
 }
 
 fn collect_number_tree_entries<'a>(
@@ -631,11 +637,11 @@ fn walk_outline_chain(
             .filter(|&p| (1..=pages).contains(&p));
 
         let mut next_level = level;
-        if !title.is_empty() && page.is_some() && level <= max_depth {
+        if let Some(p) = page.filter(|_| !title.is_empty() && level <= max_depth) {
             flat_out.push(PdfOutlineEntry {
                 level,
                 title: title.clone(),
-                page: page.expect("checked Some above"),
+                page: p,
             });
             next_level = level + 1;
         }

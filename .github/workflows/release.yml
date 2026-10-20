@@ -19,12 +19,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            run_tests: true
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-          - os: macos-13
+            run_tests: false
+          - os: macos-latest
             target: x86_64-apple-darwin
+            run_tests: false
           - os: macos-latest
             target: aarch64-apple-darwin
+            run_tests: false
     runs-on: ${{ matrix.os }}
     env:
       CARGO_TERM_COLOR: always
@@ -38,10 +42,16 @@ jobs:
       - name: Ensure Rust target is installed
         run: rustup target add "${{ matrix.target }}"
 
+      - name: Run test suite before packaging
+        if: matrix.run_tests
+        run: cargo test --locked
+
       - name: Build driver-lab release binary
         run: |
           cargo build --release --locked --target "${{ matrix.target }}"
-          "target/${{ matrix.target }}/release/driver-lab" --version | grep -F "${{ env.DRIVER_LAB_TOOL_COMMIT }}"
+          if [ "${{ matrix.target }}" != "x86_64-apple-darwin" ] || [ "$(uname -m)" = "x86_64" ]; then
+            "target/${{ matrix.target }}/release/driver-lab" --version | grep -F "${{ env.DRIVER_LAB_TOOL_COMMIT }}"
+          fi
 
       - name: Package binary and SHA-256 checksum
         run: |
@@ -68,3 +78,59 @@ jobs:
             dist/driver-lab-${{ matrix.target }}.tar.gz
             dist/driver-lab-${{ matrix.target }}.tar.gz.sha256
           if-no-files-found: error
+
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # actions/checkout v7.0.1, pinned by SHA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Verify all target archives and create SHA256SUMS
+        run: |
+          cd artifacts
+          for target in \
+            x86_64-unknown-linux-gnu \
+            aarch64-unknown-linux-gnu \
+            x86_64-apple-darwin \
+            aarch64-apple-darwin
+          do
+            archive="driver-lab-${target}.tar.gz"
+            sumfile="${archive}.sha256"
+            test -s "$archive"
+            test -s "$sumfile"
+            sha256sum -c "$sumfile"
+          done
+          cat driver-lab-*.tar.gz.sha256 > SHA256SUMS
+          sha256sum -c SHA256SUMS
+
+      - name: Publish GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" \
+              artifacts/driver-lab-*.tar.gz \
+              artifacts/driver-lab-*.tar.gz.sha256 \
+              artifacts/SHA256SUMS \
+              --clobber
+          else
+            gh release create "$TAG_NAME" \
+              artifacts/driver-lab-*.tar.gz \
+              artifacts/driver-lab-*.tar.gz.sha256 \
+              artifacts/SHA256SUMS \
+              --verify-tag \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi

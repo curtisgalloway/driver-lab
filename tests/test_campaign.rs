@@ -1,10 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use serde_json::{json, Value};
-use std::fs;
 use std::process::Command;
-use driver_lab::campaign::*;
 
 #[test]
 #[ignore]
@@ -2769,7 +2766,7 @@ fn test_cli_json_skill_and_errors() {
             shutil.copy(BASELINE, campaign / "status.yaml")
             shutil.copy(BASELINE_SOURCES, campaign / "sources.yaml")
 
-        
+
     */
 }
 
@@ -2982,11 +2979,10 @@ fn test_duplicate_keys_and_unknown_id() {
     */
 }
 
-
 #[test]
 fn test_cli_help() {
     let output = Command::new(env!("CARGO_BIN_EXE_driver-lab"))
-        .args(&["campaign", "--help"])
+        .args(["campaign", "--help"])
         .output()
         .expect("Failed to execute");
     assert!(!output.stdout.is_empty() || !output.stderr.is_empty());
@@ -2995,8 +2991,12 @@ fn test_cli_help() {
 #[test]
 fn test_index_check_e1000() {
     let output = Command::new(env!("CARGO_BIN_EXE_driver-lab"))
-        .args(&["campaign", "index-check", "evals/e1000"])
+        .args(["campaign", "index-check", "evals/e1000"])
         .output()
         .expect("Failed to execute");
-    assert!(output.status.success(), "Command failed: {:?}", String::from_utf8_lossy(&output.stdout));
+    assert!(
+        output.status.success(),
+        "Command failed: {:?}",
+        String::from_utf8_lossy(&output.stdout)
+    );
 }

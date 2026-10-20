@@ -137,7 +137,7 @@ impl fmt::Display for EvalError {
 impl std::error::Error for EvalError {}
 
 /// Result of compiling and executing a Rust test program (`compile_and_run_tests` in `speceval.py`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TestRun {
     pub compiled: bool,
     pub diagnostics: String,
@@ -147,21 +147,6 @@ pub struct TestRun {
     pub results: BTreeMap<String, String>,
     pub declared: usize,
     pub complete: bool,
-}
-
-impl Default for TestRun {
-    fn default() -> Self {
-        Self {
-            compiled: false,
-            diagnostics: String::new(),
-            exit_code: None,
-            timed_out: false,
-            stdout: String::new(),
-            results: BTreeMap::new(),
-            declared: 0,
-            complete: false,
-        }
-    }
 }
 
 /// Graded outcome of a single fact/citation evaluation record (`grade-facts`).
@@ -829,43 +814,60 @@ pub fn build_bwrap_args_with_options(
 ///
 /// Denies network access, `$HOME` reads/writes, and writes outside `scratch_dir`.
 pub fn build_macos_sandbox_profile(scratch_dir: &Path, home_dir: Option<&Path>) -> String {
-    let scratch_escaped = scratch_dir
-        .to_string_lossy()
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"");
-    let mut profile = format!(
+    let escape_sbpl = |p: &Path| {
+        p.to_string_lossy()
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+    };
+    let scratch_escaped = escape_sbpl(scratch_dir);
+    let canon_scratch = fs::canonicalize(scratch_dir).ok();
+    let extra_scratch = canon_scratch
+        .as_deref()
+        .filter(|c| *c != scratch_dir)
+        .map(escape_sbpl);
+
+    let mut profile = String::from(
         "(version 1)\n\
-         (deny default)\n\
+         (allow default)\n\
          (deny network*)\n\
-         (allow process*)\n\
-         (allow sysctl-read)\n\
-         (allow file-read*\n  \
-           (literal \"/\")\n  \
-           (subpath \"/usr\")\n  \
-           (subpath \"/System\")\n  \
-           (subpath \"/Library\")\n  \
-           (subpath \"/bin\")\n  \
-           (subpath \"/sbin\")\n  \
-           (subpath \"/private/var/db\")\n  \
-           (literal \"/dev/null\")\n  \
-           (literal \"/dev/urandom\")\n  \
-           (literal \"/dev/random\")\n  \
-           (subpath \"{scratch_escaped}\"))\n\
-         (allow file-write*\n  \
-           (literal \"/dev/null\")\n  \
-           (subpath \"{scratch_escaped}\"))\n"
+         (deny file-write*)\n",
     );
     if let Some(home) = home_dir {
         if !scratch_dir.starts_with(home) {
-            let home_escaped = home
-                .to_string_lossy()
-                .replace('\\', "\\\\")
-                .replace('"', "\\\"");
+            let home_escaped = escape_sbpl(home);
             profile.push_str(&format!(
                 "(deny file-read* (subpath \"{home_escaped}\"))\n\
                  (deny file-write* (subpath \"{home_escaped}\"))\n"
             ));
+            if let Ok(canon_home) = fs::canonicalize(home) {
+                if canon_home != home && !scratch_dir.starts_with(&canon_home) {
+                    let canon_home_escaped = escape_sbpl(&canon_home);
+                    profile.push_str(&format!(
+                        "(deny file-read* (subpath \"{canon_home_escaped}\"))\n\
+                         (deny file-write* (subpath \"{canon_home_escaped}\"))\n"
+                    ));
+                }
+            }
         }
+    }
+    if let Some(ref canon_s) = extra_scratch {
+        profile.push_str(&format!(
+            "(allow file-read*\n  \
+               (subpath \"{canon_s}\")\n  \
+               (subpath \"{scratch_escaped}\"))\n\
+             (allow file-write*\n  \
+               (literal \"/dev/null\")\n  \
+               (subpath \"{canon_s}\")\n  \
+               (subpath \"{scratch_escaped}\"))\n"
+        ));
+    } else {
+        profile.push_str(&format!(
+            "(allow file-read*\n  \
+               (subpath \"{scratch_escaped}\"))\n\
+             (allow file-write*\n  \
+               (literal \"/dev/null\")\n  \
+               (subpath \"{scratch_escaped}\"))\n"
+        ));
     }
     profile
 }
@@ -880,7 +882,6 @@ pub fn build_sandbox_exec_args(
     vec![
         "-p".into(),
         profile.into(),
-        "--".into(),
         exe.as_os_str().to_os_string(),
         "--test-threads=1".into(),
     ]
@@ -979,15 +980,15 @@ pub fn execute_candidate_binary(
                         stderr.trim()
                     )));
                 }
-                return Ok((rc, format!("{stdout}{stderr}"), timed_out));
+                Ok((rc, format!("{stdout}{stderr}"), timed_out))
             }
             Err(e) => {
                 if unsandboxed_ok {
                     return execute_unsandboxed(exe, scratch_dir, timeout);
                 }
-                return Err(EvalError::new(format!(
+                Err(EvalError::new(format!(
                     "ENV-5 sandbox error: could not execute bwrap (pass --allow-unsandboxed to override): {e}"
-                )));
+                )))
             }
         }
     } else if cfg!(target_os = "macos") {
@@ -997,16 +998,14 @@ pub fn execute_candidate_binary(
             .current_dir(scratch_dir)
             .env_clear();
         match run_command_with_timeout(&mut cmd, timeout) {
-            Ok((rc, stdout, stderr, timed_out)) => {
-                return Ok((rc, format!("{stdout}{stderr}"), timed_out));
-            }
+            Ok((rc, stdout, stderr, timed_out)) => Ok((rc, format!("{stdout}{stderr}"), timed_out)),
             Err(e) => {
                 if unsandboxed_ok {
                     return execute_unsandboxed(exe, scratch_dir, timeout);
                 }
-                return Err(EvalError::new(format!(
+                Err(EvalError::new(format!(
                     "ENV-5 sandbox error: sandbox-exec unavailable on macOS (pass --allow-unsandboxed to override): {e}"
-                )));
+                )))
             }
         }
     } else if unsandboxed_ok {
@@ -1045,14 +1044,15 @@ fn allocate_eval_tempdir(scratch_root: Option<&Path>) -> Result<tempfile::TempDi
 /// Compile `source` as a library crate (`speceval.compile_lib`). Returns `(ok, diagnostics)`.
 pub fn compile_lib(source: &str, scratch_root: Option<&Path>) -> Result<(bool, String), EvalError> {
     let tmp = allocate_eval_tempdir(scratch_root)?;
-    let src_path = tmp.path().join("item.rs");
+    let scratch_path = fs::canonicalize(tmp.path()).unwrap_or_else(|_| tmp.path().to_path_buf());
+    let src_path = scratch_path.join("item.rs");
     fs::write(&src_path, source)
         .map_err(|e| EvalError::new(format!("{}: {e}", src_path.display())))?;
 
     let mut cmd = Command::new("rustc");
     cmd.args(RUSTC_FLAGS)
         .args(["--crate-type", "lib", "--out-dir"])
-        .arg(tmp.path())
+        .arg(&scratch_path)
         .arg(&src_path);
 
     let (rc, _stdout, stderr, timed_out) =
@@ -1060,7 +1060,7 @@ pub fn compile_lib(source: &str, scratch_root: Option<&Path>) -> Result<(bool, S
     if timed_out {
         return Ok((false, "rustc timed out".to_string()));
     }
-    let tmp_prefix = format!("{}/", tmp.path().display());
+    let tmp_prefix = format!("{}/", scratch_path.display());
     let cleaned_diag = stderr.replace(&tmp_prefix, "");
     Ok((rc == Some(0), cleaned_diag))
 }
@@ -1088,8 +1088,9 @@ pub fn compile_and_run_tests(
     };
     let mut res = TestRun::default();
     let tmp = allocate_eval_tempdir(scratch_root)?;
-    let src_path = tmp.path().join("item.rs");
-    let exe_path = tmp.path().join("item_tests");
+    let scratch_path = fs::canonicalize(tmp.path()).unwrap_or_else(|_| tmp.path().to_path_buf());
+    let src_path = scratch_path.join("item.rs");
+    let exe_path = scratch_path.join("item_tests");
     fs::write(&src_path, source)
         .map_err(|e| EvalError::new(format!("{}: {e}", src_path.display())))?;
 
@@ -1107,7 +1108,7 @@ pub fn compile_and_run_tests(
         res.diagnostics = "rustc timed out".to_string();
         return Ok(res);
     }
-    let tmp_prefix = format!("{}/", tmp.path().display());
+    let tmp_prefix = format!("{}/", scratch_path.display());
     res.diagnostics = build_err.replace(&tmp_prefix, "");
     if build_rc != Some(0) {
         return Ok(res);
@@ -1120,7 +1121,7 @@ pub fn compile_and_run_tests(
 
     let (run_rc, run_out, run_timed_out) = execute_candidate_binary(
         &exe_path,
-        tmp.path(),
+        &scratch_path,
         Duration::from_secs(secs),
         allow_unsandboxed,
     )?;
@@ -2693,7 +2694,7 @@ fn run_grade_code_cli(
             let mut results: Vec<Option<Result<Vec<String>, EvalError>>> =
                 (0..items.len()).map(|_| None).collect();
             thread::scope(|s| {
-                let chunk_size = (items.len() + worker_count - 1) / worker_count;
+                let chunk_size = items.len().div_ceil(worker_count);
                 let mut handles = Vec::new();
                 for (chunk_idx, chunk) in items.chunks(chunk_size).enumerate() {
                     let prelude_ref = &prelude_text;

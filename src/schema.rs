@@ -187,8 +187,9 @@ static EMBEDDED_SCHEMAS: LazyLock<BTreeMap<String, Value>> = LazyLock::new(|| {
         ("index", INDEX_SCHEMA_JSON),
     ];
     for (kind, raw) in pairs {
-        let val = parse_strict_json(raw)
-            .unwrap_or_else(|e| panic!("embedded {kind}.schema.json must be valid strict JSON: {e}"));
+        let val = parse_strict_json(raw).unwrap_or_else(|e| {
+            panic!("embedded {kind}.schema.json must be valid strict JSON: {e}")
+        });
         map.insert(kind.to_string(), val);
     }
     map
@@ -464,7 +465,9 @@ pub fn check_fragment(
     }
 
     if frag_obj.get("type").and_then(Value::as_str) != Some("object") {
-        problems.push(format!("{where_str}: a fragment declares \"type\": \"object\""));
+        problems.push(format!(
+            "{where_str}: a fragment declares \"type\": \"object\""
+        ));
     }
 
     let empty_map = Map::new();
@@ -523,8 +526,10 @@ pub fn check_fragment(
                 problems.push(format!(
                     "{where_str}: {key} at {at} not allowed: a fragment uses plain properties and value constraints only"
                 ));
-            } else if matches!(key.as_str(), "additionalProperties" | "unevaluatedProperties")
-                && !value.is_boolean()
+            } else if matches!(
+                key.as_str(),
+                "additionalProperties" | "unevaluatedProperties"
+            ) && !value.is_boolean()
             {
                 problems.push(format!(
                     "{where_str}: {key} at {at} not allowed with a schema value; write true or false"
@@ -629,7 +634,9 @@ fn bad_json_string(node: &Value) -> Option<String> {
     }
 }
 
-fn check_raw_fragment_file(target: &Path) -> Result<(String, Value), Result<(usize, usize, String), String>> {
+fn check_raw_fragment_file(
+    target: &Path,
+) -> Result<(String, Value), Result<(usize, usize, String), String>> {
     if bad_file_name(target) {
         let name = target
             .file_name()
@@ -638,7 +645,10 @@ fn check_raw_fragment_file(target: &Path) -> Result<(String, Value), Result<(usi
         return Err(Ok((
             1,
             1,
-            format!("a refused character in the file name: {}", visible_name(&name)),
+            format!(
+                "a refused character in the file name: {}",
+                visible_name(&name)
+            ),
         )));
     }
     let file = File::open(target).map_err(|e| Err(e.to_string()))?;
@@ -648,7 +658,11 @@ fn check_raw_fragment_file(target: &Path) -> Result<(String, Value), Result<(usi
         .read_to_end(&mut raw)
         .map_err(|e| Err(e.to_string()))?;
     if raw.len() > MAX_BYTES {
-        return Err(Ok((1, 1, format!("file exceeds the {MAX_BYTES}-byte limit"))));
+        return Err(Ok((
+            1,
+            1,
+            format!("file exceeds the {MAX_BYTES}-byte limit"),
+        )));
     }
     for bom in [b"\xef\xbb\xbf".as_slice(), b"\xff\xfe", b"\xfe\xff"] {
         if raw.starts_with(bom) {
@@ -731,11 +745,7 @@ fn lexically_within_root(rel: &str) -> bool {
 
 /// Loads the `source-observed` extension schema fragment named by a valid `board-specs.yaml`
 /// marker (`spec.py:load_extension`).
-pub fn load_extension(
-    marker: &Path,
-    data: &Value,
-    findings: &mut Vec<Finding>,
-) -> Option<Value> {
+pub fn load_extension(marker: &Path, data: &Value, findings: &mut Vec<Finding>) -> Option<Value> {
     let exts = data.as_object()?.get("extensions")?.as_array()?;
     if exts.is_empty() {
         return None;
@@ -1034,12 +1044,13 @@ fn find_custom_message_in_branches(
 ) -> Option<String> {
     let branches = error_schema.get(combinator_key)?.as_array()?;
     for branch in branches {
-        let (branch_root, branch_node) = if let Some(ref_str) = branch.get("$ref").and_then(Value::as_str) {
-            resolve_ref(ref_str, active_root, schemas, extension, default_ext)
-                .unwrap_or((active_root, branch))
-        } else {
-            (active_root, branch)
-        };
+        let (branch_root, branch_node) =
+            if let Some(ref_str) = branch.get("$ref").and_then(Value::as_str) {
+                resolve_ref(ref_str, active_root, schemas, extension, default_ext)
+                    .unwrap_or((active_root, branch))
+            } else {
+                (active_root, branch)
+            };
         if !subschema_is_valid(branch_node, instance, branch_root, schemas, extension) {
             if let Some(msg) = extract_comment_message(branch_node) {
                 return Some(msg);
@@ -1173,10 +1184,7 @@ fn short_message(instance: &Value, raw_message: &str) -> String {
     message
 }
 
-fn format_error_kind(
-    error: &ValidationError<'_>,
-    error_schema: Option<&Value>,
-) -> String {
+fn format_error_kind(error: &ValidationError<'_>, error_schema: Option<&Value>) -> String {
     let inst = error.instance.as_ref();
     let shown = py_repr_value(inst);
     let schema_path = error.schema_path.as_str();
@@ -1204,7 +1212,9 @@ fn format_error_kind(
         ValidationErrorKind::Type { kind } => match kind {
             TypeKind::Single(prim) => {
                 let prim_str = prim.to_string();
-                if prim_str == "string" && !matches!(inst, Value::String(_) | Value::Object(_) | Value::Array(_)) {
+                if prim_str == "string"
+                    && !matches!(inst, Value::String(_) | Value::Object(_) | Value::Array(_))
+                {
                     let read_as = match inst {
                         Value::Bool(_) => "a boolean",
                         Value::Number(_) => "an integer",
@@ -1307,7 +1317,9 @@ fn classify_schema_finding_code(message: &str) -> &'static str {
         "SCHEMA-REQUIRED-PROPERTY"
     } else if message.contains("is not one of [") || message.contains("was expected") {
         "SCHEMA-ENUM-OR-CONST"
-    } else if message.contains("was read as a boolean") || message.contains("was read as an integer") {
+    } else if message.contains("was read as a boolean")
+        || message.contains("was read as an integer")
+    {
         "LOAD-AMBIGUOUS-SCALAR"
     } else if message.contains("*.facts.yaml") {
         "SPEC-FACTS-KIND-MISMATCH"
@@ -1347,7 +1359,12 @@ pub fn schema_findings(
 
     let others: Vec<(Vec<PathSegment>, bool)> = errors
         .iter()
-        .map(|e| (location_to_segments(&e.instance_path), is_unknown_kind(&e.kind)))
+        .map(|e| {
+            (
+                location_to_segments(&e.instance_path),
+                is_unknown_kind(&e.kind),
+            )
+        })
         .collect();
 
     let path_str = path.to_string_lossy().into_owned();
@@ -1362,7 +1379,10 @@ pub fn schema_findings(
                 let m: Mark = loaded.mark(&at, Some(key));
                 let inner_schema_path = format!(
                     "{}/propertyNames/{}",
-                    error.schema_path.as_str().trim_end_matches("/propertyNames"),
+                    error
+                        .schema_path
+                        .as_str()
+                        .trim_end_matches("/propertyNames"),
                     inner.schema_path.as_str().trim_start_matches('/')
                 );
                 let (_, inner_schema_node, inner_comments) = locate_schema_node(
@@ -1377,7 +1397,8 @@ pub fn schema_findings(
                     let formatted = format_error_kind(inner, inner_schema_node);
                     short_message(inner.instance.as_ref(), &formatted)
                 });
-                let full_msg = format!("{}: key {}: {raw_msg}", format_where(&at), py_repr_str(key));
+                let full_msg =
+                    format!("{}: key {}: {raw_msg}", format_where(&at), py_repr_str(key));
                 let code = classify_schema_finding_code(&full_msg);
                 out.push(Finding::error(code, &path_str, m.line, m.column, full_msg));
                 continue;
@@ -1426,7 +1447,8 @@ pub fn schema_findings(
                 };
 
                 // Preserve key order from the object instance.
-                let unexpected_set: BTreeSet<&str> = unexpected.iter().map(String::as_str).collect();
+                let unexpected_set: BTreeSet<&str> =
+                    unexpected.iter().map(String::as_str).collect();
                 if let Some(inst_obj) = error.instance.as_object() {
                     for key in inst_obj.keys() {
                         if !unexpected_set.contains(key.as_str()) {
@@ -1520,7 +1542,13 @@ pub fn schema_findings(
 
         let full_msg = format!("{}: {message}", format_where(&at));
         let code = classify_schema_finding_code(&full_msg);
-        out.push(Finding::error(code, &path_str, mark.line, mark.column, full_msg));
+        out.push(Finding::error(
+            code,
+            &path_str,
+            mark.line,
+            mark.column,
+            full_msg,
+        ));
     }
 
     out
@@ -1535,7 +1563,9 @@ pub fn validate_file(
 ) -> Result<(bool, SchemaKind, Option<Loaded>), String> {
     let kind = schema_kind(path)?;
     let loaded = load_file(path);
-    Ok(validate_loaded(path, kind, loaded, schemas, extension, findings))
+    Ok(validate_loaded(
+        path, kind, loaded, schemas, extension, findings,
+    ))
 }
 
 /// Validates an in-memory YAML string against `path`'s Format 2 JSON Schema (`spec.py:validate_file(..., raw=...)`).
@@ -1548,7 +1578,9 @@ pub fn validate_text(
 ) -> Result<(bool, SchemaKind, Option<Loaded>), String> {
     let kind = schema_kind(path)?;
     let loaded = load_text(raw, path);
-    Ok(validate_loaded(path, kind, loaded, schemas, extension, findings))
+    Ok(validate_loaded(
+        path, kind, loaded, schemas, extension, findings,
+    ))
 }
 
 fn validate_loaded(
@@ -1564,7 +1596,9 @@ fn validate_loaded(
         for err in &loaded.errors {
             let mut f = err.to_finding();
             if f.code == "YAML-IO" && f.message.starts_with("cannot read file:") {
-                f.message = f.message.replacen("cannot read file:", "cannot read the file:", 1);
+                f.message = f
+                    .message
+                    .replacen("cannot read file:", "cannot read the file:", 1);
             }
             findings.push(f);
         }

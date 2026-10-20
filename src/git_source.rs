@@ -300,18 +300,13 @@ pub fn parse_repo_specs(items: &[String]) -> Result<BTreeMap<String, PathBuf>, U
         };
         let name = raw_name.trim();
         let path_trimmed = raw_path.trim();
-        if name.is_empty()
-            || path_trimmed.is_empty()
-            || name.chars().any(char::is_whitespace)
-        {
+        if name.is_empty() || path_trimmed.is_empty() || name.chars().any(char::is_whitespace) {
             return Err(UsageError(format!(
                 "--repo {item:?}: expected NAME=CHECKOUT"
             )));
         }
         if out.contains_key(name) {
-            return Err(UsageError(format!(
-                "--repo {name}: given more than once"
-            )));
+            return Err(UsageError(format!("--repo {name}: given more than once")));
         }
         let path = PathBuf::from(raw_path);
         check_dir_path(&path, &format!("--repo {name}"))?;
@@ -322,10 +317,18 @@ pub fn parse_repo_specs(items: &[String]) -> Result<BTreeMap<String, PathBuf>, U
 
 /// Executes a hardened `git` command in `cwd` using [`run_bounded`] (`Stdio::piped()`),
 /// scrubbing `GIT_*` environment variables and prepending [`SAFE_GIT_ARGS`] (`ENV-1`).
-pub fn run_git(
+pub fn run_git(args: &[&str], cwd: &Path, stdout_limit: usize) -> Result<Vec<u8>, GitError> {
+    run_git_with_lazy(args, cwd, stdout_limit, false)
+}
+
+/// Executes a hardened `git` command in `cwd`, allowing promisor lazy-fetch only when
+/// `allow_lazy_fetch` is `true` (disposable scratch repositories fetched over HTTPS when
+/// `--offline` is false).
+pub fn run_git_with_lazy(
     args: &[&str],
     cwd: &Path,
     stdout_limit: usize,
+    allow_lazy_fetch: bool,
 ) -> Result<Vec<u8>, GitError> {
     let mut cmd = Command::new("git");
     cmd.args(SAFE_GIT_ARGS);
@@ -342,7 +345,9 @@ pub fn run_git(
     cmd.env("GIT_TERMINAL_PROMPT", "0");
     cmd.env("GIT_ALLOW_PROTOCOL", "https");
     cmd.env("GIT_NO_REPLACE_OBJECTS", "1");
-    cmd.env("GIT_NO_LAZY_FETCH", "1");
+    if !allow_lazy_fetch {
+        cmd.env("GIT_NO_LAZY_FETCH", "1");
+    }
 
     let limits = PipeLimits {
         stdout_limit,
@@ -438,11 +443,7 @@ pub fn check_repo_relative_path(path: &str) -> Result<Vec<&str>, OperationalErro
         )));
     }
     let parts: Vec<&str> = path.split('/').collect();
-    if path.starts_with('/')
-        || parts
-            .iter()
-            .any(|p| matches!(*p, "" | "." | ".." | ".git"))
-    {
+    if path.starts_with('/') || parts.iter().any(|p| matches!(*p, "" | "." | ".." | ".git")) {
         return Err(OperationalError::fail(format!(
             "invalid repository path {path:?}"
         )));
@@ -459,6 +460,9 @@ pub struct Repository {
     pub commit: String,
     /// Per-blob byte limit.
     pub limit: usize,
+    /// Whether this repository is a disposable scratch repository fetched over HTTPS
+    /// (`--filter=blob:none`, allowing on-demand promisor blob fetch).
+    pub fetched: bool,
     blob_cache: BTreeMap<String, String>,
     tree_cache: BTreeMap<(String, String), (String, String)>,
 }
@@ -471,6 +475,7 @@ impl Repository {
             root,
             commit,
             limit,
+            fetched: false,
             blob_cache: BTreeMap::new(),
             tree_cache: BTreeMap::new(),
         }
@@ -478,10 +483,11 @@ impl Repository {
 
     /// Verifies that `self.commit` exists in `self.root` and resolves to a `"commit"` object.
     pub fn ensure_commit(&self) -> Result<(), GitError> {
-        let out = run_git(
+        let out = run_git_with_lazy(
             &["cat-file", "-t", "--", &self.commit],
             &self.root,
             self.limit.max(4096),
+            self.fetched,
         )?;
         let kind = String::from_utf8_lossy(&out);
         if kind.trim() != "commit" {
@@ -503,10 +509,11 @@ impl Repository {
             let (mode, oid) = if let Some(cached) = self.tree_cache.get(&key) {
                 cached.clone()
             } else {
-                let raw = run_git(
+                let raw = run_git_with_lazy(
                     &["ls-tree", "-z", "--", &tree, part],
                     &self.root,
                     self.limit.max(65536),
+                    self.fetched,
                 )?;
                 let mut entries: Vec<&[u8]> =
                     raw.split(|&b| b == 0).filter(|s| !s.is_empty()).collect();
@@ -569,10 +576,11 @@ impl Repository {
         if let Some(cached) = self.blob_cache.get(oid) {
             return Ok(cached.clone());
         }
-        let size_out = run_git(
+        let size_out = run_git_with_lazy(
             &["cat-file", "-s", "--", oid],
             &self.root,
             self.limit.max(4096),
+            self.fetched,
         )?;
         let size_str = String::from_utf8_lossy(&size_out);
         let size: usize = size_str.trim().parse().map_err(|_| {
@@ -592,16 +600,19 @@ impl Repository {
                 "{path} would put read blobs over the {TOTAL_BLOB_LIMIT}-byte cumulative budget"
             ))));
         }
-        let raw = run_git(&["cat-file", "blob", "--", oid], &self.root, self.limit)?;
+        let raw = run_git_with_lazy(
+            &["cat-file", "blob", "--", oid],
+            &self.root,
+            self.limit,
+            self.fetched,
+        )?;
         if raw.contains(&0) {
             return Err(GitError::Operational(OperationalError::fail(format!(
                 "{path} is binary"
             ))));
         }
         let text = String::from_utf8(raw).map_err(|_| {
-            GitError::Operational(OperationalError::fail(format!(
-                "{path} is not valid UTF-8"
-            )))
+            GitError::Operational(OperationalError::fail(format!("{path} is not valid UTF-8")))
         })?;
         *cumulative_blob_bytes += size;
         self.blob_cache.insert(oid.to_string(), text.clone());
@@ -706,7 +717,7 @@ pub fn node_range(lines: &[String], node: &str) -> Result<(usize, usize), Operat
         let bytes = raw_line.as_bytes();
         let mut i = 0;
         let mut code = String::with_capacity(raw_line.len());
-        let mut open_Columns = Vec::new();
+        let mut open_columns = Vec::new();
 
         while i < bytes.len() {
             if in_comment {
@@ -738,17 +749,14 @@ pub fn node_range(lines: &[String], node: &str) -> Result<(usize, usize), Operat
             } else {
                 let ch = bytes[i] as char;
                 if ch == '{' {
-                    open_Columns.push(code.len());
+                    open_columns.push(code.len());
                 }
                 code.push(ch);
                 i += 1;
             }
         }
 
-        let start_cols: BTreeSet<usize> = head_re
-            .find_iter(&code)
-            .map(|m| m.end() - 1)
-            .collect();
+        let start_cols: BTreeSet<usize> = head_re.find_iter(&code).map(|m| m.end() - 1).collect();
 
         for (col, ch) in code.char_indices() {
             if ch == '{' {
@@ -770,7 +778,7 @@ pub fn node_range(lines: &[String], node: &str) -> Result<(usize, usize), Operat
                 active = next_active;
             }
         }
-        let _ = open_Columns;
+        let _ = open_columns;
     }
 
     if !active.is_empty() {
@@ -885,12 +893,7 @@ impl<'a> Resolver<'a> {
     ///   and verifies `rev-parse --show-toplevel` matches `root.canonicalize()`.
     /// - Otherwise, checks `--offline` (`ENV-1`, `exit 3`), lazily allocates a temporary bare repository
     ///   inside `self.scratch`, and fetches `commit` over HTTPS.
-    pub fn checkout(
-        &mut self,
-        name: &str,
-        url: &str,
-        commit: &str,
-    ) -> Result<PathBuf, GitError> {
+    pub fn checkout(&mut self, name: &str, url: &str, commit: &str) -> Result<PathBuf, GitError> {
         if let Some(bound_root) = self.repo_map.get(name).cloned() {
             check_not_partial_clone(name, &bound_root)?;
             let out = run_git(
@@ -939,13 +942,19 @@ impl<'a> Resolver<'a> {
         let scratch_base = self.scratch.ensure_dir()?;
         self.fetch_counter += 1;
         let dest = scratch_base.join(format!("repo-{}", self.fetch_counter));
-        fs::create_dir_all(&dest).map_err(|e| {
-            SandboxError::Io {
-                context: format!("failed to create repo dir {}", dest.display()),
-                message: e.to_string(),
-            }
+        fs::create_dir_all(&dest).map_err(|e| SandboxError::Io {
+            context: format!("failed to create repo dir {}", dest.display()),
+            message: e.to_string(),
         })?;
-        run_git(&["init", "--bare", "-q"], &dest, self.limit.max(4096))?;
+        if commit.len() == 64 {
+            run_git(
+                &["init", "-q", "--object-format=sha256"],
+                &dest,
+                self.limit.max(4096),
+            )?;
+        } else {
+            run_git(&["init", "-q"], &dest, self.limit.max(4096))?;
+        }
         run_git(
             &[
                 "fetch",
@@ -978,8 +987,10 @@ impl<'a> Resolver<'a> {
         }
         let key = (name.to_string(), url.to_string(), commit.to_string());
         if !self.repos.contains_key(&key) {
+            let is_fetched = !self.repo_map.contains_key(name);
             let root = self.checkout(name, url, commit)?;
-            let repo = Repository::new(root, commit.to_string(), self.limit);
+            let mut repo = Repository::new(root, commit.to_string(), self.limit);
+            repo.fetched = is_fetched;
             repo.ensure_commit()?;
             self.repos.insert(key.clone(), repo);
         }
@@ -1048,7 +1059,10 @@ fn validate_relative_no_traversal(value: &Value) -> Result<(), String> {
         return Err("expected a relative path without traversal".to_string());
     }
     for comp in Path::new(s).components() {
-        if matches!(comp, Component::ParentDir | Component::RootDir | Component::Prefix(_)) {
+        if matches!(
+            comp,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_)
+        ) {
             return Err("expected a relative path without traversal".to_string());
         }
     }
@@ -1076,16 +1090,18 @@ fn validate_iso_date(value: &Value) -> Result<(), String> {
         return Err(format!("invalid ISO date: {s}"));
     }
     let parts: Vec<&str> = s.split('-').collect();
-    if parts.len() != 3
-        || parts[0].len() != 4
-        || parts[1].len() != 2
-        || parts[2].len() != 2
-    {
+    if parts.len() != 3 || parts[0].len() != 4 || parts[1].len() != 2 || parts[2].len() != 2 {
         return Err(format!("invalid ISO date: {s}"));
     }
-    let year: u32 = parts[0].parse().map_err(|_| format!("invalid ISO date: {s}"))?;
-    let month: u32 = parts[1].parse().map_err(|_| format!("invalid ISO date: {s}"))?;
-    let day: u32 = parts[2].parse().map_err(|_| format!("invalid ISO date: {s}"))?;
+    let year: u32 = parts[0]
+        .parse()
+        .map_err(|_| format!("invalid ISO date: {s}"))?;
+    let month: u32 = parts[1]
+        .parse()
+        .map_err(|_| format!("invalid ISO date: {s}"))?;
+    let day: u32 = parts[2]
+        .parse()
+        .map_err(|_| format!("invalid ISO date: {s}"))?;
     if !(1..=12).contains(&month) || day == 0 {
         return Err(format!("invalid ISO date: {s}"));
     }
@@ -1093,7 +1109,7 @@ fn validate_iso_date(value: &Value) -> Result<(), String> {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
         2 => {
-            if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
+            if (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400) {
                 29
             } else {
                 28
@@ -1149,7 +1165,10 @@ fn validate_string_list(v: &Value, nonempty: bool) -> Result<(), String> {
 }
 
 /// Validates shared C8 adapter identity metadata (`source_registry.py:validate_identity`).
-pub fn validate_source_identity(source: &Map<String, Value>, require_hash: bool) -> Result<(), String> {
+pub fn validate_source_identity(
+    source: &Map<String, Value>,
+    require_hash: bool,
+) -> Result<(), String> {
     for field in ["id", "version", "sha256", "status", "checked", "provenance"] {
         if !source.contains_key(field) {
             return Err(format!("missing source field: {field}"));
@@ -1158,7 +1177,10 @@ pub fn validate_source_identity(source: &Map<String, Value>, require_hash: bool)
     for field in ["id", "version", "status"] {
         validate_nonempty_str(source.get(field).expect("checked"))?;
     }
-    let status = source.get("status").and_then(Value::as_str).unwrap_or_default();
+    let status = source
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
     if !matches!(status, "ok" | "blocked" | "unknown") {
         return Err("invalid adapter status".to_string());
     }
@@ -1239,10 +1261,7 @@ pub fn validate_source_registry(registry: &Value) -> Result<(), String> {
             return Err("unknown source kind".to_string());
         }
         validate_sha(source.get("expected_sha256").expect("checked"), false)?;
-        validate_source_identity(
-            source,
-            !matches!(kind, "toolchain" | "model" | "fixture"),
-        )?;
+        validate_source_identity(source, !matches!(kind, "toolchain" | "model" | "fixture"))?;
         let file_val = source.get("file").expect("checked");
         if !file_val.is_null() {
             let Some(file_obj) = file_val.as_object() else {
@@ -1520,7 +1539,10 @@ fn dump_yaml_value(val: &Value, indent: usize) -> String {
                             }
                         }
                         _ => {
-                            out.push_str(&format!("\n{pad}- {}", dump_yaml_value(item, indent + 1)));
+                            out.push_str(&format!(
+                                "\n{pad}- {}",
+                                dump_yaml_value(item, indent + 1)
+                            ));
                         }
                     }
                 }
@@ -1687,7 +1709,10 @@ pub fn run_pinned_file_adapter(
                     if let Err(e) = fs::create_dir_all(parent) {
                         return make_err(
                             EXIT_SANDBOX_ERROR,
-                            format!("failed to create output directory {}: {e}", parent.display()),
+                            format!(
+                                "failed to create output directory {}: {e}",
+                                parent.display()
+                            ),
                             Value::Object(result),
                         );
                     }
@@ -1737,9 +1762,7 @@ pub fn run_pinned_file_adapter(
         .get("sha256")
         .and_then(Value::as_str)
         .unwrap_or("none");
-    let line = format!(
-        "{status_str} {source_id}: sha256={sha_disp} matches_pin={matches_pin}"
-    );
+    let line = format!("{status_str} {source_id}: sha256={sha_disp} matches_pin={matches_pin}");
     let payload = json!({
         "ok": exit_code == 0,
         "updated": updated,
@@ -1805,7 +1828,10 @@ pub fn collect_spec_files_from_targets(targets: &[PathBuf]) -> Result<Vec<PathBu
     let mut out = Vec::new();
     for target in targets {
         let Ok(meta) = fs::symlink_metadata(target) else {
-            return Err(UsageError(format!("{}: no such file or directory", target.display())));
+            return Err(UsageError(format!(
+                "{}: no such file or directory",
+                target.display()
+            )));
         };
         if meta.file_type().is_symlink() {
             return Err(UsageError(format!(
@@ -2002,7 +2028,16 @@ pub fn run_fetch_command(
             }
             let src_str = bound.display().to_string();
             let mut cmd = Command::new("git");
-            cmd.args(["-C", &dest.display().to_string(), "fetch", "--quiet", "--no-tags", "--", &src_str, commit]);
+            cmd.args([
+                "-C",
+                &dest.display().to_string(),
+                "fetch",
+                "--quiet",
+                "--no-tags",
+                "--",
+                &src_str,
+                commit,
+            ]);
             let _ = run_bounded(&mut cmd, PipeLimits::default());
         } else {
             if offline {
@@ -2026,7 +2061,15 @@ pub fn run_fetch_command(
                 }
             }
             if let Err(e) = run_git(
-                &["fetch", "--quiet", "--no-tags", "--depth=1", "--", url, commit],
+                &[
+                    "fetch",
+                    "--quiet",
+                    "--no-tags",
+                    "--depth=1",
+                    "--",
+                    url,
+                    commit,
+                ],
                 &dest,
                 DEFAULT_STDOUT_LIMIT,
             ) {
@@ -2051,7 +2094,10 @@ pub fn run_fetch_command(
             ));
             continue;
         }
-        text_lines.push(format!("cached repo {name} at {commit} -> {}", dest.display()));
+        text_lines.push(format!(
+            "cached repo {name} at {commit} -> {}",
+            dest.display()
+        ));
         cached_repos.push(json!({
             "name": name,
             "commit": commit,

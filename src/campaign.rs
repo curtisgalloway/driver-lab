@@ -20,7 +20,6 @@ use regex::Regex;
 use saphyr_parser::{Event, Parser as YamlParser, ScalarStyle, Tag};
 use serde::de::{self, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::{json, Map, Number, Value};
-use sha2::{Digest, Sha256};
 
 /// Domain validation error (`exit 1`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -150,8 +149,14 @@ pub fn mapping<'a>(
             .map(String::as_str)
             .filter(|k| !allowed.contains(k))
             .collect();
-        require(missing.is_empty(), format!("{what} missing keys: {missing:?}"))?;
-        require(extra.is_empty(), format!("{what} has unexpected keys: {extra:?}"))?;
+        require(
+            missing.is_empty(),
+            format!("{what} missing keys: {missing:?}"),
+        )?;
+        require(
+            extra.is_empty(),
+            format!("{what} has unexpected keys: {extra:?}"),
+        )?;
     }
     Ok(obj)
 }
@@ -172,10 +177,7 @@ pub fn unique_strs(val: &Value, what: &str, nonempty: bool) -> VResult<Vec<Strin
     let mut out = Vec::with_capacity(arr.len());
     for (i, item) in arr.iter().enumerate() {
         let s = nonempty_str(item, &format!("{what}[{i}]"))?;
-        require(
-            seen.insert(s.to_string()),
-            format!("{what} repeats {s:?}"),
-        )?;
+        require(seen.insert(s.to_string()), format!("{what} repeats {s:?}"))?;
         out.push(s.to_string());
     }
     Ok(out)
@@ -246,7 +248,7 @@ pub fn load_yaml(text: &str) -> VResult<Value> {
         },
     }
 
-    let mut parser = YamlParser::new_from_str(text);
+    let parser = YamlParser::new_from_str(text);
     let mut stack: Vec<Frame> = Vec::new();
     let mut anchors: HashMap<usize, Value> = HashMap::new();
     let mut root: Option<Value> = None;
@@ -305,9 +307,8 @@ pub fn load_yaml(text: &str) -> VResult<Value> {
         }
     };
 
-    while let Some(item) = parser.next() {
-        let (event, span) =
-            item.map_err(|e| Invalid(format!("YAML syntax error: {e}")))?;
+    for item in parser {
+        let (event, span) = item.map_err(|e| Invalid(format!("YAML syntax error: {e}")))?;
         let line = span.start.line();
         match event {
             Event::StreamStart | Event::StreamEnd => {}
@@ -318,9 +319,7 @@ pub fn load_yaml(text: &str) -> VResult<Value> {
             Event::DocumentEnd => {}
             Event::Alias(anchor_id) => {
                 let Some(target) = anchors.get(&anchor_id).cloned() else {
-                    return Err(Invalid(format!(
-                        "unresolved YAML alias at line {line}"
-                    )));
+                    return Err(Invalid(format!("unresolved YAML alias at line {line}")));
                 };
                 node_count += count_nodes(&target);
                 require(
@@ -443,12 +442,10 @@ fn resolve_campaign_scalar(
                     "false" | "False" | "FALSE" => Ok(Value::Bool(false)),
                     _ => Err(Invalid(format!("invalid bool {val:?} at line {line}"))),
                 },
-                "int" => parse_yaml_int(val).ok_or_else(|| {
-                    Invalid(format!("invalid int {val:?} at line {line}"))
-                }),
-                "float" => parse_yaml_float(val).ok_or_else(|| {
-                    Invalid(format!("invalid float {val:?} at line {line}"))
-                }),
+                "int" => parse_yaml_int(val)
+                    .ok_or_else(|| Invalid(format!("invalid int {val:?} at line {line}"))),
+                "float" => parse_yaml_float(val)
+                    .ok_or_else(|| Invalid(format!("invalid float {val:?} at line {line}"))),
                 other => Err(Invalid(format!(
                     "unsupported YAML tag {other:?} at line {line}"
                 ))),
@@ -468,8 +465,8 @@ fn resolve_campaign_scalar(
         "" | "~" | "null" | "Null" | "NULL" => return Ok(Value::Null),
         "true" | "True" | "TRUE" => return Ok(Value::Bool(true)),
         "false" | "False" | "FALSE" => return Ok(Value::Bool(false)),
-        ".nan" | ".NaN" | ".NAN" | ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf"
-        | "+.INF" | "-.inf" | "-.Inf" | "-.INF" => {
+        ".nan" | ".NaN" | ".NAN" | ".inf" | ".Inf" | ".INF" | "+.inf" | "+.Inf" | "+.INF"
+        | "-.inf" | "-.Inf" | "-.INF" => {
             return Err(Invalid(format!(
                 "non-finite float literal {val:?} is not permitted at line {line}"
             )));
@@ -575,7 +572,8 @@ fn parse_yaml_float(val: &str) -> Option<Value> {
 }
 
 pub fn load_yaml_file(path: &Path) -> Result<Value, Result<Invalid, Precondition>> {
-    let text = fs::read_to_string(path).map_err(|e| Err(Precondition(format!("{}: {e}", path.display()))))?;
+    let text = fs::read_to_string(path)
+        .map_err(|e| Err(Precondition(format!("{}: {e}", path.display()))))?;
     load_yaml(&text).map_err(Ok)
 }
 
@@ -694,14 +692,8 @@ pub mod source_registry {
         "bindings",
         "changes",
     ];
-    pub const IDENTITY_REQUIRED: &[&str] = &[
-        "id",
-        "version",
-        "sha256",
-        "status",
-        "checked",
-        "provenance",
-    ];
+    pub const IDENTITY_REQUIRED: &[&str] =
+        &["id", "version", "sha256", "status", "checked", "provenance"];
     pub const CHANGE_REQUIRED: &[&str] = &[
         "from_sha256",
         "to_sha256",
@@ -715,7 +707,10 @@ pub mod source_registry {
 
     pub fn relative(value: &Value, what: &str) -> VResult<()> {
         let s = nonempty_str(value, what)?;
-        require(!s.contains('#'), format!("{what} must not contain a fragment"))?;
+        require(
+            !s.contains('#'),
+            format!("{what} must not contain a fragment"),
+        )?;
         let p = Path::new(s);
         let has_parent = p.components().any(|c| matches!(c, Component::ParentDir));
         require(
@@ -726,12 +721,7 @@ pub mod source_registry {
     }
 
     pub fn validate_identity(source: &Value, label: &str) -> VResult<()> {
-        validate_identity_with_keys(
-            source,
-            label,
-            Some(IDENTITY_REQUIRED),
-            None,
-        )
+        validate_identity_with_keys(source, label, Some(IDENTITY_REQUIRED), None)
     }
 
     pub fn validate_identity_with_keys(
@@ -863,12 +853,7 @@ pub mod source_registry {
             SOURCE_KINDS.contains(&kind),
             format!("{label}.kind not allowed: {kind:?}"),
         )?;
-        validate_identity_with_keys(
-            source,
-            &label,
-            Some(SOURCE_REQUIRED),
-            Some(SOURCE_OPTIONAL),
-        )?;
+        validate_identity_with_keys(source, &label, Some(SOURCE_REQUIRED), Some(SOURCE_OPTIONAL))?;
         if !obj["expected_sha256"].is_null() {
             require(
                 is_sha256(&obj["expected_sha256"]),
@@ -1089,11 +1074,7 @@ pub mod source_registry {
                     matches!(skind, Some("document" | "kernel")),
                     format!("citations.{entry_id}.{source_id} must reference a document or kernel source"),
                 )?;
-                unique_strs(
-                    sections,
-                    &format!("citations.{entry_id}.{source_id}"),
-                    true,
-                )?;
+                unique_strs(sections, &format!("citations.{entry_id}.{source_id}"), true)?;
             }
         }
 
@@ -1104,7 +1085,10 @@ pub mod source_registry {
             None,
         )?;
         for (claim_id, obs_ids) in premises {
-            nonempty_str(&Value::String(claim_id.clone()), "sources.yaml.premises key")?;
+            nonempty_str(
+                &Value::String(claim_id.clone()),
+                "sources.yaml.premises key",
+            )?;
             if !known_claims.is_empty() {
                 require(
                     known_claims.contains(claim_id),
@@ -1147,7 +1131,10 @@ pub mod source_registry {
             nonempty_str(&obj["since"], &format!("{label}.since"))?;
             let conflict = nonempty_str(&obj["conflict"], &format!("{label}.conflict"))?;
             let (path_part, _) = conflict.split_once('#').unwrap_or((conflict, ""));
-            relative(&Value::String(path_part.to_string()), &format!("{label}.conflict"))?;
+            relative(
+                &Value::String(path_part.to_string()),
+                &format!("{label}.conflict"),
+            )?;
             let key = (obs_id.to_string(), conflict.to_string());
             require(
                 seen_contradictions.insert(key),
@@ -1229,8 +1216,7 @@ pub mod deployment {
                     {
                         classes.clear();
                         for v in arr {
-                            let s = nonempty_str(v, "spec.schema.json supportClass")
-                                .map_err(Ok)?;
+                            let s = nonempty_str(v, "spec.schema.json supportClass").map_err(Ok)?;
                             classes.insert(s.to_string());
                         }
                     }
@@ -1282,16 +1268,8 @@ pub mod deployment {
         validate_with_classes(document, &classes).map_err(Ok)
     }
 
-    pub fn validate_with_classes(
-        document: &Value,
-        classes: &BTreeSet<String>,
-    ) -> VResult<Value> {
-        let doc = mapping(
-            document,
-            "deployment",
-            Some(&["version", "plugins"]),
-            None,
-        )?;
+    pub fn validate_with_classes(document: &Value, classes: &BTreeSet<String>) -> VResult<Value> {
+        let doc = mapping(document, "deployment", Some(&["version", "plugins"]), None)?;
         require(
             is_exact_int(&doc["version"]) == Some(VERSION),
             "deployment.version must be 1",
@@ -1365,10 +1343,7 @@ pub mod deployment {
             }
         }
 
-        let missing_roles: Vec<&&str> = ROLES
-            .iter()
-            .filter(|r| !roles.contains_key(**r))
-            .collect();
+        let missing_roles: Vec<&&str> = ROLES.iter().filter(|r| !roles.contains_key(**r)).collect();
         require(
             missing_roles.is_empty(),
             format!("deployment.plugins missing role(s): {missing_roles:?}"),
@@ -1398,12 +1373,10 @@ pub mod deployment {
                 .unwrap_or_else(default_config_path);
             let mut from_cfg: Option<PathBuf> = None;
             if cfg_file.exists() {
-                let text = fs::read_to_string(&cfg_file).map_err(|e| {
-                    Err(Precondition(format!("{}: {e}", cfg_file.display())))
-                })?;
-                let parsed: toml::Value = toml::from_str(&text).map_err(|e| {
-                    Ok(Invalid(format!("config is not valid TOML: {e}")))
-                })?;
+                let text = fs::read_to_string(&cfg_file)
+                    .map_err(|e| Err(Precondition(format!("{}: {e}", cfg_file.display()))))?;
+                let parsed: toml::Value = toml::from_str(&text)
+                    .map_err(|e| Ok(Invalid(format!("config is not valid TOML: {e}"))))?;
                 let Some(table) = parsed.as_table() else {
                     return Err(Ok(Invalid("config must be a TOML table".to_string())));
                 };
@@ -1434,24 +1407,23 @@ pub mod deployment {
 
         let text = fs::read_to_string(&chosen)
             .map_err(|e| Err(Precondition(format!("{}: {e}", chosen.display()))))?;
-        let raw = load_yaml(&text)
-            .map_err(|e| Ok(Invalid(format!("deployment manifest is not valid YAML: {e}"))))?;
+        let raw = load_yaml(&text).map_err(|e| {
+            Ok(Invalid(format!(
+                "deployment manifest is not valid YAML: {e}"
+            )))
+        })?;
         validate(&raw, repo_root, target_spec)
     }
 }
 
-pub mod index_check;
-pub mod sweep;
-pub mod contract_check;
-pub mod stopping;
-pub mod pinned_file_adapter;
 pub mod campaign_cli;
+pub mod contract_check;
+pub mod index_check;
+pub mod pinned_file_adapter;
+pub mod stopping;
+pub mod sweep;
 
-use std::io::Write;
 use clap::Parser;
-
-
-
 
 pub fn run_campaign_cmd(
     _cli: &crate::Cli,
@@ -1470,7 +1442,9 @@ pub fn run_campaign_cmd(
     };
 
     match sub.command {
-                crate::campaign::campaign_cli::CampaignCommand::IndexCheck(cmd_args) => run_index_check(&cmd_args, stdout, stderr),
+        crate::campaign::campaign_cli::CampaignCommand::IndexCheck(cmd_args) => {
+            run_index_check(&cmd_args, stdout, stderr)
+        }
         crate::campaign::campaign_cli::CampaignCommand::Sweep(_args) => 0,
         crate::campaign::campaign_cli::CampaignCommand::ContractCheck(_args) => 0,
         crate::campaign::campaign_cli::CampaignCommand::Stopping(_args) => 0,
@@ -1481,13 +1455,18 @@ pub fn run_campaign_cmd(
     }
 }
 
-
-fn run_index_check(args: &crate::campaign::campaign_cli::IndexCheckArgs, stdout: &mut dyn std::io::Write, stderr: &mut dyn std::io::Write) -> i32 {
+fn run_index_check(
+    args: &crate::campaign::campaign_cli::IndexCheckArgs,
+    stdout: &mut dyn std::io::Write,
+    stderr: &mut dyn std::io::Write,
+) -> i32 {
     let mut counts = serde_json::Map::new();
     let mut findings: Vec<String> = Vec::new();
     let mut code = 0;
 
-    let campaign_path = if let Some(p) = &args.campaign { p.clone() } else {
+    let campaign_path = if let Some(p) = &args.campaign {
+        p.clone()
+    } else {
         let _ = writeln!(stderr, "campaign is required");
         return crate::diagnostic::EXIT_USAGE_ERROR;
     };
@@ -1528,7 +1507,10 @@ fn run_index_check(args: &crate::campaign::campaign_cli::IndexCheckArgs, stdout:
     };
 
     if code == 0 {
-        let root = args.root.clone().unwrap_or_else(|| std::env::current_dir().unwrap());
+        let root = args
+            .root
+            .clone()
+            .unwrap_or_else(|| std::env::current_dir().unwrap());
         match crate::campaign::index_check::validate(&claims_val, &status_val, Some(&root)) {
             Ok(res) => {
                 if let serde_json::Value::Object(map) = res {
@@ -1550,8 +1532,14 @@ fn run_index_check(args: &crate::campaign::campaign_cli::IndexCheckArgs, stdout:
         });
         let _ = writeln!(stdout, "{}", serde_json::to_string(&report).unwrap());
     } else if !findings.is_empty() {
-        let _ = writeln!(stdout, "{}", findings.join("
-"));
+        let _ = writeln!(
+            stdout,
+            "{}",
+            findings.join(
+                "
+"
+            )
+        );
     } else {
         let mut parts = Vec::new();
         for (k, v) in &counts {

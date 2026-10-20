@@ -4,7 +4,7 @@
 //! Domain expert skill stub generator and `--check` verifier (`stubgen.py`, `RT-4`, `BF-IMX-ISS-4`).
 
 use crate::diagnostic::{DiagnosticEnvelope, EXIT_DOMAIN_FAILURE, EXIT_OK, EXIT_USAGE_ERROR};
-use crate::{ prosefacts, yaml_strict, Cli, StubgenArgs};
+use crate::{prosefacts, yaml_strict, Cli, StubgenArgs};
 use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
@@ -12,8 +12,7 @@ use std::fs;
 use std::io::Write;
 use std::sync::OnceLock;
 
-const TEMPLATE: &str =
-    include_str!("../skills/board-spec-scaffold/templates/domain-stub-SKILL.md");
+const TEMPLATE: &str = include_str!("../skills/board-spec-scaffold/templates/domain-stub-SKILL.md");
 
 fn name_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
@@ -47,13 +46,19 @@ fn py_str_list(items: &[&str]) -> String {
 
 fn one_line(where_str: &str, value: Option<&Value>) -> Result<String, String> {
     let Some(v) = value else {
-        return Err(format!("{where_str}: a single line of text without backticks"));
+        return Err(format!(
+            "{where_str}: a single line of text without backticks"
+        ));
     };
     let Some(s) = v.as_str() else {
-        return Err(format!("{where_str}: a single line of text without backticks"));
+        return Err(format!(
+            "{where_str}: a single line of text without backticks"
+        ));
     };
     if s.trim().is_empty() || s.contains('\n') || s.contains('`') {
-        return Err(format!("{where_str}: a single line of text without backticks"));
+        return Err(format!(
+            "{where_str}: a single line of text without backticks"
+        ));
     }
     Ok(s.split_whitespace().collect::<Vec<_>>().join(" "))
 }
@@ -431,7 +436,11 @@ pub fn run_stubgen_cmd(
             status_lines.push(format!(
                 "{}: {}",
                 path.display(),
-                if current.is_some() { "stale" } else { "missing" }
+                if current.is_some() {
+                    "stale"
+                } else {
+                    "missing"
+                }
             ));
             stale += 1;
             continue;

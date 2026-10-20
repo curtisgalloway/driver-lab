@@ -20,7 +20,26 @@
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tempfile::TempDir;
+
+struct TempDir {
+    _inner: tempfile::TempDir,
+    path: PathBuf,
+}
+
+impl TempDir {
+    fn new() -> std::io::Result<Self> {
+        let inner = tempfile::TempDir::new()?;
+        let path = inner.path().canonicalize()?;
+        Ok(Self {
+            _inner: inner,
+            path,
+        })
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
 
 const HDR: &str =
     "# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: Apache-2.0\n";
@@ -89,9 +108,7 @@ fn errors(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "error"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -104,9 +121,7 @@ fn warnings(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "warning"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -524,9 +539,15 @@ fn test_worklist_status_bf_arm_21_and_todo() {
     // `todo` lists open todos and supports `--check <kind>` filtering
     let periph_dir = fixtures_dir().join("peripheral");
     let (rc_todo, res_todo) = todo_json(&[periph_dir.to_str().unwrap()]);
-    assert_eq!(rc_todo, 0, "todo on fixtures/peripheral must exit 0: {res_todo}");
+    assert_eq!(
+        rc_todo, 0,
+        "todo on fixtures/peripheral must exit 0: {res_todo}"
+    );
     let total_todos = res_todo["counts"]["total"].as_u64().unwrap();
-    assert!(total_todos > 0, "expected open todos in fixtures/peripheral");
+    assert!(
+        total_todos > 0,
+        "expected open todos in fixtures/peripheral"
+    );
 
     let (rc_hw, res_hw) = todo_json(&[periph_dir.to_str().unwrap(), "--check", "hardware"]);
     assert_eq!(rc_hw, 0);
@@ -1104,7 +1125,10 @@ facts:
 "#,
     );
     let (bad_rc, bad_res) = check_json(&[root.to_str().unwrap()]);
-    assert_ne!(bad_rc, 0, "layout field referencing enum value exceeding field width must fail");
+    assert_ne!(
+        bad_rc, 0,
+        "layout field referencing enum value exceeding field width must fail"
+    );
     assert!(
         !errors(&bad_res, Some("exceeds field width")).is_empty(),
         "expected enumeration value exceeds field width error: {:?}",
@@ -1234,9 +1258,18 @@ facts:
         "md",
     ]);
     assert_eq!(md_rc, 0, "render md failed: {md_err}");
-    assert!(md_out.contains("## Connectors"), "expected Connectors section in md: {md_out}");
-    assert!(md_out.contains("## Bootloader"), "expected Bootloader section in md: {md_out}");
-    assert!(md_out.contains("## Bringup"), "expected Bringup section in md: {md_out}");
+    assert!(
+        md_out.contains("## Connectors"),
+        "expected Connectors section in md: {md_out}"
+    );
+    assert!(
+        md_out.contains("## Bootloader"),
+        "expected Bootloader section in md: {md_out}"
+    );
+    assert!(
+        md_out.contains("## Bringup"),
+        "expected Bringup section in md: {md_out}"
+    );
     assert!(
         md_out.contains("| Pin | Signal | Direction | Level | Note |"),
         "expected connector table header in md: {md_out}"
@@ -1303,7 +1336,10 @@ facts:
 "#,
     );
     let (bad_rc, _bad_res) = check_json(&[root.to_str().unwrap()]);
-    assert_ne!(bad_rc, 0, "data.register on kind: board must fail schema validation");
+    assert_ne!(
+        bad_rc, 0,
+        "data.register on kind: board must fail schema validation"
+    );
     let _ = fs::remove_file(root.join("bad_board.spec.yaml"));
 
     // Negative check R1a: overlay targeting kind: board with data.register must fail check
@@ -1383,14 +1419,21 @@ facts:
 "#,
     );
     let (sem_rc, sem_res) = check_json(&[root.to_str().unwrap()]);
-    assert_ne!(sem_rc, 0, "duplicate connector pin and overlapping memory_map regions must fail");
+    assert_ne!(
+        sem_rc, 0,
+        "duplicate connector pin and overlapping memory_map regions must fail"
+    );
     assert!(
         !errors(&sem_res, Some("duplicate pin '1' in connector")).is_empty(),
         "expected duplicate pin error: {:?}",
         errors(&sem_res, None)
     );
     assert!(
-        !errors(&sem_res, Some("memory_map region 'reg_b' overlaps region 'reg_a'")).is_empty(),
+        !errors(
+            &sem_res,
+            Some("memory_map region 'reg_b' overlaps region 'reg_a'")
+        )
+        .is_empty(),
         "expected overlapping memory_map region error: {:?}",
         errors(&sem_res, None)
     );

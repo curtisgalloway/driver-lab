@@ -1,15 +1,31 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use driver_lab::render_md;
 use driver_lab::render_html;
+use driver_lab::render_md;
 use scraper::{Html, Selector};
 
 // Helper for parsing HTML in tests like Python's Tree
 fn assert_safe(html: &str) -> Html {
     let document = Html::parse_fragment(html);
     // basic check to ensure no unsafe tags
-    let all_tags = ["p", "em", "strong", "a", "span", "pre", "code", "ul", "ol", "li", "blockquote", "hr", "br", "html", "body"];
+    let all_tags = [
+        "p",
+        "em",
+        "strong",
+        "a",
+        "span",
+        "pre",
+        "code",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "hr",
+        "br",
+        "html",
+        "body",
+    ];
     let mut safe = true;
     for node in document.tree.values() {
         if let scraper::node::Node::Element(elem) = node {
@@ -28,7 +44,11 @@ fn assert_safe(html: &str) -> Html {
             }
         }
     }
-    assert!(safe, "HTML contains unsafe elements or attributes: {}", html);
+    assert!(
+        safe,
+        "HTML contains unsafe elements or attributes: {}",
+        html
+    );
     document
 }
 
@@ -36,18 +56,33 @@ fn assert_safe(html: &str) -> Html {
 fn test_all_generated_punctuation_is_literal() {
     let value = "*emphasis* _under_ [link](javascript:x) ![image](x) <b> &amp; | \\ `code` # head";
     let escaped = render_md::escape(value);
-    
+
     assert_eq!(render_md::escape("next\n# heading"), "next \\# heading");
-    
+
     // value has '*', so it will return code span.
-    let expected = render_md::code(&value.replace('\n', " ").replace('\r', " "));
+    let expected = render_md::code(&value.replace(['\n', '\r'], " "));
     assert_eq!(escaped, expected);
 }
 
 #[test]
 fn test_code_span_degenerate_and_backtick_aliases() {
-    let values = vec!["", " ", "   ", "`", "``", "`x`", "`x", "x`", " x ", " x", "x ",
-                      "a`b``c", "[x](*y*)", "a|b", "line\nnext"];
+    let values = vec![
+        "",
+        " ",
+        "   ",
+        "`",
+        "``",
+        "`x`",
+        "`x",
+        "x`",
+        " x ",
+        " x",
+        "x ",
+        "a`b``c",
+        "[x](*y*)",
+        "a|b",
+        "line\nnext",
+    ];
     for value in values {
         let text = render_md::code(value);
         if value.is_empty() {
@@ -56,7 +91,7 @@ fn test_code_span_degenerate_and_backtick_aliases() {
             // text starts and ends with fence
             assert!(text.starts_with('`'));
             assert!(text.ends_with('`'));
-            let inner = value.replace('\n', " ").replace('\r', " ");
+            let inner = value.replace(['\n', '\r'], " ");
             assert!(text.contains(&inner));
         }
     }
@@ -72,12 +107,20 @@ fn test_raw_html_disabled_and_cannot_swallow_markdown() {
 
 #[test]
 fn test_link_and_autolink_scheme_filter() {
-    let bad_urls = vec!["javascript:alert(1)", "JAVASCRIPT:x", "data:text/html,bad",
-                "vbscript:x", "file:///etc/passwd", "//example.invalid/x", "/relative", "relative"];
+    let bad_urls = vec![
+        "javascript:alert(1)",
+        "JAVASCRIPT:x",
+        "data:text/html,bad",
+        "vbscript:x",
+        "file:///etc/passwd",
+        "//example.invalid/x",
+        "/relative",
+        "relative",
+    ];
     for url in bad_urls {
         let text1 = format!("[x]({})", url);
         let text2 = format!("<{}>", url);
-        
+
         let html1 = render_html::author(&text1);
         let doc1 = assert_safe(&html1);
         let selector = Selector::parse("a").unwrap();
@@ -88,7 +131,11 @@ fn test_link_and_autolink_scheme_filter() {
         assert_eq!(doc2.select(&selector).count(), 0);
     }
 
-    let good_urls = vec!["http://example.invalid", "https://example.invalid/?a=1&b=2", "#local"];
+    let good_urls = vec![
+        "http://example.invalid",
+        "https://example.invalid/?a=1&b=2",
+        "#local",
+    ];
     // Note: MAILTO: was in the Python test but allowed_link only checks http/https/#.
     for url in good_urls {
         let text = format!("[x]({})", url);
@@ -106,7 +153,10 @@ fn test_images_become_links_including_nested_label() {
     let doc = assert_safe(&html);
     let selector = Selector::parse("a").unwrap();
     let a_elem = doc.select(&selector).next().unwrap();
-    assert_eq!(a_elem.value().attr("href").unwrap(), "https://example.invalid/a.png");
+    assert_eq!(
+        a_elem.value().attr("href").unwrap(),
+        "https://example.invalid/a.png"
+    );
     assert!(html.contains("<em>alt</em>"));
 
     let bad_urls = vec!["javascript:x", "data:image/png,abc", "//example.invalid/x"];
@@ -128,14 +178,30 @@ fn test_autolink_inside_link_label_cannot_nest_anchors() {
             let text = format!("[<{}>]({})", inner, outer);
             let html = render_html::author(&text);
             let doc = assert_safe(&html);
-            
+
             let count = doc.select(&selector).count();
             if render_html::allowed_link(outer) {
                 assert_eq!(count, 1);
-                assert_eq!(doc.select(&selector).next().unwrap().value().attr("href").unwrap(), *outer);
+                assert_eq!(
+                    doc.select(&selector)
+                        .next()
+                        .unwrap()
+                        .value()
+                        .attr("href")
+                        .unwrap(),
+                    *outer
+                );
             } else if render_html::allowed_link(inner) {
                 assert_eq!(count, 1);
-                assert_eq!(doc.select(&selector).next().unwrap().value().attr("href").unwrap(), *inner);
+                assert_eq!(
+                    doc.select(&selector)
+                        .next()
+                        .unwrap()
+                        .value()
+                        .attr("href")
+                        .unwrap(),
+                    *inner
+                );
             } else {
                 assert_eq!(count, 0);
             }
@@ -161,20 +227,34 @@ fn test_urls_escape_quotes_ampersands_and_entities() {
     let doc = assert_safe(&html);
     let selector = Selector::parse("a").unwrap();
     let a_elem = doc.select(&selector).next().unwrap();
-    assert_eq!(a_elem.value().attr("href").unwrap(), "https://example.invalid/\" onmouseover=\"x&y");
-    
+    assert_eq!(
+        a_elem.value().attr("href").unwrap(),
+        "https://example.invalid/\" onmouseover=\"x&y"
+    );
+
     let html2 = render_html::author("[x](https://example.invalid/?a=1&amp;b=2)");
     let doc2 = assert_safe(&html2);
     let a_elem2 = doc2.select(&selector).next().unwrap();
-    assert_eq!(a_elem2.value().attr("href").unwrap(), "https://example.invalid/?a=1&b=2");
+    assert_eq!(
+        a_elem2.value().attr("href").unwrap(),
+        "https://example.invalid/?a=1&b=2"
+    );
 }
 
 #[test]
 fn test_nested_images_links_and_degenerate_fields() {
-    let values = vec!["", " ", "\n", "***\n\n---", "*unfinished", "> quote\n\n- *item*",
-                    "[![alt](https://example.invalid/a)](mailto:x@example.invalid)",
-                    "![![inner](https://example.invalid/a)](https://example.invalid/b)",
-                    "one  \ntwo", "`<&gic>`"];
+    let values = vec![
+        "",
+        " ",
+        "\n",
+        "***\n\n---",
+        "*unfinished",
+        "> quote\n\n- *item*",
+        "[![alt](https://example.invalid/a)](mailto:x@example.invalid)",
+        "![![inner](https://example.invalid/a)](https://example.invalid/b)",
+        "one  \ntwo",
+        "`<&gic>`",
+    ];
     for value in values {
         let html = render_html::author(value);
         assert_safe(&html);
@@ -232,8 +312,9 @@ fn test_cli_render_md_html_and_bf_gw_27_merged_context_warning_banner() {
 
     // 3. BF-GW-27: render --merged when --context-root has a non-tainting downgraded warning
     let tmp = tempfile::TempDir::new().unwrap();
-    let ctx_dir = tmp.path().join("ctx");
-    let overlay_dir = tmp.path().join("overlay");
+    let tmp_path = tmp.path().canonicalize().unwrap();
+    let ctx_dir = tmp_path.join("ctx");
+    let overlay_dir = tmp_path.join("overlay");
     std::fs::create_dir_all(&ctx_dir).unwrap();
     std::fs::create_dir_all(&overlay_dir).unwrap();
 

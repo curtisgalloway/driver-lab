@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ResourceArgs, AssembleArgs};
-use crate::sandbox::ScratchResolver;
 use crate::diagnostic::{EXIT_OK, EXIT_USAGE_ERROR};
-use sha2::{Sha256, Digest};
-use std::io::Write;
-use std::process::Command;
-use std::fs;
-use std::path::{Path, PathBuf};
+use crate::sandbox::ScratchResolver;
+use crate::{AssembleArgs, ResourceArgs};
 use clap::Parser;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 fn sha256_str(content: impl AsRef<[u8]>) -> String {
     let mut hasher = Sha256::new();
@@ -85,8 +85,12 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
     }
     let id = parts[0];
     let path = Path::new(parts[1]);
-    
-    let output = match Command::new("git").args(["rev-parse", "--verify", "HEAD"]).current_dir(path).output() {
+
+    let output = match Command::new("git")
+        .args(["rev-parse", "--verify", "HEAD"])
+        .current_dir(path)
+        .output()
+    {
         Ok(o) => o,
         Err(e) => {
             let _ = writeln!(stderr, "error: git rev-parse failed: {}", e);
@@ -98,7 +102,7 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
         return EXIT_USAGE_ERROR;
     }
     let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    
+
     // Read root
     let mut accepts = std::collections::BTreeSet::new();
     if let Some(root_path) = args.root {
@@ -106,7 +110,7 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
             accepts = marker.accepts.iter().cloned().collect();
         }
     }
-    
+
     let mut files = Vec::new();
     for rel in &args.relpath {
         let file_path = path.join(rel);
@@ -117,11 +121,14 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
                 return EXIT_USAGE_ERROR;
             }
         };
-        
+
         let sha256 = sha256_str(&content);
         let lines = content.lines().count();
-        let spdx = crate::spdx::scan_spdx_header(&content).unwrap_or(None).map(|s| s.raw_expression).unwrap_or("NOASSERTION".to_string());
-        
+        let spdx = crate::spdx::scan_spdx_header(&content)
+            .unwrap_or(None)
+            .map(|s| s.raw_expression)
+            .unwrap_or("NOASSERTION".to_string());
+
         if !accepts.is_empty() {
             if let Ok(expr) = crate::spdx::parse(&spdx) {
                 if !crate::spdx::accepted(&expr, &accepts) {
@@ -133,10 +140,10 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
                 return EXIT_USAGE_ERROR;
             }
         }
-        
+
         let attr = crate::spdx::scan_attribution(&content);
         let notice = attr.names.join(", ");
-        
+
         let mut file_obj = json!({
             "path": rel,
             "sha256": sha256,
@@ -148,7 +155,7 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
         }
         files.push(file_obj);
     }
-    
+
     let mut repo_obj = json!({
         "commit": commit,
         "files": files,
@@ -159,7 +166,7 @@ fn pin_files(args: PinFilesArgs, stdout: &mut dyn Write, stderr: &mut dyn Write)
     if let Some(ref_name) = args.ref_name {
         repo_obj["ref"] = json!(ref_name);
     }
-    
+
     let doc = json!({ "resources": { "repos": { id: repo_obj } } });
     let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&doc).unwrap());
     EXIT_OK
@@ -173,15 +180,15 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
     }
     let id = parts[0];
     let path = Path::new(parts[1]);
-    
-    let content = match fs::read(&path) {
+
+    let content = match fs::read(path) {
         Ok(c) => c,
         Err(e) => {
             let _ = writeln!(stderr, "error: reading {}: {}", path.display(), e);
             return EXIT_USAGE_ERROR;
         }
     };
-    
+
     let sha256 = sha256_str(String::from_utf8_lossy(&content).as_bytes());
     let mut pages = 0;
     if crate::pdf::is_pdf_bytes(&content) {
@@ -189,7 +196,7 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
             pages = doc.get_pages().len();
         }
     }
-    
+
     let mut doc_obj = json!({
         "title": args.title,
         "class": args.class,
@@ -197,7 +204,7 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
         "pages": pages,
         "license": args.license,
     });
-    
+
     let mut retrieval = Vec::new();
     if let Some(url) = args.url {
         if url.contains("cache.nxp.com") || url.contains("documentation-service.arm.com") {
@@ -212,10 +219,10 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
     if let Some(access) = args.access {
         doc_obj["access"] = json!(access);
     }
-    
+
     let doc = json!({ "resources": { "documents": { id: doc_obj } } });
     let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&doc).unwrap());
-    
+
     if let Some(root) = args.root {
         let out_path = root.join("index").join(format!("{}.index.yaml", id));
         // invoke index
@@ -224,10 +231,10 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
             &root,
             &root, // docs_dir doesn't matter much for generating index if path provided
             Some(&out_path),
-            &ScratchResolver::new(None)
+            &ScratchResolver::new(None),
         );
     }
-    
+
     EXIT_OK
 }
 
@@ -257,17 +264,27 @@ pub fn run_assemble_cmd(
 pub fn check_auto5_warnings(fact: &serde_json::Value) -> Vec<String> {
     let mut warnings = Vec::new();
     if let Some(meaning) = fact.get("meaning").and_then(|m| m.as_str()) {
-        if meaning.contains("table") && fact.get("enumeratedValues").is_none() && fact.get("todo").is_none() {
+        if meaning.contains("table")
+            && fact.get("enumeratedValues").is_none()
+            && fact.get("todo").is_none()
+        {
             warnings.push("#103".to_string());
         }
     }
     if let Some(action) = fact.get("action").and_then(|a| a.as_str()) {
         let verbs = ["wait", "poll", "spin", "delay", "timeout", "handshake"];
-        if verbs.iter().any(|&v| action.contains(v)) && !action.contains("bound") && fact.get("note").is_none() && fact.get("todo").is_none() {
+        if verbs.iter().any(|&v| action.contains(v))
+            && !action.contains("bound")
+            && fact.get("note").is_none()
+            && fact.get("todo").is_none()
+        {
             warnings.push("#105".to_string());
         }
     }
-    if fact.get("section").and_then(|s| s.as_str()) == Some("target") && fact.get("role").is_none() && fact.get("todo").is_none() {
+    if fact.get("section").and_then(|s| s.as_str()) == Some("target")
+        && fact.get("role").is_none()
+        && fact.get("todo").is_none()
+    {
         warnings.push("#150".to_string());
     }
     warnings

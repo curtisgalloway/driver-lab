@@ -212,7 +212,10 @@ pub fn evaluate(
     let mut policy_changes = Vec::new();
     let mut policy_blockers = Vec::new();
     let empty_vec = vec![];
-    let eligible_arr = freshness.get("eligible").and_then(Value::as_array).unwrap_or(&empty_vec);
+    let eligible_arr = freshness
+        .get("eligible")
+        .and_then(Value::as_array)
+        .unwrap_or(&empty_vec);
     let mut eligible: HashSet<&str> = eligible_arr.iter().map(|v| v.as_str().unwrap()).collect();
 
     for entry in entries.values() {
@@ -326,7 +329,7 @@ pub fn evaluate(
             }
         }
 
-        let accepted = scope.map_or(false, |s| {
+        let accepted = scope.is_some_and(|s| {
             if let Some(ac) = s
                 .get("accepted_classes")
                 .and_then(|ac| ac.get(cid))
@@ -365,12 +368,12 @@ pub fn evaluate(
     let mut queue = Vec::new();
 
     let unit = |kind: &str,
-                    ids: &[&str],
-                    reason: &str,
-                    tier: i64,
-                    decision: Option<&Value>,
-                    suffix: Option<&str>,
-                    q: &mut Vec<Value>|
+                ids: &[&str],
+                reason: &str,
+                tier: i64,
+                decision: Option<&Value>,
+                suffix: Option<&str>,
+                q: &mut Vec<Value>|
      -> Value {
         let cmp = status.get("campaign").and_then(Value::as_str).unwrap_or("");
         let suf = suffix.unwrap_or("current");
@@ -472,7 +475,7 @@ pub fn evaluate(
         if cls == "E"
             && target != "spec"
             && target != "records"
-            && (!impact.is_none() && !impact.unwrap().is_null() || target == "review")
+            && (impact.is_some() && !impact.unwrap().is_null() || target == "review")
             && in_scope
             && status_change
         {
@@ -657,8 +660,8 @@ pub fn evaluate(
                 || assessment
                     .unwrap()
                     .get("accuracy_failures")
-                    .map_or(false, |v| {
-                        v.as_bool().unwrap_or(true) || v.as_array().map_or(false, |a| !a.is_empty())
+                    .is_some_and(|v| {
+                        v.as_bool().unwrap_or(true) || v.as_array().is_some_and(|a| !a.is_empty())
                     })
             {
                 block(
@@ -803,8 +806,8 @@ pub fn evaluate(
             let assessment = lat.get("assessment");
             if assessment.is_none()
                 || assessment.unwrap().is_null()
-                || assessment.unwrap().get("r_items").map_or(false, |v| {
-                    v.as_bool().unwrap_or(true) || v.as_array().map_or(false, |a| !a.is_empty())
+                || assessment.unwrap().get("r_items").is_some_and(|v| {
+                    v.as_bool().unwrap_or(true) || v.as_array().is_some_and(|a| !a.is_empty())
                 })
             {
                 block(
@@ -851,7 +854,7 @@ pub fn evaluate(
         queue.push(rd);
     }
     if let Some(scp) = scope {
-        if scp.get("reader") != Some(&reader) {
+        if scp.get("reader") != Some(reader) {
             unit(
                 "comparison-reading",
                 &[],
@@ -888,21 +891,24 @@ pub fn evaluate(
                 let deps = basis.get("dependencies");
 
                 let mut required = Vec::new();
-                if deps.is_none() || deps.unwrap().is_null() {
-                    if let Some(sr) = basis.get("sections_read").and_then(Value::as_array) {
-                        for s in sr {
-                            required.push(s.as_str().unwrap());
+                match deps {
+                    None | Some(Value::Null) => {
+                        if let Some(sr) = basis.get("sections_read").and_then(Value::as_array) {
+                            for s in sr {
+                                required.push(s.as_str().unwrap());
+                            }
                         }
                     }
-                } else {
-                    if let Some(secs) = entry.get("sections").and_then(Value::as_array) {
-                        for s in secs {
-                            required.push(s.as_str().unwrap());
+                    Some(deps_val) => {
+                        if let Some(secs) = entry.get("sections").and_then(Value::as_array) {
+                            for s in secs {
+                                required.push(s.as_str().unwrap());
+                            }
                         }
-                    }
-                    if let Some(da) = deps.unwrap().as_array() {
-                        for d in da {
-                            required.push(d.as_str().unwrap());
+                        if let Some(da) = deps_val.as_array() {
+                            for d in da {
+                                required.push(d.as_str().unwrap());
+                            }
                         }
                     }
                 }
@@ -919,10 +925,8 @@ pub fn evaluate(
                         .and_then(Value::as_array)
                         .unwrap();
 
-                    let e_set: HashSet<i64> =
-                        e_cov.iter().map(|v| v.as_i64().unwrap()).collect();
-                    let f_set: HashSet<i64> =
-                        f_cov.iter().map(|v| v.as_i64().unwrap()).collect();
+                    let e_set: HashSet<i64> = e_cov.iter().map(|v| v.as_i64().unwrap()).collect();
+                    let f_set: HashSet<i64> = f_cov.iter().map(|v| v.as_i64().unwrap()).collect();
 
                     if e_set.is_subset(&f_set)
                         && first.get("text").and_then(Value::as_str) == Some("landed")
@@ -1089,11 +1093,11 @@ pub fn evaluate(
         || freshness
             .get("unavailable")
             .and_then(Value::as_array)
-            .map_or(false, |a| !a.is_empty())
+            .is_some_and(|a| !a.is_empty())
         || freshness
             .get("stale_controls")
             .and_then(Value::as_array)
-            .map_or(false, |a| !a.is_empty())
+            .is_some_and(|a| !a.is_empty())
         || !stale_by_kind.is_empty()
         || !policy_blockers.is_empty()
     {

@@ -3,14 +3,28 @@
 
 //! Consolidated Rust library and CLI dispatcher for `driver-lab`.
 
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
+
+pub mod author;
+pub mod campaign;
 pub mod corpus;
 pub mod diagnostic;
+pub mod docresolve;
+pub mod drift;
+pub mod eval;
+pub mod explorer;
+pub mod git_source;
 pub mod index;
+pub mod inventory;
 pub mod model;
 pub mod pdf;
 pub mod peripheral;
 pub mod prosefacts;
+pub mod publish;
 pub mod records;
+pub mod render_html;
+pub mod render_md;
+pub mod resolve;
 pub mod sandbox;
 pub mod schema;
 pub mod spdx;
@@ -18,21 +32,9 @@ pub mod speccheck;
 pub mod specmd;
 pub mod stubgen;
 pub mod topology;
+pub mod verify_flow;
 pub mod worklist;
 pub mod yaml_strict;
-pub mod campaign;
-pub mod author;
-pub mod verify_flow;
-pub mod render_md;
-pub mod render_html;
-pub mod explorer;
-pub mod publish;
-pub mod eval;
-pub mod docresolve;
-pub mod resolve;
-pub mod git_source;
-pub mod inventory;
-pub mod drift;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use diagnostic::{DiagnosticEnvelope, EXIT_OK, EXIT_SANDBOX_ERROR, EXIT_USAGE_ERROR};
@@ -224,6 +226,15 @@ pub struct ResolveArgs {
     /// Require license compatibility check.
     #[arg(long = "require-license")]
     pub require_license: bool,
+    /// Seconds per Git or PDF extraction operation (`resolve.py:--timeout`).
+    #[arg(long = "timeout", value_name = "SECS", default_value_t = 300)]
+    pub timeout: u64,
+    /// Retained objects and output limit in MiB (`resolve.py:--limit-mb`).
+    #[arg(long = "limit-mb", value_name = "MB", default_value_t = 50)]
+    pub limit_mb: usize,
+    /// Print `<name>\t<commit>` lines for all `resources.repos` entries in the target files (`BF-GW-23`).
+    #[arg(long = "list-repos")]
+    pub list_repos: bool,
 }
 
 /// Arguments for `driver-lab index`.
@@ -363,8 +374,8 @@ pub struct RenderArgs {
 /// Arguments for `driver-lab show`.
 #[derive(Debug, Clone, Args)]
 pub struct ShowArgs {
-    /// Fact reference (`#fact-id`, `spec#fact-id`, or `spec@root#fact-id`).
-    pub fact_ref: String,
+    /// Target spec files or root directories (`driver-lab show <file>...`).
+    pub targets: Vec<PathBuf>,
     /// Spec root directory.
     #[arg(long = "root", value_name = "DIR")]
     pub root: Option<PathBuf>,
@@ -377,6 +388,12 @@ pub struct ShowArgs {
     /// Local directory containing downloaded reference documents.
     #[arg(long = "docs-dir", value_name = "DIR")]
     pub docs_dir: Option<PathBuf>,
+    /// Seconds per Git or PDF extraction operation (`resolve.py:--timeout`).
+    #[arg(long = "timeout", value_name = "SECS", default_value_t = 300)]
+    pub timeout: u64,
+    /// Retained objects and output limit in MiB (`resolve.py:--limit-mb`).
+    #[arg(long = "limit-mb", value_name = "MB", default_value_t = 50)]
+    pub limit_mb: usize,
 }
 
 /// Arguments for `driver-lab inventory`.
@@ -605,24 +622,29 @@ where
         Command::Verify(v_args) => verify_flow::run_verify_cmd(v_args, &scratch, stdout, stderr),
         Command::Resolve(args) => resolve::run_resolve_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Show(args) => resolve::run_show_cmd(&cli, args, &scratch, stdout, stderr),
-        Command::Inventory(args) => inventory::run_inventory_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::Inventory(args) => {
+            inventory::run_inventory_cmd(&cli, args, &scratch, stdout, stderr)
+        }
         Command::Drift(args) => drift::run_drift_cmd(&cli, args, &scratch, stdout, stderr),
         Command::Fetch(args) => run_fetch_cmd(&cli, args, &scratch, stdout, stderr),
-        Command::PinnedFileAdapter(args) => run_pinned_file_adapter_cmd(&cli, args, &scratch, stdout, stderr),
+        Command::PinnedFileAdapter(args) => {
+            run_pinned_file_adapter_cmd(&cli, args, &scratch, stdout, stderr)
+        }
         Command::Eval(eval_args) => eval::run_eval_cmd(&cli, eval_args, stdout, stderr),
-        Command::Campaign(campaign_args) => campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr),
+        Command::Campaign(campaign_args) => {
+            campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr)
+        }
         Command::Check(check_args) => speccheck::run_check_cmd(&cli, check_args, stdout, stderr),
         Command::Status(status_args) => worklist::run_status_cmd(&cli, status_args, stdout, stderr),
         Command::Todo(todo_args) => worklist::run_todo_cmd(&cli, todo_args, stdout, stderr),
         Command::Corpus(corpus_args) => corpus::run_corpus_cmd(&cli, corpus_args, stdout, stderr),
         Command::Stubgen(stub_args) => stubgen::run_stubgen_cmd(&cli, stub_args, stdout, stderr),
-        Command::Render(render_args) => render_md::run_render_cmd(&cli, render_args, stdout, stderr),
+        Command::Render(render_args) => {
+            render_md::run_render_cmd(&cli, render_args, stdout, stderr)
+        }
         Command::Publish(pub_args) => publish::run_publish_cmd(&cli, pub_args, stdout, stderr),
     }
 }
-
-
-
 
 fn run_license_gate_cmd(
     cli: &Cli,
@@ -798,7 +820,9 @@ fn run_pinned_file_adapter_cmd(
     let outcome = git_source::run_pinned_file_adapter(
         &args.registry,
         &args.source_id,
-        args.repo.as_deref().unwrap_or_else(|| std::path::Path::new("")),
+        args.repo
+            .as_deref()
+            .unwrap_or_else(|| std::path::Path::new("")),
         None,
         Some(&args.out),
         true,

@@ -10,17 +10,37 @@
 //! behavioral cases ported from `skills/spec-format/tests/test_records.py`.
 
 use driver_lab::records::{
-    STATUSES, SUMMARY, bookkeeping_fields, canonical, check_roots, compute_graph, sha256_str,
-    status_roots,
+    bookkeeping_fields, canonical, check_roots, compute_graph, sha256_str, status_roots, STATUSES,
+    SUMMARY,
 };
 use serde::Deserialize;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use tempfile::TempDir;
 
-const HDR: &str = "# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: Apache-2.0\n";
+struct TempDir {
+    _inner: tempfile::TempDir,
+    path: PathBuf,
+}
+
+impl TempDir {
+    fn new() -> std::io::Result<Self> {
+        let inner = tempfile::TempDir::new()?;
+        let path = inner.path().canonicalize()?;
+        Ok(Self {
+            _inner: inner,
+            path,
+        })
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+const HDR: &str =
+    "# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: Apache-2.0\n";
 const COMMIT: &str = "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d";
 const TRM: &str = "    - {name: trm, class: databook, title: Widget TRM, url: \"https://example.invalid/trm.pdf\", pages: 80, verified: 2026-10-01, fetch: ok}\n";
 
@@ -78,9 +98,7 @@ fn errors(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "error"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -93,9 +111,7 @@ fn warnings(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "warning"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -142,12 +158,14 @@ fn fact(
     support: Option<&str>,
     section: &str,
 ) -> String {
-    let sup = support
-        .unwrap_or("    support: [{class: databook, doc: trm, at: [{section: \"1\"}]}]\n");
+    let sup =
+        support.unwrap_or("    support: [{class: databook, doc: trm, at: [{section: \"1\"}]}]\n");
     let c = claim
         .map(ToString::to_string)
         .unwrap_or_else(|| format!("C {fid}."));
-    format!("  - id: {fid}\n    section: {section}\n    title: T {fid}\n    claim: {c}\n{sup}{extra}")
+    format!(
+        "  - id: {fid}\n    section: {section}\n    title: T {fid}\n    claim: {c}\n{sup}{extra}"
+    )
 }
 
 fn fact_simple(fid: &str) -> String {
@@ -307,7 +325,10 @@ fn verify_all(root: &Path, sid: &str, spec_file: &str, status_args: &[&str]) {
         .strip_suffix(".spec.yaml")
         .unwrap();
     let rec_text = make_record(sid, spec_file, &verdicts, None);
-    write_files(root, &[(&format!("resources/{stem}.verify.yaml"), &rec_text)]);
+    write_files(
+        root,
+        &[(&format!("resources/{stem}.verify.yaml"), &rec_text)],
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -406,13 +427,41 @@ fn test_conformance_fact_v1_vectors_byte_for_byte() {
             assert_eq!(actual.key, expected.key, "suite {}", suite.id);
             assert_eq!(actual.r#ref, expected.full_ref, "suite {}", suite.id);
             assert_eq!(actual.kind, expected.kind, "suite {}", suite.id);
-            assert_eq!(actual.status, expected.status, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.verdict, expected.verdict, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.basis, expected.basis, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.recorded, expected.recorded, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.upstream, expected.upstream, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.changed, expected.changed, "suite {} ref {}", suite.id, actual.r#ref);
-            assert_eq!(actual.reason, expected.reason, "suite {} ref {}", suite.id, actual.r#ref);
+            assert_eq!(
+                actual.status, expected.status,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.verdict, expected.verdict,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.basis, expected.basis,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.recorded, expected.recorded,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.upstream, expected.upstream,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.changed, expected.changed,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
+            assert_eq!(
+                actual.reason, expected.reason,
+                "suite {} ref {}",
+                suite.id, actual.r#ref
+            );
             assert_eq!(
                 actual.second_reader, expected.second_reader,
                 "suite {} ref {}",
@@ -720,16 +769,30 @@ fn test_invariance_layout_bookkeeping_and_targeted_edits() {
         )
     };
 
-    let base_spec = build_spec("C a.", "quick-facts", TRM, &linux_repo(), "the parts are the same die", false);
+    let base_spec = build_spec(
+        "C a.",
+        "quick-facts",
+        TRM,
+        &linux_repo(),
+        "the parts are the same die",
+        false,
+    );
     let g0 = tmp.path().join("g0");
     write_files(
         &g0,
         &[
-            ("board-specs.yaml", &marker("g", "[GPL-2.0-only]", "GPL-2.0-only", "public")),
+            (
+                "board-specs.yaml",
+                &marker("g", "[GPL-2.0-only]", "GPL-2.0-only", "public"),
+            ),
             ("w.spec.yaml", &base_spec),
         ],
     );
-    let base_hashes = bases(&[g0.to_str().unwrap(), "--context-root", docs.to_str().unwrap()]);
+    let base_hashes = bases(&[
+        g0.to_str().unwrap(),
+        "--context-root",
+        docs.to_str().unwrap(),
+    ]);
 
     let mut counter = 1;
     let mut diff_against_base = |spec_text: &str, docs_dir: &Path| -> Vec<String> {
@@ -738,11 +801,18 @@ fn test_invariance_layout_bookkeeping_and_targeted_edits() {
         write_files(
             &g,
             &[
-                ("board-specs.yaml", &marker("g", "[GPL-2.0-only]", "GPL-2.0-only", "public")),
+                (
+                    "board-specs.yaml",
+                    &marker("g", "[GPL-2.0-only]", "GPL-2.0-only", "public"),
+                ),
                 ("w.spec.yaml", spec_text),
             ],
         );
-        let after = bases(&[g.to_str().unwrap(), "--context-root", docs_dir.to_str().unwrap()]);
+        let after = bases(&[
+            g.to_str().unwrap(),
+            "--context-root",
+            docs_dir.to_str().unwrap(),
+        ]);
         let mut changed: Vec<String> = base_hashes
             .keys()
             .filter(|k| base_hashes[*k] != after[*k])
@@ -753,24 +823,90 @@ fn test_invariance_layout_bookkeeping_and_targeted_edits() {
     };
 
     // Layout changes nothing
-    assert!(diff_against_base(&build_spec("C a.", "quick-facts", TRM, &linux_repo(), "the parts are the same die", true), &docs).is_empty());
-    assert!(diff_against_base(&build_spec("C a.", "gotchas", TRM, &linux_repo(), "the parts are the same die", false), &docs).is_empty());
+    assert!(diff_against_base(
+        &build_spec(
+            "C a.",
+            "quick-facts",
+            TRM,
+            &linux_repo(),
+            "the parts are the same die",
+            true
+        ),
+        &docs
+    )
+    .is_empty());
+    assert!(diff_against_base(
+        &build_spec(
+            "C a.",
+            "gotchas",
+            TRM,
+            &linux_repo(),
+            "the parts are the same die",
+            false
+        ),
+        &docs
+    )
+    .is_empty());
 
     // Bookkeeping changes nothing
-    let trm_bk = TRM.replace("verified: 2026-10-01, fetch: ok", "verified: 2026-10-07, fetch: blocked, note: n");
-    assert!(diff_against_base(&build_spec("C a.", "quick-facts", &trm_bk, &linux_repo(), "the parts are the same die", false), &docs).is_empty());
+    let trm_bk = TRM.replace(
+        "verified: 2026-10-01, fetch: ok",
+        "verified: 2026-10-07, fetch: blocked, note: n",
+    );
+    assert!(diff_against_base(
+        &build_spec(
+            "C a.",
+            "quick-facts",
+            &trm_bk,
+            &linux_repo(),
+            "the parts are the same die",
+            false
+        ),
+        &docs
+    )
+    .is_empty());
 
     // Targeted edits change only dependent facts
     assert_eq!(
-        diff_against_base(&build_spec("C a, edited.", "quick-facts", TRM, &linux_repo(), "the parts are the same die", false), &docs),
+        diff_against_base(
+            &build_spec(
+                "C a, edited.",
+                "quick-facts",
+                TRM,
+                &linux_repo(),
+                "the parts are the same die",
+                false
+            ),
+            &docs
+        ),
         vec!["a", "c", "d"]
     );
     assert_eq!(
-        diff_against_base(&build_spec("C a.", "quick-facts", TRM, &linux_repo().replace(COMMIT, &"f".repeat(40)), "the parts are the same die", false), &docs),
+        diff_against_base(
+            &build_spec(
+                "C a.",
+                "quick-facts",
+                TRM,
+                &linux_repo().replace(COMMIT, &"f".repeat(40)),
+                "the parts are the same die",
+                false
+            ),
+            &docs
+        ),
         vec!["b", "g"]
     );
     assert_eq!(
-        diff_against_base(&build_spec("C a.", "quick-facts", TRM, &linux_repo(), "the parts share a die", false), &docs),
+        diff_against_base(
+            &build_spec(
+                "C a.",
+                "quick-facts",
+                TRM,
+                &linux_repo(),
+                "the parts share a die",
+                false
+            ),
+            &docs
+        ),
         vec!["e", "i"]
     );
 
@@ -805,8 +941,20 @@ fn test_cycles_and_cross_root_cycle() {
     let r = tmp.path().join("r");
     let facts = format!(
         "{}{}",
-        fact("a", None, "    relates: [{fact: \"#b\", relation: same-as}]\n", None, "quick-facts"),
-        fact("b", None, "    relates: [{fact: \"#a\", relation: same-as}]\n", None, "quick-facts")
+        fact(
+            "a",
+            None,
+            "    relates: [{fact: \"#b\", relation: same-as}]\n",
+            None,
+            "quick-facts"
+        ),
+        fact(
+            "b",
+            None,
+            "    relates: [{fact: \"#a\", relation: same-as}]\n",
+            None,
+            "quick-facts"
+        )
     );
     write_files(
         &r,
@@ -1063,7 +1211,11 @@ fn test_upstream_freshness_and_second_readers() {
         &gpl,
         "xchip",
         "x.spec.yaml",
-        &[gpl.to_str().unwrap(), "--context-root", docs.to_str().unwrap()],
+        &[
+            gpl.to_str().unwrap(),
+            "--context-root",
+            docs.to_str().unwrap(),
+        ],
     );
 
     for mode in ["pr", "main"] {
@@ -1163,7 +1315,11 @@ fn test_worked_example_status_and_upstream_edit() {
         &gpl,
         "bcm2711",
         "bcm2711.spec.yaml",
-        &[gpl.to_str().unwrap(), "--context-root", docs.to_str().unwrap()],
+        &[
+            gpl.to_str().unwrap(),
+            "--context-root",
+            docs.to_str().unwrap(),
+        ],
     );
     let (code, res) = check_json(&[
         gpl.to_str().unwrap(),
@@ -1179,7 +1335,11 @@ fn test_worked_example_status_and_upstream_edit() {
     let text = fs::read_to_string(&spec_path).unwrap();
     let anchor = text.find("  - id: addressing-model").unwrap();
     let claim_pos = text[anchor..].find("    claim:").unwrap() + anchor;
-    let edited = format!("{}    note: an edit\n{}", &text[..claim_pos], &text[claim_pos..]);
+    let edited = format!(
+        "{}    note: an edit\n{}",
+        &text[..claim_pos],
+        &text[claim_pos..]
+    );
     fs::write(&spec_path, edited).unwrap();
 
     let (code_main, res_main) = check_json(&[
@@ -1191,7 +1351,11 @@ fn test_worked_example_status_and_upstream_edit() {
     ]);
     assert_eq!(code_main, 0);
     assert_eq!(
-        warnings(&res_main, Some("fact 'tree-describes-low-peripheral-mode': upstream-stale")).len(),
+        warnings(
+            &res_main,
+            Some("fact 'tree-describes-low-peripheral-mode': upstream-stale")
+        )
+        .len(),
         1
     );
 
@@ -1204,7 +1368,11 @@ fn test_worked_example_status_and_upstream_edit() {
     ]);
     assert_eq!(code_pr, 1);
     assert_eq!(
-        errors(&res_pr, Some("fact 'tree-describes-low-peripheral-mode': upstream-stale")).len(),
+        errors(
+            &res_pr,
+            Some("fact 'tree-describes-low-peripheral-mode': upstream-stale")
+        )
+        .len(),
         1
     );
 

@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::VerifyArgs;
-use crate::sandbox::ScratchResolver;
 use crate::diagnostic::{EXIT_OK, EXIT_USAGE_ERROR};
-use std::io::Write;
+use crate::sandbox::ScratchResolver;
+use crate::VerifyArgs;
 use clap::Parser;
-
+use std::io::Write;
 
 #[derive(Debug, Parser)]
 #[command(name = "verify")]

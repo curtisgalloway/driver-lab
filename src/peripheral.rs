@@ -4,9 +4,7 @@
 //! Typed peripheral fact semantic checks, D16 subrecord projection, and generated
 //! register/field/sequence views (`peripheral.py`, `RT-4`, `BF-IMX-14`).
 
-use crate::records::{
-    anchors, registry_entry_label, Checker, PathElem, SpecFile, SpecRecord,
-};
+use crate::records::{anchors, registry_entry_label, Checker, PathElem, SpecFile, SpecRecord};
 use serde_json::{json, Map, Value};
 use std::collections::{HashMap, HashSet};
 
@@ -157,23 +155,14 @@ pub fn requirement(
 
     if let Some(req) = value.and_then(Value::as_str) {
         if req == "hw-required" {
-            let has_doc = support_val
-                .and_then(Value::as_array)
-                .is_some_and(|arr| {
-                    arr.iter().any(|entry| {
-                        matches!(
-                            as_str(entry, "class"),
-                            Some(
-                                "databook"
-                                    | "datasheet"
-                                    | "errata"
-                                    | "appnote"
-                                    | "standard"
-                                    | "doc"
-                            )
-                        )
-                    })
-                });
+            let has_doc = support_val.and_then(Value::as_array).is_some_and(|arr| {
+                arr.iter().any(|entry| {
+                    matches!(
+                        as_str(entry, "class"),
+                        Some("databook" | "datasheet" | "errata" | "appnote" | "standard" | "doc")
+                    )
+                })
+            });
             if !has_doc {
                 let mut p = path.to_vec();
                 p.push(PathElem::Key("requirement".to_string()));
@@ -189,19 +178,18 @@ pub fn requirement(
             }
         }
         if req == "comment-explained" {
-            let has_comment = support_val
-                .and_then(Value::as_array)
-                .is_some_and(|arr| {
-                    arr.iter().any(|entry| {
-                        let cls = as_str(entry, "class").unwrap_or("");
-                        if matches!(cls, "src" | "DT" | "rtl") {
-                            as_array(entry, "anchors")
-                                .is_some_and(|anchors| anchors.iter().any(|a| a.get("comment").is_some()))
-                        } else {
-                            false
-                        }
-                    })
-                });
+            let has_comment = support_val.and_then(Value::as_array).is_some_and(|arr| {
+                arr.iter().any(|entry| {
+                    let cls = as_str(entry, "class").unwrap_or("");
+                    if matches!(cls, "src" | "DT" | "rtl") {
+                        as_array(entry, "anchors").is_some_and(|anchors| {
+                            anchors.iter().any(|a| a.get("comment").is_some())
+                        })
+                    } else {
+                        false
+                    }
+                })
+            });
             if !has_comment {
                 let mut p = path.to_vec();
                 p.push(PathElem::Key("requirement".to_string()));
@@ -252,7 +240,9 @@ pub fn check_registries(checker: &mut Checker, file_idx: usize, _cited: &mut Has
                             checker.reject(
                                 file_idx,
                                 &p,
-                                format!("{what}: reset type '{reset}' is not in this file's resetTypes"),
+                                format!(
+                                    "{what}: reset type '{reset}' is not in this file's resetTypes"
+                                ),
                                 true,
                             );
                         }
@@ -299,9 +289,10 @@ pub fn check_file(checker: &mut Checker, file_idx: usize) {
             let register = payload.and_then(|p| p.get("register"));
 
             if let Some(reg) = register {
-                if let (Some(reset_val), Some(width)) =
-                    (parse_int(reg.get("reset")), reg.get("width").and_then(Value::as_u64))
-                {
+                if let (Some(reset_val), Some(width)) = (
+                    parse_int(reg.get("reset")),
+                    reg.get("width").and_then(Value::as_u64),
+                ) {
                     if bit_length(reset_val) > width {
                         let mut p = path.clone();
                         p.push(PathElem::Key("data".to_string()));
@@ -356,26 +347,26 @@ pub fn check_file(checker: &mut Checker, file_idx: usize) {
                 }
 
                 if let Some(bits) = as_array(row, "bits") {
-                    if at.len() >= 3 && matches!(&at[at.len() - 3], PathElem::Key(k) if k == "data")
+                    if at.len() >= 3
+                        && matches!(&at[at.len() - 3], PathElem::Key(k) if k == "data")
+                        && bits.len() >= 2
                     {
-                        if bits.len() >= 2 {
-                            if let (Some(low), Some(high)) = (bits[0].as_u64(), bits[1].as_u64()) {
-                                let w = register
-                                    .and_then(|r| r.get("width"))
-                                    .and_then(Value::as_u64);
-                                if low > high || w.is_some_and(|w| high >= w) {
-                                    let mut p = at.clone();
-                                    p.push(PathElem::Key("bits".to_string()));
-                                    checker.add_file(
-                                        file_idx,
-                                        &p,
-                                        "bits must be ordered and inside register width",
-                                        "error",
-                                        false,
-                                        true,
-                                        true,
-                                    );
-                                }
+                        if let (Some(low), Some(high)) = (bits[0].as_u64(), bits[1].as_u64()) {
+                            let w = register
+                                .and_then(|r| r.get("width"))
+                                .and_then(Value::as_u64);
+                            if low > high || w.is_some_and(|w| high >= w) {
+                                let mut p = at.clone();
+                                p.push(PathElem::Key("bits".to_string()));
+                                checker.add_file(
+                                    file_idx,
+                                    &p,
+                                    "bits must be ordered and inside register width",
+                                    "error",
+                                    false,
+                                    true,
+                                    true,
+                                );
                             }
                         }
                     }
@@ -725,7 +716,9 @@ fn check_register(checker: &mut Checker, file_idx: usize, register: &Value, rpat
             checker.reject(
                 file_idx,
                 &p,
-                format!("register '{name}': register file '{rf}' is not in this file's registerFiles"),
+                format!(
+                    "register '{name}': register file '{rf}' is not in this file's registerFiles"
+                ),
                 true,
             );
             return;
@@ -735,9 +728,10 @@ fn check_register(checker: &mut Checker, file_idx: usize, register: &Value, rpat
             .and_then(Value::as_u64)
             .map(|w| u128::from(w / 8))
             .unwrap_or(0);
-        if let (Some(off), Some(rf_size)) =
-            (parse_int(register.get("offset")), parse_int(rf_entry.get("size")))
-        {
+        if let (Some(off), Some(rf_size)) = (
+            parse_int(register.get("offset")),
+            parse_int(rf_entry.get("size")),
+        ) {
             if off + width_bytes > rf_size {
                 let mut p = rpath.to_vec();
                 p.push(PathElem::from("offset"));
@@ -1060,9 +1054,7 @@ fn check_field(
             checker.reject(
                 file_idx,
                 &p,
-                format!(
-                    "{what}: enumeration '{ed}' is not in this file's enumerationDefinitions"
-                ),
+                format!("{what}: enumeration '{ed}' is not in this file's enumerationDefinitions"),
                 true,
             );
         }
@@ -1077,13 +1069,7 @@ fn check_field(
             "values".to_string(),
             field.get("enumeratedValues").cloned().unwrap_or(json!([])),
         );
-        check_enumeration(
-            checker,
-            file_idx,
-            &what,
-            &Value::Object(ev_map),
-            fpath,
-        );
+        check_enumeration(checker, file_idx, &what, &Value::Object(ev_map), fpath);
     }
 
     if let Some(table) = field.get("table") {
@@ -1128,20 +1114,18 @@ fn check_field(
                         None
                     }
                 });
-                if fwidth.is_some() && ow.is_some() && fwidth != ow {
-                    checker.add_file(
-                        file_idx,
-                        &apath,
-                        format!(
-                            "{what}: aliasOf '{alias}' has width {}, not {}",
-                            ow.unwrap(),
-                            fwidth.unwrap()
-                        ),
-                        "error",
-                        false,
-                        true,
-                        true,
-                    );
+                if let (Some(fw), Some(other_w)) = (fwidth, ow) {
+                    if fw != other_w {
+                        checker.add_file(
+                            file_idx,
+                            &apath,
+                            format!("{what}: aliasOf '{alias}' has width {other_w}, not {fw}"),
+                            "error",
+                            false,
+                            true,
+                            true,
+                        );
+                    }
                 }
                 if register.get("offset") == other_reg.get("offset")
                     && register.get("registerFile") == other_reg.get("registerFile")
@@ -1407,13 +1391,7 @@ pub fn check_layouts(checker: &mut Checker, file_idx: usize) {
                         "values".to_string(),
                         field.get("enumeratedValues").cloned().unwrap_or(json!([])),
                     );
-                    check_enumeration(
-                        checker,
-                        file_idx,
-                        &what,
-                        &Value::Object(ev_map),
-                        &fpath,
-                    );
+                    check_enumeration(checker, file_idx, &what, &Value::Object(ev_map), &fpath);
                 }
 
                 for (poff, psize, pbl, pbh, pid, pwhen) in &ranges {
@@ -1699,8 +1677,8 @@ fn check_step_value(
                 .get("enumerationDefinitions")
                 .and_then(|m| m.get(eref))
             {
-                if let Some(vals) = as_array(ed_entry, "enumeratedValues")
-                    .or_else(|| as_array(ed_entry, "values"))
+                if let Some(vals) =
+                    as_array(ed_entry, "enumeratedValues").or_else(|| as_array(ed_entry, "values"))
                 {
                     for r in vals {
                         if let Some(n) = as_str(r, "name") {
@@ -1959,16 +1937,34 @@ pub fn field_rows(summary: &Map<String, Value>) -> Vec<Map<String, Value>> {
         sorted_fields.sort_by(|a, b| {
             let ba = as_array(a, "bits");
             let bb = as_array(b, "bits");
-            let a1 = ba.and_then(|v| v.get(1)).and_then(Value::as_i64).unwrap_or(0);
-            let a0 = ba.and_then(|v| v.first()).and_then(Value::as_i64).unwrap_or(0);
-            let b1 = bb.and_then(|v| v.get(1)).and_then(Value::as_i64).unwrap_or(0);
-            let b0 = bb.and_then(|v| v.first()).and_then(Value::as_i64).unwrap_or(0);
+            let a1 = ba
+                .and_then(|v| v.get(1))
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let a0 = ba
+                .and_then(|v| v.first())
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let b1 = bb
+                .and_then(|v| v.get(1))
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let b0 = bb
+                .and_then(|v| v.first())
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
             (-a1, -a0).cmp(&(-b1, -b0))
         });
         for fld in sorted_fields {
             let bits = as_array(&fld, "bits");
-            let low = bits.and_then(|v| v.first()).and_then(Value::as_u64).unwrap_or(0);
-            let high = bits.and_then(|v| v.get(1)).and_then(Value::as_u64).unwrap_or(0);
+            let low = bits
+                .and_then(|v| v.first())
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            let high = bits
+                .and_then(|v| v.get(1))
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
             let span = if low == high {
                 format!("[{low}]")
             } else {

@@ -14,16 +14,35 @@
 //! - `headingcheck` (`check_headings_with_fetcher`, `fetch_url`, `parse_rendered_headings`)
 //! - Bug-fix regressions: `BF-IMX-14`, `BF-IMX-18`, `BF-GW-27`, and `BF-IMX-ISS-4`
 
-use driver_lab::records::{Checker, load_schemas};
+use driver_lab::records::{load_schemas, Checker};
 use driver_lab::speccheck::{
-    TaintClass, check_headings_with_fetcher, classify_context_finding, fetch_url,
-    load_and_run_checker, parse_rendered_headings, textcheck_data_where,
+    check_headings_with_fetcher, classify_context_finding, fetch_url, load_and_run_checker,
+    parse_rendered_headings, textcheck_data_where, TaintClass,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tempfile::TempDir;
+
+struct TempDir {
+    _inner: tempfile::TempDir,
+    path: PathBuf,
+}
+
+impl TempDir {
+    fn new() -> std::io::Result<Self> {
+        let inner = tempfile::TempDir::new()?;
+        let path = inner.path().canonicalize()?;
+        Ok(Self {
+            _inner: inner,
+            path,
+        })
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
 
 const HDR: &str =
     "# SPDX-FileCopyrightText: 2026 contributors\n# SPDX-License-Identifier: Apache-2.0\n";
@@ -66,9 +85,7 @@ fn errors(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "error"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -81,9 +98,7 @@ fn warnings(result: &Value, text: Option<&str>) -> Vec<Value> {
         .iter()
         .filter(|f| {
             f["level"] == "warning"
-                && text.map_or(true, |needle| {
-                    f["message"].as_str().unwrap_or("").contains(needle)
-                })
+                && text.is_none_or(|needle| f["message"].as_str().unwrap_or("").contains(needle))
         })
         .cloned()
         .collect()
@@ -130,7 +145,10 @@ fn test_license_gate_matrix() {
             let root = tmp.path().join("root");
             fs::create_dir_all(&root).unwrap();
             fs::copy(
-                lg_dir.join("roots").join(root_kind).join("board-specs.yaml"),
+                lg_dir
+                    .join("roots")
+                    .join(root_kind)
+                    .join("board-specs.yaml"),
                 root.join("board-specs.yaml"),
             )
             .unwrap();
@@ -208,7 +226,10 @@ fn test_board_overlay_fixtures() {
         base_root.to_str().unwrap(),
         "--require-license",
     ]);
-    assert_ne!(rc, 0, "expected GPL-3.0 overlay under permissive root to fail: {res}");
+    assert_ne!(
+        rc, 0,
+        "expected GPL-3.0 overlay under permissive root to fail: {res}"
+    );
     assert!(!errors(&res, None).is_empty());
 }
 
@@ -347,7 +368,11 @@ fn test_check_bad_root_all_files_report_errors() {
     let mut files_with_errors = HashSet::new();
     for f in findings {
         if f["level"] == "error" {
-            if let Some(file) = f.get("path").or_else(|| f.get("file")).and_then(Value::as_str) {
+            if let Some(file) = f
+                .get("path")
+                .or_else(|| f.get("file"))
+                .and_then(Value::as_str)
+            {
                 let p = Path::new(file);
                 if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
                     files_with_errors.insert(name.to_string());
@@ -556,7 +581,10 @@ fn test_headingcheck_urls_parsing_and_verification() {
         </body></html>
     "##;
     let headings = parse_rendered_headings(html);
-    assert_eq!(headings.get("overview").map(String::as_str), Some("overview"));
+    assert_eq!(
+        headings.get("overview").map(String::as_str),
+        Some("overview")
+    );
     assert_eq!(
         headings.get("clock tree & plls").map(String::as_str),
         Some("clock-tree")
@@ -830,7 +858,9 @@ fn test_bf_gw_27_explicit_context_root_taint_classification() {
     // Non-tainting upstream unresolved third-root references and spec_file path mismatches
     // are downgraded to context warnings (BF-GW-27)
     assert_eq!(
-        classify_context_finding("context root: instance 'uart0': ip 'widgetuart' resolves to no spec"),
+        classify_context_finding(
+            "context root: instance 'uart0': ip 'widgetuart' resolves to no spec"
+        ),
         TaintClass::DowngradedContextWarning
     );
     assert_eq!(

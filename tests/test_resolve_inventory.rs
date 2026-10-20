@@ -1,4 +1,14 @@
+// SPDX-FileCopyrightText: 2026 contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use driver_lab::docresolve::{
+    hex_values, hex_values_u64, locator_pattern, section_covered_by_index,
+};
+use serde_json::json;
+use std::collections::BTreeSet;
+use std::fs;
 use std::process::Command;
+use tempfile::TempDir;
 
 fn run_test_cli(args: Vec<&str>) -> std::process::Output {
     let bin = env!("CARGO_BIN_EXE_driver-lab");
@@ -10,13 +20,13 @@ fn run_test_cli(args: Vec<&str>) -> std::process::Output {
 #[test]
 fn test_hex_values_extraction() {
     let text1 = "The address is 0x1234_5678 and also 4438_0000h.";
-    let res1 = driver_lab::docresolve::hex_values(text1);
+    let res1 = hex_values(text1);
     assert_eq!(res1, vec!["0x1234_5678", "4438_0000h"]);
 }
 
 #[test]
 fn test_locator_pattern() {
-    let pat1 = driver_lab::docresolve::locator_pattern("table", "Table 1.2");
+    let pat1 = locator_pattern("table", "Table 1.2");
     assert!(pat1.is_match("Table 1.2 is shown"));
 
     // Issue #166: captions and prose references followed by a period
@@ -57,37 +67,272 @@ fn test_locator_pattern() {
 }
 
 #[test]
-fn test_bf_usb_1() {
-    let out = run_test_cli(vec!["resolve", "--help"]);
-    assert!(out.status.success());
+fn test_bf_usb_1_locator_prefix_normalization_and_trailing_punctuation() {
+    let pat_prefixed = locator_pattern("table", "Table 9-2");
+    let pat_bare = locator_pattern("table", "9-2");
+    let pat_trailing = locator_pattern("table", "Table 16.");
+    assert!(pat_prefixed.is_match("Table 9-2. Format of Setup Data"));
+    assert!(pat_bare.is_match("Table 9-2. Format of Setup Data"));
+    assert!(!pat_prefixed.is_match("Table 9-2-1. Sub-table"));
+    assert!(pat_trailing.is_match("Table 16: Endpoint Descriptor"));
+    assert!(!pat_trailing.is_match("Table 16.1: Extended Endpoint"));
+
+    let fig_pat = locator_pattern("figure", "Figure 1-1");
+    assert!(fig_pat.is_match("Figure 1-1. LPM State Transition Diagram"));
+    assert!(!fig_pat.is_match("Figure 1-10. Other Diagram"));
 }
+
 #[test]
-fn test_bf_usb_2() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_usb_2_unicode_en_dash_and_ascii_hyphen_matching() {
+    let pat = locator_pattern("table", "Table 2-3");
+    assert!(pat.is_match("Table 2–3. USBLEGSUP Register"));
+    assert!(pat.is_match("Table 2-3. USBLEGSUP Register"));
+    assert!(!pat.is_match("Table 2–3–1. Subfield"));
 }
+
 #[test]
-fn test_bf_imx_iss_6() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_imx_iss_6_line_wrapped_captions_and_index_section_span() {
+    let pat = locator_pattern("table", "Table 282. Break character length");
+    assert!(pat.is_match("Table 282\nBreak character length"));
+    assert!(pat.is_match("Table 282. Break character length"));
+    assert!(pat.is_match("Table 282:\n  Break character length"));
+
+    let sha = "a".repeat(64);
+    let idx = json!({
+        "format": 2,
+        "document": "imx95-rm",
+        "sha256": sha,
+        "sections": [
+            {
+                "number": "12.3.4",
+                "title": "LPUART Baud Rate Generation",
+                "start_page": 2578,
+                "end_page": 2586
+            }
+        ]
+    });
+    assert!(
+        section_covered_by_index(&idx, Some(&sha), "12.3.4", 2582, 2583).unwrap(),
+        "mid-section pages 2582..2583 must be covered by verified index span 2578..2586"
+    );
+    assert!(section_covered_by_index(
+        &idx,
+        Some(&sha),
+        "Section 12.3.4 LPUART Baud Rate Generation",
+        2582,
+        2583
+    )
+    .unwrap());
+    assert!(
+        !section_covered_by_index(&idx, Some(&sha), "12.3.4", 2590, 2591).unwrap(),
+        "pages outside [2578, 2586] must not be covered"
+    );
 }
+
 #[test]
-fn test_bf_imx_iss_7() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_imx_iss_7_and_bf_imx_16_vendor_h_suffix_hex_normalization() {
+    let text = "Base 4438_0000h reset 0404_0007h offsets 14h, 1Ch, and 580h in each beach.";
+    let vals = hex_values_u64(text);
+    let expected: BTreeSet<u64> = [0x4438_0000, 0x0404_0007, 0x14, 0x1c, 0x580]
+        .into_iter()
+        .collect();
+    assert_eq!(
+        vals, expected,
+        "English words 'each'/'beach' must not parse as hex"
+    );
 }
+
 #[test]
-fn test_bf_imx_13() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_imx_13_section_locator_with_trailing_period() {
+    let pat = locator_pattern("section", "1.2");
+    assert!(pat.is_match("1.2. Purpose"));
+    assert!(pat.is_match("Section 1.2: Overview"));
+    assert!(!pat.is_match("1.2.1 Detailed Scope"));
 }
+
 #[test]
-fn test_bf_imx_16() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_imx_17_stale_index_rejected_on_sha256_mismatch() {
+    let idx_sha = "a".repeat(64);
+    let doc_sha = "b".repeat(64);
+    let idx = json!({
+        "format": 2,
+        "document": "imx95-rm",
+        "sha256": idx_sha,
+        "sections": [
+            {
+                "number": "12.3",
+                "title": "Registers",
+                "start_page": 10,
+                "end_page": 20
+            }
+        ]
+    });
+    let err = section_covered_by_index(&idx, Some(&doc_sha), "12.3", 12, 12).unwrap_err();
+    assert!(
+        err.contains("stale index"),
+        "expected stale index error on sha256 mismatch, got: {err}"
+    );
 }
+
 #[test]
-fn test_bf_imx_17() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
-}
-#[test]
-fn test_bf_gw_26() {
-    let _ = run_test_cli(vec!["resolve", "--help"]);
+fn test_bf_gw_26_unused_repo_mapping_warns_without_aborting_and_env1_partial_clone_refused() {
+    let tmp = TempDir::new().unwrap();
+    let repo_dir = tmp.path().join("tools");
+    let extra_dir = tmp.path().join("extra");
+    fs::create_dir_all(&repo_dir).unwrap();
+    fs::create_dir_all(&extra_dir).unwrap();
+
+    let git_env = [
+        ("GIT_AUTHOR_NAME", "Test"),
+        ("GIT_AUTHOR_EMAIL", "test@users.noreply.github.com"),
+        ("GIT_COMMITTER_NAME", "Test"),
+        ("GIT_COMMITTER_EMAIL", "test@users.noreply.github.com"),
+    ];
+    for d in [&repo_dir, &extra_dir] {
+        assert!(Command::new("git")
+            .args(["init", "-q"])
+            .current_dir(d)
+            .envs(git_env)
+            .status()
+            .unwrap()
+            .success());
+        fs::write(
+            d.join("driver.c"),
+            "// SPDX-License-Identifier: BSD-3-Clause\nint stub_magic(void) { return 0x42; }\n",
+        )
+        .unwrap();
+        assert!(Command::new("git")
+            .args(["add", "driver.c"])
+            .current_dir(d)
+            .envs(git_env)
+            .status()
+            .unwrap()
+            .success());
+        assert!(Command::new("git")
+            .args(["commit", "-q", "-m", "init"])
+            .current_dir(d)
+            .envs(git_env)
+            .status()
+            .unwrap()
+            .success());
+    }
+    let commit = String::from_utf8(
+        Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .current_dir(&repo_dir)
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+
+    let spec_path = tmp.path().join("widget.spec.yaml");
+    fs::write(
+        &spec_path,
+        format!(
+            r#"format: 2
+kind: chip
+id: widget
+name: Widget
+resources:
+  repos:
+    - name: tools
+      url: https://example.invalid/tools
+      commit: "{commit}"
+      license: BSD-3-Clause
+      files:
+        - path: driver.c
+          license_from: spdx-line
+facts:
+  - id: stub-magic
+    section: identity
+    title: Stub magic
+    claim: Returns 0x42.
+    support:
+      - class: src
+        anchors:
+          - repo: tools
+            path: driver.c
+            lines: [2, 2]
+            symbol: stub_magic
+"#
+        ),
+    )
+    .unwrap();
+
+    // 1. --list-repos outputs name<TAB>commit
+    let mut out_list = Vec::new();
+    let mut err_list = Vec::new();
+    let rc_list = driver_lab::run_from_args(
+        [
+            "driver-lab",
+            "resolve",
+            "--list-repos",
+            spec_path.to_str().unwrap(),
+        ],
+        &mut out_list,
+        &mut err_list,
+    );
+    assert_eq!(rc_list, 0);
+    assert_eq!(
+        String::from_utf8_lossy(&out_list).trim(),
+        format!("tools\t{commit}")
+    );
+
+    // 2. Unused --repo mapping emits a warning and exits 0 (BF-GW-26)
+    let tools_arg = format!("tools={}", repo_dir.display());
+    let unused_arg = format!("unused={}", extra_dir.display());
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let rc = driver_lab::run_from_args(
+        [
+            "driver-lab",
+            "resolve",
+            spec_path.to_str().unwrap(),
+            "--repo",
+            &tools_arg,
+            "--repo",
+            &unused_arg,
+        ],
+        &mut out,
+        &mut err,
+    );
+    let out_str = String::from_utf8_lossy(&out);
+    assert_eq!(rc, 0, "out={out_str} err={}", String::from_utf8_lossy(&err));
+    assert!(
+        out_str.contains("warning: unused --repo mapping 'unused'"),
+        "expected unused --repo warning in output: {out_str}"
+    );
+    assert!(out_str.contains("1 anchor(s) resolved, 0 skipped"));
+
+    // 3. Partial clone bound via --repo exits 3 (ENV-1)
+    assert!(Command::new("git")
+        .args(["config", "extensions.partialClone", "origin"])
+        .current_dir(&repo_dir)
+        .status()
+        .unwrap()
+        .success());
+    let mut out_pc = Vec::new();
+    let mut err_pc = Vec::new();
+    let rc_pc = driver_lab::run_from_args(
+        [
+            "driver-lab",
+            "resolve",
+            spec_path.to_str().unwrap(),
+            "--repo",
+            &tools_arg,
+        ],
+        &mut out_pc,
+        &mut err_pc,
+    );
+    let err_pc_str = String::from_utf8_lossy(&err_pc);
+    assert_eq!(rc_pc, 3, "expected exit 3 on partial clone: {err_pc_str}");
+    assert!(
+        err_pc_str.contains("partial clone: bind a full checkout"),
+        "expected partial clone message, got: {err_pc_str}"
+    );
 }
 
 #[test]
@@ -128,7 +373,8 @@ verdicts: {}
 
     // Unpinned source with fetch != "ok" must be rejected
     let invalid_blocked_path = tmp.path().join("blocked.verify.yaml");
-    let invalid_blocked_yaml = valid_yaml.replace("fetch: ok\n    note:", "fetch: blocked\n    note:");
+    let invalid_blocked_yaml =
+        valid_yaml.replace("fetch: ok\n    note:", "fetch: blocked\n    note:");
     fs::write(&invalid_blocked_path, invalid_blocked_yaml).unwrap();
     let out_blocked = run_test_cli(vec![
         "--json",
@@ -422,14 +668,10 @@ facts:
         2,
         "expected warnings on dt-only-missing-hex (0x51) and co-cited-missing-in-both (0x99), got: {findings_with_docs:?}"
     );
-    assert!(
-        findings_with_docs
-            .iter()
-            .any(|f| f["message"].as_str().unwrap_or("").contains("0x51"))
-    );
-    assert!(
-        findings_with_docs
-            .iter()
-            .any(|f| f["message"].as_str().unwrap_or("").contains("0x99"))
-    );
+    assert!(findings_with_docs
+        .iter()
+        .any(|f| f["message"].as_str().unwrap_or("").contains("0x51")));
+    assert!(findings_with_docs
+        .iter()
+        .any(|f| f["message"].as_str().unwrap_or("").contains("0x99")));
 }

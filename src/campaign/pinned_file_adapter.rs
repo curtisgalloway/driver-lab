@@ -1,8 +1,5 @@
-use std::fs;
-use std::path::{Path, PathBuf};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use crate::campaign::{Invalid, Precondition, VResult, require, nonempty_str, mapping, is_sha256, is_iso_date_str};
 
 pub fn check_blob(content: &[u8], expected: Option<&str>) -> serde_json::Map<String, Value> {
     let mut hasher = Sha256::new();

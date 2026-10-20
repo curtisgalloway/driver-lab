@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::records::{Checker, SpecFile};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -43,7 +43,12 @@ pub fn catalog(checker: &Checker) -> Result<Vec<PageInfo<'_>>, String> {
         let mut hasher = Sha256::new();
         hasher.update(source.as_bytes());
         let stem = format!("spec-{:x}", hasher.finalize());
-        pages.push(PageInfo { stem, source, file, merged: false });
+        pages.push(PageInfo {
+            stem,
+            source,
+            file,
+            merged: false,
+        });
     }
 
     let mut overlays = BTreeSet::new();
@@ -58,11 +63,20 @@ pub fn catalog(checker: &Checker) -> Result<Vec<PageInfo<'_>>, String> {
         let mut hasher = Sha256::new();
         hasher.update(sid.as_bytes());
         let stem = format!("merged-{:x}", hasher.finalize());
-        let file = checker.files.iter().find(|f| {
-            let root = &checker.roots[f.root_idx];
-            !root.context && f.spec_id() == sid
-        }).expect("overlay file must exist");
-        pages.push(PageInfo { stem, source: format!("merged:{}", sid), file, merged: true });
+        let file = checker
+            .files
+            .iter()
+            .find(|f| {
+                let root = &checker.roots[f.root_idx];
+                !root.context && f.spec_id() == sid
+            })
+            .expect("overlay file must exist");
+        pages.push(PageInfo {
+            stem,
+            source: format!("merged:{}", sid),
+            file,
+            merged: true,
+        });
     }
 
     if pages.is_empty() {
@@ -71,7 +85,11 @@ pub fn catalog(checker: &Checker) -> Result<Vec<PageInfo<'_>>, String> {
     Ok(pages)
 }
 
-pub fn payloads(checker: &Checker, args: &PublishOptions, anchors: Option<&serde_json::Value>) -> Result<std::collections::HashMap<String, String>, String> {
+pub fn payloads(
+    checker: &Checker,
+    args: &PublishOptions,
+    anchors: Option<&serde_json::Value>,
+) -> Result<std::collections::HashMap<String, String>, String> {
     let mut result = std::collections::HashMap::new();
     let mut entries = Vec::new();
 
@@ -116,30 +134,56 @@ pub fn payloads(checker: &Checker, args: &PublishOptions, anchors: Option<&serde
         }
 
         let spec_id = page.file.spec_id();
-        let first_commit = commits.first().map(|s| s.as_str());
-        let html = render_html::render(checker, Some(&spec_id), page.merged, true, first_commit, Some(&args.tool_commit))?;
-        let md = render_md::render(checker, Some(&spec_id), page.merged, true, first_commit, Some(&args.tool_commit))?;
+        let joined_commits = commits.join("\n");
+        let commit_opt = if commits.is_empty() {
+            None
+        } else {
+            Some(joined_commits.as_str())
+        };
+        let html = render_html::render(
+            checker,
+            Some(&spec_id),
+            page.merged,
+            true,
+            commit_opt,
+            Some(&args.tool_commit),
+        )?;
+        let md = render_md::render(
+            checker,
+            Some(&spec_id),
+            page.merged,
+            true,
+            commit_opt,
+            Some(&args.tool_commit),
+        )?;
 
         result.insert(format!("{}.html", page.stem), html);
         result.insert(format!("{}.md", page.stem), md);
 
         let mut entry = serde_json::Map::new();
-        entry.insert("html".into(), serde_json::Value::String(format!("{}.html", page.stem)));
-        entry.insert("markdown".into(), serde_json::Value::String(format!("{}.md", page.stem)));
+        entry.insert(
+            "html".into(),
+            serde_json::Value::String(format!("{}.html", page.stem)),
+        );
+        entry.insert(
+            "markdown".into(),
+            serde_json::Value::String(format!("{}.md", page.stem)),
+        );
         entry.insert("source".into(), serde_json::Value::String(page.source));
-        entry.insert("spec".into(), serde_json::Value::String(page.file.spec_id()));
+        entry.insert(
+            "spec".into(),
+            serde_json::Value::String(page.file.spec_id()),
+        );
         entries.push(serde_json::Value::Object(entry));
     }
 
-    let default_anchors_str = explorer::empty_anchors();
-    let default_anchors: serde_json::Value =
-        serde_json::from_str(&default_anchors_str).unwrap_or_default();
+    let default_anchors = explorer::empty_anchors_value();
     let anchors_ref = anchors.unwrap_or(&default_anchors);
     let anchors_json = explorer::dump_anchors(anchors_ref);
     result.insert("anchors.json".into(), anchors_json.clone());
 
-    let loaded_anchors = explorer::load_anchors(&anchors_json, checker);
-    let index_html = explorer::page(checker, &loaded_anchors, &entries, &args.tool_commit);
+    let loaded_anchors = explorer::load_anchors(&anchors_json, checker)?;
+    let index_html = explorer::try_page(checker, &loaded_anchors, &entries, &args.tool_commit)?;
     result.insert("index.html".into(), index_html);
 
     let mut manifest_sha256 = serde_json::Map::new();
@@ -149,14 +193,20 @@ pub fn payloads(checker: &Checker, args: &PublishOptions, anchors: Option<&serde
         let text = &result[name];
         let mut hasher = Sha256::new();
         hasher.update(text.as_bytes());
-        manifest_sha256.insert(name.clone(), serde_json::Value::String(format!("{:x}", hasher.finalize())));
+        manifest_sha256.insert(
+            name.clone(),
+            serde_json::Value::String(format!("{:x}", hasher.finalize())),
+        );
     }
 
     let mut manifest = serde_json::Map::new();
     manifest.insert("pages".into(), serde_json::Value::Array(entries));
     manifest.insert("sha256".into(), serde_json::Value::Object(manifest_sha256));
-    
-    let manifest_str = format!("{}\n", serde_json::to_string_pretty(&manifest).unwrap_or_default());
+
+    let manifest_str = format!(
+        "{}\n",
+        serde_json::to_string_pretty(&manifest).unwrap_or_default()
+    );
     result.insert("manifest.json".into(), manifest_str);
 
     Ok(result)
@@ -166,9 +216,11 @@ pub fn safe_output(out: &Path, checker: &Checker) -> Result<(), String> {
     let absolute = if out.is_absolute() {
         out.to_path_buf()
     } else {
-        std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join(out)
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(out)
     };
-    
+
     let mut current = absolute.clone();
     loop {
         if let Ok(meta) = std::fs::symlink_metadata(&current) {
@@ -197,7 +249,13 @@ pub fn safe_output(out: &Path, checker: &Checker) -> Result<(), String> {
 
 pub fn build(checker: &Checker, args: &PublishOptions) -> Result<(), String> {
     safe_output(&args.out, checker)?;
-    if args.out.exists() && args.out.read_dir().map(|mut i| i.next().is_some()).unwrap_or(false) {
+    if args.out.exists()
+        && args
+            .out
+            .read_dir()
+            .map(|mut i| i.next().is_some())
+            .unwrap_or(false)
+    {
         return Err("site output must be empty".into());
     }
 
@@ -217,14 +275,14 @@ pub fn build(checker: &Checker, args: &PublishOptions) -> Result<(), String> {
     for (name, text) in expected {
         std::fs::write(args.out.join(name), text).map_err(|e| e.to_string())?;
     }
-    
+
     check(checker, args)
 }
 
 pub fn check(checker: &Checker, args: &PublishOptions) -> Result<(), String> {
     safe_output(&args.out, checker)?;
     let stored = args.out.join("anchors.json");
-    
+
     if let Ok(meta) = std::fs::symlink_metadata(&stored) {
         if meta.file_type().is_symlink() || !meta.is_file() {
             return Err("site is missing anchors.json".into());
@@ -234,9 +292,10 @@ pub fn check(checker: &Checker, args: &PublishOptions) -> Result<(), String> {
     }
 
     let anchors_text = std::fs::read_to_string(&stored).map_err(|e| e.to_string())?;
-    explorer::load_anchors(&anchors_text, checker);
-    
-    let anchors_val: serde_json::Value = serde_json::from_str(&anchors_text).map_err(|_| "invalid anchors.json".to_string())?;
+    explorer::load_anchors(&anchors_text, checker)?;
+
+    let anchors_val: serde_json::Value =
+        serde_json::from_str(&anchors_text).map_err(|_| "invalid anchors.json".to_string())?;
     let expected = payloads(checker, args, Some(&anchors_val))?;
 
     if !args.out.is_dir() {
@@ -296,7 +355,11 @@ pub fn run_publish_cmd(
                 "error": if code == EXIT_USAGE_ERROR { "usage" } else { "domain" },
                 "findings": [{"message": msg}],
             });
-            let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+            let _ = writeln!(
+                stdout,
+                "{}",
+                serde_json::to_string(&payload).unwrap_or_default()
+            );
         } else {
             let _ = writeln!(stderr, "{msg}");
         }
@@ -322,7 +385,12 @@ pub fn run_publish_cmd(
                 if let Some(v) = args.args.get(i) {
                     context_root.push(PathBuf::from(v));
                 } else {
-                    return emit_fail(EXIT_USAGE_ERROR, "--context-root requires a value", stdout, stderr);
+                    return emit_fail(
+                        EXIT_USAGE_ERROR,
+                        "--context-root requires a value",
+                        stdout,
+                        stderr,
+                    );
                 }
             }
             "--public-skill" => {
@@ -330,7 +398,12 @@ pub fn run_publish_cmd(
                 if let Some(v) = args.args.get(i) {
                     public_skill.push(v.clone());
                 } else {
-                    return emit_fail(EXIT_USAGE_ERROR, "--public-skill requires a value", stdout, stderr);
+                    return emit_fail(
+                        EXIT_USAGE_ERROR,
+                        "--public-skill requires a value",
+                        stdout,
+                        stderr,
+                    );
                 }
             }
             "--source-commit" => {
@@ -338,7 +411,12 @@ pub fn run_publish_cmd(
                 if let Some(v) = args.args.get(i) {
                     source_commit.push(v.clone());
                 } else {
-                    return emit_fail(EXIT_USAGE_ERROR, "--source-commit requires a value", stdout, stderr);
+                    return emit_fail(
+                        EXIT_USAGE_ERROR,
+                        "--source-commit requires a value",
+                        stdout,
+                        stderr,
+                    );
                 }
             }
             "--tool-commit" => {
@@ -346,7 +424,12 @@ pub fn run_publish_cmd(
                 if let Some(v) = args.args.get(i) {
                     tool_commit = Some(v.clone());
                 } else {
-                    return emit_fail(EXIT_USAGE_ERROR, "--tool-commit requires a value", stdout, stderr);
+                    return emit_fail(
+                        EXIT_USAGE_ERROR,
+                        "--tool-commit requires a value",
+                        stdout,
+                        stderr,
+                    );
                 }
             }
             "--require-verified" => {
@@ -354,7 +437,12 @@ pub fn run_publish_cmd(
                 if let Some(v) = args.args.get(i) {
                     require_verified = Some(v.clone());
                 } else {
-                    return emit_fail(EXIT_USAGE_ERROR, "--require-verified requires a value", stdout, stderr);
+                    return emit_fail(
+                        EXIT_USAGE_ERROR,
+                        "--require-verified requires a value",
+                        stdout,
+                        stderr,
+                    );
                 }
             }
             "--out" => {
@@ -419,10 +507,20 @@ pub fn run_publish_cmd(
         );
     }
     let Some(root_path) = root else {
-        return emit_fail(EXIT_USAGE_ERROR, "publish requires a spec root path", stdout, stderr);
+        return emit_fail(
+            EXIT_USAGE_ERROR,
+            "publish requires a spec root path",
+            stdout,
+            stderr,
+        );
     };
     let Some(out_path) = out else {
-        return emit_fail(EXIT_USAGE_ERROR, "publish requires --out <DIR>", stdout, stderr);
+        return emit_fail(
+            EXIT_USAGE_ERROR,
+            "publish requires --out <DIR>",
+            stdout,
+            stderr,
+        );
     };
 
     let opts = PublishOptions {
@@ -485,7 +583,11 @@ pub fn run_publish_cmd(
                     "mode": mode_str,
                     "views": count,
                 });
-                let _ = writeln!(stdout, "{}", serde_json::to_string(&payload).unwrap_or_default());
+                let _ = writeln!(
+                    stdout,
+                    "{}",
+                    serde_json::to_string(&payload).unwrap_or_default()
+                );
             } else {
                 let _ = writeln!(stdout, "{mode_str}: complete site ({count} spec views)");
             }

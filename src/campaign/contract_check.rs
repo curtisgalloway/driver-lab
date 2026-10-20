@@ -250,7 +250,7 @@ pub fn result_groups(identity: &Value, results: &[Value]) -> VResult<()> {
         let g = groups.get(name).unwrap();
         let checks_empty = g
             .get("checks")
-            .map_or(true, |c| c.as_array().map_or(true, |a| a.is_empty()));
+            .is_none_or(|c| c.as_array().is_none_or(|a| a.is_empty()));
         require(
             g.get("verdict").unwrap().as_str().unwrap() == "ERROR" && checks_empty,
             "error group must be ERROR with no completed checks",
@@ -369,21 +369,20 @@ pub fn fixture_output(directory: &Path) -> VResult<Value> {
                 "check needs exactly one of ok or verdict",
             )?;
 
-            let outcome;
-            if has_ok {
+            let outcome = if has_ok {
                 require(
                     row.get("ok").unwrap().is_boolean(),
                     "check ok must be boolean",
                 )?;
-                outcome = if row.get("ok").unwrap().as_bool().unwrap() {
+                if row.get("ok").unwrap().as_bool().unwrap() {
                     "PASS"
                 } else {
                     "FAIL"
-                };
+                }
             } else {
                 verdict(row.get("verdict").unwrap())?;
-                outcome = row.get("verdict").unwrap().as_str().unwrap();
-            }
+                row.get("verdict").unwrap().as_str().unwrap()
+            };
             outcomes.insert(outcome.to_string());
             *counts.entry(outcome.to_string()).or_insert(0) += 1;
         }

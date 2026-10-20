@@ -92,7 +92,11 @@ fn test_not_an_spdx_expression_is_refused() {
 #[test]
 fn test_root_without_accepts_refuses_everything() {
     let tmp = TempDir::new().unwrap();
-    fs::write(tmp.path().join("board-specs.yaml"), "layer: public\nname: bare\n").unwrap();
+    fs::write(
+        tmp.path().join("board-specs.yaml"),
+        "layer: public\nname: bare\n",
+    )
+    .unwrap();
     let root = tmp.path().to_str().unwrap();
 
     let (rc1, out1, _) = run_license_gate(&["--root", root, "MIT"]);
@@ -109,7 +113,8 @@ fn test_empty_accepts_refuses_everything() {
     fs::write(
         tmp.path().join("board-specs.yaml"),
         "format: 2\nlayer: public\nname: docs\nlicense: CC-BY-4.0\naccepts: []\n",
-    ).unwrap();
+    )
+    .unwrap();
     let root = tmp.path().to_str().unwrap();
 
     let (rc, out, _) = run_license_gate(&["--root", root, "MIT"]);
@@ -123,7 +128,8 @@ fn test_invalid_accepts_entry_exits_one() {
     fs::write(
         tmp.path().join("board-specs.yaml"),
         "format: 2\nlayer: public\nname: bad\nlicense: MIT\naccepts: [Foo Bar, MIT]\n",
-    ).unwrap();
+    )
+    .unwrap();
     let root = tmp.path().to_str().unwrap();
 
     let (rc, out, _) = run_license_gate(&["--root", root, "MIT"]);
@@ -138,10 +144,16 @@ fn test_invalid_markers_never_accept_a_license() {
         ("format missing", valid.replace("format: 2\n", "")),
         ("format one", valid.replace("format: 2", "format: 1")),
         ("duplicate key", format!("{}accepts: []\n", valid)),
-        ("noncanonical identifier", valid.replace("[MIT]", "[GPL-2.0]")),
+        (
+            "noncanonical identifier",
+            valid.replace("[MIT]", "[GPL-2.0]"),
+        ),
         ("duplicate identifier", valid.replace("[MIT]", "[MIT, MIT]")),
         ("bad license", valid.replace("license: MIT", "license: Foo")),
-        ("accepts expression", valid.replace("[MIT]", "[MIT OR BSD-3-Clause]")),
+        (
+            "accepts expression",
+            valid.replace("[MIT]", "[MIT OR BSD-3-Clause]"),
+        ),
         ("not a mapping", "[]\n".to_string()),
         ("malformed YAML", "format: [\n".to_string()),
     ];
@@ -154,8 +166,18 @@ fn test_invalid_markers_never_accept_a_license() {
         fs::write(&marker_path, text).unwrap();
         let (rc, out, _) = run_license_gate(&["--root", root, "MIT"]);
         assert_eq!(rc, 1, "Case {} failed: {}", label, out);
-        assert!(out.contains("invalid spec format root marker"), "Case {} failed: {}", label, out);
-        assert!(!out.contains("accepted: MIT"), "Case {} failed: {}", label, out);
+        assert!(
+            out.contains("invalid spec format root marker"),
+            "Case {} failed: {}",
+            label,
+            out
+        );
+        assert!(
+            !out.contains("accepted: MIT"),
+            "Case {} failed: {}",
+            label,
+            out
+        );
     }
 }
 

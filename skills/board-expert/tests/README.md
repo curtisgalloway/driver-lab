@@ -9,9 +9,10 @@ SPDX-License-Identifier: Apache-2.0
 See the [glossary](../../../GLOSSARY.md).
 
 ```bash
-python3 -m unittest discover -s skills/board-expert/tests -v
+cargo test --locked --offline --test test_yaml_spdx
 ```
 
-`test_spdx.py` tests the shared SPDX expression parser and acceptance rules. Spec
-structure, references, license gates, records and stub resolution are tested under
-`skills/spec-format/tests`; its fixtures include the board and peripheral license matrices.
+`tests/test_yaml_spdx.rs` tests the shared SPDX expression parser and acceptance rules (`src/spdx.rs`).
+Spec structure, references, license gates, records and stub resolution are tested in the crate's
+integration and conformance test suites (`cargo test --locked --offline`); the fixtures live under
+`skills/spec-format/tests/fixtures`.

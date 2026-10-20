@@ -4,7 +4,7 @@ description: >-
   Demand-driven pinned document store and polite HTTP read-through cache for
   vendor wikis, technical documentation pages and PDFs. Use to fetch, pin,
   inspect and materialize cited web documents without recursive crawling, and
-  to populate --docs-dir for spec.py resolve and show.
+  to populate --docs-dir for driver-lab resolve and show.
 ---
 
 <!--
@@ -72,8 +72,9 @@ See the [glossary](../../GLOSSARY.md) and [spec-format contract](../spec-format/
 
 ## Commands
 
-Run `scripts/site_cache.py` (with `spec-format`'s virtualenv when running YAML
-subcommands `prefetch`, `materialize`, or `gc`, or via `uv run` under PEP 723).
+Run `scripts/site_cache.py` (with `uv run` under PEP 723, or a Python environment
+with `PyYAML` installed when running YAML subcommands `prefetch`, `materialize`,
+or `gc`).
 
 ### 1. Discover and pin a wiki page or web document (`pin`)
 
@@ -142,15 +143,15 @@ blob:
 python3 skills/site-cache/scripts/site_cache.py info <url-or-sha256>
 ```
 
-### 4. Materialize `docs/by-name` for `spec.py resolve` and `show` (`materialize`, `prefetch`)
+### 4. Materialize `docs/by-name` for `driver-lab resolve` and `show` (`materialize`, `prefetch`)
 
-`spec.py resolve <spec.yaml> --docs-dir docs/by-name` expects each sha256-pinned
+`driver-lab resolve <spec.yaml> --docs-dir docs/by-name` expects each sha256-pinned
 entry in `resources.documents` to exist as a regular, non-symlink file at
 `docs/by-name/<doc-name>`. Populate and hash-verify `docs/by-name` from the
 durable cache:
 
 ```bash
-.venv-spec/bin/python skills/site-cache/scripts/site_cache.py materialize \
+uv run skills/site-cache/scripts/site_cache.py materialize \
   specs/*.spec.yaml --docs-dir docs/by-name --root specs
 ```
 
@@ -175,7 +176,7 @@ Re-hash all blobs in the selected `--namespace` (`public` by default) and
 optionally verify a materialized `--docs-dir` against `--spec`:
 
 ```bash
-.venv-spec/bin/python skills/site-cache/scripts/site_cache.py verify \
+uv run skills/site-cache/scripts/site_cache.py verify \
   --docs-dir docs/by-name --spec specs/board.spec.yaml
 ```
 
@@ -185,7 +186,7 @@ automatic eviction runs by default; the latest snapshot per URL is kept unless
 `--no-keep-latest` is passed):
 
 ```bash
-.venv-spec/bin/python skills/site-cache/scripts/site_cache.py gc \
+uv run skills/site-cache/scripts/site_cache.py gc \
   --root specs --dry-run
 ```
 

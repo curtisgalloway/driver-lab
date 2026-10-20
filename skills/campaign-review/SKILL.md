@@ -24,26 +24,29 @@ artifacts private; publish only safe identities and concise verdicts with links.
 Preserve qualification limits and unknown basis fields. Append new verdicts with
 supersedes links; never relabel an old PASS as qualification of an untested claim.
 
-Run scripts/index_check.py with the campaign directory and --root pointing to its
-repository. It needs PyYAML and supports --json; it reads no private store and runs
-no guests. Also run that repository's privacy check. Independent review should
-trace the entries to the evidence, not treat schema validation as proof.
+First verify that `driver-lab` is on `PATH` (`driver-lab --version`). If it is missing, stop
+and ask the user to install a release binary or run `cargo install --path .` from a `driver-lab`
+checkout (`ENV-6`).
 
-When the campaign's specs live in a root with a corpus ledger, run spec-format's
-`spec.py corpus <root>...` and keep its report with the review artifact. Report coverage
+Run `driver-lab campaign index-check` with the campaign directory and `--root` pointing to its
+repository. It supports `--json`; it reads no private store and runs no guests. Also run that
+repository's privacy check. Independent review should trace the entries to the evidence, not
+treat schema validation as proof.
+
+When the campaign's specs live in a root with a corpus ledger, run
+`driver-lab corpus <root>...` and keep its report with the review artifact. Report coverage
 (documents and blocks specified, planned, excluded), list `planned` entries as candidate
 work, and flag an `excluded` reason a reviewer would not accept. A root with no ledger is
 reported as unscoped, not as covered. Spec gaps board-expert proposed from doc-read answers
-appear, once authored, in `spec.py todo <root>... --check document`; report their count, and
-for an indexed document the sections no fact cites (the views' document index tables).
+appear, once authored, in `driver-lab todo <root>...`; report their count, and for an indexed
+document the sections no fact cites (the views' document index tables).
 
 At the start of each orchestrator session and whenever a known input changes
 (such as a package upgrade or manual edition), refresh applicable sources locally
-with scripts/pinned_file_adapter.py REGISTRY ID --write --json, then run
-scripts/sweep.py CAMPAIGN --json. Both need PyYAML; their --skill output documents
-the CLI. The adapter resolves repository/run-store-relative files and hashes opaque
-bytes; the sweep reads campaign metadata, deployment settings and class definitions.
-An adapter observation does
+with `driver-lab campaign pinned-file-adapter REGISTRY ID --write --json`, then run
+`driver-lab campaign sweep CAMPAIGN --json`. The adapter resolves repository/run-store-relative
+files and hashes opaque bytes; the sweep reads campaign metadata, deployment settings and class
+definitions. An adapter observation does
 not adopt a new edition or replace an expected pin. Preserve the deployment's
 authorization requirements for changing an adopted source.
 
@@ -70,11 +73,11 @@ batch. Models come from the deployment manifest's reader, implementer and review
 roles. Changing the reader model queues one comparison per campaign, including
 sufficient ones; only an adjudicated reading can update the adopted scope.reader.
 
-The user config's deployment key selects a manifest; --deployment overrides it,
-and evals/deployment.yaml is the default. Read INDEX-FORMAT.md's deployment and
+The user config's deployment key selects a manifest; `--deployment` overrides it,
+and `evals/deployment.yaml` is the default. Read INDEX-FORMAT.md's deployment and
 contract sections before changing it. Each plugin's via skill owns invocation,
 authentication and safety; the declared command is not permission to execute it.
 Capture source-adapter JSON and a fixture's isolated run directory, then run
-scripts/contract_check.py --source-json JSON --run-dir DIRECTORY --json.
+`driver-lab campaign contract-check --source-json JSON --run-dir DIRECTORY --json`.
 This checks metadata only, never launches a fixture or executes manifest commands.
 Producer observations and role/session provenance remain reviewer conventions.

@@ -27,9 +27,8 @@ Copy `examples/expected/answer-linux.facts.yaml` and `answer-fw.facts.yaml` to s
 only the all-ones resource commit in each with its corresponding checkout hash. Do not change
 claims or support to make them pass. The example tests make these same temporary checkouts.
 
-Use a virtual environment installed with spec-format's hash-pinned requirements.
-`<python>` is its interpreter; `<spec.py>` is `spec-format/scripts/spec.py`; `<gate.py>` is
-`hardware-investigator/scripts/license_gate.py`. `<root>` is `examples/roots/gpl`,
+Run `driver-lab --version` first to verify the compiled CLI is installed. `<root>` is
+`examples/roots/gpl`,
 `<permissive-root>` is `examples/roots/permissive`; `<facts>` and `<facts-fw>` are the two copied
 answers. `<source-checkout>` and `<fw-checkout>` are the temporary source trees. Their names
 and bindings match `resources.repos`, which have `role: source`, full commits, file licenses
@@ -40,14 +39,14 @@ and `license_from: spdx-line` confirmations.
 Read the GPL target policy:
 
 ```bash
-<python> <gate.py> --root <root>
+driver-lab license-gate --root <root>
 ```
 
 Read only the intended file's license line first. It states GPL-2.0-only. Gate before opening
 the file for evidence:
 
 ```bash
-<python> <gate.py> --root <root> GPL-2.0-only
+driver-lab license-gate --root <root> GPL-2.0-only
 ```
 
 Expected: exit 0 and `accepted: GPL-2.0-only`. Now read the accepted source at its pin and
@@ -59,9 +58,9 @@ The LCR explanation is attributed to the source comment with a `comment: true` a
 not measured hardware. The answer's SPDX header matches the GPL-2.0-only destination root.
 
 ```bash
-<python> <spec.py> check <facts> --root <root> --require-license
-<python> <spec.py> resolve <facts> --root <root> --repo linux=<source-checkout>
-<python> <spec.py> show <facts> --root <root> --repo linux=<source-checkout>
+driver-lab check <facts> --root <root> --require-license
+driver-lab resolve <facts> --root <root> --repo linux=<source-checkout>
+driver-lab show <facts> --root <root> --repo linux=<source-checkout>
 ```
 
 Expected: exit 0 for each, zero check errors/warnings, four resolved anchors and zero skips.
@@ -78,13 +77,13 @@ during assembly; the tests validate, check and resolve both assembled specs.
 Read the permissive policy:
 
 ```bash
-<python> <gate.py> --root <permissive-root>
+driver-lab license-gate --root <permissive-root>
 ```
 
 After the GPL license line, gate it. **Expected exit: 1.**
 
 ```bash
-<python> <gate.py> --root <permissive-root> GPL-2.0-only
+driver-lab license-gate --root <permissive-root> GPL-2.0-only
 ```
 
 The gate reports refusal. Stop without reading that source for evidence, pinning it for an
@@ -95,8 +94,8 @@ The following is a deliberately invalid backstop test, not a step in the refusin
 If GPL facts were supplied anyway, both paths reject them. **Expected exit: 1.**
 
 ```bash
-<python> <spec.py> check <facts> --root <permissive-root> --require-license
-<python> <gate.py> --facts <facts> --root <permissive-root>
+driver-lab check <facts> --root <permissive-root> --require-license
+driver-lab license-gate --facts <facts> --root <permissive-root>
 ```
 
 ## C: independently accepted firmware offered
@@ -105,7 +104,7 @@ Record the Linux refusal from B. Read the offered firmware file's license line: 
 before reading further:
 
 ```bash
-<python> <gate.py> --root <permissive-root> MIT
+driver-lab license-gate --root <permissive-root> MIT
 ```
 
 Expected: exit 0 and `accepted: MIT`. Now read firmware at its pin and produce the second
@@ -115,9 +114,9 @@ an independently established hardware requirement. Its `data.sequence` carries s
 order constraints too, and its SPDX header matches the Apache-2.0 permissive destination.
 
 ```bash
-<python> <spec.py> check <facts-fw> --root <permissive-root> --require-license
-<python> <spec.py> resolve <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
-<python> <spec.py> show <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+driver-lab check <facts-fw> --root <permissive-root> --require-license
+driver-lab resolve <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+driver-lab show <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
 ```
 
 Expected: all exit 0, zero check errors/warnings, four resolved anchors and zero skips.
@@ -129,7 +128,7 @@ verification use the same records and per-fact bases; unknown width/access/reset
 
 The investigator worked-example suite checks the three license outcomes, source attribution,
 destination SPDX headers and assembly without changing returned payloads/support.
-`skills/spec-format/tests/test_spec_format_9_docs.py` also extracts and
-executes every shell block above after these substitutions, as it does for the skills and
-prompts. Stand-in sources for the review fixture are explicitly synthetic; no command result
+The crate's integration test suite (`cargo test --locked --offline`) also exercises these
+license-gate and facts-file checks. Stand-in sources for the review fixture are explicitly
+synthetic; no command result
 here claims a differential driver or physical hardware test.

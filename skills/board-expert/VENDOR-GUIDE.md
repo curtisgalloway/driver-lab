@@ -57,7 +57,7 @@ vendor/<vendor>/board-specs/            any directory you control
   vendor's board code and lands in the same review.
 - Overlay facts have distinct ids within the target spec id and root. Across roots, cite the
   full `spec@root#fact` reference. Consolidate competing overlays within one root rather than
-  relying on an undefined replacement order. Check the root with `spec.py check`.
+  relying on an undefined replacement order. Check the root with `driver-lab check`.
 
 ## 3. Write the vendor skill
 
@@ -86,9 +86,9 @@ register name written in their prose is read as authoritative by the agent and c
 nothing: one comparison of hand-written domain agents found a subsystem base that was really a
 controller inside it, two instance numbers swapped and two overlapping address ranges, all
 contradicted by the agents' own reference material. Put such facts in an overlay spec. Generate
-domain stubs from a manifest with `board-spec-scaffold/scripts/stubgen.py`, give each a
+domain stubs from a manifest with `driver-lab stubgen`, give each a
 `split:` line saying which questions go to it rather than to the board expert, and run
-`spec.py check --stubs-from <skills dir>` in your repository's checks. For agent files, run
+`driver-lab check --stubs-from <skills dir>` in your repository's checks. For agent files, run
 driver-lab's `python3 <driver-lab>/utilities/check-no-hardware-facts.py <agent file>...` with
 explicit paths: with none, it checks driver-lab's own files. A line that must show a value as an example carries
 `hw-fact-ok: <reason>`.
@@ -116,7 +116,7 @@ expert should launch it. The expert agent keeps the Agent tool for this. Claude 
 subagents at most three layers below the main conversation: main session, expert and tool agent
 use two; an orchestrated unit that launches the expert uses all three, so the tool agent there
 cannot start agents of its own.
-A `via: agent:<name>` form is planned, not built: it needs a schema change, `spec.py check`
+A `via: agent:<name>` form is planned, not built: it needs a schema change, `driver-lab check`
 support and tests, and a rule for harnesses with no agent definitions. Until then, keep the
 skill as the entry point.
 

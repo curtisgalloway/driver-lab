@@ -17,8 +17,8 @@ These are maintained templates, not active driver-lab workflows. They include ph
 self-test temporary paths for macOS and run all check steps on Ubuntu and macOS. Existing
 repositories hold independent copies; review and apply later template changes explicitly.
 The script assumes the repository's marker is `specs/board-specs.yaml` and runs from the
-repository top level. It needs Bash 3.2 or later and either `driver-lab` (`DRIVER_LAB_BIN`)
-or the pinned spec-format Python dependencies.
+repository top level. It needs Bash 3.2 or later and the `driver-lab` binary (`DRIVER_LAB_BIN`,
+`<driver-lab>/target/release/driver-lab`, or `driver-lab` on `PATH`).
 
 Set `TOOL_COMMIT` in the check workflow to a full driver-lab commit on `main` that contains
 the required fixtures and checker; use the same pin in the publishing workflow. The all-zero
@@ -74,10 +74,10 @@ Keep `RESOLVE_SRC=1` on both resolve and self-test steps. It fetches cited sourc
 the self-test proves a valid anchor resolves and a deliberately invalid anchor is rejected.
 
 Before the first commit, run `scripts/checks.sh --mode pr all` with the pinned driver-lab
-checkout and the configured context-root arguments, setting `DRIVER_LAB_BIN` (or `CHECKS_PYTHON`
-to the pinned Python environment) and `RESOLVE_SRC=1`. Verify the license fit passes, the misfit
-fails for the expected license reason, and both platform jobs run in CI. Never relax the
-checker's symlink policy: the script canonicalizes only the temporary directory it just created.
+checkout and the configured context-root arguments, setting `DRIVER_LAB_BIN` and
+`RESOLVE_SRC=1`. Verify the license fit passes, the misfit fails for the expected license reason,
+and both platform jobs run in CI. Never relax the checker's symlink policy: the script
+canonicalizes only the temporary directory it just created.
 
 ## Publishing spec views
 

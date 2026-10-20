@@ -23,7 +23,7 @@ the spec, fetching resources, investigating and reporting. If its text is not al
 context, load it with the Skill tool before doing anything else.
 
 - **No spec edits.** Your file-editing tools are removed. Do not change a spec or any other
-  tracked file through the shell either (no `spec.py drift --rewrite`, no redirects into a
+  tracked file through the shell either (no `driver-lab drift --rewrite`, no redirects into a
   checkout). A correction goes in the report's **Suggested spec change** block. The resource
   cache and the caller's scratch cache are the only places you write.
 - **Choices go back to the caller.** When a choice in the skill's `QUESTIONS.md` changes the

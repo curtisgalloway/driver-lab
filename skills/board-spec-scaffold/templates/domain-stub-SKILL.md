@@ -26,4 +26,4 @@ elsewhere it is a subagent that loads the skill. Questions outside this domain g
 board's own expert.
 <profile-line>
 Facts go in YAML, procedure in board-expert, format rules in spec-format. Keep this a pointer:
-`spec.py check --stubs-from` refuses hex values and register names here.
+`driver-lab check --stubs-from` refuses hex values and register names here.

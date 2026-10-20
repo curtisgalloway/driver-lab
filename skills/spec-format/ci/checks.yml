@@ -34,7 +34,7 @@ jobs:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # spec.py (spec format) and the self-test's fixtures live in driver-lab. Pinned to a
+      # driver-lab (spec format CLI) and the self-test's fixtures live in driver-lab. Pinned to a
       # commit on its main branch so an upstream edit cannot change what runs here unreviewed;
       # bump the ref (and publish.yml's TOOL_COMMIT) to take a new one.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -47,26 +47,25 @@ jobs:
       # Add context-root checkouts here, and append their specs/ paths to every
       # checks.sh invocation below. See ci/README.md for the profile table.
 
-      # spec.py's pinned dependencies (PyYAML, jsonschema, markdown-it-py and theirs), installed
-      # only from the hashes in driver-lab's requirements.txt; checks.sh runs spec.py with this
-      # interpreter (CHECKS_PYTHON).
-      - name: Pinned spec-format dependencies
+      # Build the pinned driver-lab Rust CLI binary from Cargo.lock; checks.sh runs this binary
+      # via DRIVER_LAB_BIN.
+      - name: Build pinned driver-lab CLI
+        env:
+          DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
-          python3 -m venv "$RUNNER_TEMP/spec"
-          "$RUNNER_TEMP/spec/bin/python" -m pip install --require-hashes \
-            -r .driver-lab/skills/spec-format/requirements.txt
-          echo "CHECKS_PYTHON=$RUNNER_TEMP/spec/bin/python" >> "$GITHUB_ENV"
+          cargo build --release --locked --manifest-path .driver-lab/Cargo.toml
+          echo "DRIVER_LAB_BIN=$PWD/.driver-lab/target/release/driver-lab" >> "$GITHUB_ENV"
 
-      - name: Root marker, specs and verification records (spec.py check --require-license --require-verified)
+      - name: Root marker, specs and verification records (driver-lab check --require-license --require-verified)
         run: scripts/checks.sh --mode "$CHECKS_MODE" check .driver-lab
 
-      - name: Source anchors at their pins (spec.py resolve)
+      - name: Source anchors at their pins (driver-lab resolve)
         run: scripts/checks.sh resolve .driver-lab
         # Fetch the pinned repositories the specs cite (below a size limit) and resolve them.
         env:
           RESOLVE_SRC: 1
 
-      - name: Markdown view and viewer (spec.py render --format md and html)
+      - name: Markdown view and viewer (driver-lab render --format md and html)
         run: scripts/checks.sh render .driver-lab
 
       # Proves the license gate with this repository's own root marker: fixture specs that do

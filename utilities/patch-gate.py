@@ -100,7 +100,6 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 # corpus files, CI, and the files that decide what git reports as changed or how it diffs it.
 GATE_INPUTS = re.compile(
     r"utilities/(check-[^/]*|patch-gate|codex-implement|codex-review)\.py|"
-    r"skills/spec-format/requirements\.txt|skills/spec-format/scripts/prosefacts\.py|"
     r"evals/requirements\.txt|"
     r"Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/.*|tests/conformance/.*|"
     r"\.github/.*|(.*/)?\.git(ignore|attributes|modules)", re.DOTALL)
@@ -113,8 +112,6 @@ MAX_UNTRACKED_BYTES = 1 << 20
 def default_suites(worktree=None):
   python = sys.executable
   suites = [
-      ("spec-format", [os.path.join(".venv-spec", "bin", "python"), "-I", "-m", "unittest",
-                       "discover", "-s", "skills/spec-format/tests"]),
       ("utilities", [python, "-I", "-m", "unittest", "discover", "-s", "utilities/tests"]),
   ]
   if worktree is not None and os.path.isfile(os.path.join(worktree, "Cargo.toml")):
@@ -407,7 +404,7 @@ def build_venv(worktree):
   code, output = run([sys.executable, "-I", "-m", "venv", ".venv-spec"], worktree)
   if code == 0:
     code, output = run([os.path.join(".venv-spec", "bin", "pip"), "install", "-q",
-                        "--require-hashes", "-r", "skills/spec-format/requirements.txt"],
+                        "--require-hashes", "-r", "evals/requirements.txt"],
                        worktree)
   return code, output
 

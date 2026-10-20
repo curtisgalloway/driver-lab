@@ -34,43 +34,87 @@ jobs:
       - name: utilities tests
         run: python3 -m unittest discover -s utilities/tests -v
 
-      - name: board-expert tests
-        run: python3 -m unittest discover -s skills/board-expert/tests -v
-
-      # Spec format: PyYAML, jsonschema and markdown-it-py, installed by hash.
-      # spec.py exits 3 without them at the pinned versions; there is no fallback parser.
-      - name: Spec-format dependencies
+      - name: Install bubblewrap for ENV-1 and ENV-5 sandbox checks
         run: |
-          python3 -m venv "$RUNNER_TEMP/spec"
-          "$RUNNER_TEMP/spec/bin/python" -m pip install --require-hashes \
-            -r skills/spec-format/requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
-      - name: spec-format tests
-        run: '"$RUNNER_TEMP/spec/bin/python" -m unittest discover -s skills/spec-format/tests -v'
+      - name: driver-lab Rust test suite
+        env:
+          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+        run: cargo test --locked
 
-      # The investigator's worked example runs the spec-format tool, which needs the pinned set.
-      - name: hardware-investigator tests
-        run: '"$RUNNER_TEMP/spec/bin/python" -m unittest discover -s skills/hardware-investigator/tests -v'
-
-      - name: site-cache tests
-        run: '"$RUNNER_TEMP/spec/bin/python" -m unittest discover -s skills/site-cache/tests -v'
-
-      - name: board specs
+      - name: Build driver-lab release binary
+        env:
+          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
         run: |
-          "$RUNNER_TEMP/spec/bin/python" skills/spec-format/scripts/spec.py check \
+          cargo build --release --locked
+          target/release/driver-lab --version
+
+      - name: board specs (driver-lab check and status)
+        run: |
+          target/release/driver-lab check \
             skills/board-expert/specs \
             --stubs-from skills --require-license
+          target/release/driver-lab status \
+            skills/board-expert/specs \
+            --require-license
+
+      - name: Read-only zero-write sandbox check (ENV-1 / RT-G)
+        run: |
+          tmp_corpus=$(mktemp -d)
+          cp -r skills/spec-format/tests/fixtures/check/good_root/. "$tmp_corpus/"
+          cp skills/spec-format/tests/fixtures/corpus/good_root.corpus.yaml "$tmp_corpus/corpus.yaml"
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab validate \
+            skills/board-expert/specs/board-specs.yaml \
+            skills/spec-verifier/examples/widget/widget.spec.yaml
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab check \
+            skills/board-expert/specs \
+            --stubs-from skills --require-license
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab status \
+            skills/board-expert/specs \
+            --require-license
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab todo \
+            skills/board-expert/specs \
+            --require-license
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab corpus \
+            "$tmp_corpus" --public-skill widget-board-tools
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab prose-facts \
+            agents/board-expert.md
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab render \
+            skills/spec-verifier/examples/widget --format md >/dev/null
+          bwrap --ro-bind / / --unshare-net \
+            target/release/driver-lab render \
+            skills/spec-verifier/examples/widget --format html >/dev/null
+          rm -rf "$tmp_corpus"
+
+      - name: Frozen evaluation archive dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/evals"
+          "$RUNNER_TEMP/evals/bin/python" -m pip install --require-hashes \
+            -r evals/requirements.txt
+
+      - name: site-cache tests
+        run: '"$RUNNER_TEMP/evals/bin/python" -m unittest discover -s skills/site-cache/tests -v'
 
       - name: enc28j60 corpus tests
         run: >-
-          "$RUNNER_TEMP/spec/bin/python" -m unittest discover
+          "$RUNNER_TEMP/evals/bin/python" -m unittest discover
           -s evals/enc28j60/tests -v
 
       # The author's manifest is what a candidate run is given. Regenerating it on every push is
       # how a corpus edit that would change what an author sees becomes visible in review.
       - name: enc28j60 author manifest
         run: >-
-          "$RUNNER_TEMP/spec/bin/python"
+          "$RUNNER_TEMP/evals/bin/python"
           evals/enc28j60/author_manifest.py
           --check evals/enc28j60/author-manifest.yaml
 
@@ -78,12 +122,7 @@ jobs:
       - name: e1000 QEMU harness tests
         run: python3 -m unittest discover -s evals/e1000/harness/tests -v
 
-      - name: campaign-review tests
-        run: >-
-          "$RUNNER_TEMP/spec/bin/python" -m unittest discover
-          -s skills/campaign-review/tests -v
-
       - name: e1000 status index
-        run: >-
-          "$RUNNER_TEMP/spec/bin/python"
-          skills/campaign-review/scripts/index_check.py evals/e1000
+        run: |
+          "$RUNNER_TEMP/evals/bin/python" evals/e1000/index_check.py evals/e1000
+          target/release/driver-lab campaign index-check evals/e1000

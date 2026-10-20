@@ -4,7 +4,7 @@ description: >-
   Produce a YAML peripheral implementation spec from driver source whose license fits the
   target spec repository. Every fact carries structured support at an immutable commit or a
   named document locator. Use for documenting, specifying or porting a peripheral from citable
-  source or public datasheets; not for NDA source. Uses spec.py validate, check, resolve, show,
+  source or public datasheets; not for NDA source. Uses driver-lab validate, check, resolve, show,
   drift and inventory, with independent verification through spec-verifier.
 ---
 
@@ -230,19 +230,22 @@ settle conflicts or tighten citations. A small driver can be read in one context
 
 ### Check, verify, land
 
-Use Python from a virtual environment installed with spec-format's hash-pinned requirements.
-`<python>` names that interpreter, `<spec.py>` the sibling `spec-format/scripts/spec.py`,
-`<root>` the destination root, `<spec>` the spec file, `<source-checkout>` its `linux` checkout
-and `<header>` a cited repo-relative header. Substitute actual repo names in `--repo`/`--pin`;
-repeat `--repo NAME=CHECKOUT` for every cited source/target entry. These commands are tested
-on SF2-7's widget peripheral fixture (whose register header is its synthetic C file).
+Before running any subcommand, run `driver-lab --version` first. If `driver-lab` is missing or
+reports an `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing
+precondition with installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <driver-lab>`) rather than compiling or installing inside a
+subagent. `<root>` names the destination root, `<spec>` the spec file, `<source-checkout>` its
+`linux` checkout and `<header>` a cited repo-relative header. Substitute actual repo names in
+`--repo`/`--pin`; repeat `--repo NAME=CHECKOUT` for every cited source/target entry. These
+commands are tested on SF2-7's widget peripheral fixture (whose register header is its synthetic
+C file).
 
 ```bash
-<python> <spec.py> validate <spec> --root <root>
-<python> <spec.py> check <root> --require-license
-<python> <spec.py> resolve <spec> --root <root> --repo linux=<source-checkout>
-<python> <spec.py> inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
-<python> <spec.py> show <spec> --root <root> --repo linux=<source-checkout>
+driver-lab validate <spec> --root <root>
+driver-lab check <root> --require-license
+driver-lab resolve <spec> --root <root> --repo linux=<source-checkout>
+driver-lab inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+driver-lab show <spec> --root <root> --repo linux=<source-checkout>
 ```
 
 `validate` takes files and checks strict YAML and schema shape; `check` takes spec roots and
@@ -283,8 +286,8 @@ claim requires its own evidence; code being citable does not prove that code is 
 Before moving one commit, inspect drift and then rewrite only the reviewed pin:
 
 ```bash
-<python> <spec.py> drift <new-commit> <spec> --pin linux --root <root> --repo linux=<source-checkout>
-<python> <spec.py> drift <new-commit> <spec> --pin linux --rewrite --root <root> --repo linux=<source-checkout>
+driver-lab drift <new-commit> <spec> --pin linux --root <root> --repo linux=<source-checkout>
+driver-lab drift <new-commit> <spec> --pin linux --rewrite --root <root> --repo linux=<source-checkout>
 ```
 
 `<new-commit>` is a full lowercase hash. Rewrite moves the resource commit and unique moved

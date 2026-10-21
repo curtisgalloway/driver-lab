@@ -142,8 +142,7 @@ fn test_schema_rejects_negative_without_abstain_probe() {
     neg.as_object_mut().unwrap().remove("abstain_probe");
     let bank = json!({ "items": [neg] });
     let errs =
-        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap())
-            .unwrap();
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap();
     assert!(
         errs.iter().any(|e| e.contains("abstain_probe")),
         "expected abstain_probe error, got {errs:?}"
@@ -160,8 +159,7 @@ fn test_schema_rejects_unknown_extra_property() {
     item["surprise_field"] = json!(123);
     let bank = json!({ "items": [item] });
     let errs =
-        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap())
-            .unwrap();
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap();
     assert!(
         errs.iter().any(|e| e.contains("surprise_field")),
         "expected surprise_field error, got {errs:?}"
@@ -216,8 +214,7 @@ fn test_bank_findings_clean_on_synthetic_bank() {
         .collect();
     let bank = json!({ "items": items });
     assert_eq!(
-        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap())
-            .unwrap(),
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap(),
         vec![] as Vec<String>
     );
 }

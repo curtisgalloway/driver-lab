@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use hwspecs::docresolve::{
-    hex_values, hex_values_u64, locator_pattern, section_covered_by_index,
-};
+use hwspecs::docresolve::{hex_values, hex_values_u64, locator_pattern, section_covered_by_index};
 use serde_json::json;
 use std::collections::BTreeSet;
 use std::fs;

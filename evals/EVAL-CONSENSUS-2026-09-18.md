@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 > **Record, not a live plan.** The evaluation consensus two reviewers reached on 2026-09-18,
-> kept verbatim as the source of [EVAL-PLAN.md](../EVAL-PLAN.md), which is where its decisions
+> kept verbatim as the source of [EVAL-PLAN.md](../notes/archive/EVAL-PLAN.md), which is where its decisions
 > are tracked and updated. The two drafts it supersedes are not in any repository.
 
 # Driver-specification evaluation: final consensus

@@ -6,23 +6,23 @@ SPDX-License-Identifier: Apache-2.0
 # hardware-specs
 
 Instructions for coding agents working in this repository. The user guide is the
-[README](README.md); borrowed and coined terms are in the [glossary](GLOSSARY.md).
+[README](README.md); borrowed and coined terms are in the [glossary](docs/GLOSSARY.md).
 
 ## What this is
 
 The `driver-porting` skills (under `skills/`) and the work that tests them: the
-[design](DESIGN.md), the [license-split plan](docs/LICENSE-SPLIT-PLAN.md), and a record of each
-milestone under `evidence/` and `notebook/`. The evaluations under `evals/`, their plans
-([IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md), [DEFERRED-PLAN.md](DEFERRED-PLAN.md)) and the
+[design](docs/DESIGN.md), the [license-split plan](notes/plans/LICENSE-SPLIT-PLAN.md), and a record of each
+milestone under `notes/evidence/` and `notes/notebook/`. The evaluations under `evals/`, their plans
+([IMPLEMENTATION-PLAN.md](notes/archive/IMPLEMENTATION-PLAN.md), [DEFERRED-PLAN.md](notes/archive/DEFERRED-PLAN.md)) and the
 documents that describe them are a frozen archive since the license split: kept as history and
 still checked by CI ([evals/README.md](evals/README.md)). The repository was split out of
 [public-skills](https://github.com/curtisgalloway/public-skills) on 2026-09-25 with its history.
-[TRANSITION.md](TRANSITION.md) records the move.
+[TRANSITION.md](notes/history/TRANSITION.md) records the move.
 
 **Commit hashes cited in files here are public-skills hashes.** Prose citations link to the
 commit on GitHub. Bare hashes in machine-read fields (`ledger.lock`, `*.verify.md` front matter,
 reconstruction inputs) translate to this repository's copies through
-[history/public-skills-commit-map.txt](history/public-skills-commit-map.txt). New citations name
+[notes/history/public-skills-commit-map.txt](notes/history/public-skills-commit-map.txt). New citations name
 this repository's commits.
 
 **Skill names are an interface.** `fuchsia-skills` hands off to these skills by name; renaming
@@ -180,9 +180,9 @@ The core test is rebuilding a Linux driver from the spec and running it differen
 the original (L01, L02). Lead with that result when explaining or reporting the work, not with
 reviewer pass counts. Human review of every spec costs about as much as writing the driver with
 AI help, so the design aims at automated checks with people handling exceptions
-([DRIVER-QUALITY.md](DRIVER-QUALITY.md)). Every current target has a working reference driver,
+([DRIVER-QUALITY.md](docs/DRIVER-QUALITY.md)). Every current target has a working reference driver,
 which makes this the easy case; hardware with no existing driver is the open question
-([DESIGN.md](DESIGN.md#when-there-is-no-existing-driver)).
+([DESIGN.md](docs/DESIGN.md#when-there-is-no-existing-driver)).
 
 ## Skills this work uses from elsewhere
 

@@ -7,7 +7,7 @@ Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 # Review drafting prompt
 
 **Terms:** roles identify the two trees; an assessment judges a difference; a verifier verdict
-judges the finding's evidence. See [the glossary](../../../GLOSSARY.md).
+judges the finding's evidence. See [the glossary](../../../docs/GLOSSARY.md).
 
 Review <peripheral> (<IP block>, <board/revision>) at <impl-checkout>, <impl-commit>, against
 <ref-checkout>, <ref-commit>. Reference choice and applicability: <reference choice>.

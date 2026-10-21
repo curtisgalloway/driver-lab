@@ -22,7 +22,7 @@ Terms (case-insensitive; TERMS below):
 Allowlist (ARCHIVE_DIRS, ARCHIVE_FILES below): the frozen archive the design lists, the license-split
 design and plan (they describe the split), the campaign-review fixture copied from the frozen CR5
 deployment, two history records, and this checker with its tests. README.md may carry one
-matching line, the pointer, which must name cleanroom-skills; any other fails. evidence/LS8.md justifies each entry.
+matching line, the pointer, which must name cleanroom-skills; any other fails. notes/evidence/LS8.md justifies each entry.
 
 Scope is tracked files only. Exit 0 clean / 1 findings / 2 usage or environment error.
 """
@@ -49,27 +49,24 @@ TERMS: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
     )
 )
 
-# The frozen archive (LS-R20): kept as history, with a header pointing to the new home.
-ARCHIVE_DIRS = ("evals/", "evidence/", "notebook/", "history/")
+# The frozen archive (LS-R20): kept as history, with a header pointing to the new home. The
+# archive documents LS-R20 names, and the history records, moved under notes/ on 2026-10-21.
+ARCHIVE_DIRS = (
+    "evals/",
+    "notes/evidence/",
+    "notes/notebook/",
+    "notes/history/",
+    "notes/archive/",
+)
 ARCHIVE_FILES = frozenset(
     {
-        # Frozen archive documents named by LS-R20.
-        "RECONSTRUCTION.md",
-        "QEMU-DIFFERENTIAL.md",
-        "EVAL-PLAN.md",
-        "VALIDATION-PROPOSAL.md",
-        "VALIDATION-REVIEW.md",
-        "IMPLEMENTATION-PLAN.md",
-        "DEFERRED-PLAN.md",
         # The design and plan of the split itself.
         "docs/LICENSE-SPLIT.md",
-        "docs/LICENSE-SPLIT-PLAN.md",
+        "notes/plans/LICENSE-SPLIT-PLAN.md",
         # A copy of the frozen CR5 deployment manifest, pinned by test_sweep.py (LS7).
         "skills/campaign-review/tests/fixtures/deployment-cr5.yaml",
-        # History records: the process log and the 2026-09-25 move. (docs/STORY.md, the project
-        # timeline, moved to cleanroom-skills on 2026-10-07, user decision.)
-        "PROCESS-NOTES.md",
-        "TRANSITION.md",
+        # (docs/STORY.md, the project timeline, moved to cleanroom-skills on 2026-10-07, user
+        # decision.)
         # This checker names the terms it looks for; its tests plant them.
         "utilities/check-open-side.py",
         "utilities/tests/test_check_open_side.py",

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 **Terms:** a viewer is the generated HTML reading copy; a root is a directory with a
 `board-specs.yaml` marker; context roots supply referenced facts; an artifact is a build's
-downloadable files. See the repository [glossary](../../../GLOSSARY.md).
+downloadable files. See the repository [glossary](../../../docs/GLOSSARY.md).
 
 ## Repository checks
 

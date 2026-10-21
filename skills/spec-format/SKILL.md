@@ -30,7 +30,7 @@ SPDX-License-Identifier: Apache-2.0
   --spec ID`) is one interactive page for a board and the specs around it: outline, spec graph,
   memory map, coverage grid and open items.
 
-See the [glossary](../../GLOSSARY.md) for these and the hardware terms. This is the shared
+See the [glossary](../../docs/GLOSSARY.md) for these and the hardware terms. This is the shared
 contract; the [design](../../docs/SPEC-FORMAT.md) records its rationale and decisions D1–D22.
 Read the schema branch for the kind you write and start from
 [board-spec-scaffold's templates](../board-spec-scaffold/templates/).

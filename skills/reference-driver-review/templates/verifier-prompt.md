@@ -7,7 +7,7 @@ Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 # Review verification prompt
 
 **Terms:** assessments judge differences; verdicts judge support; bases track semantic evidence
-freshness. See [the glossary](../../../GLOSSARY.md).
+freshness. See [the glossary](../../../docs/GLOSSARY.md).
 
 Independently verify <review> in <root>; you did not author it and do not edit it.
 Load `reference-driver-review`, `peripheral-spec`, `spec-format` and `spec-verifier`.

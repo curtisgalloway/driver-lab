@@ -31,7 +31,7 @@ any actionable claim to evidence at the recorded revision.
 - **OS framework**: the OS's driver interface for a device class; MTU, frame versus payload and
   head or tail room are in the glossary.
 
-See the [glossary](../../GLOSSARY.md) and [spec-format contract](../spec-format/SKILL.md).
+See the [glossary](../../docs/GLOSSARY.md) and [spec-format contract](../spec-format/SKILL.md).
 Read the `peripheral` branch and payload definitions of the
 [spec schema](../spec-format/schema/spec.schema.json); those define the accepted shapes.
 

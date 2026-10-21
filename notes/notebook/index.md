@@ -1,0 +1,538 @@
+<!--
+SPDX-FileCopyrightText: 2026 contributors
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# Notebook index
+
+Bug-fix chapters (removed 2026-10-14; links go to each file at its last commit): [Issue 79](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-79.md), [Issue 95](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-95.md) and
+[Issue 78](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-78.md), indexed through 2026-10-14; [Issue 107](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-107.md), indexed
+through 2026-10-13.
+These open-method chapters are outside the frozen archive described below.
+
+> **Tooling chapters removed (2026-10-14, user decision).** Tooling units (the spec format's SF2
+> milestones, the license split's LS milestones, issue fixes, RG1) no longer keep a chapter: their
+> dead ends go in the pull request. Their chapters were deleted; links to them go to each file at
+> its last commit on GitHub. Experiments (L01, L02, the campaign rounds) keep their chapters.
+
+Updated: 2026-10-10T11:32:28-07:00
+
+A row is stale when its chapter has an entry newer than "indexed through". The notebook
+starts with L02e; earlier units' paths are in their [evidence files](../evidence/). The
+process log for this project is [PROCESS-NOTES.md](../history/PROCESS-NOTES.md). Terms: a chapter is
+one unit's append-only notes; see the [glossary](../../docs/GLOSSARY.md) (lab notebook, process log).
+
+> **Frozen archive.** Chapters for work before driver-lab's license split (2026-10-06), every
+> chapter here except `LS-design`, `LS1`–`LS12` and `LS-G`, are kept as history; the clean-room skills
+> they name now live in [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills),
+> where new evaluation rounds run. Names and paths in them are as they were then
+> (`os-investigator` is now `cleanroom-investigator`). See the
+> [license-split design](../../docs/LICENSE-SPLIT.md), requirement LS-R20.
+
+## Chapters
+
+### [IPX-1 — topwrap-ipxact-parser evaluation](IPX-1.md)
+Entries: 2026-10-19T01:45Z through 2026-10-19T02:20Z
+Outcome: complete; reject for now ([evidence](../evidence/IPX-1.md)). The bindings keep only the
+last register (and register file) of a block and export the loss as valid XML; units 4 and 5 use
+xmlschema alone.
+
+### [SF2-9 — Peripheral, review and investigator skills in format 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-9.md)
+Entries: 2026-10-09T23:41:35-07:00 through 2026-10-10T00:17:58-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-9.md)); one review round with no blocker and a clean
+confirmation. Command tests use SF2-7 fixtures; format 1 procedures and prompts remain labeled in
+`FORMAT-1.md` files. Review inventory needs companion register records because findings prose does
+not count as register coverage.
+
+### [SF2-7b — Reviews and the HTML generated sections](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7b.md)
+Entries: 2026-10-09T22:18:09-07:00 through 2026-10-09T23:17:02-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7b.md)). Reviews and the HTML generated sections
+shipped with no blocker in round 1; a confirmation regression (the pair exemption leaking into
+instance and variant rows) was fixed directly. Deciding that a pair's anchors are its support
+removed a forced Gap badge.
+
+### [SF2-7a — Peripheral specs and facts files in format 2](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-7a.md)
+Entries: 2026-10-09T19:23:01-07:00 through 2026-10-09T21:46:57-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-7a.md)); reviews (SF2-7b) and the HTML generated
+sections are pending. The stop rule fired twice on inventory; refusing what is not fully understood,
+checked against a C compiler, ended the wrong-value blockers. When a fix loop keeps finding the
+same kind of blocker, change the contract instead of patching cases.
+
+### [SF2-10 — bcm2711 converted and verified on draft branches](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-10.md)
+Entries: 2026-10-09 through 2026-10-09T21:31:15-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-10.md)); the three draft branches are not merged
+(SF2-11 cuts over). 50 of 65 v1 verdicts carried; the rest were read fresh in three correction
+rounds. When a fidelity check is unsure, keep the verdict fresh: all three uncertain carries
+cited headings that did not exist.
+
+### [SF2-11 — The three spec repositories cut over and published](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-11.md)
+Entries: 2026-10-09 through 2026-10-10
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-11.md)); docs, permissive and gpl merged in order and
+publish three Pages sites. Downstream CI reads the upstream `main`, so it is red until the upstream
+merges, and with no branch protection the re-run after each merge is the only gate.
+
+### [SF2-G — Whole-outcome gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-G.md)
+Entries: 2026-10-10T10:05-07:00 through 2026-10-10T11:32-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-G.md)); the gate passed on fresh clones after small
+fixes, and two review rounds closed a second-reader bypass in `main` mode and set ADJUDICATE's
+policy. The spec repositories pin a tool from before SF2-7a (G5). A refusal test must assert its
+own diagnostic, or an earlier check makes it pass.
+
+### [SF2-12 — Format 1 retired](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-12.md)
+Entries: 2026-10-10
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-12.md)); the format 1 checkers, migration tool and
+fixtures are gone and the full checks list passes. Passing consumer tests prove little when they
+still build the old format: `bringup-kit`'s replay tests never touch the format 2 reader.
+
+### [SF2-5 — The viewer and publishing](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-5.md)
+Entries: 2026-10-09T19:19:34-07:00 through 2026-10-09T20:24:09-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-5.md)); one review round and a clean confirmation
+round. The chapter records parser option isolation, nested image links and deployment completeness
+from source inventory. A composite action that looks pinned can still run a nested action by a
+movable tag; read what a pinned action calls.
+
+### [SF2-8 — The format 2 contract and the board-spec skills](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8a.md)
+Entries: 2026-10-09T16:11-07:00 through 2026-10-09T19:00-07:00 (also [SF2-8b](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-8b.md))
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-8.md)); one review round and a clean confirmation
+round. The Opus trace review found one blocker: format 1 contract sections were deleted while
+live format 1 skills still cited them; the old text now lives in a retained FORMAT-1.md. Before a
+contract file becomes a pointer, grep every skill and script docstring for its section names.
+### [SF2-4 — CommonMark checks and the Markdown view](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-4.md)
+Entries: 2026-10-09T14:27:42-07:00 through 2026-10-09T18:30:00-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-4.md)); four fix rounds and a confirmation review.
+Round 2 met the stop rule (author text escaped its container under GFM a second time); the user
+chose "author text inert in the .md view": every author field is fenced and generated identifiers
+are code spans. Record limits of the parser itself (nesting, delimiter length) as findings; do not
+rely on a proof that text is safe.
+### [SF2-6 — Resolve, show and drift](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-6.md)
+Entries: 2026-10-08T18:51:57-07:00 through 2026-10-09T16:30:00-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-6.md)); three review rounds and a clean confirmation
+round. Round 3 met the stop rule (drift wrote the wrong span a second time); the user chose
+"verify after rewrite": drift compares its rewritten YAML with exactly the intended data changes
+and keeps the original on any other difference. Do not patch a splicer a second time; verify its
+output. Recheck file policy beside the final comparison, not only before staging.
+
+### [SF2-3 — Verification records and per-fact freshness](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-3.md)
+Entries: 2026-10-08T17:52-07:00 through 2026-10-08T19:50-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-3.md)); three review rounds, round 3 clean. Round 2
+met the stop rule on identity allow-lists; the user chose "hash all but bookkeeping". Anything
+freshness cannot establish reads unknown, never current. Score a mutant that does not compile as
+invalid, and a failure during an internal error as a crash, not a kill.
+
+### [SF2-2 — Checker: composition, references and the license gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-2.md)
+Entries: 2026-10-08T14:58-07:00 through 2026-10-08T17:38-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-2.md)); three review rounds, merged with tracked
+gaps (user). The gate fails closed: a reference rests only on a root that checks clean (user
+decision). The matrix gives format 1's codes under `--require-license`. A mutation pass without a
+clean baseline proved nothing (withdrawn). Untrust propagates to a fixed point, not in one sweep.
+
+### [SF2-1 — Strict loader, pinned dependencies, core schemas](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-1.md)
+Entries: 2026-10-08T12:17-07:00 through 2026-10-08T14:49-07:00
+Outcome: complete ([evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/SF2-1.md)); three review rounds. `$` in Python's `re`
+matches before a final newline: patterns end with `(?![\s\S])`. PyYAML rewrites a lone CR and NEL
+first: the loader scans the source. `uv run --with-requirements` ignores hashes. The unknown-key
+filter keeps only keys of the applying branch. Internal errors exit 100 (4 reversed).
+
+### [SF2-design — Spec format 2: design decisions and the plan](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SF2-design.md)
+Entries: 2026-10-08T12:09-07:00 through 2026-10-08T12:09-07:00 (written after the design session)
+Outcome: design approved with D1–D22 (PR #65); plan SF2-1–SF2-12 and gate SF2-G written. D1, D4,
+D5 differ from the draft's recommendations; D19–D22 added during review. Open: six user decisions
+listed in the plan.
+
+### [RG-regen — Spec regeneration](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md)
+Entries: 2026-10-07 through 2026-10-08
+Outcome: RG1 (`bcm2711`) and RG-T1 (the `[src]` checker) complete and merged; Codex as an
+independent reviewer found most substantive issues; the spec format moves to YAML with a schema
+next. Review learnings roll up in [SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md).
+
+### [LS-G — Whole-outcome acceptance](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-G.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; the design's five acceptance items met from fresh clones of all eight
+repositories, item 2 also in published CI (nine scratch pull requests, every cell as expected);
+stale status text in the plan, design and `peripheral-spec` corrected.
+
+### [LS12 — Consumers updated](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS12.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; `fuchsia-skills`, `bringup-kit`, `public-skills` and this marketplace entry follow
+the new names and repositories; `rpi-expert` had no successor and its handoffs were reworded; a
+reviewer found two low items, both fixed.
+
+### [LS11 — Firewall by name](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS11.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; the implementer's hook denies four dirty-side names however installed, with the
+investigator and verifier roles still allowed and logged; a seven-arm review found three real
+bypasses (assignments after `export`, a shell comment character, a glob cap), all fixed.
+
+### [LS10 — `hardware-investigator`](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS10.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; skill, worked example on fixtures, and a thin `license_gate.py`; the license
+check is placed before reading a source, not only before citing it.
+
+### [LS9 — Rename `anchored-peripheral-spec` to `peripheral-spec`](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS9.md)
+Entries: 2026-10-07 through 2026-10-07
+Outcome: complete; directory, name field, CI and check-list paths renamed in five repositories;
+a first global replace rewrote history files and was reverted; the review found the
+`spec-verifier` heading and its references still using the old term.
+
+### [LS8 — Documents split; frozen archive; open-side check](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS8.md)
+Entries: 2026-10-06T18:21-07:00 through 2026-10-06T18:31-07:00
+Outcome: complete; `DESIGN.md`'s clean-room passages moved by line range to `cleanroom-skills`, the
+check's term list and allowlist decided (three history records and the whole L01/L02/CR plan
+added, justified), no redirect stubs needed, `RECONSTRUCTION.md`'s links broken by LS7 repointed;
+review found the continuous-review design still requiring moved tools.
+
+### [LS7 — driver-lab's skills neutral; clean-room rules moved](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS7.md)
+Entries: 2026-10-06T17:48-07:00 through 2026-10-06T18:05-07:00
+Outcome: complete; `board-expert` given its own method, 57-row move list into
+`cleanroom-investigator` (wrapping `board-expert`, plus `BOARD-SPECS.md`) and a new
+`cleanroom-verifier`; three skills deleted. Open format's rule for code-only facts added after
+review; the CR5 deployment fixture is the acceptance grep's one exception.
+
+### [LS6 — `cleanroom-skills` created with history](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS6.md)
+Entries: 2026-10-06T17:40-07:00 through 2026-10-06T17:42-07:00
+Outcome: complete; public with 21 commits of history kept by filter-repo, the rename and its own
+files; CI green. Both plugins carry the three skills until LS7.
+
+### [LS5 — the three spec repositories](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS5.md)
+Entries: 2026-10-06T17:17-07:00 through 2026-10-06T17:31-07:00
+Outcome: complete (published); board-spec license gate in `spec_check.py
+--require-license`, shipped marker's license fields, three local spec repositories with a CI
+self-test. The first self-test pattern matched an informational line, then any gate error
+(review); accepts lists trimmed to the design's names, extras a question for the user.
+
+### [LS4 — placement guidance, provenance template and format docs](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS4.md)
+Entries: 2026-10-06T10:26-07:00 through 2026-10-06T10:39-07:00
+Outcome: complete; placement rule and the design's repo table in `anchored-peripheral-spec`,
+format docs for named pins, the gate and the `docs:` registry, private `PROVENANCE.md`, README
+"Why this exists". Verification runs corrected two drafted claims; peripheral specs must not be
+named `*.spec.md` (spec_check loads them as board specs). Review: a template self-check that
+failed on multi-pin specs.
+
+### [LS3 — checkable doc anchors](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS3.md)
+Entries: 2026-10-06T10:14-07:00 through 2026-10-06T10:24-07:00
+Outcome: complete; `docs:` registry, named `[doc:<name> p.N]` anchors, `--docs-dir` hashes,
+`anchor_check.py --require-license` (named anchors only where `accepts:` is empty). Named vs
+unnamed is the space after `doc:`. Review found a leading `---` rule taken for front matter,
+hiding the first section from the checker.
+
+### [LS2 — root license fields and the license gate](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS2.md)
+Entries: 2026-10-06T09:54-07:00 through 2026-10-06T10:09-07:00
+Outcome: complete; SPDX parser, root `license:`/`accepts:`, `anchor_check.py --root`. Review
+found pin lines the pattern did not read were silently dropped, a false-accept path; a
+guard test that could not fail on the old code was folded into one that can.
+
+### [LS1 — anchor tools under test; several named pins](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS1.md)
+Entries: 2026-10-06T07:38-07:00 through 2026-10-06T07:48-07:00
+Outcome: complete; 47 tests and CI for the anchor tools; named, licensed pins. Tests that
+asserted only an exit code could not fail; checked by running the suite on the old scripts.
+
+### [LS-design — license split: design and plan](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/LS-design.md)
+Entries: 2026-10-05T16:21-07:00 through 2026-10-06T05:03-07:00
+Outcome: complete; design approved, plan LS1–LS12 + LS-G written; anchor tools found untested
+with one pin per side; see the [plan](../plans/LICENSE-SPLIT-PLAN.md).
+
+### [CR-G — acceptance of the continuous-review layer](CR-G.md)
+Entries: 2026-09-27T10:05-07:00 through 2026-09-27T11:12-07:00
+Outcome: complete; the layer accepted (the user's decision on C6's last clause); reviewer's 15
+and the swarm's 16 findings fixed; see the [evidence](../evidence/CR-G.md).
+
+### [CR8 — spec revision 9 through the three-round cap](CR8.md)
+Entries: 2026-09-27T07:22-07:00 through 2026-09-27T08:45-07:00
+Outcome: complete; revision 9 landed; two R items for the user; see the
+[evidence](../evidence/CR8.md).
+
+### [CR7 — a stand-in private deployment](CR7.md)
+Entries: 2026-09-26T22:56:17-07:00 through 2026-09-27T07:05:00-07:00
+Outcome: complete; reviewed, three findings fixed;
+see the [evidence](../evidence/CR7.md).
+
+### [CR6 — the first tier-1 batch](CR6.md)
+Entries: 2026-09-26T21:09:39-07:00 through 2026-09-26T22:42:58-07:00
+Outcome: CR6a and CR6b complete; twelve R items and the CR6a decision for CR8; see the
+[CR6a](../evidence/CR6a.md) and [CR6b](../evidence/CR6b.md) evidence.
+
+### [CR5 — deployment manifest and contract check](CR5.md)
+Entries: 2026-09-26T20:40:20-07:00 through 2026-09-26T20:58:45-07:00
+Outcome: complete (PR #33); see the [evidence](../evidence/CR5.md).
+
+### [CR4 — stopping rule and guarded queue](CR4.md)
+Entries: 2026-09-26T19:59:33-07:00 through 2026-09-26T20:18:50-07:00
+Outcome: complete (PR #32); see the [evidence](../evidence/CR4.md).
+
+### [CR3 — tier-0 sweep](CR3.md)
+Entries: 2026-09-26T19:28:29-07:00 through 2026-09-26T19:44:51-07:00
+Outcome: complete (PR #31); see the [evidence](../evidence/CR3.md).
+
+### [CR2 — spec verification history and the TNCRS revision chain](CR2.md)
+Entries: 2026-09-26T18:28:20-07:00 through 2026-09-26T18:59:32-07:00
+Outcome: complete (PR #30); see the [evidence](../evidence/CR2.md).
+
+### [CR1 — e1000 claim map and status index](CR1.md)
+Entries: 2026-09-26T17:48:29-07:00 through 2026-09-26T18:05:49-07:00
+Outcome: complete (PR #29); see the [evidence](../evidence/CR1.md).
+
+### [L01-hw — the candidate and the reference on the Pi 4 fixture](L01-hw.md)
+Entries: 2026-09-26T14:01-07:00 through 2026-09-26T17:18:37-07:00
+Outcome: scoped L01 acceptance complete; L01c independent review and checkpoint-bundle
+import pending. See the [evidence](../evidence/L01-hw.md).
+- Reopen-cycle captures revealed the switch's non-forwarding state; the earlier interrupt
+  and poll-latency explanations were withdrawn.
+- A verbosity mask silently selected defaults where a bit count was required.
+- A capture orphan survived its failed check and changed during artifact transfer.
+- The shared Git metadata was read-only; local commits survived in a separate checkout.
+
+### [CF-2 — the candidate on spec revision 8](CF-2.md)
+Entries: 2026-09-26T12:32-07:00 through 2026-09-26T13:08-07:00
+Outcome: complete; the candidate implements revision 8's TNCRS attribution rule, 40 of 40 on
+the FC-1 harness and again on CS-1's, every trace difference from CF-1 attributed, no bug from
+the L01 review trio;
+see the [evidence](../evidence/CF-2.md).
+- Of 21 spec hunks only four change this driver, and all four are one rule seen from four
+  places.
+- The link check drains on every watchdog tick as well as on every LSC; the rule is per
+  reading, so an extra reading is permitted, not a deviation.
+- Classify each TNCRS read by the register read before it (DC, COLC, other) and the three
+  predicted trace differences fall out exactly.
+- The one unexplained tick was FC-1's longer `frame-sizes` landing on the 2 s boundary.
+- The model's link never changes duplex, so the crediting itself is for hardware.
+- Correction (artifact review R2, R3, R5): a link-down STATUS value glossed as link up; late
+  reads counted per run instead of per open; a script that looked two accesses ahead.
+- A poll with an interrupt-handler access between COLC and TNCRS looks like a link check by
+  its predecessor; the run totals settle it.
+
+### [CS-1 — checksum-preserving corruption of received small frames](CS-1.md)
+Entries: 2026-09-26T09:10-07:00 through 2026-09-26T12:44-07:00
+Outcome: complete; `frame-sizes` carries 1 MiB each way in 214-byte frames checked by
+MD5, Q28 qualified by two word-swap defects, reference and candidate 5 of 5; round c1 not
+as declared (a check-design error, both drivers intact) and kept; see the
+[evidence](../evidence/CS-1.md).
+- TCP's checksum is the same sum as ICMP's, so a word swap reaches the application;
+  `wget`'s MD5 over busybox's own tools is the witness, with no guest-image change.
+- Lowering the peer's MTU bounds both directions' frames (its sends by the MTU, the
+  DUT's by the advertised MSS) and touches nothing on the DUT.
+- On the stored captures a word swap keeps every TCP checksum and changes nothing inside
+  a one-byte ping pattern.
+- Dead end: an MTU of 200 does not make a Linux peer advertise an MSS of 160; the
+  `route.min_adv_mss` floor is 256, so the DUT sent 310-byte frames until it was lowered.
+- Correction (review R1–R4): the evidence carried c1's check names and pre-rebase hashes
+  and one wrong segment count; the plan and index lagged the checkpoint.
+### [SR-8 — spec revision 8](SR-8.md)
+Entries: 2026-09-26T09:12-07:00 through 2026-09-26T10:17-07:00
+Outcome: complete; revision 8 states the TNCRS attribution rule (a requirement change the
+candidate does not yet follow) and SR-7's three wording items, two verifier rounds; see the
+[evidence](../evidence/SR-8.md).
+- The rule is an argument the manual supplies four premises for; the fifth (duplex changes
+  only with a link change) is the spec's own configuration, and the confidence says so.
+- Count the code point and map it to pages; do not search for a sign that is not there.
+- Round 1's page FAILs: the footer sits between a heading and its first sentence.
+- The rule's starting point (§5.5) needed a step of its own; a reader's GAP found it.
+- First record-scan findings in this series: the reader's own kernel-API citations.
+- Interrupted by a spend limit after landing; resumed from disk.
+- Corrections (records review F5, F7, F9): two reader notes were in its record, not its
+  reply; the index time was set before the commit again; two entries restate the evidence.
+
+### [FC-1 — a small-frame content check](FC-1.md)
+Entries: 2026-09-26T08:22-07:00 through 2026-09-26T09:04-07:00
+Outcome: complete; `frame-sizes` checks small-frame content, Q27 qualified by two defects,
+reference and candidate 20 of 20 on the changed harness; see the [evidence](../evidence/FC-1.md).
+- Of the four small-frame paths, captures see three; a reply the driver delivers corrupted is
+  seen only by the kernel's ICMP checksum-error count, because ping reads a raw socket.
+- d21c, invisible with zero payloads, fails the count on every 60/61-byte ping while ping
+  still reports no loss.
+- Dead end in the declaration: expecting the peer's ping to lose a corrupted reply when it is
+  the same raw-socket program as the DUT's.
+- Correction (review R2, R3): a failed counter read could have hidden a rise, fixed and
+  rerun; the chapter's 08:50 entry was committed at 08:47.
+
+### [SR-7 — spec revision 7](SR-7.md)
+Entries: 2026-09-26T07:37-07:00 through 2026-09-26T09:00-07:00
+Outcome: complete; see the [evidence](../evidence/SR-7.md).
+- A second reading of a sentence finds what a reading of the change in it does not.
+- Write an `[emulated]` entry from the extract's sentences, not from the finding.
+- Six verification rounds; four FAILs were sentences a fix pass had written.
+- Corrections: ledger times from memory (AF-1's F5 repeated); the key count (55, not 54).
+
+### [CF-1 — the candidate on spec revision 6](CF-1.md)
+Entries: 2026-09-26T07:55-07:00 through 2026-09-26T08:20-07:00
+Outcome: complete; the candidate implements revision 6 (two behaviors changed), 40 of 40 on the
+QF-1 harness, no bug from the L01 review trio; see the [evidence](../evidence/CF-1.md).
+- Of 16 spec hunks only two change this driver: FWE = 01b on its one EECD write, TNCRS in full
+  duplex only.
+- Attributing the trace differences meant counting statistics polls, not TNCRS reads: the
+  init-time clearing sweep reads TNCRS too.
+- Where the drivers differ on the changed code, the reference is the one off the manual.
+- The one weakness (which duplex a TNCRS reading belongs to after a link change) is a spec gap.
+- Correction (artifact review R1): per-run smallest reset gaps are 5 to 8 µs, not 5 to 17.
+
+### [QF-1 — the four unqualified claims](QF-1.md)
+Entries: 2026-09-26T00:10-07:00 through 2026-09-26T00:52-07:00
+Outcome: complete; Q24, Q25 and Q26 qualified, Q18 stays unqualified (`unobservable`); see
+the [evidence](../evidence/QF-1.md).
+- The trace resolves sub-microsecond intervals as equal stamps; the 1 µs rule was lenient,
+  not blind, and now needs stamps 2 µs apart.
+- Even with no wait at all, a reset write is never followed within 4 µs here; why is unknown.
+- The model does not pad short frames: a small-frame defect that trims also kills ARP.
+- The kernel-log check caught a warning in the reference's own probe error path.
+- Ping payloads are zeros past a 4-byte timestamp, so small-frame corruption is invisible.
+- Correction (review R1): write-then-read stamps are typically 6 µs apart, not 1.
+
+### [AF-1 — a second reading of revision 4's changes](AF-1.md)
+Entries: 2026-09-25T22:33-07:00 through 2026-09-25T22:56-07:00
+Outcome: complete; see the [evidence](../evidence/AF-1.md).
+- The one disagreement between the readings was the spec's own tag rule, not the manual.
+- Both readers independently hung the same caveat on R7's verification test.
+- The record's leak scan flagged a kernel type quoted from a target-tree prototype.
+- Correction (review F5): the ledger's step times had been written from memory.
+
+### [SF-1 — `[emulated]` in the format](SF-1.md)
+Entries: 2026-09-25T20:33-07:00 through 2026-09-25T21:05-07:00
+Outcome: complete; the class is in the format, the evidence model and the checker; see the
+[evidence](../evidence/SF-1.md).
+- The checker already had the citation and TODO shapes; "never alone" is the one new rule,
+  a set test on the tail's tags.
+- The phrasing rule and the run-ID content are judgment, so they went to `spec-verifier`'s
+  text, where L02f3 actually enforced them.
+
+### [L02f3 — spec feedback, reverification and L02 acceptance](L02f3.md)
+Entries: 2026-09-25T18:35-07:00 through 2026-09-25T19:30-07:00
+Outcome: complete; L02 closes with both decisions met and explicit shortfalls; see the
+[evidence](../evidence/L02f3.md).
+- The 40 acceptance runs finished in 81 s, before the spec edits were done.
+- An `[emulated]` entry states what the runs recorded, never the model's mechanism.
+- With the whitelist on the test host, the scans are clean; L02s's set comparison had no
+  baseline.
+- The fix pass made three defects of its own (a rename that hit the milestone keys, a
+  double replacement, a change list not rewritten from the diff); four verifier rounds.
+
+### [L02f2b — harness fix H1 and Q15 requalification](L02f2b.md)
+Entries: 2026-09-25T18:05-07:00 through 2026-09-25T18:35-07:00
+Outcome: complete; see the [evidence](../evidence/L02f2b.md).
+- Traffic already ran through shutdown; only the settling interval was missing.
+- The old harness still failed the candidate at the same load (control).
+- The reference's leftover burst comes before its carrier-up RCTL write.
+- Correction (review R1): the first stated reason for 3 s was wrong for the candidate.
+
+### [L02s — spec revision 5](L02s.md)
+Entries: 2026-09-25T17:49-07:00 through 2026-09-25T18:12-07:00
+Outcome: complete; revision 5 sets PSCON bit 11, 15 PASS after one round of fixes.
+- The manual never says "set bit 11": the spec argues it as an `[inference]` from §8.4.2 and
+  Table 13-31, confidence medium, with the contrary sentence recorded.
+- The first verifier caught a wrong ordering claim: "Retain" in the bit table says what a
+  reset keeps, not when a write applies; §11.1.3 makes bit 11 wait for an AN restart.
+- The manual contradicts itself on TNCRS in half duplex (§8.4.2 against §13.7.12).
+- Out-of-scope notes from both verifiers go to L02f3.
+
+### [L02f2 — bounded repair and retest](L02f2.md)
+Entries: 2026-09-25T16:45-07:00 through 2026-09-25T17:45-07:00
+Outcome: complete after one round; the candidate binds and passes 9 of 10 scenarios past probe.
+- The implementer runs under bubblewrap with a fresh Codex home; strace audits every read.
+- The sandbox is codified in `cleanroom-implementer` (`cleanroom_sandbox.sh`, `sandbox_audit.py`).
+- Round 1: E1 waits 10 ms, then proceeds to EERD with a warning; audit PASS after a pipe
+  false positive in the audit was fixed.
+- `down-during-traffic` fails at random (3 of 6): the reply reaches ICMP in every measured
+  run; QEMU holds reception 1 s after any RCTL write, and with the candidate's faster carrier
+  the hold ends as the ping starts, releasing ~30 leftover flood frames just ahead of the
+  reply. Model plus harness (H1), not the candidate.
+- The operator's machine crashed twice; entries for 16:48 and 16:51 are reconstructed, and
+  the first code review was lost with the scratch space and rerun.
+- Reviews: `review-swarm` 13 findings (fixed or left to the user); a fresh artifact reviewer
+  14, all fixed, among them two wrong notebook statements (corrected at 17:45).
+- First past-probe comparison: V7–V16, all `benign`; flow control off goes to L02f3.
+
+### [L02f1 — differential run and attribution](L02f1.md)
+Entries: 2026-09-25T15:06-07:00 through 2026-09-25T15:56-07:00
+Outcome: complete; reference 10/10 PASS, candidate fails every scenario at probe (one cause).
+- QEMU hard-wires EECD.EE_GNT = 1; the candidate enforces spec E1 (manual §13.4.4) and aborts.
+- Labeled `benign`, model limitation; secondary spec gap: no bound or fallback in E1.
+- The model also reads EECD.FWE = 00b, which the manual forbids; both drivers write it back.
+- The run store was not on the test host; now a per-user setting (`docs/run-store-config`).
+- Nothing after probe has run: L02f2 must repair before any real comparison.
+
+### [L02d3 — check qualification](L02d3.md)
+Entries: 2026-09-25T14:23-07:00 through 2026-09-25T14:43-07:00
+Outcome: complete; 26 claims, 22 qualified by planted defects in isolated runs, 4 unqualified.
+- The reference pads short frames in software (`eth_skb_pad`), so a padding defect must drop
+  that as well as TCTL.PSP.
+- Dead end: d09 (ring indices not reset on clean) is equivalent: open re-zeroes them.
+- d16's checksum-gated corruption never ran; the model apparently never reports TCP-good.
+- Removing the reset wait leaves 13 µs gaps: the 1 µs rule cannot be failed this way.
+- The reviewer, reading captures, caught a reason written from memory (ARP at 42 bytes).
+
+### [L02d2 — QEMU harness, scenarios and planted defects](L02d2.md)
+Entries: 2026-09-24T17:31-07:00 through 2026-09-25T13:45-07:00
+Outcome: complete; the reference passes twice on the final harness, m2–m5 detected, m1 an
+equivalent mutation; a Codex review of the fixes found three more (R1, R2, R5), all fixed.
+- The test host was this checkout's own machine; no SSH was needed.
+- Frames left over from a stalled flood contaminate later scenarios, differently each round;
+  only ring-wrap detects m5 in every round.
+- busybox `nc` has no UDP mode; floods are `ping -i 0.001`; `ping -i 0` hangs the guest.
+- QEMU's e1000 pushes back instead of overrunning, and drains TX with the link down (L4
+  not reproducible); packet-capture timestamps are about 8 h off the host clock.
+- m1 (receive tail one early) is an equivalent mutation; m5 replaces it.
+- Correction: the ITR read-back checks the model, not the driver (C4).
+
+### [L02d1 — QEMU harness, boot and capture](L02d1.md)
+Entries: 2026-09-24T16:17-07:00 through 2026-09-24T17:03-07:00
+Outcome: complete; smoke passes on the reference; failure paths exit as documented.
+- Dead end: busybox `read -t` on the guest command channel drops partial lines; use a
+  blocking read and repeat READY from a background loop.
+- QEMU 10.2.1 `-msg timestamp=on` prefixes trace lines with an ISO time, not `pid@time:`.
+- The reference reads its EEPROM by bit-banging EECD (about 6,700 accesses), not EERD.
+- Smoke does not yet check the kernel log (L02d2).
+
+### [L02e — Implement, build, and review the candidate](L02e.md)
+Entries: 2026-09-24T12:22-07:00 through 2026-09-24T13:09-07:00
+Outcome: complete; driver builds clean, reviewed, repaired once, never run.
+- GCC 15 cannot build Linux v6.12; the test host builds with gcc-14.
+- Dead end: forcing a 32-bit DMA mask (the spec permits 64-bit with fallback).
+- Spec error found: PSCON bit 11 (carrier sense on transmit) should be set.
+- The session auditor flags a clean Claude Code session; its 8 findings were traced by hand.
+- Entries before 12:22 are reconstructed from the run ledger.
+
+## Threads
+- **A check that cannot fail:** [L02d2](L02d2.md) — floods that never ran (r001), the ITR
+  read-back, the L4 and M2 probes; caught by run artifacts and the coverage reviewer, not by
+  code review.
+  [L02d3](L02d3.md) — qualified 22 of 26 claims with planted defects; the 1 µs reset rule
+  stays unqualified. [L02f2](L02f2.md) — the reverse: a check that fails a correct driver at
+  random (H1, `down-during-traffic`); [L02f2b](L02f2b.md) fixed it and requalified Q15.
+- **Model departures from the manual:** [L02d2](L02d2.md) — no overrun drops, TX drains with
+  the link down; [L02f1](L02f1.md) — EE_GNT always 1 and FWE = 00b in EECD;
+  [L02f2](L02f2.md) — a one-second receive hold after every RCTL write.
+- **Spec errors found downstream:** [L02e](L02e.md) — the reference review found a spec §5.4
+  error (PSCON bit 11) that L02c's two readings passed; the implementer filed it during repair.
+  [L02s](L02s.md) — corrected in revision 5; its own first draft had an ordering error that
+  the verifier caught. [L02f3](L02f3.md) — revision 6 folds in every gap L02 filed; the
+  verifiers' findings were mostly the operator's own fix-pass errors.
+- **Model departures from the manual** (continued): [L02f3](L02f3.md) — all seven recorded in
+  the spec as `[emulated]` EM1–EM7, with the rule that an entry cites runs, not mechanism.
+  [SF-1](SF-1.md) — the class and that rule adopted into the format, the evidence model and
+  the checker.
+- **Spec errors found downstream** (continued): [AF-1](AF-1.md) — a second independent reading
+  of revision 4's changes found no accuracy error the first had missed; the one disagreement
+  was the spec's tag convention applied unevenly.
+- **A check that cannot fail** (continued): [QF-1](QF-1.md) — Q24–Q26 shown able to fail by
+  planted defects; the reset rule restated as what the trace can observe and still not shown
+  able to fail on this host and model; a small-frame content corruption that no check sees.
+- **Model departures from the manual** (continued): [QF-1](QF-1.md) — the model delivers
+  runts at their wire length (42-byte ARP reaches the driver), for the next `[emulated]` table.
+  [SR-7](SR-7.md) — recorded as EM8, from the captures alone.
+- **Spec errors found downstream** (continued): [SR-7](SR-7.md) — a second reading of
+  revisions 5 and 6 found three form and citation defects beside the changes, none an
+  accuracy error; revision 7 applies them and AF-1's items.
+- **Spec errors found downstream** (continued): [CF-1](CF-1.md) — updating the candidate to
+  revision 6 surfaced one gap the revision does not close (TNCRS attribution across a duplex
+  change), filed by the implementer and found again by two reviewers.
+- **A check that cannot fail** (continued): [FC-1](FC-1.md) — small-frame content made
+  checkable with a pattern payload and the kernel's checksum-error count; the arrival checks
+  at 60/61 bytes are shown unable to see a corrupted reply on either side.
+- **Spec errors found downstream** (continued): [SR-8](SR-8.md) — the TNCRS attribution gap
+  CF-1 filed is closed by a rule the spec chooses, tagged as an argument with the manual's
+  premises; the first requirement change since revision 6, which the candidate does not yet
+  follow. [CF-2](CF-2.md) — the candidate now follows it; the model can place the readings
+  but not test the crediting, which goes to HF-1.
+
+Bug-fix chapters (removed 2026-10-14; links go to each file at its last commit): [Issue 95](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-95.md) and [Issue 112](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-112.md), indexed
+through 2026-10-14.
+Earlier bug-fix chapters (removed 2026-10-14, same): [Issue 96](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-96.md), [Issue 107](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/ISSUE-107.md).
+This open-method chapter is outside the frozen archive described above.

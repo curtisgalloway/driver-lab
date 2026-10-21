@@ -8,10 +8,10 @@ reports which facts have gone stale, and renders the result as readable views.
 
 The aim is something better to write drivers from than a pile of datasheets and source trees.
 Writing a driver for a particular OS, or bringing up a particular board, happens in projects
-that install these skills (see [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality)).
+that install these skills (see [DESIGN.md's scope section](docs/DESIGN.md#scope-specs-and-their-quality)).
 
 New here? Start with the one-page [How it works](docs/HOW-IT-WORKS.md). Every borrowed or coined
-term is defined in the [glossary](GLOSSARY.md).
+term is defined in the [glossary](docs/GLOSSARY.md).
 
 ## How the graph fits together
 
@@ -80,7 +80,7 @@ peripheral. Each fact has a stable id, a claim, and the sources that support it.
   repositories together.
 - Topology is new. The format and its checks are in place; the atlas does not yet draw
   connections, and no real board's topology has been written up
-  ([plan](docs/ATLAS-CONNECTIONS-PLAN.md)).
+  ([plan](notes/plans/ATLAS-CONNECTIONS-PLAN.md)).
 
 The full contract is [docs/SPEC-FORMAT.md](docs/SPEC-FORMAT.md), with the agent-facing summary in
 [skills/spec-format/SKILL.md](skills/spec-format/SKILL.md).
@@ -94,17 +94,17 @@ The main test is to write a driver from the spec alone and run it beside the exi
   emulation of the card. On the final harness both drivers passed all ten scenarios in isolated
   runs (40 runs, 928 checks, 0 failed). The candidate is qualified for the 22 claims in scope;
   four were left outside it as recorded shortfalls. This was an emulator, not real hardware.
-  See [evidence/L02f3.md](evidence/L02f3.md).
+  See [notes/evidence/L02f3.md](notes/evidence/L02f3.md).
 - **ENC28J60 (L01).** A driver for this SPI Ethernet chip was written from its spec and tested
   on a Raspberry Pi 4 fixture against the Linux driver. It passed all ten checks of its scoped
   acceptance, and all five deliberately broken controls were caught; an independent review of
-  that result is pending. See [evidence/L01.md](evidence/L01.md) and
-  [evidence/L01-hw.md](evidence/L01-hw.md).
+  that result is pending. See [notes/evidence/L01.md](notes/evidence/L01.md) and
+  [notes/evidence/L01-hw.md](notes/evidence/L01-hw.md).
 
 Both devices already had a working driver to compare against, which is the easy case. Hardware
 with no existing driver has not been tried
-([DESIGN.md](DESIGN.md#when-there-is-no-existing-driver)). Why the design leans on automated
-checks rather than human review of every spec: [DRIVER-QUALITY.md](DRIVER-QUALITY.md).
+([DESIGN.md](docs/DESIGN.md#when-there-is-no-existing-driver)). Why the design leans on automated
+checks rather than human review of every spec: [DRIVER-QUALITY.md](docs/DRIVER-QUALITY.md).
 
 ## How quality is checked
 
@@ -230,24 +230,17 @@ target/release/hwspecs check skills/board-expert/specs --stubs-from skills --req
 
 The full list CI runs is in [AGENTS.md](AGENTS.md#checks).
 
-## Other documents
+## What's where
 
-- [DESIGN.md](DESIGN.md): the overall design, evidence model and scope.
-- [docs/SPEC-FORMAT.md](docs/SPEC-FORMAT.md): the spec format, references, roots and freshness.
-- [docs/RUST-TOOLING-DESIGN.md](docs/RUST-TOOLING-DESIGN.md): the `hwspecs` tool.
-- [docs/LICENSE-SPLIT.md](docs/LICENSE-SPLIT.md): why specs are split by license, and how.
-- [docs/STANDARDS-SURVEY.md](docs/STANDARDS-SURVEY.md): existing hardware-description standards
-  (IP-XACT, SystemRDL and others) and what the format borrows from them.
-- `evidence/` and `notebook/`: a record of each milestone and experiment.
-
-**Frozen archive.** The evaluation plans ([IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md),
-[DEFERRED-PLAN.md](DEFERRED-PLAN.md), [EVAL-PLAN.md](EVAL-PLAN.md)), the
-[reconstruction protocol](RECONSTRUCTION.md) and [`evals/`](evals/README.md) are kept as history
-since the license split and are still checked by CI. New evaluation rounds happen elsewhere.
-
-This repository was split out of
-[public-skills](https://github.com/curtisgalloway/public-skills) on 2026-09-25 and renamed from
-driver-lab on 2026-10-21; [TRANSITION.md](TRANSITION.md) records the move.
+| Path | What it holds |
+| --- | --- |
+| [`docs/`](docs/) | Current documentation: start with [HOW-IT-WORKS](docs/HOW-IT-WORKS.md) and the [glossary](docs/GLOSSARY.md); the [design](docs/DESIGN.md), the [spec format](docs/SPEC-FORMAT.md), the [`hwspecs` tool design](docs/RUST-TOOLING-DESIGN.md), the [license split](docs/LICENSE-SPLIT.md), the [atlas connections design](docs/ATLAS-CONNECTIONS-DESIGN.md), and [why automated checks](docs/DRIVER-QUALITY.md) |
+| [`skills/`](skills/) | The agent skills the plugin installs, one directory each |
+| [`agents/`](agents/) | Subagent definitions the plugin installs (`board-expert`) |
+| [`src/`](src/), [`tests/`](tests/) | The `hwspecs` CLI (Rust) and its tests |
+| [`utilities/`](utilities/) | Repository checks CI runs (privacy, open side, hardware facts in prose), the run-store lookup, and the Codex implementer and patch-gate scripts |
+| [`evals/`](evals/README.md) | The e1000 and ENC28J60 evaluations, frozen since the license split and still checked by CI |
+| [`notes/`](notes/README.md) | Working records: plans, the evidence and lab notebook for each milestone, research surveys, history, and the frozen evaluation plans |
 
 ## License
 

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Board spec format
 
 **Terms:** a spec records cited hardware facts; a root is a marked directory of specs;
-an overlay adds facts to another spec. See the [glossary](../../GLOSSARY.md).
+an overlay adds facts to another spec. See the [glossary](../../docs/GLOSSARY.md).
 
 The shared contract is [spec-format](../spec-format/SKILL.md). Read it before authoring or
 consuming YAML. Its schemas define shapes; its text defines classes, references,

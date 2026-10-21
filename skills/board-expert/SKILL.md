@@ -26,7 +26,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Freshness**: whether a recorded verdict still covers the fact's current dependencies.
 - **Needs decision**: a report block returning an unresolved choice to the orchestrator.
 
-See the [glossary](../../GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) for the shared
+See the [glossary](../../docs/GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) for the shared
 contract and schemas; [QUESTIONS.md](QUESTIONS.md) for input choices; [VENDOR-GUIDE.md](VENDOR-GUIDE.md)
 for private resources. Per-board stubs name a spec id and hand the work here. The shipped `specs/`
 is a public root for hardware with no home tree.

@@ -16,7 +16,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Runs a Linux e1000 driver against QEMU's emulated Intel 82540EM and records what happened, so
 the reference driver and a candidate written from the spec can be compared
-([design](../../../QEMU-DIFFERENTIAL.md), plan units L02d1 and L02d2).
+([design](../../../notes/archive/QEMU-DIFFERENTIAL.md), plan units L02d1 and L02d2).
 
 ## Terms
 
@@ -35,7 +35,7 @@ the reference driver and a candidate written from the spec can be compared
 - **Planted defect** — a deliberate bug in a disposable copy of the reference driver; the
   suite must fail on it.
 
-See the [glossary](../../../GLOSSARY.md).
+See the [glossary](../../../docs/GLOSSARY.md).
 
 ## What it does
 
@@ -69,7 +69,7 @@ After the scenarios, two pseudo-scenarios check the stored files:
   manual states: at least 1 µs between a global reset (`CTRL.RST`) and the next register
   access, judged as trace stamps at least 2 µs apart, since the stamps are whole
   microseconds and a difference of 1 µs can be any interval under 2 µs (plan unit QF-1,
-  [evidence](../../../evidence/QF-1.md)); ring lengths nonzero multiples of 128 bytes; ring bases 16-byte aligned; tail
+  [evidence](../../../notes/evidence/QF-1.md)); ring lengths nonzero multiples of 128 bytes; ring bases 16-byte aligned; tail
   writes inside the ring; head writes only while that direction is disabled; ITR's reserved
   bits clear. A reset returns lengths and enables to their power-on values. Its
   observations record which window carried each reset, the gaps, any ring base above
@@ -131,7 +131,7 @@ this busybox's `nc` has no UDP mode.
 a receive path that shifts or replaces a small frame's bytes past its headers changes nothing
 a ping can see (plan unit QF-1, finding F3). `frame-sizes` therefore sends its 60- and
 61-byte pings with a one-byte pattern (`ping -p`, one byte per size) and checks the content
-three ways (plan unit FC-1, [evidence](../../../evidence/FC-1.md)): from the peer's capture,
+three ways (plan unit FC-1, [evidence](../../../notes/evidence/FC-1.md)): from the peer's capture,
 the DUT's requests carry the pattern and the DUT's replies repeat the peer's requests byte
 for byte (what the driver transmitted, and what it delivered when the kernel echoed it);
 from the DUT's capture, the peer's frames arrived with the expected payload (the stimulus);
@@ -149,7 +149,7 @@ echo. A corruption that keeps the checksum (two 16-bit words swapped, a compensa
 two-byte change) in a reply the DUT receives is seen by neither: the kernel accepts the
 reply, and ping reads it from a raw socket and compares nothing past the id. So after the
 pings `frame-sizes` lowers the peer's MTU to 200 and sends 1 MiB over HTTP each way on port
-8081 (plan unit CS-1, [evidence](../../../evidence/CS-1.md)): TCP's checksum is the same
+8081 (plan unit CS-1, [evidence](../../../notes/evidence/CS-1.md)): TCP's checksum is the same
 ones'-complement sum, so such a corruption reaches the application, and `wget`'s MD5 of the
 bytes the stack delivered is compared with the sender's, in either direction. The peer's
 MTU bounds both directions (its own sends by the MTU, the DUT's by the MSS the peer
@@ -169,7 +169,7 @@ QEMU's model holds all reception for one second after every RCTL write, and rele
 frames that arrived meanwhile in one burst; the manual describes no such hold. Drivers rewrite
 RCTL when the stack joins multicast groups at carrier-up, so a ping sent right after carrier
 returns can fall inside it. `down-during-traffic` waits it out (plan unit L02f2b,
-[evidence](../../../evidence/L02f2b.md)).
+[evidence](../../../notes/evidence/L02f2b.md)).
 
 What QEMU's model does not show: when the receive ring is full it stops accepting frames
 rather than dropping and counting them, so there is no missed-packet count or overrun cause
@@ -197,7 +197,7 @@ A full suite run (`--scenario all`) takes a little over 2 minutes with KVM.
 
 **Isolated runs for qualified evidence.** In one boot, a driver that stalls a flood leaves
 frames queued at the peer that reach later scenarios. The checks were qualified (plan unit
-L02d3, [evidence](../../../evidence/L02d3.md)) with each scenario in its own run, on fresh
+L02d3, [evidence](../../../notes/evidence/L02d3.md)) with each scenario in its own run, on fresh
 guests; cite a result as qualified evidence only from such a run:
 
 ```bash

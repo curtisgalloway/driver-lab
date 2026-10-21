@@ -30,7 +30,7 @@ use `peripheral-spec`.
 - **Pin / root / basis hash**: exact source commit / spec directory and license policy /
   fingerprint of a fact and its declared dependencies used for verification freshness.
 
-See the [glossary](../../GLOSSARY.md), [spec-format](../spec-format/SKILL.md) and the `review`
+See the [glossary](../../docs/GLOSSARY.md), [spec-format](../spec-format/SKILL.md) and the `review`
 branch and payload definitions in the [schema](../spec-format/schema/spec.schema.json).
 
 ## Intake and finding the reference

@@ -22,7 +22,7 @@ where one exists. Default everything else and say so.**
   never asked about.
 
 The shared shapes and evidence rules are in [spec-format](../spec-format/SKILL.md); terms
-are in the [glossary](../../GLOSSARY.md).
+are in the [glossary](../../docs/GLOSSARY.md).
 
 ## Who asks
 

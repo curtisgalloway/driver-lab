@@ -45,6 +45,7 @@ fn test_auto6() {
 #[test]
 fn test_tier_calibration() {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("notes");
     path.push("evidence");
     path.push("CR6b.md");
     let cr6b = fs::read_to_string(path).unwrap();

@@ -7,7 +7,7 @@ Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 # Peripheral verification prompt
 
 **Terms:** verdicts judge evidence records; sub-keys identify independently supported fields or
-steps; a basis hash tracks semantic dependencies. See [the glossary](../../../GLOSSARY.md).
+steps; a basis hash tracks semantic dependencies. See [the glossary](../../../docs/GLOSSARY.md).
 
 Independently verify <spec> in <root>. You did not author it. Load `peripheral-spec`,
 `spec-format` and `spec-verifier`; use their verification procedure. Read source bytes at each

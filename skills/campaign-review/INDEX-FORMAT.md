@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Campaign index format, version 1
 
-**Terms** (see the [glossary](../../GLOSSARY.md)): a **claim** is a behavior a
+**Terms** (see the [glossary](../../docs/GLOSSARY.md)): a **claim** is a behavior a
 check's PASS is used to support; **qualification** shows that a planted defect
 made that check fail for the intended reason. A **basis** records the identities
 behind a verdict. An **item** is a finding with a recorded disposition.
@@ -253,7 +253,7 @@ one object with `ok`, `counts`, `findings`.
 **Terms:** a pinned-file adapter returns identity metadata for opaque bytes; a
 change map narrows a change using reviewed metadata bound to its exact old and
 new hashes. An eligible record is current after identity checks, not accepted by
-the stopping rule. See the [glossary](../../GLOSSARY.md).
+the stopping rule. See the [glossary](../../docs/GLOSSARY.md).
 
 The registry is a third file, with `version: 1`, matching `campaign`, `sources`
 (list), `citations` and `premises` (mappings), and `contradictions` (list). The
@@ -374,7 +374,7 @@ operator to record; the sweep never edits the spec or invents hardware evidence.
 
 **Terms:** a reading lineage is one reader's sequential fix passes, counted once
 for independence; a batch is up to three proposed units of work, not an execution.
-See the [glossary](../../GLOSSARY.md).
+See the [glossary](../../docs/GLOSSARY.md).
 
 `scope` contains these required fields:
 

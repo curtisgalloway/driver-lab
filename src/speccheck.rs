@@ -2916,13 +2916,13 @@ pub fn check_stubs(
 
     for path in &stubs_list {
         if !path.is_file() {
-            checker.findings.push(SpecFinding {
-                path: path.display().to_string(),
-                line: 1,
-                column: 1,
-                level: "error".to_string(),
-                message: "stub file not found".to_string(),
-            });
+            checker.findings.push(SpecFinding::new(
+                path.display().to_string(),
+                1,
+                1,
+                "error",
+                "stub file not found",
+            ));
             continue;
         }
         let text = std::fs::read_to_string(path).unwrap_or_default();
@@ -2933,25 +2933,25 @@ pub fn check_stubs(
             let line = prefix.chars().filter(|&c| c == '\n').count() + 1;
             let last_newline = prefix.rfind('\n').map_or(0, |i| i + 1);
             let column = prefix[last_newline..].chars().count() + 1;
-            checker.findings.push(SpecFinding {
-                path: path_str.clone(),
+            checker.findings.push(SpecFinding::new(
+                path_str.clone(),
                 line,
                 column,
-                level: "error".to_string(),
+                "error",
                 message,
-            });
+            ));
         };
 
         if let Some((line, column, found)) =
             crate::specmd::placeholders(&text, false).into_iter().next()
         {
-            checker.findings.push(SpecFinding {
-                path: path_str.clone(),
+            checker.findings.push(SpecFinding::new(
+                path_str.clone(),
                 line,
                 column,
-                level: "error".to_string(),
-                message: format!("unsubstituted template placeholder '{found}'"),
-            });
+                "error",
+                format!("unsubstituted template placeholder '{found}'"),
+            ));
         }
 
         let specs: Vec<_> = STUB_SPEC_RE.captures_iter(&text).collect();
@@ -2992,13 +2992,13 @@ pub fn check_stubs(
             }
         }
         for prose in crate::prosefacts::scan_text(&text) {
-            checker.findings.push(SpecFinding {
-                path: path_str.clone(),
-                line: prose.line,
-                column: prose.column,
-                level: "error".to_string(),
-                message: crate::prosefacts::format_message(&prose.what),
-            });
+            checker.findings.push(SpecFinding::new(
+                path_str.clone(),
+                prose.line,
+                prose.column,
+                "error",
+                crate::prosefacts::format_message(&prose.what),
+            ));
         }
 
         let name = if let Some(front) = FRONTMATTER_RE.captures(&text) {
@@ -3093,16 +3093,16 @@ pub fn check_agent_names(checker: &mut Checker, stubs_from: &[PathBuf]) {
                         {
                             let name = found.get(1).map_or("", |m| m.as_str()).to_string();
                             if let Some(existing_path) = seen.get(&name) {
-                                checker.findings.push(SpecFinding {
-                                    path: path.display().to_string(),
-                                    line: 1,
-                                    column: 1,
-                                    level: "error".to_string(),
-                                    message: format!(
+                                checker.findings.push(SpecFinding::new(
+                                    path.display().to_string(),
+                                    1,
+                                    1,
+                                    "error",
+                                    format!(
                                         "agent name '{name}' is also the name of {}: installed agents need distinct names",
                                         existing_path.display()
                                     ),
-                                });
+                                ));
                             } else {
                                 seen.insert(name, path.clone());
                             }
@@ -3146,16 +3146,16 @@ pub fn check_overlap(
                 if shares_expert_hub {
                     continue;
                 }
-                checker.findings.push(SpecFinding {
-                    path: bpath.display().to_string(),
-                    line: 1,
-                    column: 1,
-                    level: "warning".to_string(),
-                    message: format!(
+                checker.findings.push(SpecFinding::new(
+                    bpath.display().to_string(),
+                    1,
+                    1,
+                    "warning",
+                    format!(
                         "stubs '{a}' ({}) and '{b}' both enter through spec '{spec_id}' with no stated split: add a `split: ...` line to one naming the other and saying which questions go where",
                         apath.display()
                     ),
-                });
+                ));
             }
         }
     }
@@ -4069,13 +4069,13 @@ pub fn check_roots(
             specs: 0,
             stubs: 0,
             verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: "at least one root directory is required".to_string(),
-            }],
+            findings: vec![SpecFinding::new(
+                String::new(),
+                0,
+                0,
+                "error",
+                "at least one root directory is required",
+            )],
             text_lines: Vec::new(),
         };
     }
@@ -4105,13 +4105,7 @@ pub fn check_roots(
             specs: 0,
             stubs: 0,
             verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: msg,
-            }],
+            findings: vec![SpecFinding::new(String::new(), 0, 0, "error", msg)],
             text_lines: Vec::new(),
         };
     }
@@ -4229,16 +4223,10 @@ pub fn run_check_cmd(
                 specs: 0,
                 stubs: 0,
                 verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-                findings: vec![SpecFinding {
-                    path: String::new(),
-                    line: 0,
-                    column: 0,
-                    level: "error".to_string(),
-                    message: msg.to_string(),
-                }],
+                findings: vec![SpecFinding::new(String::new(), 0, 0, "error", msg)],
                 text_lines: Vec::new(),
             };
-            return emit_check_report(&rep, cli.json, stdout, stderr);
+            return emit_check_report(&rep, cli.json, cli.diag_out.as_deref(), stdout, stderr);
         };
         match check_facts(
             &args.targets,
@@ -4267,13 +4255,7 @@ pub fn run_check_cmd(
                     specs: 0,
                     stubs: 0,
                     verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-                    findings: vec![SpecFinding {
-                        path: String::new(),
-                        line: 0,
-                        column: 0,
-                        level: "error".to_string(),
-                        message: msg,
-                    }],
+                    findings: vec![SpecFinding::new(String::new(), 0, 0, "error", msg)],
                     text_lines: Vec::new(),
                 }
             }
@@ -4302,15 +4284,20 @@ pub fn run_check_cmd(
         )
     };
 
-    emit_check_report(&report, cli.json, stdout, stderr)
+    emit_check_report(&report, cli.json, cli.diag_out.as_deref(), stdout, stderr)
 }
 
 fn emit_check_report(
     report: &CheckReport,
     json_mode: bool,
+    diag_out: Option<&Path>,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    if diag_out.is_some() {
+        let json_str = serde_json::to_string(report).unwrap_or_default();
+        let _ = crate::diagnostic::write_diag_out(diag_out, &json_str);
+    }
     if json_mode {
         let _ = writeln!(
             stdout,

@@ -16,7 +16,7 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 pub fn hex_values(text: &str) -> BTreeSet<u64> {
@@ -186,23 +186,32 @@ pub fn run_resolve_cmd(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    let diag_out = cli.diag_out.as_deref();
     let target_files = match collect_spec_files_from_targets(&args.targets) {
         Ok(t) => t,
-        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
+        Err(e) => {
+            return return_error(
+                e.0,
+                ExitCode::UsageError,
+                cli.json,
+                diag_out,
+                stdout,
+                stderr,
+            )
+        }
     };
 
     if args.list_repos {
         let pins = discover_repo_pins(&target_files);
+        let items: Vec<Value> = pins
+            .iter()
+            .map(|(n, c)| json!({"name": n, "commit": c}))
+            .collect();
+        let json_payload =
+            serde_json::to_string_pretty(&json!({"ok": true, "repos": items})).unwrap();
+        let _ = crate::diagnostic::write_diag_out(diag_out, &json_payload);
         if cli.json {
-            let items: Vec<Value> = pins
-                .iter()
-                .map(|(n, c)| json!({"name": n, "commit": c}))
-                .collect();
-            let _ = writeln!(
-                stdout,
-                "{}",
-                serde_json::to_string_pretty(&json!({"ok": true, "repos": items})).unwrap()
-            );
+            let _ = writeln!(stdout, "{json_payload}");
         } else {
             for (name, commit) in pins {
                 let _ = writeln!(stdout, "{name}\t{commit}");
@@ -221,18 +230,28 @@ pub fn run_resolve_cmd(
         scratch,
     ) {
         Ok(r) => r,
-        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
+        Err(e) => {
+            return return_error(
+                e.0,
+                ExitCode::UsageError,
+                cli.json,
+                diag_out,
+                stdout,
+                stderr,
+            )
+        }
     };
 
     match run_impl(cli, false, &target_files, &mut resolver) {
         Ok((code, res)) => {
-            print_result(&res, cli.json, stdout, stderr);
+            print_result(&res, cli.json, diag_out, stdout, stderr);
             code
         }
         Err(pre) => return_error(
             pre.message,
             ExitCode::SandboxError,
             cli.json,
+            diag_out,
             stdout,
             stderr,
         ),
@@ -246,6 +265,7 @@ pub fn run_show_cmd(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    let diag_out = cli.diag_out.as_deref();
     let raw_targets = if !args.targets.is_empty() {
         args.targets.clone()
     } else if let Some(ref r) = args.root {
@@ -258,7 +278,16 @@ pub fn run_show_cmd(
     } else {
         match collect_spec_files_from_targets(&raw_targets) {
             Ok(t) => t,
-            Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
+            Err(e) => {
+                return return_error(
+                    e.0,
+                    ExitCode::UsageError,
+                    cli.json,
+                    diag_out,
+                    stdout,
+                    stderr,
+                )
+            }
         }
     };
 
@@ -272,18 +301,28 @@ pub fn run_show_cmd(
         scratch,
     ) {
         Ok(r) => r,
-        Err(e) => return return_error(e.0, ExitCode::UsageError, cli.json, stdout, stderr),
+        Err(e) => {
+            return return_error(
+                e.0,
+                ExitCode::UsageError,
+                cli.json,
+                diag_out,
+                stdout,
+                stderr,
+            )
+        }
     };
 
     match run_impl(cli, true, &target_files, &mut resolver) {
         Ok((code, res)) => {
-            print_result(&res, cli.json, stdout, stderr);
+            print_result(&res, cli.json, diag_out, stdout, stderr);
             code
         }
         Err(pre) => return_error(
             pre.message,
             ExitCode::SandboxError,
             cli.json,
+            diag_out,
             stdout,
             stderr,
         ),
@@ -294,20 +333,28 @@ fn return_error(
     msg: String,
     code: ExitCode,
     json_out: bool,
+    diag_out: Option<&Path>,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
+    let finding_code = crate::diagnostic::classify_resolve_finding_code(&msg);
+    let out = json!({
+        "ok": false,
+        "findings": [{
+            "level": "error",
+            "code": finding_code,
+            "message": msg,
+            "path": "",
+            "line": 0,
+            "column": 0
+        }]
+    });
+    if diag_out.is_some() {
+        if let Ok(json_str) = serde_json::to_string_pretty(&out) {
+            let _ = crate::diagnostic::write_diag_out(diag_out, &json_str);
+        }
+    }
     if json_out {
-        let out = json!({
-            "ok": false,
-            "findings": [{
-                "level": "error",
-                "message": msg,
-                "path": "",
-                "line": 0,
-                "column": 0
-            }]
-        });
         let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&out).unwrap());
     } else {
         let prefix = match code {
@@ -320,17 +367,30 @@ fn return_error(
     code as i32
 }
 
-fn print_result(res: &Value, json_out: bool, stdout: &mut dyn Write, _stderr: &mut dyn Write) {
-    if json_out {
+fn print_result(
+    res: &Value,
+    json_out: bool,
+    diag_out: Option<&Path>,
+    stdout: &mut dyn Write,
+    _stderr: &mut dyn Write,
+) {
+    if json_out || diag_out.is_some() {
         let mut out = res.clone();
         if let Some(map) = out.as_object_mut() {
             map.remove("_text");
         }
-        let _ = writeln!(stdout, "{}", serde_json::to_string_pretty(&out).unwrap());
-    } else if let Some(arr) = res.get("_text").and_then(Value::as_array) {
-        for line in arr {
-            if let Some(s) = line.as_str() {
-                let _ = writeln!(stdout, "{s}");
+        let json_str = serde_json::to_string_pretty(&out).unwrap();
+        let _ = crate::diagnostic::write_diag_out(diag_out, &json_str);
+        if json_out {
+            let _ = writeln!(stdout, "{json_str}");
+        }
+    }
+    if !json_out {
+        if let Some(arr) = res.get("_text").and_then(Value::as_array) {
+            for line in arr {
+                if let Some(s) = line.as_str() {
+                    let _ = writeln!(stdout, "{s}");
+                }
             }
         }
     }
@@ -379,11 +439,13 @@ fn run_impl(
     for path in target_files {
         let loaded = load_file(path);
         for lf in loaded.findings() {
+            let code = crate::diagnostic::classify_resolve_finding_code(&lf.message);
             findings_out.push(json!({
                 "path": lf.path,
                 "line": lf.line,
                 "column": lf.col,
                 "level": lf.level.as_str(),
+                "code": code,
                 "message": lf.message,
             }));
         }
@@ -492,11 +554,13 @@ fn run_impl(
                                     "sha256".to_string(),
                                 ];
                                 let mark = mark_for_at(&loaded, &at);
+                                let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                                 findings_out.push(json!({
                                     "path": path_str,
                                     "line": mark.line,
                                     "column": mark.column,
                                     "level": "error",
+                                    "code": code,
                                     "message": msg
                                 }));
                                 DocReader::ResolutionError(msg)
@@ -696,20 +760,26 @@ fn run_impl(
                     let mark = mark_for_at(&loaded, &at);
                     if skip {
                         item["status"] = json!("skipped");
+                        let msg = format!("{record_id}: resolution skipped: {err}");
+                        let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                         findings_out.push(json!({
                             "path": path_str,
                             "line": mark.line,
                             "column": mark.column,
                             "level": "warning",
-                            "message": format!("{record_id}: resolution skipped: {err}")
+                            "code": code,
+                            "message": msg
                         }));
                     } else {
+                        let msg = format!("{record_id}: {err}");
+                        let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                         findings_out.push(json!({
                             "path": path_str,
                             "line": mark.line,
                             "column": mark.column,
                             "level": "error",
-                            "message": format!("{record_id}: {err}")
+                            "code": code,
+                            "message": msg
                         }));
                     }
                 } else {
@@ -727,11 +797,13 @@ fn run_impl(
                     &mut documents,
                     |where_at, msg, level| {
                         let mark = mark_for_at(&loaded, &where_at);
+                        let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                         findings_out.push(json!({
                             "path": path_str,
                             "line": mark.line,
                             "column": mark.column,
                             "level": level,
+                            "code": code,
                             "message": msg
                         }));
                     },
@@ -780,12 +852,18 @@ fn run_impl(
                     let mut claim_at = base.clone();
                     claim_at.push("claim".to_string());
                     let mark = mark_for_at(&loaded, &claim_at);
+                    let msg = format!(
+                        "claim hex values absent from cited lines: {}",
+                        missing.join(", ")
+                    );
+                    let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                     findings_out.push(json!({
                         "path": path_str,
                         "line": mark.line,
                         "column": mark.column,
                         "level": "warning",
-                        "message": format!("claim hex values absent from cited lines: {}", missing.join(", "))
+                        "code": code,
+                        "message": msg
                     }));
                 }
             }
@@ -805,12 +883,16 @@ fn run_impl(
                         off_at.push("register".to_string());
                         off_at.push("offset".to_string());
                         let mark = mark_for_at(&loaded, &off_at);
+                        let msg =
+                            format!("register offset absent from cited PDF pages: {offset_str}");
+                        let code = crate::diagnostic::classify_resolve_finding_code(&msg);
                         findings_out.push(json!({
                             "path": path_str,
                             "line": mark.line,
                             "column": mark.column,
                             "level": "warning",
-                            "message": format!("register offset absent from cited PDF pages: {offset_str}")
+                            "code": code,
+                            "message": msg
                         }));
                     }
                 }
@@ -829,11 +911,17 @@ fn run_impl(
     let mut unused_findings: Vec<Finding> = Vec::new();
     resolver.check_unused_repos(&declared_repo_names, &default_path, &mut unused_findings);
     for uf in unused_findings {
+        let code = if uf.code.is_empty() {
+            crate::diagnostic::classify_resolve_finding_code(&uf.message).to_string()
+        } else {
+            uf.code
+        };
         findings_out.push(json!({
             "path": uf.path,
             "line": uf.line,
             "column": uf.col,
             "level": uf.level.as_str(),
+            "code": code,
             "message": uf.message,
         }));
     }

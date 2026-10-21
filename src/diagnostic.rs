@@ -452,6 +452,236 @@ impl DiagnosticEnvelope {
     }
 }
 
+/// Writes structured JSON diagnostics to `diag_out` when `--diag-out <FILE>` is set (`PA-2`).
+///
+/// When `diag_out` is `None`, this function is a no-op and performs zero filesystem operations,
+/// preserving `ENV-1`/`ENV-2` and read-only root (`bwrap --ro-bind / /`) compatibility.
+pub fn write_diag_out(diag_out: Option<&Path>, json_payload: &str) -> std::io::Result<()> {
+    let Some(path) = diag_out else {
+        return Ok(());
+    };
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() && !parent.exists() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+    let mut owned = json_payload.to_string();
+    if !owned.ends_with('\n') {
+        owned.push('\n');
+    }
+    std::fs::write(path, owned)
+}
+
+/// Deterministic rule-code classifier for `hwspecs check` and `hwspecs status` findings (`PA-2`).
+///
+/// Maps human-readable `speccheck` and `records` diagnostic messages to stable, non-empty rule
+/// codes without altering human-readable `Display` output.
+#[must_use]
+pub fn classify_check_finding_code(message: &str) -> &'static str {
+    let msg = message.strip_prefix("context root: ").unwrap_or(message);
+    let lower = msg.to_ascii_lowercase();
+
+    if lower.contains("at least one root directory is required")
+        || lower.contains("requires --root")
+        || lower.contains("not a file")
+        || lower.contains("not a directory")
+        || lower.contains("root directory not found")
+        || lower.contains("missing board-specs.yaml")
+        || lower.contains("no spec files found")
+    {
+        return "CHK-PRECONDITION";
+    }
+
+    if msg.starts_with("schema:")
+        || msg.contains("YAML ")
+        || lower.contains("duplicate mapping key")
+        || lower.contains("non-standard character")
+        || lower.contains("invalid utf-8")
+        || lower.contains("failed to parse")
+        || lower.contains("must be a yaml mapping")
+    {
+        return "CHK-SCHEMA";
+    }
+
+    if lower.contains("basis")
+        || lower.contains("stale")
+        || lower.contains("unverified")
+        || lower.contains("needs-second-reader")
+        || lower.contains("verification record")
+        || lower.contains(".verify.yaml")
+        || lower.contains("freshness")
+        || lower.contains("verifier")
+        || lower.contains("verdict")
+    {
+        return "CHK-BASIS-STALE";
+    }
+
+    if lower.contains("overlay")
+        || lower.contains("extends")
+        || lower.contains("overrides")
+        || lower.contains("refines")
+        || lower.contains("base spec")
+        || lower.contains("target record")
+    {
+        return "CHK-OVERLAY-TARGET";
+    }
+
+    if lower.contains("todo") || lower.contains("resolves:") || lower.contains("tracks ") {
+        return "CHK-TODO-TRACKING";
+    }
+
+    if lower.contains("bus")
+        || lower.contains("protocol")
+        || lower.contains("endpoint")
+        || lower.contains("responder")
+        || lower.contains("initiator")
+        || lower.contains("address_space")
+        || lower.contains("interrupt")
+        || lower.contains("clock")
+        || lower.contains("reset")
+        || lower.contains("power")
+        || lower.contains("gpio")
+        || lower.contains("pinctrl")
+        || lower.contains("iommu")
+        || lower.contains("dma")
+        || lower.contains("xbar")
+        || lower.contains("fabric")
+    {
+        return "CHK-BUS-PROTOCOL";
+    }
+
+    if lower.contains("license")
+        || lower.contains("spdx")
+        || lower.contains("accepts")
+        || lower.contains("confidential")
+        || lower.contains("public skill")
+        || lower.contains("containment")
+    {
+        return "CHK-LICENSE";
+    }
+
+    if lower.contains("stub")
+        || lower.contains("agent name")
+        || lower.contains("placeholder")
+        || lower.contains("split:")
+    {
+        return "CHK-STUB";
+    }
+
+    if lower.contains("unanchored") || lower.contains("prose") || lower.contains("hex literal") {
+        return "CHK-PROSE";
+    }
+
+    if lower.contains("corpus") || lower.contains(".index.yaml") || lower.contains("index file") {
+        return "CHK-CORPUS";
+    }
+
+    if lower.contains("citation")
+        || lower.contains("anchor")
+        || lower.contains("support")
+        || lower.contains("locator")
+        || lower.contains("document")
+        || lower.contains("repo")
+        || lower.contains("commit")
+        || lower.contains("sha256")
+        || lower.contains("heading")
+        || lower.contains("fragment")
+        || lower.contains("authority")
+    {
+        return "CHK-CITATION";
+    }
+
+    if lower.contains("register")
+        || lower.contains("field")
+        || lower.contains("bit")
+        || lower.contains("offset")
+        || lower.contains("width")
+        || lower.contains("access")
+        || lower.contains("reset_value")
+        || lower.contains("peripheral")
+    {
+        return "CHK-PERIPHERAL";
+    }
+
+    "CHK-GENERAL"
+}
+
+/// Deterministic rule-code classifier for `hwspecs resolve` and `hwspecs show` findings (`PA-2`).
+///
+/// Maps human-readable `resolve` diagnostic messages to stable, non-empty rule codes without
+/// altering human-readable text output.
+#[must_use]
+pub fn classify_resolve_finding_code(message: &str) -> &'static str {
+    let lower = message.to_ascii_lowercase();
+
+    if lower.contains("precondition")
+        || lower.contains("offline")
+        || lower.contains("scratch")
+        || lower.contains("timeout")
+        || lower.contains("limit")
+        || lower.contains("no spec files")
+        || lower.contains("requires --")
+        || lower.contains("invalid --repo")
+        || lower.contains("at least one")
+    {
+        return "RES-PRECONDITION";
+    }
+
+    if message.starts_with("schema:")
+        || message.contains("YAML ")
+        || lower.contains("duplicate mapping key")
+        || lower.contains("non-standard character")
+        || lower.contains("invalid utf-8")
+    {
+        return "RES-YAML";
+    }
+
+    if lower.contains("line range")
+        || lower.contains("symbol ")
+        || lower.contains("dt node")
+        || lower.contains("cited lines")
+        || lower.contains("hex values absent")
+        || lower.contains("offset absent")
+        || lower.contains("stale anchor")
+        || lower.contains("closed files list")
+        || lower.contains("anchor repo")
+    {
+        return "RES-ANCHOR-MISMATCH";
+    }
+
+    if lower.contains(".index.yaml")
+        || lower.contains("index")
+        || lower.contains("pdf")
+        || lower.contains("page ")
+        || lower.contains("pages")
+        || lower.contains("section")
+        || lower.contains("heading")
+        || lower.contains("locator")
+        || lower.contains("document")
+        || lower.contains("sha256")
+        || lower.contains("--docs-dir")
+    {
+        return "RES-DOC-INDEX";
+    }
+
+    if lower.contains("git")
+        || lower.contains("commit")
+        || lower.contains("repository")
+        || lower.contains("repo")
+        || lower.contains("https://")
+        || lower.contains("blob")
+        || lower.contains("tree")
+        || lower.contains("fetch")
+        || lower.contains("clone")
+        || lower.contains("file not found")
+        || lower.contains("does not exist")
+    {
+        return "RES-GIT-SOURCE";
+    }
+
+    "RES-GENERAL"
+}
+
 #[inline]
 fn range_contains(ranges: &[(u32, u32)], cp: u32) -> bool {
     ranges

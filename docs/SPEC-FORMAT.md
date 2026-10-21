@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Status: **approved by the user on 2026-10-08 (decisions D1–D22 below).** Nothing here is built yet. The
 direction (one YAML format for every spec, validated by a JSON Schema, with Markdown as a rendered
-view) was approved by the user on 2026-10-08 ([RG-regen](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md), "RG-T1 rounds
+view) was approved by the user on 2026-10-08 ([RG-regen](https://github.com/curtisgalloway/hardware-specs/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/RG-regen.md), "RG-T1 rounds
 6–8, merge, and the format decision"). The user settled the design's open choices the same day;
 they are recorded under [Decisions (2026-10-08)](#decisions-2026-10-08), and the body below
 follows them. Where the body depends on one, it names it (D1–D22).
@@ -73,7 +73,7 @@ wrapped bullets; two fence scanners that disagreed and blanked a fact between co
 after the rewrite onto one CommonMark parser, text that renders as provenance while the checker
 reads it otherwise (quoted headings, comments closed early, entities, emphasis inside an anchor,
 invisible characters). The three gaps still open at merge go away only by changing the format
-([RG1 evidence](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md), "Known gaps at merge"). A proposed "plain-ASCII tail" rule
+([RG1 evidence](https://github.com/curtisgalloway/hardware-specs/blob/086385c13698a5b3593138e123ce6fe3a35553af/evidence/RG1.md), "Known gaps at merge"). A proposed "plain-ASCII tail" rule
 would have failed 94 already verified bullets. The lesson recorded in the notebook: *a schema
 imposed on a format designed for many equivalent spellings will keep leaking; when the data is
 structured, store it structured.*
@@ -690,7 +690,7 @@ and register-style names in stub prose (`scripts/prosefacts.py`; a line with
 directories, refuses agent files with one name across the `agents/` directories beside the
 `--stubs-from` directories, and warns when two stubs enter through one spec and neither's `split:` line names
 the other. `utilities/check-no-hardware-facts.py` applies the same prose rules to agent files
-(driver-lab's own by default; another repository passes its files as arguments). The rules
+(hardware-specs's own by default; another repository passes its files as arguments). The rules
 miss hex without `0x`, decimal addresses, instance numbers written in words and register names
 without an underscore, so review still reads stub prose. In both modes stubgen reports, and
 exits 1 for, an orphan: a stub carrying this board's `<!-- stubgen: <board> -->` marker that the
@@ -1106,10 +1106,10 @@ Originally proposed 2026-10-14. The choices in the table at the end (D23–D41) 
 the user on 2026-10-14 (D34 proposed from the user's note that some register tools hold far
 more than IP-XACT expresses, then accepted); this section turns them into a design. Apart
 from units 1-3, nothing here is built. It reshapes issues
-[#103](https://github.com/curtisgalloway/driver-lab/issues/103) (encodings and bit-packed
-layouts) and [#105](https://github.com/curtisgalloway/driver-lab/issues/105) (per-field access,
+[#103](https://github.com/curtisgalloway/hardware-specs/issues/103) (encodings and bit-packed
+layouts) and [#105](https://github.com/curtisgalloway/hardware-specs/issues/105) (per-field access,
 resets, sequence timeouts), and it answers the precision goal behind
-[#118](https://github.com/curtisgalloway/driver-lab/issues/118). The survey behind it, with a
+[#118](https://github.com/curtisgalloway/hardware-specs/issues/118). The survey behind it, with a
 URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md); the second survey, on
 public JSON register formats and on routing between blocks, is
 [STANDARDS-SURVEY-2.md](STANDARDS-SURVEY-2.md). Both are a research agent's reports of
@@ -1326,10 +1326,10 @@ point at fields, and conflicts where the document and the tool disagree.
   common questions need (names, bits, values, access, resets); a source richer than this model
   keeps everything else, readers go to the source for it, and the resolved record is always
   marked partial, never complete (D34). This model is a floor for what an adapter must supply,
-  not a ceiling on what a source may hold. driver-lab ships `inline` (today's `data.register`, for
+  not a ceiling on what a source may hold. hardware-specs ships `inline` (today's `data.register`, for
   specs with no tool behind them) and `ipxact`. Any other adapter, including one for an
   internal tool, comes from the root that needs it, named in its marker, as the
-  `source-observed` schema fragment is (D15); driver-lab never names such a tool or its format.
+  `source-observed` schema fragment is (D15); hardware-specs never names such a tool or its format.
 - **Provenance** (D30). A new support class, `register-source` (`{source, path}`), is evidence
   for the revision named, as `rtl` is. It may stand alone in `support`. The verifier's job
   for such a fact is to compare the cited documentation with the tool's record, and to record
@@ -1553,7 +1553,7 @@ Each is one session and one pull request, in this order:
 | D26 | How strictly to follow IP-XACT | Names in the YAML plus an exporter validated against the official XSD in CI | the export check, not a claim, shows conformance |
 | D27 | Time limits | UCUM unit codes and IEC 61360 level names | tolerances become numbers |
 | D28 | Order of work | This design section first, approved, then the units above | later units build on approved decisions, not on a pull request |
-| D29 | Specs where a register tool already exists | Reference into the tool at a pinned revision through an adapter; the spec holds only what the tool lacks | no duplicated register data; a private tool's adapter stays out of driver-lab |
+| D29 | Specs where a register tool already exists | Reference into the tool at a pinned revision through an adapter; the spec holds only what the tool lacks | no duplicated register data; a private tool's adapter stays out of hwspecs |
 | D30 | What makes a tool's value verified | The tool is evidence for its revision (class `register-source`); the verifier cross-checks the documentation against it and records conflicts | catches errors in either the documentation or the tool without re-typing values |
 | D31 | What belongs in a spec | Facts from sources the reader cannot be pointed to, and accurate summaries that save reading cost; never a duplicate of a canonical source the readers can use | the spec is a stand-in or an index, not a second copy to keep in sync |
 | D32 | Enforcing D31 | The checker refuses inline data a declared register source covers and warns on references that add nothing; the verifier reports other duplicates | mechanical where the duplicate is visible in the data, reviewed where it is not |
@@ -1641,7 +1641,7 @@ The schema is one file with `$defs` per record. The support entry dispatches on 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/spec.schema.json",
+  "$id": "https://github.com/curtisgalloway/hardware-specs/spec-format/2/spec.schema.json",
   "type": "object",
   "required": ["format", "kind", "facts"],
   "properties": {
@@ -1789,7 +1789,7 @@ views from the YAML and the records: the **Markdown view** and the **viewer** (s
 are generated; neither is committed or edited (D5). Both carry the same content:
 
 - a generated-file banner naming the YAML files, the commits they were built from, the
-  canonical-form version and the `driver-lab` commit, and saying the view must not be edited;
+  canonical-form version and the `hwspecs` commit, and saying the view must not be edited;
 - the identity block (kind, id, name, triggers) and the resources as tables (documents with
   class, revision and hash; repos with commit and license);
 - `orientation` and other prose under "Context (not facts)";
@@ -1946,8 +1946,8 @@ The spec format is now the only supported reading and authoring path.
 | Spec repository publish workflow | none | builds both views on merges to `main` and weekly, deploys them to GitHub Pages (D5) |
 | Spec repository CI dependencies | markdown-it-py 4.2.0 in a venv | PyYAML, the chosen validator and the CommonMark library (markdown-it-py, subject to `dep-quality`), pinned, for checks, render and publish alike |
 | Spec repository `AGENTS.md`/README citation rules | describe peripheral `[doc:]` anchors and board tags | describe records; the README links each spec's page on the published site |
-| driver-lab `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | hash-pinned spec-format requirements in a virtual environment; `spec.py check` on the shipped root and the spec format suites; the shared SPDX suite and frozen archive checks remain |
-| Consumers outside driver-lab | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as the Markdown format until it migrates |
+| hardware-specs `AGENTS.md` check list and CI | `uv run --with markdown-it-py==4.2.0 ...` | hash-pinned spec-format requirements in a virtual environment; `spec.py check` on the shipped root and the spec format suites; the shared SPDX suite and frozen archive checks remain |
+| Consumers outside hardware-specs | `bringup-kit` roots point at the docs and permissive repositories and read specs through `board-expert`; `fuchsia-skills` hands off by skill name | no skill is renamed; `board-expert` reads both formats only during the transition; bringup-kit test markers without `format:` are read as the Markdown format until it migrates |
 
 ## Worked example
 
@@ -2506,7 +2506,7 @@ no verification record, and the zero basis hashes in the GPL fixture's record re
 ~~~markdown
 Generated by `spec.py render`. Do not edit.
 
-Canonical form `fact-v1`; driver-lab unavailable.
+Canonical form `fact-v1`; hwspecs unavailable.
 
 Source `hardware-specs-docs:bcm2711.spec.yaml`; commit unavailable; SHA256 `<checked-byte hash>`.
 
@@ -2636,7 +2636,7 @@ left open, also decided by the user on 2026-10-08.
 | D12 | Licenses per cited file | One license per repos entry, a closed `files` list stating how each license was confirmed; `resolve` checks the first SPDX tag anywhere within five lines, stripping a leading UTF-8 BOM and trailing whitespace/comment closer/quote | catches a file whose license differs from its entry without a per-file gate |
 | D13 | References across roots | Transitive license gate | the placement rule holds through references, for any root's accepts list |
 | D14 | Second readers | `critical: true`; a second reader's verdict is required for each critical fact | the record shows whether the second verifier ran |
-| D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without driver-lab defining its content |
+| D15 | `source-observed` | Kept as the extension class; its fields come from a schema fragment the extension supplies, named in the root marker | the extension keeps working without hardware-specs defining its content |
 | D16 | Verdict granularity | One verdict per register, layout or sequence fact; sub-keys for register fields, layout fields or sequence steps with their own support | precise where the author cited precisely, without hundreds of records |
 | D17 | File names | Every spec is `<name>.spec.yaml`; `kind` says what it is | one glob, one rule |
 | D18 | Conflict entries | The `conflicts` field now | DESIGN.md's proposal gets a home, and RG1's documentation-versus-source contradiction is recorded as one |
@@ -2665,7 +2665,7 @@ left open, also decided by the user on 2026-10-08.
 | The checker's CommonMark parse is used for more than safety and layout | provenance drifts back into text, the Markdown format's failure | the parse lives in one module whose only outputs are raw-HTML, link-scheme, heading and unclosed-fence findings; review rejects any other use; provenance is read only from structured fields |
 | The CommonMark library changes what counts as HTML or a heading between versions | a field passes under one version and fails under another | one pinned version shared by checker and publish step; a version bump is its own reviewed change with the fixtures re-run |
 | The schema grows its own equivalent spellings (optional fields that mean the same) | the leak returns at the data level | closed records (`unevaluatedProperties: false`); one field per meaning; review asks "is there a second way to say this?" for every schema change |
-| Consumers outside driver-lab read `*.spec.md` | they break at the cutover | `board-expert` is the only reader of specs; bringup-kit reads through it; transition window (D11) |
+| Consumers outside hardware-specs read `*.spec.md` | they break at the cutover | `board-expert` is the only reader of specs; bringup-kit reads through it; transition window (D11) |
 | The viewer grows past its first static version | scope creep | this design covers the static viewer with badges only; search and navigation are later work on the same data |
 
 ## Implementation outline
@@ -2706,7 +2706,7 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
    publish workflow and Pages site.
 7. **SF2-7 Retire the Markdown format.** Remove the Markdown checker, `mdtokens.py` and `anchor_check.py`'s
    Markdown mode; markdown-it-py stays as the pinned CommonMark library (D20); update
-   driver-lab's `AGENTS.md` check list and CI.
+   hardware-specs's `AGENTS.md` check list and CI.
 
 ## What this design does not cover
 
@@ -2718,7 +2718,7 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
 
 ## How the learnings map to this design
 
-The format-related rows of [SPEC-REGEN-learnings](https://github.com/curtisgalloway/driver-lab/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md) and the
+The format-related rows of [SPEC-REGEN-learnings](https://github.com/curtisgalloway/hardware-specs/blob/086385c13698a5b3593138e123ce6fe3a35553af/notebook/SPEC-REGEN-learnings.md) and the
 RG-T1 rounds:
 
 | Learning (source) | Where it lands |

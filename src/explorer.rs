@@ -342,7 +342,7 @@ pub fn request_headers(
     headers.insert("Accept".to_string(), accept.to_string());
     headers.insert(
         "User-Agent".to_string(),
-        "driver-lab-spec-explorer".to_string(),
+        "hwspecs-spec-explorer".to_string(),
     );
     let token = env
         .get("GITHUB_TOKEN")

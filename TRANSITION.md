@@ -157,3 +157,14 @@ Carry these into the new repository's instruction file (`AGENTS.md`):
 - Whether `driver-porting` remains installable from the `curtisg-skills` marketplace (a
   pointer) or only from the new one.
 - Whether the deferred experimental plan (M02–M17, P01) moves as live plan or as archive.
+
+## Renamed to hardware-specs (2026-10-21)
+
+The repository was renamed from `driver-lab` to `hardware-specs`, and its command-line tool from
+`driver-lab` to `hwspecs`: the crate, the binary, the release archives (`hwspecs-<target>.tar.gz`),
+the plugin marketplace (`driver-porting@hardware-specs`), the user config directory
+(`~/.config/hwspecs/`) and the environment variables (`HWSPECS_*`). The old config directory and
+`DRIVER_LAB_RUNS`, `DRIVER_LAB_CARGO_VENDOR` and `DRIVER_LAB_RUST_BIN` are still read when the new
+ones are absent. The spec-format identifiers (`urn:driver-lab:spec-format:...`) keep their names,
+since existing specs carry them. The frozen archive and the plans, notes and design records written
+before the rename keep the old name as history.

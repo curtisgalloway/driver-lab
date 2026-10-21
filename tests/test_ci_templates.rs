@@ -8,7 +8,7 @@
 //! Port of `dc21263:skills/spec-format/tests/test_ci_templates.py` plus consensus CI/release
 //! hardening gates.
 
-use driver_lab::yaml_strict;
+use hwspecs::yaml_strict;
 use regex::Regex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -76,8 +76,8 @@ fn fixtures_dir() -> PathBuf {
     repo_root().join("skills/spec-format/tests/fixtures/license-gate")
 }
 
-fn driver_lab_bin() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_driver-lab"))
+fn hwspecs_bin() -> PathBuf {
+    PathBuf::from(env!("CARGO_BIN_EXE_hwspecs"))
 }
 
 struct CiHarness {
@@ -211,7 +211,7 @@ impl CiHarness {
         cmd.current_dir(script.parent().unwrap().parent().unwrap())
             .env("PATH", new_path)
             .env("FIXTURE_TEMP", &self.fixture_temp)
-            .env("DRIVER_LAB_BIN", driver_lab_bin())
+            .env("HWSPECS_BIN", hwspecs_bin())
             .env("RESOLVE_SRC", resolve)
             .env("CI", ci)
             .env_remove("TOOL_COMMIT");
@@ -339,7 +339,7 @@ fn test_check_step_runs_stubs_from_and_stubgen_check() {
     )
     .unwrap();
 
-    let gen = Command::new(driver_lab_bin())
+    let gen = Command::new(hwspecs_bin())
         .arg("stubgen")
         .arg(&domains)
         .arg("--out")
@@ -498,7 +498,7 @@ fn test_checks_sh_rejects_mismatched_tool_commit_with_exit_3() {
 
 #[test]
 fn test_self_test_live_github_resolve_when_net_tests_enabled() {
-    if std::env::var("DRIVER_LAB_NET_TESTS").as_deref() != Ok("1") {
+    if std::env::var("HWSPECS_NET_TESTS").as_deref() != Ok("1") {
         return;
     }
     let h = CiHarness::new();
@@ -577,7 +577,7 @@ fn test_workflow_runs_all_checks_on_both_platforms() {
         .zip(checks.iter())
     {
         let run_str = step["run"].as_str().unwrap();
-        assert!(run_str.contains(&format!("{command} .driver-lab")));
+        assert!(run_str.contains(&format!("{command} .hwspecs")));
         if *command == "resolve" || *command == "self-test" {
             assert_eq!(step["env"]["RESOLVE_SRC"], serde_json::json!(1));
         }
@@ -599,9 +599,9 @@ fn test_workflow_runs_all_checks_on_both_platforms() {
             s.get("with")
                 .and_then(|w| w.get("path"))
                 .and_then(Value::as_str)
-                == Some(".driver-lab")
+                == Some(".hwspecs")
         })
-        .expect(".driver-lab checkout step");
+        .expect(".hwspecs checkout step");
     assert_eq!(
         tool["with"]["ref"],
         Value::String("${{ env.TOOL_COMMIT }}".into())
@@ -685,7 +685,7 @@ fn test_release_workflow_builds_four_targets_with_tool_commit_and_publish_job() 
         }
     }
     assert_eq!(
-        build_job["env"]["DRIVER_LAB_TOOL_COMMIT"],
+        build_job["env"]["HWSPECS_TOOL_COMMIT"],
         Value::String("${{ github.sha }}".into())
     );
 
@@ -756,28 +756,28 @@ fn test_install_sh_offline_bundle_sha256_and_commit_handshake() {
     fs::create_dir_all(&dist_dir).unwrap();
 
     let target = "x86_64-unknown-linux-gnu";
-    let staging = dist_dir.join(format!("driver-lab-{target}"));
+    let staging = dist_dir.join(format!("hwspecs-{target}"));
     fs::create_dir_all(&staging).unwrap();
 
     let commit_sha = "1234567890abcdef1234567890abcdef12345678";
-    let fake_bin = staging.join("driver-lab");
+    let fake_bin = staging.join("hwspecs");
     fs::write(
         &fake_bin,
-        format!("#!/bin/sh\necho \"driver-lab 0.1.0 ({commit_sha})\"\n"),
+        format!("#!/bin/sh\necho \"hwspecs 0.1.0 ({commit_sha})\"\n"),
     )
     .unwrap();
     let mut perms = fs::metadata(&fake_bin).unwrap().permissions();
     perms.set_mode(0o755);
     fs::set_permissions(&fake_bin, perms).unwrap();
 
-    let archive_name = format!("driver-lab-{target}.tar.gz");
+    let archive_name = format!("hwspecs-{target}.tar.gz");
     let archive_path = dist_dir.join(&archive_name);
     let tar_status = Command::new("tar")
         .arg("-C")
         .arg(&dist_dir)
         .arg("-czf")
         .arg(&archive_path)
-        .arg(format!("driver-lab-{target}"))
+        .arg(format!("hwspecs-{target}"))
         .status()
         .unwrap();
     assert!(tar_status.success());
@@ -808,7 +808,7 @@ fn test_install_sh_offline_bundle_sha256_and_commit_handshake() {
             "--install-dir",
             install_dir.to_str().unwrap(),
         ])
-        .env("DRIVER_LAB_TARGET", target)
+        .env("HWSPECS_TARGET", target)
         .output()
         .unwrap();
     assert_eq!(
@@ -818,7 +818,7 @@ fn test_install_sh_offline_bundle_sha256_and_commit_handshake() {
         String::from_utf8_lossy(&ok_out.stderr)
     );
     assert!(String::from_utf8_lossy(&ok_out.stdout).contains(commit_sha));
-    assert!(install_dir.join("driver-lab").is_file());
+    assert!(install_dir.join("hwspecs").is_file());
 
     // 2. Mismatched SHA-256 -> exit 3.
     let bad_sha = "0".repeat(64);
@@ -836,7 +836,7 @@ fn test_install_sh_offline_bundle_sha256_and_commit_handshake() {
             "--install-dir",
             install_dir.to_str().unwrap(),
         ])
-        .env("DRIVER_LAB_TARGET", target)
+        .env("HWSPECS_TARGET", target)
         .output()
         .unwrap();
     assert_eq!(bad_sha_out.status.code(), Some(3));
@@ -858,7 +858,7 @@ fn test_install_sh_offline_bundle_sha256_and_commit_handshake() {
             "--install-dir",
             install_dir.to_str().unwrap(),
         ])
-        .env("DRIVER_LAB_TARGET", target)
+        .env("HWSPECS_TARGET", target)
         .output()
         .unwrap();
     assert_eq!(bad_commit_out.status.code(), Some(3));

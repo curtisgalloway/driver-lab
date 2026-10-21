@@ -6,7 +6,7 @@
 # regenerated with the current skills. See ../SPEC-FORMAT.md.
 #
 # license: and accepts: decided by the user on 2026-10-06 (license-split LS5):
-# this root ships inside the Apache-2.0 driver-lab repository, so it accepts
+# this root ships inside the Apache-2.0 hardware-specs repository, so it accepts
 # sources under Apache-2.0 and the common permissive licenses only.
 format: 2
 layer: public

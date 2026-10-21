@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CARGO_TERM_COLOR: always
-      DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+      HWSPECS_TOOL_COMMIT: ${{ github.sha }}
     steps:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -46,37 +46,37 @@ jobs:
         if: matrix.run_tests
         run: cargo test --locked
 
-      - name: Build driver-lab release binary
+      - name: Build hwspecs release binary
         run: |
           cargo build --release --locked --target "${{ matrix.target }}"
           if [ "${{ matrix.target }}" != "x86_64-apple-darwin" ] || [ "$(uname -m)" = "x86_64" ]; then
-            "target/${{ matrix.target }}/release/driver-lab" --version | grep -F "${{ env.DRIVER_LAB_TOOL_COMMIT }}"
+            "target/${{ matrix.target }}/release/hwspecs" --version | grep -F "${{ env.HWSPECS_TOOL_COMMIT }}"
           fi
 
       - name: Package binary and SHA-256 checksum
         run: |
           mkdir -p dist
-          staging="dist/driver-lab-${{ matrix.target }}"
+          staging="dist/hwspecs-${{ matrix.target }}"
           mkdir -p "$staging"
-          cp "target/${{ matrix.target }}/release/driver-lab" "$staging/driver-lab"
+          cp "target/${{ matrix.target }}/release/hwspecs" "$staging/hwspecs"
           cp LICENSE "$staging/LICENSE"
-          tar -C dist -czf "dist/driver-lab-${{ matrix.target }}.tar.gz" "driver-lab-${{ matrix.target }}"
+          tar -C dist -czf "dist/hwspecs-${{ matrix.target }}.tar.gz" "hwspecs-${{ matrix.target }}"
           rm -rf "$staging"
           (
             cd dist
             if command -v sha256sum >/dev/null 2>&1; then
-              sha256sum "driver-lab-${{ matrix.target }}.tar.gz" > "driver-lab-${{ matrix.target }}.tar.gz.sha256"
+              sha256sum "hwspecs-${{ matrix.target }}.tar.gz" > "hwspecs-${{ matrix.target }}.tar.gz.sha256"
             else
-              shasum -a 256 "driver-lab-${{ matrix.target }}.tar.gz" > "driver-lab-${{ matrix.target }}.tar.gz.sha256"
+              shasum -a 256 "hwspecs-${{ matrix.target }}.tar.gz" > "hwspecs-${{ matrix.target }}.tar.gz.sha256"
             fi
           )
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: driver-lab-${{ matrix.target }}
+          name: hwspecs-${{ matrix.target }}
           path: |
-            dist/driver-lab-${{ matrix.target }}.tar.gz
-            dist/driver-lab-${{ matrix.target }}.tar.gz.sha256
+            dist/hwspecs-${{ matrix.target }}.tar.gz
+            dist/hwspecs-${{ matrix.target }}.tar.gz.sha256
           if-no-files-found: error
 
   publish-release:
@@ -105,13 +105,13 @@ jobs:
             x86_64-apple-darwin \
             aarch64-apple-darwin
           do
-            archive="driver-lab-${target}.tar.gz"
+            archive="hwspecs-${target}.tar.gz"
             sumfile="${archive}.sha256"
             test -s "$archive"
             test -s "$sumfile"
             sha256sum -c "$sumfile"
           done
-          cat driver-lab-*.tar.gz.sha256 > SHA256SUMS
+          cat hwspecs-*.tar.gz.sha256 > SHA256SUMS
           sha256sum -c SHA256SUMS
 
       - name: Publish GitHub Release assets
@@ -121,14 +121,14 @@ jobs:
         run: |
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" \
-              artifacts/driver-lab-*.tar.gz \
-              artifacts/driver-lab-*.tar.gz.sha256 \
+              artifacts/hwspecs-*.tar.gz \
+              artifacts/hwspecs-*.tar.gz.sha256 \
               artifacts/SHA256SUMS \
               --clobber
           else
             gh release create "$TAG_NAME" \
-              artifacts/driver-lab-*.tar.gz \
-              artifacts/driver-lab-*.tar.gz.sha256 \
+              artifacts/hwspecs-*.tar.gz \
+              artifacts/hwspecs-*.tar.gz.sha256 \
               artifacts/SHA256SUMS \
               --verify-tag \
               --title "$TAG_NAME" \

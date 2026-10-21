@@ -10,11 +10,11 @@
 //! - Topology semantic validation (`topologyNode`, `connection`, `provides`/`consumes` ports,
 //!   cell arities, `incompleteKinds`, slot conflicts, board-owned `selection`/`topologyConfiguration`,
 //!   and topology export)
-//! - Worklist (`driver-lab status` including `--no-fail-on-pending` `BF-ARM-21`, `--stale`, `--spec`;
-//!   `driver-lab todo` including `--check`, `--spec`, payload row todos)
-//! - Corpus (`driver-lab corpus` on `fixtures/corpus/good_root.corpus.yaml`, ledger states, coverage,
+//! - Worklist (`hwspecs status` including `--no-fail-on-pending` `BF-ARM-21`, `--stale`, `--spec`;
+//!   `hwspecs todo` including `--check`, `--spec`, payload row todos)
+//! - Corpus (`hwspecs corpus` on `fixtures/corpus/good_root.corpus.yaml`, ledger states, coverage,
 //!   and `BF-IMX-12` / `BF-GW-24` template placeholder checks)
-//! - Stubgen (`driver-lab stubgen` and `--check`, `BF-IMX-ISS-4` 3+ sibling domain stubs auto-split
+//! - Stubgen (`hwspecs stubgen` and `--check`, `BF-IMX-ISS-4` 3+ sibling domain stubs auto-split
 //!   generation, hardware fact refusal in `domains.yaml`, orphan detection)
 
 use serde_json::Value;
@@ -53,11 +53,11 @@ fn fixtures_dir() -> PathBuf {
 }
 
 fn run_cli(args: &[&str]) -> (i32, String, String) {
-    let mut full = vec!["driver-lab"];
+    let mut full = vec!["hwspecs"];
     full.extend_from_slice(args);
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let code = driver_lab::run_from_args(full, &mut stdout, &mut stderr);
+    let code = hwspecs::run_from_args(full, &mut stdout, &mut stderr);
     (
         code,
         String::from_utf8(stdout).unwrap(),
@@ -555,7 +555,7 @@ fn test_worklist_status_bf_arm_21_and_todo() {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Corpus (`driver-lab corpus` + BF-IMX-12 / BF-GW-24 placeholder detection)
+// 4. Corpus (`hwspecs corpus` + BF-IMX-12 / BF-GW-24 placeholder detection)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -610,7 +610,7 @@ fn test_corpus_good_root_and_bf_imx_12_bf_gw_24_placeholders() {
 }
 
 // ---------------------------------------------------------------------------
-// 5. Stubgen (`driver-lab stubgen`, `--check`, and BF-IMX-ISS-4 3+ sibling split)
+// 5. Stubgen (`hwspecs stubgen`, `--check`, and BF-IMX-ISS-4 3+ sibling split)
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -644,11 +644,11 @@ domains:
     let manifest_str = manifest_path.to_str().unwrap();
     let skills_str = skills_dir.to_str().unwrap();
 
-    // 1. Run `driver-lab stubgen <domains.yaml> --out <skills_dir>`
+    // 1. Run `hwspecs stubgen <domains.yaml> --out <skills_dir>`
     let (rc, out, err) = run_cli(&["stubgen", manifest_str, "--out", skills_str]);
     assert_eq!(rc, 0, "stubgen failed: out={out} err={err}");
 
-    // 2. Run `driver-lab stubgen <domains.yaml> --out <skills_dir> --check` -> must pass with 0 drift
+    // 2. Run `hwspecs stubgen <domains.yaml> --out <skills_dir> --check` -> must pass with 0 drift
     let (rc_chk, out_chk, err_chk) =
         run_cli(&["stubgen", manifest_str, "--out", skills_str, "--check"]);
     assert_eq!(
@@ -663,7 +663,7 @@ domains:
         "BF-IMX-ISS-4: widget-boot/SKILL.md must auto-populate sibling domains in split:\n{boot_md}"
     );
 
-    // 4. Verify `driver-lab check <good_root> --stubs-from <skills_dir>` passes with 0 overlap warnings!
+    // 4. Verify `hwspecs check <good_root> --stubs-from <skills_dir>` passes with 0 overlap warnings!
     let good_root = fixtures_dir().join("check/good_root");
     let (rc_spec, res_spec) = check_json(&[
         good_root.to_str().unwrap(),

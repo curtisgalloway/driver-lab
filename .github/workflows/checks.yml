@@ -59,30 +59,30 @@ jobs:
 
       - name: Rust lint check (cargo clippy)
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+          HWSPECS_TOOL_COMMIT: ${{ github.sha }}
         run: cargo clippy --all-targets --locked -- -D warnings
 
-      - name: driver-lab Rust test suite
+      - name: hwspecs Rust test suite
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+          HWSPECS_TOOL_COMMIT: ${{ github.sha }}
         run: |
           cargo test --locked
           cargo test --locked --test test_eval -- --ignored
-          DRIVER_LAB_NET_TESTS=1 cargo test --locked --test test_ci_templates
+          HWSPECS_NET_TESTS=1 cargo test --locked --test test_ci_templates
 
-      - name: Build driver-lab release binary and verify embedded commit
+      - name: Build hwspecs release binary and verify embedded commit
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+          HWSPECS_TOOL_COMMIT: ${{ github.sha }}
         run: |
           cargo build --release --locked
-          target/release/driver-lab --version | grep -F "${{ github.sha }}"
+          target/release/hwspecs --version | grep -F "${{ github.sha }}"
 
-      - name: board specs (driver-lab check and status)
+      - name: board specs (hwspecs check and status)
         run: |
-          target/release/driver-lab check \
+          target/release/hwspecs check \
             skills/board-expert/specs \
             --stubs-from skills --require-license
-          target/release/driver-lab status \
+          target/release/hwspecs status \
             skills/board-expert/specs \
             --require-license
 
@@ -147,31 +147,31 @@ jobs:
               --setenv HOME /nonexistent \
               "$@"
           }
-          ro_run target/release/driver-lab --offline validate \
+          ro_run target/release/hwspecs --offline validate \
             skills/board-expert/specs/board-specs.yaml \
             skills/spec-verifier/examples/widget/widget.spec.yaml
-          ro_run target/release/driver-lab --offline check \
+          ro_run target/release/hwspecs --offline check \
             skills/board-expert/specs \
             --stubs-from skills --require-license
-          ro_run target/release/driver-lab --offline status \
+          ro_run target/release/hwspecs --offline status \
             skills/board-expert/specs \
             --require-license
-          ro_run target/release/driver-lab --offline todo \
+          ro_run target/release/hwspecs --offline todo \
             skills/board-expert/specs \
             --require-license
-          ro_run target/release/driver-lab --offline corpus \
+          ro_run target/release/hwspecs --offline corpus \
             "$tmp_corpus" --public-skill widget-board-tools
-          ro_run target/release/driver-lab --offline prose-facts \
+          ro_run target/release/hwspecs --offline prose-facts \
             agents/board-expert.md
-          ro_run target/release/driver-lab --offline render \
+          ro_run target/release/hwspecs --offline render \
             skills/spec-verifier/examples/widget --format md >/dev/null
-          ro_run target/release/driver-lab --offline render \
+          ro_run target/release/hwspecs --offline render \
             skills/spec-verifier/examples/widget --format html >/dev/null
-          ro_run target/release/driver-lab --offline resolve \
+          ro_run target/release/hwspecs --offline resolve \
             "$tmp_src_root/widget.spec.yaml" --root "$tmp_src_root" --repo "kernel=$tmp_repo"
-          ro_run target/release/driver-lab --offline show \
+          ro_run target/release/hwspecs --offline show \
             "$tmp_src_root/widget.spec.yaml" --root "$tmp_src_root" --repo "kernel=$tmp_repo" >/dev/null
-          ro_run target/release/driver-lab --offline inventory \
+          ro_run target/release/hwspecs --offline inventory \
             "$tmp_src_root/widget.spec.yaml" --repo "kernel=$tmp_repo" >/dev/null
           rm -rf "$tmp_corpus" "$tmp_repo" "$tmp_src_root"
 
@@ -204,7 +204,7 @@ jobs:
       - name: e1000 status index
         run: |
           "$RUNNER_TEMP/evals/bin/python" evals/e1000/index_check.py evals/e1000
-          target/release/driver-lab campaign index-check evals/e1000
+          target/release/hwspecs campaign index-check evals/e1000
 
   macos:
     runs-on: macos-latest
@@ -226,9 +226,9 @@ jobs:
           restore-keys: |
             cargo-macos-
 
-      - name: driver-lab Rust test suite (macOS)
+      - name: hwspecs Rust test suite (macOS)
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ github.sha }}
+          HWSPECS_TOOL_COMMIT: ${{ github.sha }}
         run: |
           cargo test --locked
           cargo test --locked --test test_eval -- --ignored

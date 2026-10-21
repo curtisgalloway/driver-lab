@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Consolidated Rust library and CLI dispatcher for `driver-lab`.
+//! Consolidated Rust library and CLI dispatcher for `hwspecs`.
 
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
@@ -42,8 +42,8 @@ use sandbox::ScratchResolver;
 use std::io::Write;
 use std::path::PathBuf;
 
-/// Embedded git commit SHA (`DRIVER_LAB_TOOL_COMMIT`), defaulting to `"unknown"` when unset.
-pub const TOOL_COMMIT: &str = match option_env!("DRIVER_LAB_TOOL_COMMIT") {
+/// Embedded git commit SHA (`HWSPECS_TOOL_COMMIT`), defaulting to `"unknown"` when unset.
+pub const TOOL_COMMIT: &str = match option_env!("HWSPECS_TOOL_COMMIT") {
     Some(commit) if !commit.is_empty() => commit,
     _ => "unknown",
 };
@@ -51,16 +51,16 @@ pub const TOOL_COMMIT: &str = match option_env!("DRIVER_LAB_TOOL_COMMIT") {
 /// Package version from `Cargo.toml`.
 pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Returns the formatted version string: `driver-lab <semver> (<DRIVER_LAB_TOOL_COMMIT>)` (`ENV-3`, `ENV-6`).
+/// Returns the formatted version string: `hwspecs <semver> (<HWSPECS_TOOL_COMMIT>)` (`ENV-3`, `ENV-6`).
 #[must_use]
 pub fn version_string() -> String {
-    format!("driver-lab {PKG_VERSION} ({TOOL_COMMIT})")
+    format!("hwspecs {PKG_VERSION} ({TOOL_COMMIT})")
 }
 
-/// Top-level `driver-lab` CLI parser (`RUST-TOOLING-DESIGN.md` §2.3, `BF-IMX-18`).
+/// Top-level `hwspecs` CLI parser (`RUST-TOOLING-DESIGN.md` §2.3, `BF-IMX-18`).
 #[derive(Debug, Clone, Parser)]
 #[command(
-    name = "driver-lab",
+    name = "hwspecs",
     about = "Consolidated hardware specification, verification, and evaluation tooling",
     disable_version_flag = true,
     propagate_version = false
@@ -78,7 +78,7 @@ pub struct Cli {
     #[arg(long = "offline", global = true)]
     pub offline: bool,
 
-    /// Print `driver-lab <semver> (<DRIVER_LAB_TOOL_COMMIT>)` and exit (`ENV-3`, `ENV-6`, `BF-IMX-18`).
+    /// Print `hwspecs <semver> (<HWSPECS_TOOL_COMMIT>)` and exit (`ENV-3`, `ENV-6`, `BF-IMX-18`).
     #[arg(short = 'V', long = "version", global = true)]
     pub version: bool,
 
@@ -95,7 +95,7 @@ impl Cli {
     }
 }
 
-/// Output format for `driver-lab render`.
+/// Output format for `hwspecs render`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum RenderFormat {
     /// Deterministic Markdown view.
@@ -106,7 +106,7 @@ pub enum RenderFormat {
     Atlas,
 }
 
-/// Subcommands for `driver-lab` (`RUST-TOOLING-DESIGN.md` §2.3).
+/// Subcommands for `hwspecs` (`RUST-TOOLING-DESIGN.md` §2.3).
 #[derive(Debug, Clone, Subcommand)]
 pub enum Command {
     /// Validate YAML 1.2 syntax and JSON Schema compliance (`RT-2`).
@@ -155,7 +155,7 @@ pub enum Command {
     Verify(VerifyArgs),
 }
 
-/// Arguments for `driver-lab validate`.
+/// Arguments for `hwspecs validate`.
 #[derive(Debug, Clone, Args)]
 pub struct ValidateArgs {
     /// Target `.spec.yaml`, `.facts.yaml`, `.verify.yaml`, `corpus.yaml`, or root directories.
@@ -171,7 +171,7 @@ pub struct ValidateArgs {
     pub require_license: bool,
 }
 
-/// Arguments for `driver-lab check`.
+/// Arguments for `hwspecs check`.
 #[derive(Debug, Clone, Args)]
 pub struct CheckArgs {
     /// Target spec files, facts files, or root directories.
@@ -206,7 +206,7 @@ pub struct CheckArgs {
     pub public_skills: Vec<String>,
 }
 
-/// Arguments for `driver-lab resolve`.
+/// Arguments for `hwspecs resolve`.
 #[derive(Debug, Clone, Args)]
 pub struct ResolveArgs {
     /// Target spec files or root directories.
@@ -237,7 +237,7 @@ pub struct ResolveArgs {
     pub list_repos: bool,
 }
 
-/// Arguments for `driver-lab index`.
+/// Arguments for `hwspecs index`.
 #[derive(Debug, Clone, Args)]
 pub struct IndexArgs {
     /// Document identifier declared in `resources.documents`.
@@ -253,7 +253,7 @@ pub struct IndexArgs {
     pub out: Option<PathBuf>,
 }
 
-/// Arguments for `driver-lab status`.
+/// Arguments for `hwspecs status`.
 #[derive(Debug, Clone, Args)]
 pub struct StatusArgs {
     /// Target spec files or root directories.
@@ -281,7 +281,7 @@ pub struct StatusArgs {
     pub public_skills: Vec<String>,
 }
 
-/// Arguments for `driver-lab todo`.
+/// Arguments for `hwspecs todo`.
 #[derive(Debug, Clone, Args)]
 pub struct TodoArgs {
     /// Target spec files or root directories.
@@ -306,7 +306,7 @@ pub struct TodoArgs {
     pub spec: Option<String>,
 }
 
-/// Arguments for `driver-lab corpus`.
+/// Arguments for `hwspecs corpus`.
 #[derive(Debug, Clone, Args)]
 pub struct CorpusArgs {
     /// Target root directories or `corpus.yaml` files.
@@ -328,7 +328,7 @@ pub struct CorpusArgs {
     pub public_skills: Vec<String>,
 }
 
-/// Arguments for `driver-lab render`.
+/// Arguments for `hwspecs render`.
 #[derive(Debug, Clone, Args)]
 pub struct RenderArgs {
     /// Target spec files or root directories.
@@ -371,10 +371,10 @@ pub struct RenderArgs {
     pub out: Option<PathBuf>,
 }
 
-/// Arguments for `driver-lab show`.
+/// Arguments for `hwspecs show`.
 #[derive(Debug, Clone, Args)]
 pub struct ShowArgs {
-    /// Target spec files or root directories (`driver-lab show <file>...`).
+    /// Target spec files or root directories (`hwspecs show <file>...`).
     pub targets: Vec<PathBuf>,
     /// Spec root directory.
     #[arg(long = "root", value_name = "DIR")]
@@ -396,7 +396,7 @@ pub struct ShowArgs {
     pub limit_mb: usize,
 }
 
-/// Arguments for `driver-lab inventory`.
+/// Arguments for `hwspecs inventory`.
 #[derive(Debug, Clone, Args)]
 pub struct InventoryArgs {
     /// Target `.spec.yaml` file.
@@ -412,7 +412,7 @@ pub struct InventoryArgs {
     pub check: bool,
 }
 
-/// Arguments for `driver-lab drift`.
+/// Arguments for `hwspecs drift`.
 #[derive(Debug, Clone, Args)]
 pub struct DriftArgs {
     /// Target spec files or root directories.
@@ -425,7 +425,7 @@ pub struct DriftArgs {
     pub repos: Vec<String>,
 }
 
-/// Arguments for `driver-lab fetch`.
+/// Arguments for `hwspecs fetch`.
 #[derive(Debug, Clone, Args)]
 pub struct FetchArgs {
     /// Target spec files or root directories.
@@ -447,7 +447,7 @@ pub struct FetchArgs {
     pub docs_dir: Option<PathBuf>,
 }
 
-/// Arguments for `driver-lab stubgen`.
+/// Arguments for `hwspecs stubgen`.
 #[derive(Debug, Clone, Args)]
 pub struct StubgenArgs {
     /// Path to `domains.yaml`.
@@ -460,7 +460,7 @@ pub struct StubgenArgs {
     pub check: bool,
 }
 
-/// Arguments for `driver-lab publish`.
+/// Arguments for `hwspecs publish`.
 #[derive(Debug, Clone, Args)]
 pub struct PublishArgs {
     /// Subcommand action (`build` or `check`) and arguments.
@@ -468,7 +468,7 @@ pub struct PublishArgs {
     pub args: Vec<String>,
 }
 
-/// Arguments for `driver-lab pinned-file-adapter`.
+/// Arguments for `hwspecs pinned-file-adapter`.
 #[derive(Debug, Clone, Args)]
 pub struct PinnedFileAdapterArgs {
     /// Path to source registry YAML file.
@@ -485,14 +485,14 @@ pub struct PinnedFileAdapterArgs {
     pub repo: Option<PathBuf>,
 }
 
-/// Arguments for `driver-lab prose-facts`.
+/// Arguments for `hwspecs prose-facts`.
 #[derive(Debug, Clone, Args)]
 pub struct ProseFactsArgs {
     /// Paths to scan for unanchored hardware prose facts.
     pub paths: Vec<PathBuf>,
 }
 
-/// Arguments for `driver-lab license-gate`.
+/// Arguments for `hwspecs license-gate`.
 #[derive(Debug, Clone, Args)]
 pub struct LicenseGateArgs {
     /// Target spec root directory (containing `board-specs.yaml` or `.spec-root.yaml`).
@@ -506,7 +506,7 @@ pub struct LicenseGateArgs {
     pub licenses: Vec<String>,
 }
 
-/// Arguments for `driver-lab eval`.
+/// Arguments for `hwspecs eval`.
 #[derive(Debug, Clone, Args)]
 pub struct EvalArgs {
     /// Evaluation subcommand (`extract`, `build-prompt`, `grade-facts`, `grade-code`, `run`, `score`, `validate-bank`) and arguments.
@@ -514,7 +514,7 @@ pub struct EvalArgs {
     pub args: Vec<String>,
 }
 
-/// Arguments for `driver-lab campaign`.
+/// Arguments for `hwspecs campaign`.
 #[derive(Debug, Clone, Args)]
 pub struct CampaignArgs {
     /// Campaign subcommand (`sweep`, `contract-check`, `index-check`, `stopping`) and arguments.
@@ -522,7 +522,7 @@ pub struct CampaignArgs {
     pub args: Vec<String>,
 }
 
-/// Arguments for `driver-lab resource`.
+/// Arguments for `hwspecs resource`.
 #[derive(Debug, Clone, Args)]
 pub struct ResourceArgs {
     /// Resource subcommand (`pin-files`, `pin-doc`) and arguments.
@@ -530,7 +530,7 @@ pub struct ResourceArgs {
     pub args: Vec<String>,
 }
 
-/// Arguments for `driver-lab assemble`.
+/// Arguments for `hwspecs assemble`.
 #[derive(Debug, Clone, Args)]
 pub struct AssembleArgs {
     /// Target `.spec.yaml` file.
@@ -540,7 +540,7 @@ pub struct AssembleArgs {
     pub from: Vec<PathBuf>,
 }
 
-/// Arguments for `driver-lab verify`.
+/// Arguments for `hwspecs verify`.
 #[derive(Debug, Clone, Args)]
 pub struct VerifyArgs {
     /// Verify subcommand (`prepare`, `submit-blind`, `assemble`) and arguments.
@@ -548,7 +548,7 @@ pub struct VerifyArgs {
     pub args: Vec<String>,
 }
 
-/// Parses CLI arguments and executes `driver-lab`, writing to `stdout` and `stderr` and
+/// Parses CLI arguments and executes `hwspecs`, writing to `stdout` and `stderr` and
 /// returning the numeric exit code (`0`, `1`, `2`, or `3`).
 pub fn run_from_args<I, T>(args: I, stdout: &mut dyn Write, stderr: &mut dyn Write) -> i32
 where

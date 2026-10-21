@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Embedded JSON Schema registry, extension fragment validator, and `driver-lab validate`
+//! Embedded JSON Schema registry, extension fragment validator, and `hwspecs validate`
 //! implementation (`RT-2`, `BF-IMX-14`, `BF-IMX-18`).
 //!
 //! Ports the schema loading, extension fragment validation (`check_fragment`, `load_extension`),
@@ -1708,7 +1708,7 @@ fn emit_validate_usage_error(
     EXIT_USAGE_ERROR
 }
 
-/// Executes `driver-lab validate` (`spec.py:cmd_validate` + `BF-IMX-18`).
+/// Executes `hwspecs validate` (`spec.py:cmd_validate` + `BF-IMX-18`).
 pub fn run_validate(
     args: &ValidateArgs,
     json_mode: bool,

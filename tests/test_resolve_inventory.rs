@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use driver_lab::docresolve::{
+use hwspecs::docresolve::{
     hex_values, hex_values_u64, locator_pattern, section_covered_by_index,
 };
 use serde_json::json;
@@ -11,7 +11,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn run_test_cli(args: Vec<&str>) -> std::process::Output {
-    let bin = env!("CARGO_BIN_EXE_driver-lab");
+    let bin = env!("CARGO_BIN_EXE_hwspecs");
     let mut cmd = Command::new(bin);
     cmd.args(args);
     cmd.output().expect("failed to execute process")
@@ -30,36 +30,36 @@ fn test_locator_pattern() {
     assert!(pat1.is_match("Table 1.2 is shown"));
 
     // Issue #166: captions and prose references followed by a period
-    let pat_table = driver_lab::docresolve::locator_pattern("table", "9-12");
+    let pat_table = hwspecs::docresolve::locator_pattern("table", "9-12");
     assert!(pat_table.is_match("Table 9-12. Standard Interface Descriptor"));
     assert!(pat_table.is_match("Table 9-12: Standard Interface Descriptor"));
     assert!(pat_table.is_match("Table 9-12 Standard Interface Descriptor"));
 
-    let pat_table_end = driver_lab::docresolve::locator_pattern("table", "11-15");
+    let pat_table_end = hwspecs::docresolve::locator_pattern("table", "11-15");
     assert!(pat_table_end.is_match("outlined in Table 11-15."));
     assert!(pat_table_end.is_match("(see Table 11-15.)"));
 
-    let pat_fig = driver_lab::docresolve::locator_pattern("figure", "9-4");
+    let pat_fig = hwspecs::docresolve::locator_pattern("figure", "9-4");
     assert!(pat_fig.is_match("Figure 9-4. Information Returned by a GetStatus() Request"));
 
-    let pat_endash = driver_lab::docresolve::locator_pattern("table", "2-3");
+    let pat_endash = hwspecs::docresolve::locator_pattern("table", "2-3");
     assert!(pat_endash.is_match("Table 2–3. USBLEGSUP Register Bit Definitions"));
-    let pat_endash_rev = driver_lab::docresolve::locator_pattern("table", "2–3");
+    let pat_endash_rev = hwspecs::docresolve::locator_pattern("table", "2–3");
     assert!(pat_endash_rev.is_match("Table 2-3. USBLEGSUP Register Bit Definitions"));
 
-    let pat_sec = driver_lab::docresolve::locator_pattern("section", "9.4.5");
+    let pat_sec = hwspecs::docresolve::locator_pattern("section", "9.4.5");
     assert!(pat_sec.is_match("see section 9.4.5."));
     assert!(pat_sec.is_match("9.4.5. GetStatus"));
     assert!(!pat_sec.is_match("Section 1.9.4.5"));
     assert!(!pat_sec.is_match("Section 19.4.5"));
 
     // Prefix section or table numbers must not match longer numbers
-    let pat_sec_prefix = driver_lab::docresolve::locator_pattern("section", "9.4");
+    let pat_sec_prefix = hwspecs::docresolve::locator_pattern("section", "9.4");
     assert!(!pat_sec_prefix.is_match("Section 9.4.5 Standard Requests"));
     assert!(pat_sec_prefix.is_match("Section 9.4. Standard Requests"));
     assert!(pat_sec_prefix.is_match("see Section 9.4."));
 
-    let pat_table_prefix = driver_lab::docresolve::locator_pattern("table", "9-1");
+    let pat_table_prefix = hwspecs::docresolve::locator_pattern("table", "9-1");
     assert!(!pat_table_prefix.is_match("Table 9-12. Standard Interface Descriptor"));
     assert!(!pat_table_prefix.is_match("Table 9-1-2. Subtable"));
     assert!(pat_table_prefix.is_match("Table 9-1. Standard Device Requests"));
@@ -265,9 +265,9 @@ facts:
     // 1. --list-repos outputs name<TAB>commit
     let mut out_list = Vec::new();
     let mut err_list = Vec::new();
-    let rc_list = driver_lab::run_from_args(
+    let rc_list = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "resolve",
             "--list-repos",
             spec_path.to_str().unwrap(),
@@ -286,9 +286,9 @@ facts:
     let unused_arg = format!("unused={}", extra_dir.display());
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let rc = driver_lab::run_from_args(
+    let rc = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "resolve",
             spec_path.to_str().unwrap(),
             "--repo",
@@ -316,9 +316,9 @@ facts:
         .success());
     let mut out_pc = Vec::new();
     let mut err_pc = Vec::new();
-    let rc_pc = driver_lab::run_from_args(
+    let rc_pc = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "resolve",
             spec_path.to_str().unwrap(),
             "--repo",

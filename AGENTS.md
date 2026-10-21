@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# driver-lab
+# hardware-specs
 
 Instructions for coding agents working in this repository. The user guide is the
 [README](README.md); borrowed and coined terms are in the [glossary](GLOSSARY.md).
@@ -43,28 +43,28 @@ python3 utilities/check-no-hardware-facts.py
 python3 -m unittest discover -s utilities/tests
 cargo test --locked --offline
 cargo build --release --locked
-target/release/driver-lab check skills/board-expert/specs --stubs-from skills --require-license
-target/release/driver-lab status skills/board-expert/specs --require-license
-bwrap --ro-bind / / --unshare-net target/release/driver-lab validate skills/board-expert/specs/board-specs.yaml skills/spec-verifier/examples/widget/widget.spec.yaml
-bwrap --ro-bind / / --unshare-net target/release/driver-lab check skills/board-expert/specs --stubs-from skills --require-license
-bwrap --ro-bind / / --unshare-net target/release/driver-lab status skills/board-expert/specs --require-license
-bwrap --ro-bind / / --unshare-net target/release/driver-lab todo skills/board-expert/specs --require-license
-bwrap --ro-bind / / --unshare-net target/release/driver-lab prose-facts agents/board-expert.md
-bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format md >/dev/null
-bwrap --ro-bind / / --unshare-net target/release/driver-lab render skills/spec-verifier/examples/widget --format html >/dev/null
+target/release/hwspecs check skills/board-expert/specs --stubs-from skills --require-license
+target/release/hwspecs status skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/hwspecs validate skills/board-expert/specs/board-specs.yaml skills/spec-verifier/examples/widget/widget.spec.yaml
+bwrap --ro-bind / / --unshare-net target/release/hwspecs check skills/board-expert/specs --stubs-from skills --require-license
+bwrap --ro-bind / / --unshare-net target/release/hwspecs status skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/hwspecs todo skills/board-expert/specs --require-license
+bwrap --ro-bind / / --unshare-net target/release/hwspecs prose-facts agents/board-expert.md
+bwrap --ro-bind / / --unshare-net target/release/hwspecs render skills/spec-verifier/examples/widget --format md >/dev/null
+bwrap --ro-bind / / --unshare-net target/release/hwspecs render skills/spec-verifier/examples/widget --format html >/dev/null
 python3 -m venv .venv-evals && .venv-evals/bin/pip install -q --require-hashes -r evals/requirements.txt
 .venv-evals/bin/python -m unittest discover -s skills/site-cache/tests
 .venv-evals/bin/python -m unittest discover -s evals/enc28j60/tests
 .venv-evals/bin/python evals/enc28j60/author_manifest.py --check evals/enc28j60/author-manifest.yaml
 python3 -m unittest discover -s evals/e1000/harness/tests
 .venv-evals/bin/python evals/e1000/index_check.py evals/e1000
-target/release/driver-lab campaign index-check evals/e1000
+target/release/hwspecs campaign index-check evals/e1000
 ```
 
 ## Rules the work runs under
 
 - **Continuous review**: at the start of each orchestrator session, refresh applicable
-  source identities and run `driver-lab campaign sweep` on the campaign.
+  source identities and run `hwspecs campaign sweep` on the campaign.
   Follow its stopping report and guarded queue. A batch contains at most three tier-1
   units, each ending in a reviewed checkpoint commit; tier-2 work requires its own
   recorded user decision. Pull requests still open only on the user's explicit "push".
@@ -158,10 +158,11 @@ target/release/driver-lab campaign index-check evals/e1000
   from a public mailing-list post or a published device tree stays in a spec.
 - **Run store location**: each user chooses where their run store lives; the path is never
   written into this repository and has no default. Set it as `run_store = "<path>"` in
-  `~/.config/driver-lab/config.toml` (under `$XDG_CONFIG_HOME` when that is set);
-  `DRIVER_LAB_RUNS` overrides it. `python3 utilities/run-store.py [<run ID>]` prints the store,
-  or a run's directory in it, and exits 1 when nothing is configured: then ask the user for the
-  location rather than searching the filesystem.
+  `~/.config/hwspecs/config.toml` (under `$XDG_CONFIG_HOME` when that is set);
+  `HWSPECS_RUNS` overrides it. The pre-rename `driver-lab/config.toml` and `DRIVER_LAB_RUNS`
+  still work. `python3 utilities/run-store.py [<run ID>]` prints the store, or a run's
+  directory in it, and exits 1 when nothing is configured: then ask the user for the location
+  rather than searching the filesystem.
 - **Git**: a topic branch and a pull request per unit, and a separate branch for any unrelated
   change. Fetch first and cut the branch from `origin/main`, not a local `main` that may be
   stale. Push or open a pull request only on the user's explicit "push", and "push" never means

@@ -4176,7 +4176,7 @@ fn build_check_report(checker: &Checker) -> CheckReport {
 /// Determines whether `check` was invoked in standalone `.facts.yaml` mode (`BF-IMX-18`).
 ///
 /// Under `BF-IMX-18`:
-/// - Passing a directory target alongside `--root <dir>` (e.g. `driver-lab check <dir> --root <dir>`)
+/// - Passing a directory target alongside `--root <dir>` (e.g. `hwspecs check <dir> --root <dir>`)
 ///   runs normal root-directory checking rather than failing with a standalone-facts usage error.
 /// - Standalone `.facts.yaml` mode is triggered when any target path ends with `.facts.yaml`
 ///   (or is a file with `kind: facts` / a file target paired with `--root`).
@@ -4202,7 +4202,7 @@ fn is_standalone_facts_invocation(targets: &[PathBuf], root_opt: Option<&PathBuf
     false
 }
 
-/// Executes `driver-lab check` (`spec.py:cmd_check`, `BF-IMX-18`).
+/// Executes `hwspecs check` (`spec.py:cmd_check`, `BF-IMX-18`).
 pub fn run_check_cmd(
     cli: &Cli,
     args: &CheckArgs,

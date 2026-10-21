@@ -15,14 +15,14 @@ Read <impl-checkout> and <ref-checkout> at their respective repos entries' immut
 License evidence must fit the root. Inspect file SPDX lines and confirm notices/license files
 that resolve cannot prove. Inspect reference choice and hardware revision applicability first.
 
-Run `driver-lab --version` first, then run:
+Run `hwspecs --version` first, then run:
 
 ```bash
-driver-lab check <root> --require-license
-driver-lab resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
-driver-lab status <root> --json --no-fail-on-pending
+hwspecs check <root> --require-license
+hwspecs resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
+hwspecs status <root> --json --no-fail-on-pending
 ```
 
 Repeat bindings for all entries and resolve every overlay against its own resources.

@@ -17,7 +17,7 @@ use std::path::Path;
 pub type PathElem = PathSegment;
 
 /// Base URI for embedded Format 2 JSON Schemas.
-pub const SCHEMA_BASE: &str = "https://github.com/curtisgalloway/driver-lab/spec-format/2/";
+pub const SCHEMA_BASE: &str = "https://github.com/curtisgalloway/hardware-specs/spec-format/2/";
 
 /// URN for the `source-observed` support extension schema fragment (D15).
 pub const EXTENSION_URN: &str = "urn:driver-lab:spec-format:2:extension:source-observed";

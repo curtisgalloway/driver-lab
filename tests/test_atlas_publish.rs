@@ -3,12 +3,12 @@
 
 //! Integration tests for `atlas`, `explorer`, and `publish` (`test_atlas.py` and `test_explorer.py`).
 
-use driver_lab::explorer::{
+use hwspecs::explorer::{
     self, atlas, clean_anchor, dump_anchors, empty_anchors_value, fetch_url, heading_key,
     load_anchors, parse_headings, plain, request_headers, resolve_anchors_with,
 };
-use driver_lab::publish::{self, PublishOptions};
-use driver_lab::records::{self, Checker};
+use hwspecs::publish::{self, PublishOptions};
+use hwspecs::records::{self, Checker};
 use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -107,7 +107,7 @@ fn write_root_files(dir: &Path, files: &[(&str, String)]) {
 fn create_checker(roots: &[PathBuf], context_roots: &[PathBuf]) -> Checker {
     let schemas = records::load_schemas();
     let mut checker = Checker::new(false, HashSet::new(), None);
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         roots,
         context_roots,
@@ -238,7 +238,7 @@ fn cli_atlas(root: &Path, extra_args: &[&str]) -> (i32, Value) {
     let mut out = Vec::new();
     let mut err = Vec::new();
     let mut argv = vec![
-        "driver-lab".to_string(),
+        "hwspecs".to_string(),
         "render".to_string(),
         "--format".to_string(),
         "atlas".to_string(),
@@ -248,7 +248,7 @@ fn cli_atlas(root: &Path, extra_args: &[&str]) -> (i32, Value) {
     for a in extra_args {
         argv.push((*a).to_string());
     }
-    let code = driver_lab::run_from_args(argv, &mut out, &mut err);
+    let code = hwspecs::run_from_args(argv, &mut out, &mut err);
     let val: Value = serde_json::from_slice(&out).unwrap();
     (code, val)
 }
@@ -948,7 +948,7 @@ fn test_hostile_text_stays_inside_the_json_and_author_html_is_sanitized() {
         .unwrap()
         .contains("&lt;/script&gt;"));
     assert_eq!(
-        plain(&driver_lab::render_html::author(
+        plain(&hwspecs::render_html::author(
             "See *Boot*, `UART0` and [the guide](https://example.invalid)."
         )),
         "See Boot, UART0 and the guide."
@@ -974,7 +974,7 @@ fn test_payload_is_deterministic_and_carries_status_and_pages() {
         HashSet::from(["widget-board-tools".to_string()]),
         None,
     );
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         &[good_root],
         &[],
@@ -1056,7 +1056,7 @@ fn test_premises_assumptions_conflicts_notes_and_second_reader() {
         HashSet::from(["widget-board-tools".to_string()]),
         None,
     );
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         std::slice::from_ref(&r),
         &[],
@@ -1095,7 +1095,7 @@ fn test_premises_assumptions_conflicts_notes_and_second_reader() {
         HashSet::from(["widget-board-tools".to_string()]),
         None,
     );
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         &[r],
         &[],
@@ -1172,7 +1172,7 @@ fn test_build_writes_explorer_and_anchors_and_verify_rechecks_them() {
         HashSet::from(["widget-board-tools".to_string()]),
         Some("main".to_string()),
     );
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         std::slice::from_ref(&good_root),
         &[],
@@ -1210,7 +1210,7 @@ fn test_verify_refuses_missing_malformed_or_rewritten_anchors() {
         HashSet::from(["widget-board-tools".to_string()]),
         Some("main".to_string()),
     );
-    driver_lab::speccheck::load_and_run_checker(
+    hwspecs::speccheck::load_and_run_checker(
         &mut checker,
         std::slice::from_ref(&good_root),
         &[],

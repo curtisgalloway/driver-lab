@@ -951,7 +951,7 @@ pub struct DeclaredDocument {
     pub page_numbering: Option<String>,
 }
 
-/// Outcome of running `driver-lab index <document> --root <root> --docs-dir <docs_dir>`.
+/// Outcome of running `hwspecs index <document> --root <root> --docs-dir <docs_dir>`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IndexCommandOutcome {
     /// Exit code (`0` pass, `1` domain failure, `2` usage error, `3` sandbox error).
@@ -969,7 +969,7 @@ pub struct IndexCommandOutcome {
 }
 
 impl IndexCommandOutcome {
-    /// Serializes this outcome to the JSON object format expected by `driver-lab index --json`.
+    /// Serializes this outcome to the JSON object format expected by `hwspecs index --json`.
     #[must_use]
     pub fn to_json_value(&self) -> Value {
         let mut map = Map::new();

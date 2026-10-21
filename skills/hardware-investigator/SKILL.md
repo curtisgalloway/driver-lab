@@ -4,8 +4,8 @@ description: >-
   Answer one board or peripheral question from sources accepted by the target spec root.
   Check each cited file's license before reading it for evidence and return kind:
   facts YAML with immutable repos entries and structured support, ready for peripheral-spec.
-  Refuse unaccepted sources. Use board-expert for the map, driver-lab license-gate before source
-  reading, and driver-lab check, resolve and show for the finished records. Not for a whole spec
+  Refuse unaccepted sources. Use board-expert for the map, hwspecs license-gate before source
+  reading, and hwspecs check, resolve and show for the finished records. Not for a whole spec
   or NDA material.
 ---
 
@@ -56,10 +56,10 @@ Inputs: question with board/SoC/peripheral; target root; optional `name=checkout
 spec id. If the root or another material choice is missing, return a structured Needs decision
 block to the orchestrator (or ask the user when working directly); never guess placement.
 
-Before running any subcommand, run `driver-lab --version` first. If `driver-lab` is missing or
-reports an `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing
-precondition with installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
-cargo install --locked --path <driver-lab>`) rather than compiling or installing inside a
+Before running any subcommand, run `hwspecs --version` first. If `hwspecs` is missing or
+reports an `unknown` or mismatched `HWSPECS_TOOL_COMMIT`, stop and report the missing
+precondition with installation instructions (`HWSPECS_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <hardware-specs>`) rather than compiling or installing inside a
 subagent. `<root>` is the target root, `<facts>` the output file, and `<source-checkout>` binds
 `linux`. Use actual repo names and repeat bindings for every cited entry. The example gate
 expression is GPL-2.0-only, tested with SF2-7's accepting widget root; change it to the confirmed
@@ -68,7 +68,7 @@ license.
 1. Read the target marker; require a valid spec root and its policy. Print its accepts list:
 
    ```bash
-   driver-lab license-gate --root <root>
+   hwspecs license-gate --root <root>
    ```
 
 2. Ask `board-expert` for composition, resources and file/license leads **without reading
@@ -81,7 +81,7 @@ license.
 4. Gate each confirmed expression before opening its source for evidence:
 
    ```bash
-   driver-lab license-gate --root <root> GPL-2.0-only
+   hwspecs license-gate --root <root> GPL-2.0-only
    ```
 
    Exit 0 accepts; 1 refuses (`A OR B` needs either, `A AND B` both); 2 is a usage error (not a
@@ -106,14 +106,14 @@ license.
    code does without hardware justification. Source alone cannot prove a silicon requirement.
    Separate inference into its own supported derivation with premises and TODO. Preserve
    unknowns as gap records with observable TODOs; do not invent width, access or reset values.
-   `driver-lab todo <root>... --check hardware` lists those TODOs as the input to a readback plan,
+   `hwspecs todo <root>... --check hardware` lists those TODOs as the input to a readback plan,
    and a narrow follow-up question to an investigator names one fact id from that list.
 8. Check the output before returning:
 
    ```bash
-   driver-lab check <facts> --root <root> --require-license
-   driver-lab resolve <facts> --root <root> --repo linux=<source-checkout>
-   driver-lab show <facts> --root <root> --repo linux=<source-checkout>
+   hwspecs check <facts> --root <root> --require-license
+   hwspecs resolve <facts> --root <root> --repo linux=<source-checkout>
+   hwspecs show <facts> --root <root> --repo linux=<source-checkout>
    ```
 
    Facts-file `check` reads the target marker and applies citation/license rules without
@@ -128,7 +128,7 @@ license.
    is not independent verification.
 9. Return the report and facts path to the caller. Full independent verification belongs to
    `spec-verifier` after assembly, including independently supported fields/steps and critical
-   facts' second readers. Re-pinning uses peripheral-spec's `driver-lab drift` procedure, never
+   facts' second readers. Re-pinning uses peripheral-spec's `hwspecs drift` procedure, never
    a silent replacement of the commit.
 
 ## The corpus ledger

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Integration and conformance tests for `driver_lab::speccheck` (`RT-3b` + `RT-4`).
+//! Integration and conformance tests for `hwspecs::speccheck` (`RT-3b` + `RT-4`).
 //!
 //! Covers:
 //! - License gate matrix (`fixtures/license-gate/expected.json`), board overlays, cross-root
@@ -14,8 +14,8 @@
 //! - `headingcheck` (`check_headings_with_fetcher`, `fetch_url`, `parse_rendered_headings`)
 //! - Bug-fix regressions: `BF-IMX-14`, `BF-IMX-18`, `BF-GW-27`, and `BF-IMX-ISS-4`
 
-use driver_lab::records::{load_schemas, Checker};
-use driver_lab::speccheck::{
+use hwspecs::records::{load_schemas, Checker};
+use hwspecs::speccheck::{
     check_headings_with_fetcher, classify_context_finding, fetch_url, load_and_run_checker,
     parse_rendered_headings, textcheck_data_where, TaintClass,
 };
@@ -57,11 +57,11 @@ fn fixtures_dir() -> PathBuf {
 }
 
 fn run_cli(args: &[&str]) -> (i32, String, String) {
-    let mut full = vec!["driver-lab"];
+    let mut full = vec!["hwspecs"];
     full.extend_from_slice(args);
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let code = driver_lab::run_from_args(full, &mut stdout, &mut stderr);
+    let code = hwspecs::run_from_args(full, &mut stdout, &mut stderr);
     (
         code,
         String::from_utf8(stdout).unwrap(),
@@ -493,7 +493,7 @@ fn test_textcheck_cases_fixture_and_backtick_bounds() {
         let text = case["text"].as_str().unwrap();
         let want_findings = case["findings"].as_array().unwrap();
 
-        let raw_got = driver_lab::specmd::findings(text, false);
+        let raw_got = hwspecs::specmd::findings(text, false);
         let mut got: Vec<(usize, &str)> = Vec::new();
         for f in &raw_got {
             let pair = (f.line, f.kind.as_str());
@@ -516,7 +516,7 @@ fn test_textcheck_cases_fixture_and_backtick_bounds() {
     }
 
     // 33+ backtick fence limit across keys and string values (mutate_spec_format_4 guard)
-    let run_textcheck = |path: &Path, doc: &Value| -> Vec<driver_lab::records::SpecFinding> {
+    let run_textcheck = |path: &Path, doc: &Value| -> Vec<hwspecs::records::SpecFinding> {
         let mut checker = Checker::new(false, HashSet::new(), None);
         textcheck_data_where(&mut checker, path, None, None, doc, None, true);
         checker.findings

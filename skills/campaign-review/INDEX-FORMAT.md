@@ -226,10 +226,10 @@ is a records finding. Outward reports remain user decisions.
 
 ## Checker boundary
 
-From the repository root, with `driver-lab` on `PATH`:
+From the repository root, with `hwspecs` on `PATH`:
 
 ```bash
-driver-lab campaign index-check evals/e1000
+hwspecs campaign index-check evals/e1000
 cargo test --test test_campaign
 ```
 
@@ -496,8 +496,8 @@ do not prevent a sufficient campaign once current coverage replaces their use.
 ### Adapter and report
 
 ```bash
-driver-lab campaign pinned-file-adapter evals/e1000/sources.yaml spec --json
-driver-lab campaign sweep evals/e1000 --json
+hwspecs campaign pinned-file-adapter evals/e1000/sources.yaml spec --json
+hwspecs campaign sweep evals/e1000 --json
 ```
 
 The adapter supports `--root`, `--run-store`, `--write` and `--dry-run`. With no
@@ -577,7 +577,7 @@ From the repository root, capture an adapter's output and supply one existing
 isolated run directory:
 
 ```bash
-driver-lab campaign contract-check \
+hwspecs campaign contract-check \
   --source-json adapter-output.json --run-dir isolated-run --json
 ```
 

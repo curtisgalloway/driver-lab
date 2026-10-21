@@ -16,7 +16,7 @@
 //!   mapping is not declared in the target spec's `resources.repos` (`BF-GW-26`).
 //! - Inlined `check_blob` SHA-256 verification and `pinned-file-adapter` source registry inspection
 //!   and atomic update.
-//! - Auditable local cache population via `driver-lab fetch --cache <dir>` (`ENV-6`).
+//! - Auditable local cache population via `hwspecs fetch --cache <dir>` (`ENV-6`).
 
 use crate::diagnostic::{
     bad_file_name, is_yaml_refused_char, visible_name, ExitCode, Finding, EXIT_DOMAIN_FAILURE,
@@ -1404,7 +1404,10 @@ pub fn resolve_pinned_file(
         root.to_path_buf()
     } else if let Some(rs) = run_store {
         rs.to_path_buf()
-    } else if let Some(env_rs) = env::var_os("DRIVER_LAB_RUNS").filter(|v| !v.is_empty()) {
+    } else if let Some(env_rs) = ["HWSPECS_RUNS", "DRIVER_LAB_RUNS"]
+        .iter()
+        .find_map(|name| env::var_os(name).filter(|v| !v.is_empty()))
+    {
         PathBuf::from(env_rs)
     } else {
         return None;
@@ -1572,7 +1575,7 @@ fn format_map_val(v: &Value, indent: usize) -> String {
     }
 }
 
-/// Outcome of running `driver-lab pinned-file-adapter`.
+/// Outcome of running `hwspecs pinned-file-adapter`.
 #[derive(Debug, Clone)]
 pub struct PinnedFileAdapterOutcome {
     /// Exit code (`0`, `1`, `2`, or `3`).
@@ -1802,10 +1805,10 @@ pub fn write_file_atomic(
 }
 
 // ============================================================================
-// `driver-lab fetch --cache <dir>` (`ENV-6`)
+// `hwspecs fetch --cache <dir>` (`ENV-6`)
 // ============================================================================
 
-/// Outcome of running `driver-lab fetch --cache <dir>`.
+/// Outcome of running `hwspecs fetch --cache <dir>`.
 #[derive(Debug, Clone)]
 pub struct FetchOutcome {
     /// Exit code (`0`, `1`, `2`, or `3`).

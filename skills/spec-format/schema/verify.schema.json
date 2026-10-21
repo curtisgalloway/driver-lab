@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/verify.schema.json",
+  "$id": "https://github.com/curtisgalloway/hardware-specs/spec-format/2/verify.schema.json",
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format verification record, resources/<name>.verify.yaml: its shape only. Keys naming facts, summary counts, basis freshness, upstream maps and second readers are the checker's (records.py, SF2-3).",
   "title": "Spec format: verification record",
   "type": "object",

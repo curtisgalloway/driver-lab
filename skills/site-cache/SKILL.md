@@ -4,7 +4,7 @@ description: >-
   Demand-driven pinned document store and polite HTTP read-through cache for
   vendor wikis, technical documentation pages and PDFs. Use to fetch, pin,
   inspect and materialize cited web documents without recursive crawling, and
-  to populate --docs-dir for driver-lab resolve and show.
+  to populate --docs-dir for hwspecs resolve and show.
 ---
 
 <!--
@@ -143,9 +143,9 @@ blob:
 python3 skills/site-cache/scripts/site_cache.py info <url-or-sha256>
 ```
 
-### 4. Materialize `docs/by-name` for `driver-lab resolve` and `show` (`materialize`, `prefetch`)
+### 4. Materialize `docs/by-name` for `hwspecs resolve` and `show` (`materialize`, `prefetch`)
 
-`driver-lab resolve <spec.yaml> --docs-dir docs/by-name` expects each sha256-pinned
+`hwspecs resolve <spec.yaml> --docs-dir docs/by-name` expects each sha256-pinned
 entry in `resources.documents` to exist as a regular, non-symlink file at
 `docs/by-name/<doc-name>`. Populate and hash-verify `docs/by-name` from the
 durable cache:

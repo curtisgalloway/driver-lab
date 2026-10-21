@@ -11,7 +11,7 @@ reference material. Facts belong in specs, where `spec.py check` and `spec-verif
 agent and stub prose points at the specs.
 
 Scope, by default: every tracked `agents/*.md`, and every tracked `SKILL.md` whose front matter
-calls it a stub (`stub over`). `driver-lab check --stubs-from` runs the same rules on the stubs a
+calls it a stub (`stub over`). `hwspecs check --stubs-from` runs the same rules on the stubs a
 spec repository installs; this check covers the agent files it never reads: a hex literal of two
 or more digits (`0x7e20`, `0xFE201000`, also in code spans), or an upper-case underscore name
 with an optional `n` or `x` index suffix (`UART_CTRL`, `GICD_CTLR`, `GICD_ITARGETSRn`, excluding

@@ -7,7 +7,7 @@
 //! Validates `<root>/corpus.yaml` dispositions (`spec:<id>[#<fact>]`, `planned:<note>`,
 //! `excluded:<reason>`), cross-checks `resources.documents` entries across all spec files in the
 //! root against the ledger, enforces template placeholder rules (`BF-IMX-12`, `BF-GW-24`), and
-//! implements `driver-lab corpus`.
+//! implements `hwspecs corpus`.
 
 use crate::diagnostic::{visible_name, EXIT_DOMAIN_FAILURE, EXIT_OK, EXIT_USAGE_ERROR};
 use crate::records::{Checker, PathElem, CORPUS};
@@ -317,7 +317,7 @@ pub struct CorpusGroupCoverage {
     pub counts: BTreeMap<String, usize>,
 }
 
-/// Per-root entry in `driver-lab corpus` output.
+/// Per-root entry in `hwspecs corpus` output.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CorpusRootEntry {
     pub path: String,
@@ -434,7 +434,7 @@ pub fn summary(cov: &BTreeMap<String, CorpusGroupCoverage>) -> String {
         .join("; ")
 }
 
-/// Executes `driver-lab corpus` (`spec.py:cmd_corpus`).
+/// Executes `hwspecs corpus` (`spec.py:cmd_corpus`).
 pub fn run_corpus_cmd(
     cli: &Cli,
     args: &CorpusArgs,

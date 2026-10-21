@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Install a pinned driver-lab release binary (or build from source at a pinned git revision)
-# and verify its embedded DRIVER_LAB_TOOL_COMMIT handshake (ENV-6).
+# Install a pinned hwspecs release binary (or build from source at a pinned git revision)
+# and verify its embedded HWSPECS_TOOL_COMMIT handshake (ENV-6).
 #
 # Usage:
 #   ./install.sh --version <vX.Y.Z> [--commit <40-hex-sha>] [--sha256 <64-hex>]
@@ -11,12 +11,12 @@
 #   ./install.sh --from-source --rev <40-hex-sha> [--install-dir <dir>] [--repo <owner/repo>]
 #
 # Environment overrides:
-#   DRIVER_LAB_VERSION      default release tag when --version is omitted
-#   DRIVER_LAB_TOOL_COMMIT  expected 40-hex tool commit when --commit / --rev is omitted
-#   DRIVER_LAB_SHA256       caller-pinned 64-hex SHA-256 of the release tarball
-#   DRIVER_LAB_INSTALL_DIR  target bin directory (default: $HOME/.local/bin)
-#   DRIVER_LAB_REPO         GitHub owner/repo (default: curtisgalloway/driver-lab)
-#   DRIVER_LAB_BASE_URL     release asset base URL override (for mirrors or offline tests)
+#   HWSPECS_VERSION      default release tag when --version is omitted
+#   HWSPECS_TOOL_COMMIT  expected 40-hex tool commit when --commit / --rev is omitted
+#   HWSPECS_SHA256       caller-pinned 64-hex SHA-256 of the release tarball
+#   HWSPECS_INSTALL_DIR  target bin directory (default: $HOME/.local/bin)
+#   HWSPECS_REPO         GitHub owner/repo (default: curtisgalloway/hardware-specs)
+#   HWSPECS_BASE_URL     release asset base URL override (for mirrors or offline tests)
 #
 # Exit codes: 0 installed and verified, 2 usage error, 3 missing precondition or verification failure.
 
@@ -60,8 +60,8 @@ compute_sha256() {
 }
 
 detect_target() {
-  if [ -n "${DRIVER_LAB_TARGET:-}" ]; then
-    printf '%s\n' "$DRIVER_LAB_TARGET"
+  if [ -n "${HWSPECS_TARGET:-}" ]; then
+    printf '%s\n' "$HWSPECS_TARGET"
     return 0
   fi
   os_name=$(uname -s 2>/dev/null || echo unknown)
@@ -115,12 +115,12 @@ fetch_url() {
   esac
 }
 
-version="${DRIVER_LAB_VERSION:-}"
-commit="${DRIVER_LAB_TOOL_COMMIT:-}"
-sha256="${DRIVER_LAB_SHA256:-}"
-install_dir="${DRIVER_LAB_INSTALL_DIR:-${HOME:-/tmp}/.local/bin}"
-repo="${DRIVER_LAB_REPO:-curtisgalloway/driver-lab}"
-base_url="${DRIVER_LAB_BASE_URL:-}"
+version="${HWSPECS_VERSION:-}"
+commit="${HWSPECS_TOOL_COMMIT:-}"
+sha256="${HWSPECS_SHA256:-}"
+install_dir="${HWSPECS_INSTALL_DIR:-${HOME:-/tmp}/.local/bin}"
+repo="${HWSPECS_REPO:-curtisgalloway/hardware-specs}"
+base_url="${HWSPECS_BASE_URL:-}"
 from_source=0
 source_path=""
 
@@ -186,7 +186,7 @@ fi
 
 if [ "$from_source" -eq 1 ]; then
   if [ -z "$commit" ]; then
-    echo "usage: --from-source requires --rev <40-hex-sha> (or DRIVER_LAB_TOOL_COMMIT)" >&2
+    echo "usage: --from-source requires --rev <40-hex-sha> (or HWSPECS_TOOL_COMMIT)" >&2
     exit 2
   fi
   if ! command -v cargo >/dev/null 2>&1; then
@@ -196,23 +196,23 @@ if [ "$from_source" -eq 1 ]; then
   tmp_root=$(mktemp -d)
   trap 'rm -rf "$tmp_root"' EXIT INT TERM
   if [ -n "$source_path" ]; then
-    DRIVER_LAB_TOOL_COMMIT="$commit" cargo install --locked --force \
+    HWSPECS_TOOL_COMMIT="$commit" cargo install --locked --force \
       --path "$source_path" --root "$tmp_root/install"
   else
-    DRIVER_LAB_TOOL_COMMIT="$commit" cargo install --locked --force \
+    HWSPECS_TOOL_COMMIT="$commit" cargo install --locked --force \
       --git "https://github.com/$repo.git" --rev "$commit" --root "$tmp_root/install"
   fi
   mkdir -p "$install_dir"
-  cp "$tmp_root/install/bin/driver-lab" "$install_dir/driver-lab.tmp.$$"
-  chmod 0755 "$install_dir/driver-lab.tmp.$$"
-  mv "$install_dir/driver-lab.tmp.$$" "$install_dir/driver-lab"
+  cp "$tmp_root/install/bin/hwspecs" "$install_dir/hwspecs.tmp.$$"
+  chmod 0755 "$install_dir/hwspecs.tmp.$$"
+  mv "$install_dir/hwspecs.tmp.$$" "$install_dir/hwspecs"
 else
   if [ -z "$version" ]; then
     echo "usage: --version <vX.Y.Z> is required unless --from-source is used" >&2
     exit 2
   fi
   target=$(detect_target)
-  archive_name="driver-lab-${target}.tar.gz"
+  archive_name="hwspecs-${target}.tar.gz"
   if [ -z "$base_url" ]; then
     base_url="https://github.com/${repo}/releases/download/${version}"
   fi
@@ -244,22 +244,22 @@ else
 
   mkdir -p "$tmp_dir/extract"
   tar -xzf "$archive_path" -C "$tmp_dir/extract"
-  bin_candidate="$tmp_dir/extract/driver-lab-${target}/driver-lab"
+  bin_candidate="$tmp_dir/extract/hwspecs-${target}/hwspecs"
   if [ ! -f "$bin_candidate" ]; then
-    bin_candidate="$tmp_dir/extract/driver-lab"
+    bin_candidate="$tmp_dir/extract/hwspecs"
   fi
   if [ ! -f "$bin_candidate" ]; then
-    echo "missing precondition: driver-lab binary not found in archive $archive_name" >&2
+    echo "missing precondition: hwspecs binary not found in archive $archive_name" >&2
     exit 3
   fi
 
   mkdir -p "$install_dir"
-  cp "$bin_candidate" "$install_dir/driver-lab.tmp.$$"
-  chmod 0755 "$install_dir/driver-lab.tmp.$$"
-  mv "$install_dir/driver-lab.tmp.$$" "$install_dir/driver-lab"
+  cp "$bin_candidate" "$install_dir/hwspecs.tmp.$$"
+  chmod 0755 "$install_dir/hwspecs.tmp.$$"
+  mv "$install_dir/hwspecs.tmp.$$" "$install_dir/hwspecs"
 fi
 
-installed_bin="$install_dir/driver-lab"
+installed_bin="$install_dir/hwspecs"
 ver_out=$("$installed_bin" --version 2>&1) || {
   echo "missing precondition: installed binary $installed_bin failed --version check" >&2
   exit 3

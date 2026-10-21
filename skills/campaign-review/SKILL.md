@@ -24,27 +24,27 @@ artifacts private; publish only safe identities and concise verdicts with links.
 Preserve qualification limits and unknown basis fields. Append new verdicts with
 supersedes links; never relabel an old PASS as qualification of an untested claim.
 
-First verify that `driver-lab` is on `PATH` (`driver-lab --version`). If it is missing, stop
-and ask the user to install a release binary or run `cargo install --path .` from a `driver-lab`
+First verify that `hwspecs` is on `PATH` (`hwspecs --version`). If it is missing, stop
+and ask the user to install a release binary or run `cargo install --path .` from a `hwspecs`
 checkout (`ENV-6`).
 
-Run `driver-lab campaign index-check` with the campaign directory and `--root` pointing to its
+Run `hwspecs campaign index-check` with the campaign directory and `--root` pointing to its
 repository. It supports `--json`; it reads no private store and runs no guests. Also run that
 repository's privacy check. Independent review should trace the entries to the evidence, not
 treat schema validation as proof.
 
 When the campaign's specs live in a root with a corpus ledger, run
-`driver-lab corpus <root>...` and keep its report with the review artifact. Report coverage
+`hwspecs corpus <root>...` and keep its report with the review artifact. Report coverage
 (documents and blocks specified, planned, excluded), list `planned` entries as candidate
 work, and flag an `excluded` reason a reviewer would not accept. A root with no ledger is
 reported as unscoped, not as covered. Spec gaps board-expert proposed from doc-read answers
-appear, once authored, in `driver-lab todo <root>...`; report their count, and for an indexed
+appear, once authored, in `hwspecs todo <root>...`; report their count, and for an indexed
 document the sections no fact cites (the views' document index tables).
 
 At the start of each orchestrator session and whenever a known input changes
 (such as a package upgrade or manual edition), refresh applicable sources locally
-with `driver-lab campaign pinned-file-adapter REGISTRY ID --write --json`, then run
-`driver-lab campaign sweep CAMPAIGN --json`. The adapter resolves repository/run-store-relative
+with `hwspecs campaign pinned-file-adapter REGISTRY ID --write --json`, then run
+`hwspecs campaign sweep CAMPAIGN --json`. The adapter resolves repository/run-store-relative
 files and hashes opaque bytes; the sweep reads campaign metadata, deployment settings and class
 definitions. An adapter observation does
 not adopt a new edition or replace an expected pin. Preserve the deployment's
@@ -78,6 +78,6 @@ and `evals/deployment.yaml` is the default. Read INDEX-FORMAT.md's deployment an
 contract sections before changing it. Each plugin's via skill owns invocation,
 authentication and safety; the declared command is not permission to execute it.
 Capture source-adapter JSON and a fixture's isolated run directory, then run
-`driver-lab campaign contract-check --source-json JSON --run-dir DIRECTORY --json`.
+`hwspecs campaign contract-check --source-json JSON --run-dir DIRECTORY --json`.
 This checks metadata only, never launches a fixture or executes manifest commands.
 Producer observations and role/session provenance remain reviewer conventions.

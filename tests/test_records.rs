@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Integration and conformance tests for `driver_lab::records` (`RT-3a`).
+//! Integration and conformance tests for `hwspecs::records` (`RT-3a`).
 //!
 //! Verifies byte-for-byte identical `fact-v1` canonical JSON serialization, SHA-256 basis hashes,
 //! upstream dependency maps, cycle-safe Tarjan SCC digests, `.verify.yaml` validation, and
@@ -9,7 +9,7 @@
 //! `skills/spec-verifier/examples/widget`, and `skills/spec-format/tests/fixtures/`, plus all
 //! behavioral cases ported from `skills/spec-format/tests/test_records.py`.
 
-use driver_lab::records::{
+use hwspecs::records::{
     bookkeeping_fields, canonical, check_roots, compute_graph, sha256_str, status_roots, STATUSES,
     SUMMARY,
 };
@@ -61,11 +61,11 @@ fn trm_hashed() -> Value {
 }
 
 fn run_cli(args: &[&str]) -> (i32, String, String) {
-    let mut full = vec!["driver-lab"];
+    let mut full = vec!["hwspecs"];
     full.extend_from_slice(args);
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let code = driver_lab::run_from_args(full, &mut stdout, &mut stderr);
+    let code = hwspecs::run_from_args(full, &mut stdout, &mut stderr);
     (
         code,
         String::from_utf8(stdout).unwrap(),

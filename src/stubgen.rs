@@ -368,7 +368,7 @@ pub fn render(manifest: &Value) -> Result<BTreeMap<String, String>, String> {
     Ok(out)
 }
 
-/// Executes `driver-lab stubgen` writing to `stdout` and `stderr`.
+/// Executes `hwspecs stubgen` writing to `stdout` and `stderr`.
 pub fn run_stubgen_cmd(
     cli: &Cli,
     args: &StubgenArgs,

@@ -27,7 +27,7 @@ Copy `examples/expected/answer-linux.facts.yaml` and `answer-fw.facts.yaml` to s
 only the all-ones resource commit in each with its corresponding checkout hash. Do not change
 claims or support to make them pass. The example tests make these same temporary checkouts.
 
-Run `driver-lab --version` first to verify the compiled CLI is installed. `<root>` is
+Run `hwspecs --version` first to verify the compiled CLI is installed. `<root>` is
 `examples/roots/gpl`,
 `<permissive-root>` is `examples/roots/permissive`; `<facts>` and `<facts-fw>` are the two copied
 answers. `<source-checkout>` and `<fw-checkout>` are the temporary source trees. Their names
@@ -39,14 +39,14 @@ and `license_from: spdx-line` confirmations.
 Read the GPL target policy:
 
 ```bash
-driver-lab license-gate --root <root>
+hwspecs license-gate --root <root>
 ```
 
 Read only the intended file's license line first. It states GPL-2.0-only. Gate before opening
 the file for evidence:
 
 ```bash
-driver-lab license-gate --root <root> GPL-2.0-only
+hwspecs license-gate --root <root> GPL-2.0-only
 ```
 
 Expected: exit 0 and `accepted: GPL-2.0-only`. Now read the accepted source at its pin and
@@ -58,9 +58,9 @@ The LCR explanation is attributed to the source comment with a `comment: true` a
 not measured hardware. The answer's SPDX header matches the GPL-2.0-only destination root.
 
 ```bash
-driver-lab check <facts> --root <root> --require-license
-driver-lab resolve <facts> --root <root> --repo linux=<source-checkout>
-driver-lab show <facts> --root <root> --repo linux=<source-checkout>
+hwspecs check <facts> --root <root> --require-license
+hwspecs resolve <facts> --root <root> --repo linux=<source-checkout>
+hwspecs show <facts> --root <root> --repo linux=<source-checkout>
 ```
 
 Expected: exit 0 for each, zero check errors/warnings, four resolved anchors and zero skips.
@@ -77,13 +77,13 @@ during assembly; the tests validate, check and resolve both assembled specs.
 Read the permissive policy:
 
 ```bash
-driver-lab license-gate --root <permissive-root>
+hwspecs license-gate --root <permissive-root>
 ```
 
 After the GPL license line, gate it. **Expected exit: 1.**
 
 ```bash
-driver-lab license-gate --root <permissive-root> GPL-2.0-only
+hwspecs license-gate --root <permissive-root> GPL-2.0-only
 ```
 
 The gate reports refusal. Stop without reading that source for evidence, pinning it for an
@@ -94,8 +94,8 @@ The following is a deliberately invalid backstop test, not a step in the refusin
 If GPL facts were supplied anyway, both paths reject them. **Expected exit: 1.**
 
 ```bash
-driver-lab check <facts> --root <permissive-root> --require-license
-driver-lab license-gate --facts <facts> --root <permissive-root>
+hwspecs check <facts> --root <permissive-root> --require-license
+hwspecs license-gate --facts <facts> --root <permissive-root>
 ```
 
 ## C: independently accepted firmware offered
@@ -104,7 +104,7 @@ Record the Linux refusal from B. Read the offered firmware file's license line: 
 before reading further:
 
 ```bash
-driver-lab license-gate --root <permissive-root> MIT
+hwspecs license-gate --root <permissive-root> MIT
 ```
 
 Expected: exit 0 and `accepted: MIT`. Now read firmware at its pin and produce the second
@@ -114,9 +114,9 @@ an independently established hardware requirement. Its `data.sequence` carries s
 order constraints too, and its SPDX header matches the Apache-2.0 permissive destination.
 
 ```bash
-driver-lab check <facts-fw> --root <permissive-root> --require-license
-driver-lab resolve <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
-driver-lab show <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+hwspecs check <facts-fw> --root <permissive-root> --require-license
+hwspecs resolve <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
+hwspecs show <facts-fw> --root <permissive-root> --repo fw=<fw-checkout>
 ```
 
 Expected: all exit 0, zero check errors/warnings, four resolved anchors and zero skips.

@@ -15,14 +15,14 @@ Independently verify <spec> in <root>. You did not author it. Load `peripheral-s
 additional source/target bindings: <additional bindings>. Resolve license lines, and read
 notices/license files for every `license_from` confirmation the resolver cannot prove.
 
-Run `driver-lab --version` first, then run:
+Run `hwspecs --version` first, then run:
 
 ```bash
-driver-lab check <root> --require-license
-driver-lab resolve <spec> --root <root> --repo linux=<source-checkout>
-driver-lab inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
-driver-lab show <spec> --root <root> --repo linux=<source-checkout>
-driver-lab status <root> --json --no-fail-on-pending
+hwspecs check <root> --require-license
+hwspecs resolve <spec> --root <root> --repo linux=<source-checkout>
+hwspecs inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+hwspecs show <spec> --root <root> --repo linux=<source-checkout>
+hwspecs status <root> --json --no-fail-on-pending
 ```
 
 Repeat bindings for all cited entries; add document bytes via `--docs-dir DIR` (`DIR/NAME`).

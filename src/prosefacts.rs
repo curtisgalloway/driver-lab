@@ -331,7 +331,7 @@ pub fn run_prose_facts(repo_root: &Path, paths: &[PathBuf]) -> Vec<Finding> {
     out
 }
 
-/// Executes the `driver-lab prose-facts [<paths...>]` CLI subcommand.
+/// Executes the `hwspecs prose-facts [<paths...>]` CLI subcommand.
 pub fn run_prose_facts_cmd(
     paths: &[PathBuf],
     json_mode: bool,

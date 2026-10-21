@@ -146,8 +146,8 @@ evaluation; add other terms as the documents that use them are updated.
 | Source fact (`src`) | A fact about what code defines or does, supported by anchors into a pinned, licensed repo. Uses `class: src` structured support. It does not alone prove a hardware requirement and needs no hardware TODO for a claim about that code. |
 | Placement rule | A spec lives in the most restrictive repository among the sources it anchors to, and never cites a source more restrictive than that repository. |
 | Spec repositories | `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`: the three license-tiered public homes for specs. Standards specs have their own documents-only repositories beside them (#154): so far `hardware-specs-usb`, the USB family (USB, xHCI, Type-C, PD, TCPCI). |
-| Open side | driver-lab outside its frozen archive since the license split: the method for specs that cite their sources and are published where their licenses fit. |
-| Frozen archive | The parts of driver-lab kept as history after the split (evals, evidence, notebook and the documents describing them); still checked by CI, no new rounds. |
+| Open side | hardware-specs outside its frozen archive since the license split: the method for specs that cite their sources and are published where their licenses fit. |
+| Frozen archive | The parts of hardware-specs kept as history after the split (evals, evidence, notebook and the documents describing them); still checked by CI, no new rounds. |
 | SPDX | The standard short identifiers for licenses (`GPL-2.0-only`, `MIT`, `CC-BY-4.0`) and expressions combining them with `OR`, `AND` and `WITH`. |
 | Target root / refusal | The spec root whose accepts list governs which sources `hardware-investigator` may cite for one question / its return when a needed source's license is not on that list: the source, license, list and reason, with no fact from the source. |
 | Anchored facts | Evidence-supported statements with exact document or source citations, stored as structured support in YAML records. |

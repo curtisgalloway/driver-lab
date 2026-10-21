@@ -13,14 +13,14 @@ downloadable files. See the repository [glossary](../../../GLOSSARY.md).
 
 Copy [checks.sh](checks.sh) to `scripts/checks.sh` (keep it executable) and
 [checks.yml](checks.yml) to `.github/workflows/checks.yml` when creating a spec repository.
-These are maintained templates, not active driver-lab workflows. They include physical
+These are maintained templates, not active hardware-specs workflows. They include physical
 self-test temporary paths for macOS and run all check steps on Ubuntu and macOS. Existing
 repositories hold independent copies; review and apply later template changes explicitly.
 The script assumes the repository's marker is `specs/board-specs.yaml` and runs from the
-repository top level. It needs Bash 3.2 or later and the `driver-lab` binary (`DRIVER_LAB_BIN`,
-`<driver-lab>/target/release/driver-lab`, or `driver-lab` on `PATH`).
+repository top level. It needs Bash 3.2 or later and the `hwspecs` binary (`HWSPECS_BIN`,
+`<hardware-specs>/target/release/hwspecs`, or `hwspecs` on `PATH`).
 
-Set `TOOL_COMMIT` in the check workflow to a full driver-lab commit on `main` that contains
+Set `TOOL_COMMIT` in the check workflow to a full hardware-specs commit on `main` that contains
 the required fixtures and checker; use the same pin in the publishing workflow. The all-zero
 placeholder deliberately fails. Keep action revisions pinned and workflow permissions read-only.
 The copied scripts and workflows retain their Apache-2.0 headers; spec content uses its own
@@ -65,7 +65,7 @@ The workflow initially has no context roots. For each required context, add an
 `actions/checkout` step with its repository, explicit ref, `persist-credentials: false`, and a
 separate path outside `specs/`. Append that checkout's `specs/` path to **all four** `checks.sh`
 invocations, in the table's order. Existing hardware-specs checks use context repositories'
-`main` refs so new spec data is checked together; the executable driver-lab tool stays pinned.
+`main` refs so new spec data is checked together; the executable hwspecs tool stays pinned.
 Set `REQUIRE_CORPUS=1` on the check step once the root keeps a corpus ledger
 (`specs/corpus.yaml`, [spec-format](../SKILL.md#corpus-ledger)): the step then also runs
 `corpus`, which fails when the ledger is missing. Without it, `check` still checks a
@@ -73,17 +73,17 @@ ledger that exists, but a root without one passes.
 Keep `RESOLVE_SRC=1` on both resolve and self-test steps. It fetches cited source revisions;
 the self-test proves a valid anchor resolves and a deliberately invalid anchor is rejected.
 
-Before the first commit, run `scripts/checks.sh --mode pr all` with the pinned driver-lab
-checkout and the configured context-root arguments, setting `DRIVER_LAB_BIN` and
+Before the first commit, run `scripts/checks.sh --mode pr all` with the pinned hwspecs
+checkout and the configured context-root arguments, setting `HWSPECS_BIN` and
 `RESOLVE_SRC=1`. Verify the license fit passes, the misfit fails for the expected license reason,
 and both platform jobs run in CI. Never relax the checker's symlink policy: the script
 canonicalizes only the temporary directory it just created.
 
 ## Publishing spec views
 
-`publish.yml` is a workflow template for a spec repository, not an active driver-lab workflow.
+`publish.yml` is a workflow template for a spec repository, not an active hwspecs workflow.
 Copy it into that repository's workflows directory during SF2-11. Replace `TOOL_COMMIT` with
-the full driver-lab commit containing this viewer. The zero placeholder deliberately fails.
+the full hardware-specs commit containing this viewer. The zero placeholder deliberately fails.
 The template checks out the spec repository to `path: repo` and passes `repo/specs` with
 `--source-commit "repo/specs=$SOURCE_COMMIT"` so repositories whose root marker is at
 `specs/board-specs.yaml` build and verify cleanly (`BF-IMX-ISS-1`). Enable GitHub
@@ -104,11 +104,11 @@ job downloads the build, rechecks the same sources and re-renders every expected
 uploading the Pages artifact. The source inventory determines completeness; editing a manifest
 cannot hide a missing or modified page. All actions are pinned by full commit SHA.
 
-Local dry run, using `driver-lab` (or a pinned Python environment) and a scratch copy of a fixture root:
+Local dry run, using `hwspecs` (or a pinned Python environment) and a scratch copy of a fixture root:
 
 ```text
-driver-lab publish build repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
-driver-lab publish check repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
+hwspecs publish build repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
+hwspecs publish check repo/specs --out site --source-commit repo/specs=SHA --tool-commit SHA
 ```
 
 `SITE` must be empty and outside every supplied root; neither command follows output symlinks.

@@ -1,5 +1,5 @@
-use driver_lab::prosefacts::{scan_text, ProseFactKind};
-use driver_lab::specmd::findings;
+use hwspecs::prosefacts::{scan_text, ProseFactKind};
+use hwspecs::specmd::findings;
 use serde::Deserialize;
 use std::fs;
 

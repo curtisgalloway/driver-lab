@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use driver_lab::author::{check_auto5_warnings, check_auto6_canonical_register_source};
+use hwspecs::author::{check_auto5_warnings, check_auto6_canonical_register_source};
 use serde_json::json;
 use std::fs;
 use std::path::PathBuf;

@@ -538,6 +538,7 @@ pub fn run_stubgen_cmd(
 pub fn run(args: &StubgenArgs) -> i32 {
     let cli = Cli {
         json: false,
+        diag_out: None,
         scratch_dir: None,
         offline: false,
         version: false,

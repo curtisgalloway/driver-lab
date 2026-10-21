@@ -70,6 +70,10 @@ pub struct Cli {
     #[arg(long = "json", global = true)]
     pub json: bool,
 
+    /// Write structured JSON diagnostics to `<FILE>` while keeping `stdout`/`stderr` in normal mode (`PA-2`, `ENV-1`, `ENV-2`).
+    #[arg(long = "diag-out", global = true, value_name = "FILE")]
+    pub diag_out: Option<PathBuf>,
+
     /// Explicit writable directory for lazy temporary directory allocation (`ENV-2`, `BF-IMX-18`).
     #[arg(long = "scratch-dir", value_name = "DIR", global = true)]
     pub scratch_dir: Option<PathBuf>,
@@ -595,9 +599,10 @@ where
 
     let Some(ref command) = cli.command else {
         let msg = "error: a subcommand is required (pass --help for usage)";
+        let env = DiagnosticEnvelope::usage_error("CLI-USAGE", msg)
+            .with_field("files", serde_json::json!([]));
+        let _ = diagnostic::write_diag_out(cli.diag_out.as_deref(), &env.to_json_string());
         if cli.json {
-            let env = DiagnosticEnvelope::usage_error("CLI-USAGE", msg)
-                .with_field("files", serde_json::json!([]));
             let _ = writeln!(stdout, "{}", env.to_json_string());
         } else {
             let _ = writeln!(stderr, "usage error: {msg}");
@@ -635,7 +640,7 @@ where
             campaign::run_campaign_cmd(&cli, campaign_args, stdout, stderr)
         }
         Command::Check(check_args) => speccheck::run_check_cmd(&cli, check_args, stdout, stderr),
-        Command::Status(status_args) => worklist::run_status_cmd(&cli, status_args, stdout, stderr),
+        Command::Status(status_args) => run_status_with_diag(&cli, status_args, stdout, stderr),
         Command::Todo(todo_args) => worklist::run_todo_cmd(&cli, todo_args, stdout, stderr),
         Command::Corpus(corpus_args) => corpus::run_corpus_cmd(&cli, corpus_args, stdout, stderr),
         Command::Stubgen(stub_args) => stubgen::run_stubgen_cmd(&cli, stub_args, stdout, stderr),
@@ -644,6 +649,71 @@ where
         }
         Command::Publish(pub_args) => publish::run_publish_cmd(&cli, pub_args, stdout, stderr),
     }
+}
+
+fn ensure_status_json_finding_codes(raw_json: &str) -> String {
+    let Ok(mut val) = serde_json::from_str::<serde_json::Value>(raw_json) else {
+        return raw_json.to_string();
+    };
+    let mut modified = false;
+    if let Some(findings) = val
+        .get_mut("findings")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for item in findings {
+            if let Some(obj) = item.as_object_mut() {
+                let needs_code = obj
+                    .get("code")
+                    .and_then(serde_json::Value::as_str)
+                    .is_none_or(str::is_empty);
+                if needs_code {
+                    let msg = obj
+                        .get("message")
+                        .and_then(serde_json::Value::as_str)
+                        .unwrap_or("");
+                    let code = diagnostic::classify_check_finding_code(msg);
+                    obj.insert("code".to_string(), serde_json::json!(code));
+                    modified = true;
+                }
+            }
+        }
+    }
+    if modified {
+        serde_json::to_string(&val).unwrap_or_else(|_| raw_json.trim_end().to_string())
+    } else {
+        raw_json.trim_end().to_string()
+    }
+}
+
+fn run_status_with_diag(
+    cli: &Cli,
+    status_args: &StatusArgs,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    if cli.json {
+        let mut json_buf = Vec::new();
+        let code = worklist::run_status_cmd(cli, status_args, &mut json_buf, stderr);
+        let raw = String::from_utf8_lossy(&json_buf);
+        let normalized = ensure_status_json_finding_codes(&raw);
+        let _ = diagnostic::write_diag_out(cli.diag_out.as_deref(), &normalized);
+        let _ = writeln!(stdout, "{normalized}");
+        return code;
+    }
+
+    let code = worklist::run_status_cmd(cli, status_args, stdout, stderr);
+    if let Some(ref diag_path) = cli.diag_out {
+        let mut json_cli = cli.clone();
+        json_cli.json = true;
+        json_cli.diag_out = None;
+        let mut json_buf = Vec::new();
+        let mut sink_err = std::io::sink();
+        let _ = worklist::run_status_cmd(&json_cli, status_args, &mut json_buf, &mut sink_err);
+        let raw = String::from_utf8_lossy(&json_buf);
+        let normalized = ensure_status_json_finding_codes(&raw);
+        let _ = diagnostic::write_diag_out(Some(diag_path.as_path()), &normalized);
+    }
+    code
 }
 
 fn run_license_gate_cmd(

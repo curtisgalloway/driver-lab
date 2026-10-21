@@ -2270,7 +2270,7 @@ pub struct RootInfo {
     pub context: bool,
 }
 
-/// Finding item formatted as `spec.py` JSON finding (`{"path", "line", "column", "level", "message"}`).
+/// Finding item formatted as `spec.py` JSON finding (`{"path", "line", "column", "level", "code", "message"}`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SpecFinding {
     /// File path.
@@ -2281,8 +2281,34 @@ pub struct SpecFinding {
     pub column: usize,
     /// `"error"` or `"warning"`.
     pub level: String,
+    /// Deterministic rule code classified from `message` (`PA-2`).
+    #[serde(default)]
+    pub code: String,
     /// Diagnostic message.
     pub message: String,
+}
+
+impl SpecFinding {
+    /// Constructs a [`SpecFinding`] with `code` populated via [`crate::diagnostic::classify_check_finding_code`].
+    #[must_use]
+    pub fn new(
+        path: impl Into<String>,
+        line: usize,
+        column: usize,
+        level: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        let message = message.into();
+        let code = crate::diagnostic::classify_check_finding_code(&message).to_string();
+        Self {
+            path: path.into(),
+            line,
+            column,
+            level: level.into(),
+            code,
+            message,
+        }
+    }
 }
 
 impl fmt::Display for SpecFinding {
@@ -2616,13 +2642,13 @@ impl Checker {
                 message = format!("context root: {message}");
             }
         }
-        self.findings.push(SpecFinding {
-            path: path_str,
+        self.findings.push(SpecFinding::new(
+            path_str,
             line,
             column,
-            level: final_level,
+            final_level,
             message,
-        });
+        ));
     }
 
     /// Rejects a reference or citation (`citation = true`) on `file_idx` at `path`.
@@ -5466,13 +5492,13 @@ pub fn check_roots(
             specs: 0,
             stubs: 0,
             verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: "at least one root directory is required".to_string(),
-            }],
+            findings: vec![SpecFinding::new(
+                String::new(),
+                0,
+                0,
+                "error",
+                "at least one root directory is required",
+            )],
             text_lines: Vec::new(),
         };
     }
@@ -5493,13 +5519,7 @@ pub fn check_roots(
             specs: 0,
             stubs: 0,
             verification: STATUSES.iter().map(|&s| (s.to_string(), 0)).collect(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: msg,
-            }],
+            findings: vec![SpecFinding::new(String::new(), 0, 0, "error", msg)],
             text_lines: Vec::new(),
         };
     }
@@ -5576,13 +5596,13 @@ pub fn status_roots(
             errors: 0,
             warnings: 0,
             specs: Vec::new(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: "at least one root directory is required".to_string(),
-            }],
+            findings: vec![SpecFinding::new(
+                String::new(),
+                0,
+                0,
+                "error",
+                "at least one root directory is required",
+            )],
             text_lines: Vec::new(),
         };
     }
@@ -5603,13 +5623,7 @@ pub fn status_roots(
             errors: 0,
             warnings: 0,
             specs: Vec::new(),
-            findings: vec![SpecFinding {
-                path: String::new(),
-                line: 0,
-                column: 0,
-                level: "error".to_string(),
-                message: msg,
-            }],
+            findings: vec![SpecFinding::new(String::new(), 0, 0, "error", msg)],
             text_lines: Vec::new(),
         };
     }

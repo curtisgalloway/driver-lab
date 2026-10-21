@@ -1,205 +1,222 @@
-# driver-porting
+# hardware-specs
 
-Skills for writing and reviewing device-driver specs from source you may cite:
+Agent skills and a command-line tool, `hwspecs`, for building a checked, cited body of knowledge
+about hardware: what each register does, how a board's devices are wired to clocks and
+interrupts, which order to bring them up in, and where every one of those facts came from.
 
-- peripheral specs and reviews for source you may cite (GPL-2.0, BSD, MIT, Apache, or your
-  own code), published where their license fits,
-- board experts that supply the per-SoC facts those specs need.
+The goal is to give people and coding agents something better to write drivers from than a pile
+of datasheets and source trees. Writing a driver for a particular OS, or bringing up a
+particular board, happens in projects that install these skills (see
+[DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality)).
 
-**Scope:** this project's goal is generating hardware specs and measuring and maintaining their
-quality. Writing a driver for a particular target OS is not, and neither is bringing up a
-particular board: a separate bring-up project installs these skills and uses them there to
-write specs for its boards and Fuchsia drivers from them. A driver written from a spec, such as
-the Linux candidates in the e1000 and ENC28J60 campaigns, is used here as one quality signal for
-the spec. See [DESIGN.md's scope section](DESIGN.md#scope-specs-and-their-quality).
+New here? Start with the one-page [How it works](docs/HOW-IT-WORKS.md). Every borrowed or coined
+term is defined in the [glossary](GLOSSARY.md).
 
-A one-page overview of how the system works and how it checks quality:
-[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+## Does it work?
 
-## Why this exists and what it is not for
+The core test is to rebuild a driver from the spec alone and run it against the original.
 
-Agents write drivers better from a spec than from a pile of source: a spec states the register
-map, the init order and the quirks once, with a citation for each. This project makes those
-specs and checks them. Terms used below: a *spec* is that per-device or per-board description;
-an *anchor* cites the exact source lines (at a pinned commit) or document page a fact came from.
-Full definitions are in the [glossary](GLOSSARY.md).
+- **e1000 (L02).** A Linux driver for Intel's e1000 network card was written from the spec,
+  without the writer reading the Linux source, then run beside Linux v6.12's own `e1000` on QEMU's
+  emulated card. On the final harness both drivers passed all ten scenarios, twice each, in
+  isolated runs: 40 runs, 928 checks, 0 failed. Every difference found along the way went back
+  into the spec as a fix or a recorded gap. See [evidence/L02f3.md](evidence/L02f3.md).
+- **ENC28J60 (L01).** A driver for this SPI Ethernet chip was written from its spec and tested
+  on real hardware (a Raspberry Pi 4 fixture) against the Linux driver. It passed all ten
+  checks, and all five deliberately broken controls were caught; an independent review of that
+  result is pending. See [evidence/L01.md](evidence/L01.md) and
+  [evidence/L01-hw.md](evidence/L01-hw.md).
 
-- **Published specs say what they derive from.** A spec that cites GPL code is a derivative of
-  that code and is published under the GPL, in its own repository. Specs built only from
-  datasheets, and specs citing BSD, MIT or Apache code, go in two other repositories under
-  licenses that fit. One rule decides: a spec lives in the most restrictive repository among the
-  sources it anchors to, and each repository's CI runs a check (the license gate) that fails a
-  spec citing a source the repository does not accept. The three repositories are
-  `hardware-specs-gpl`, `hardware-specs-docs` and `hardware-specs-permissive`; see the
-  [license-split design](docs/LICENSE-SPLIT.md). Generic facts of public standards live in
-  documents-only standards repositories that board and SoC specs compose; the first is
-  [`hardware-specs-usb`](https://github.com/curtisgalloway/hardware-specs-usb) (USB, xHCI,
-  Type-C, PD, TCPCI).
-- **Every claim is checkable.** AI-written documentation is only as good as its checks. Every
-  fact in a published spec carries an anchor, a checker resolves every anchor at its pinned
-  commit, and an independent verifier re-derives the claims from the cited lines. A reader can
-  open the spec and the source side by side.
-- **Datasheet-based specs paraphrase and cite.** They quote sparingly and point at the section or
-  page, the usual practice for working from a vendor's documents.
-- **The clean-room method is published separately, and its output never is:** [cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills) holds the skills for writing a spec and a driver without the writers reading the original source, and its README says why they are not a way to launder GPL code.
+Both targets already had a working reference driver to compare against, which is the easy case.
+Hardware with no existing driver is the open question
+([DESIGN.md](DESIGN.md#when-there-is-no-existing-driver)). Why the design leans on automated
+checks rather than human review of every spec: [DRIVER-QUALITY.md](DRIVER-QUALITY.md).
 
-Not for: publishing specs derived from NDA or vendor-licensed material; legal advice about any
-of the above (none of this has had legal review); or writing a driver for a particular OS or
-bringing up a particular board, which happen in projects that use these skills.
+## A knowledge graph for hardware (sort of)
 
-## Which one do I want?
+A spec is a YAML file of **facts**. Each fact is one statement about the hardware ("this
+register resets to zero", "the UART's clock comes from this PLL") with a stable id and the exact
+source it came from. The facts and the links between them form a graph:
+
+```
+ specs     board ──parts──> SoC ──instances──> IP / peripheral spec
+             ▲               ▲                      │
+             │               └──────describes───────┘
+          overlay (adds facts from another repository; never edits)
+
+ facts     each spec holds facts; facts link to other facts:
+             relates   qualifies / refines / contradicts / same-as
+             premises  an inference rests on other facts
+             topology  clock, interrupt, power, reset connections
+
+ sources   every fact's support ──> source lines at a pinned commit,
+                                    or a document section and page
+```
+
+**Nodes**
+
+- **Specs**, of a few kinds: `board`, `soc`, `chip`, `ip` (a reusable block such as a UART
+  design), `protocol`, `peripheral` (one block's full programming model: registers, sequences,
+  data formats) and `review` (a driver compared with a reference).
+- **Facts** inside them. A fact's full name, `<spec>@<repository>#<fact>`, is unique across
+  every repository read together, so an id never changes meaning when another repository adds a
+  fact.
+- **Sources**: a Linux source file at a pinned commit, a datasheet section, a device tree.
+  These are the leaves; every non-gap fact ends at one or more of them.
+
+**Edges**
+
+- **Composition**: a board lists its `parts`; an SoC's `instances` place IP and peripheral
+  specs at base addresses; a peripheral spec `describes` the SoCs it appears in; an `overlay`
+  adds facts to a spec from another repository.
+- **Fact links**: `relates` (`qualifies`, `refines`, `contradicts`, `same-as`) and inference
+  premises. Premises must form a DAG, so a conclusion can never rest on itself.
+- **Topology** (newest): typed nodes and ports for clock sources, muxes, PLLs, power domains,
+  reset and interrupt controllers, and `connection` facts between them, plus named board
+  `configuration`s that select among alternative routes. See the
+  [atlas connections design](docs/ATLAS-CONNECTIONS-DESIGN.md).
+
+**What the graph is used for**
+
+- **Freshness travels along edges.** Each verdict records a hash of the fact, its sources and
+  every fact it rests on. Change one source line and exactly the facts downstream of it go
+  stale; nothing else needs re-checking.
+- **Licenses travel along edges.** A fact that cites GPL code, directly or through any chain of
+  references, can only live in a repository that accepts GPL. The checker follows the chain.
+- **Composition gives the reader one view.** `board-expert` follows parts, instances and
+  overlays to answer "what is at this address on this board, and how sure are we?"
+- **The atlas** (`hwspecs render --format atlas`) is an offline HTML page per board: an outline,
+  the spec graph, a memory map, a verification coverage grid and open items.
+
+**Why "sort of"**
+
+- **Every edge is authored and cited.** Nothing is inferred by a reasoner, and there is no
+  query language. The CLI and the rendered views are how you read it.
+- **It is partial on purpose.** A missing connection is a gap, not a claim that the hardware is
+  unconnected. Where complete upstream data already exists (a full device tree), specs link to it
+  rather than copy it, and the view shows where extraction stopped.
+- **It is split across repositories by license**, and the identity scheme exists so the pieces
+  still join.
+- **Status of the topology layer.** The fact format and its checks are done (AT1). The
+  Connections view in the atlas, and a sourced real-board example, are still to come (AT2 to AT4
+  in the [plan](docs/ATLAS-CONNECTIONS-PLAN.md)).
+
+The full contract is [docs/SPEC-FORMAT.md](docs/SPEC-FORMAT.md), with the agent-facing summary in
+[skills/spec-format/SKILL.md](skills/spec-format/SKILL.md).
+
+## How quality is checked
+
+- **Every fact cites its source** at a pinned commit or document page, and says what kind of
+  evidence it is, so "a driver does this" is never mistaken for "the hardware requires this". A
+  fact with no source is a recorded gap, not a guess.
+- **Independent verification.** `spec-verifier` has fresh agents, who never saw the author's
+  reasoning, re-derive each fact from the cited source and write a separate verification record.
+  Bring-up-critical facts need two independent readers.
+- **Conflicts are recorded, never overwritten.** When two sources disagree, both readings stay,
+  with the resolution and who decided it.
+- **Automation first, people for exceptions.** CI checks structure, citations, licenses and
+  verdict freshness on every change; people handle disagreements.
+
+What this does not prove: that the cited source is right. Two readers can share a mistake, and
+only running on hardware settles behavior.
+
+## Where the specs live
+
+This repository holds the tools and the method. Published specs live in repositories split by
+the licenses of what they cite. A spec goes in the most restrictive repository among its
+sources, and each repository's CI rejects a spec citing a source it does not accept
+([license-split design](docs/LICENSE-SPLIT.md)):
+
+| Repository | Accepts |
+| --- | --- |
+| `hardware-specs-docs` | datasheets and documents only |
+| `hardware-specs-permissive` | plus BSD, MIT and Apache source |
+| `hardware-specs-gpl` | plus GPL source |
+| [`hardware-specs-usb`](https://github.com/curtisgalloway/hardware-specs-usb) | generic facts of public standards (USB, xHCI, Type-C, PD, TCPCI) that board and SoC specs compose |
+
+Not for: specs derived from NDA or vendor-licensed material, or legal advice (none of this has
+had legal review). The method for writing a spec and driver without the writers reading the
+original source is published separately in
+[cleanroom-skills](https://github.com/curtisgalloway/cleanroom-skills).
+
+## Which skill do I want?
 
 | Situation | Skill |
 | --- | --- |
-| You may cite the reference driver (GPL-2.0, BSD, MIT, Apache, or your own code), and you want a spec whose every fact points back at the code, published where its license fits | `peripheral-spec` |
-| A driver exists and you want it checked against the upstream, vendor, or original implementation | `reference-driver-review` |
-| You need memory maps, boot chains, clocks, or interrupt details for a specific board | `board-expert`, for any board with a spec (none ship today; see `board-spec-scaffold`) |
-| You have a hardware question and the answer will be published in a spec repository, so each source you cite must be one that repository's license accepts | `hardware-investigator` |
-| You need a board expert for a board that does not have one yet | `board-spec-scaffold` writes the spec and stub; `board-expert` does its best without one |
-| You want a spec checked against every source it cites, or re-checked after the sources moved | `spec-verifier`, for board specs and peripheral specs and reviews alike |
-| You need to fetch, pin, inspect or materialize web documentation pages, vendor wikis (Trac, MediaWiki) or PDFs into a durable local cache and `--docs-dir` without recursive crawling | `site-cache` |
-| You have a bank of code-writing items for a spec and want to measure, by compiling and running tests, whether readers of the spec answer them correctly | `spec-eval` |
+| Write a spec for one peripheral, every fact pointing back at code or documents you may cite | `peripheral-spec` |
+| Check an existing driver against an upstream, vendor or original implementation | `reference-driver-review` |
+| Ask about a board: memory map, boot chain, clocks, interrupts | `board-expert` |
+| Start a board, SoC, chip or IP spec that does not exist yet | `board-spec-scaffold` |
+| Answer one hardware question as cited facts, from sources the target repository accepts | `hardware-investigator` |
+| Check a spec against every source it cites, or re-check after sources moved | `spec-verifier` |
+| Fetch, pin and cache web documentation, vendor wikis or PDFs for citing | `site-cache` |
+| Measure whether readers of a spec can write correct code from it | `spec-eval` |
+| Check a driver campaign's claims and status index against its evidence | `campaign-review` |
+| Learn the format and the `hwspecs` CLI | `spec-format` |
+
+In Claude Code the plugin also installs a `driver-porting:board-expert` agent that runs
+`board-expert` in its own context with file-editing tools removed
+([agents/board-expert.md](agents/board-expert.md)). The Fuchsia-specific skills that build on
+these live in [fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and call them by
+name.
+
+## The `hwspecs` CLI
+
+One Rust binary does every mechanical step. `hwspecs --help` lists them all; the main groups:
+
+| Job | Subcommands |
+| --- | --- |
+| Check specs | `validate`, `check`, `license-gate`, `prose-facts` |
+| Follow evidence | `resolve`, `show`, `drift`, `inventory`, `fetch`, `resource`, `index` |
+| Track verification | `verify`, `status`, `todo`, `corpus` |
+| Build and publish views | `render` (`md`, `html`, `atlas`), `publish`, `stubgen` |
+| Author in parallel | `assemble` (merge `.facts.yaml` slices into a spec) |
+| Evaluate | `eval`, `campaign` |
+
+Every command takes `--json` and `--offline` and follows the exit-code contract: 0 passed, 1 a
+check failed, 2 usage error, 3 missing precondition.
 
 ## Installing
 
-### Claude Code
+### The skills
+
+Claude Code:
 
 ```
 /plugin marketplace add curtisgalloway/hardware-specs
 /plugin install driver-porting@hardware-specs
 ```
 
-Add the marketplace once per machine. `hwspecs` is its name, set in
-`.claude-plugin/marketplace.json`. Outside a session, run the same commands as `claude plugin
-marketplace add ...` and `claude plugin install ...`. For a local clone, pass its path to
-`marketplace add`. Update later with `/plugin marketplace update hwspecs`.
+Update later with `/plugin marketplace update hardware-specs`. If you already use the
+`curtisg-skills` marketplace from [public-skills](https://github.com/curtisgalloway/public-skills),
+`/plugin install driver-porting@curtisg-skills` installs the same plugin.
 
-If you already use the `curtisg-skills` marketplace from
-[public-skills](https://github.com/curtisgalloway/public-skills),
-`/plugin install driver-porting@curtisg-skills` installs the same plugin from this repository;
-there is no need to add a second marketplace.
-
-### Codex
+Codex:
 
 ```
 codex plugin marketplace add curtisgalloway/hardware-specs
 codex plugin add driver-porting@hardware-specs
 ```
 
-Update later with `codex plugin marketplace upgrade hwspecs`.
+Other harnesses that read skill directories: clone the repository and link each
+`skills/<name>` into your skills root. The
+[public-skills README](https://github.com/curtisgalloway/public-skills#installing) has the paths.
 
-### Other agents
+The plugin keeps the name `driver-porting` because other skills hand off to these by name.
 
-For Antigravity and other harnesses that read skill directories, clone the repo and link each
-skill you want from `skills/<name>` into your skills root. The
-[public-skills README](https://github.com/curtisgalloway/public-skills#installing) has the
-paths for each harness.
+### The CLI
 
-## Peripheral specs and reviews
+Build from a clone (the toolchain is pinned in `rust-toolchain.toml`):
 
-- **`peripheral-spec`** writes a YAML spec for one peripheral from sources the
-  target may cite. Facts have stable ids, structured support and requirements; register,
-  sequence and layout payloads hold the programming data. Repository resources declare each
-  pin's full commit, license and per-file license evidence. The placement rule chooses a
-  spec repository that accepts every cited source's license.
-  `hwspecs check/resolve/show/drift/inventory` check structure and licenses, resolve citations,
-  show claims beside evidence, compare pins and compare register payloads with headers.
-- **`reference-driver-review`** compares an implementation with a pinned reference for the
-  same hardware. It produces a `kind: review` YAML spec: repositories have `role: impl` or
-  `ref`, findings carry both sides' structured anchors and an `assessment` (bug, suspect,
-  benign or reference issue). The databook can settle disagreements. A verifier checks the
-  findings; a finding's assessment is separate from its verification verdict. Output is a
-  review, never driver code.
-- **`hardware-investigator`** answers one board or peripheral question as `kind: facts` YAML
-  ready for peripheral authoring. It gets the map from `board-expert` and checks source
-  licenses against the target root before reading source evidence. `hwspecs license-gate`
-  uses the spec format’s strict marker validation and shared SPDX acceptance rules; `--facts` runs
-  the complete citation gate. The
-  [worked example](skills/hardware-investigator/WORKED-EXAMPLE.md) exercises accepting,
-  refusing and alternate-source cases with synthetic sources.
+```bash
+cargo build --release --locked
+target/release/hwspecs --version
+```
 
-Peripheral specs are derivatives of the sources they cite. These skills do not permit a
-license the source's terms refuse and are not for NDA source.
-
-## Board experts
-
-Board experts supply the per-board map and sources to cite. The map lives in YAML:
-board, SoC, chip and IP specs compose through `parts` and `instances`; overlays add material
-from other roots in a fixed layer order. Reference source stays in an out-of-tree cache.
-
-The shared contract is [spec-format](skills/spec-format/SKILL.md), with a pointer at
-[board-expert/SPEC-FORMAT.md](skills/board-expert/SPEC-FORMAT.md). `hwspecs check` enforces
-schemas, references, composition, license policy, public-root restrictions, stub resolution
-and verification records. Generated Markdown and HTML views present the YAML with provenance
-and per-fact status; edit the YAML, then regenerate the views.
-
-The atlas connection-view extension is described in the
-[design](docs/ATLAS-CONNECTIONS-DESIGN.md) and
-[implementation plan](docs/ATLAS-CONNECTIONS-PLAN.md). The plan distinguishes the
-checked topology format from the graph views still to be delivered.
-
-- **`board-expert`** reads YAML specs. It resolves ids or board/SoC names across declared
-  roots, composes and overlays the specs, consults pinned sources and reports full fact
-  references with freshness and limitations. An IP question can be tied to a board instance
-  or answered generically. Without a spec it investigates and suggests scaffolding.
-  Its shipped `specs/` root is empty; published specs live in the separate
-  spec repositories. It also ships the structured question catalog and vendor guide.
-  In Claude Code the plugin also installs a `driver-porting:board-expert` agent that runs the
-  skill in its own context, on Opus, with its file-editing tools removed and an instruction not
-  to edit specs; that is a guard, not a sandbox ([agents/board-expert.md](agents/board-expert.md)). Other harnesses run the skill in a
-  subagent the caller starts.
-- **`board-spec-scaffold`** creates board, SoC, chip or IP YAML from templates, with optional
-  expert stubs, overlays, vendor tool skills and root markers. Its interview settles identity,
-  placement and sources; optional research-fill returns fact records. Its verification phase
-  hands the files to `spec-verifier`.
-- **`spec-verifier`** re-derives each fact from its evidence in fresh reader contexts and writes
-  `<root>/resources/<name>.verify.yaml`, one record per spec file, including overlays.
-  Verdicts use fact ids, or sub-keys for independently supported register fields, layout fields and sequence
-  steps. Critical facts need a second independent reader. `hwspecs status` computes per-fact
-  freshness from basis and dependency hashes; whole-file `spec_sha256` is informational.
-  `--require-verified pr|main` selects the checking policy. The verifier proposes corrections
-  and never edits the spec.
-- **`spec-format`** supplies the contract, strict YAML loader, JSON Schemas and `hwspecs` CLI:
-  `validate`, `check`, `status`, `render`, `resolve`, `show`, `drift`, `inventory`, `index`,
-  `todo`, `corpus`, `fetch`, `stubgen`, `publish`, `license-gate`, `prose-facts`, `resource`,
-  `assemble`, `verify`, `eval` and `campaign`.
-- **`site-cache`** manages an out-of-tree, content-addressed document blob store and polite
-  read-through HTTP cache (`get`, `pin`, `links`, `headings`, `info`, `prefetch`, `materialize`,
-  `verify`, `gc`), discovering immutable wiki revisions (such as Trac `?version=N&format=txt`)
-  and materializing `docs/by-name` for `hwspecs resolve --docs-dir`.
-
-The Fuchsia-specific skills that consume these skills live in
-[curtisgalloway/fuchsia-skills](https://github.com/curtisgalloway/fuchsia-skills) and hand
-off to these by name.
-
-## Evaluating spec quality
-
-- [Spec eval skill](skills/spec-eval/SKILL.md): grades code-writing item banks against a spec by
-  compiling and running unit tests; self-tests a bank and grades a sweep of answers.
-- [Faster driver development with evidence we can test](DRIVER-QUALITY.md): the problem, the
-  proposed workflow, and how independent checks could reduce human review while improving
-  driver quality and test coverage. Written for programmers new to driver development.
-- [Evaluation plan](EVAL-PLAN.md): measures both document quality and downstream usability.
-- [OS-neutral reconstruction protocol](RECONSTRUCTION.md): how isolated implementers build
-  drivers from generated specs, and how evaluators compare them with the selected reference.
-- [ENC28J60 pilot](evals/enc28j60/README.md): documentary scoring tools and a paired-run
-  protocol. Paired generation and reconstruction remain pending; its
-  [reconstruction run guide](evals/enc28j60/RECONSTRUCTION-RUN.md) lists the preparation
-  still needed.
-- [Implementation plan for L01, L02 and continuous review](IMPLEMENTATION-PLAN.md): the L01
-  Linux driver pass, the L02 e1000 QEMU differential campaign and the CR milestones, as
-  session-sized units with status, dependencies and review gates.
-- [Deferred plan](DEFERRED-PLAN.md): trial preparation, paired evaluation, test quality,
-  companion-skill validation, and final verification (milestones M01–M17 and P01).
-- These plans, the evaluation plan, the reconstruction protocol and [`evals/`](evals/README.md)
-  are a frozen archive since the [license split](docs/LICENSE-SPLIT.md): kept as history, still
-  checked by CI.
-
-Evaluation terms are defined in the repository [glossary](GLOSSARY.md).
+[install.sh](install.sh) installs a pinned release binary, or builds a pinned revision with
+`--from-source --rev <sha>`, and checks that the binary reports the commit you asked for.
 
 ## Tests
-
-Build `hwspecs` and run the Rust test suite and shipped-root check:
 
 ```bash
 cargo test --locked --offline
@@ -207,6 +224,27 @@ cargo build --release --locked
 target/release/hwspecs check skills/board-expert/specs --stubs-from skills --require-license
 ```
 
-Add `--require-verified pr` to reject missing or stale verdicts; `main` allows upstream-stale
-warnings while enforcing the other verdict requirements. These checks do not re-read evidence.
-The full checks list, including the frozen archive, is in `AGENTS.md`.
+The full list CI runs is in [AGENTS.md](AGENTS.md#checks).
+
+## Other documents
+
+- [DESIGN.md](DESIGN.md): the overall design, evidence model and scope.
+- [docs/SPEC-FORMAT.md](docs/SPEC-FORMAT.md): the spec format, references, roots and freshness.
+- [docs/RUST-TOOLING-DESIGN.md](docs/RUST-TOOLING-DESIGN.md): the `hwspecs` tool.
+- [docs/LICENSE-SPLIT.md](docs/LICENSE-SPLIT.md): why specs are split by license, and how.
+- [docs/STANDARDS-SURVEY.md](docs/STANDARDS-SURVEY.md): existing hardware-description standards
+  (IP-XACT, SystemRDL and others) and what the format borrows from them.
+- `evidence/` and `notebook/`: a record of each milestone and experiment.
+
+**Frozen archive.** The evaluation plans ([IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md),
+[DEFERRED-PLAN.md](DEFERRED-PLAN.md), [EVAL-PLAN.md](EVAL-PLAN.md)), the
+[reconstruction protocol](RECONSTRUCTION.md) and [`evals/`](evals/README.md) are kept as history
+since the license split and are still checked by CI. New evaluation rounds happen elsewhere.
+
+This repository was split out of
+[public-skills](https://github.com/curtisgalloway/public-skills) on 2026-09-25 and renamed from
+driver-lab on 2026-10-21; [TRANSITION.md](TRANSITION.md) records the move.
+
+## License
+
+Apache 2.0; see [LICENSE](LICENSE).

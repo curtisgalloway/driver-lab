@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Integration tests for `driver-lab eval` (RT-9), porting `skills/spec-eval/tests/test_spec_eval.py`
+//! Integration tests for `hwspecs eval` (RT-9), porting `skills/spec-eval/tests/test_spec_eval.py`
 //! plus ENV-5 candidate sandbox containment tests and CLI subcommand tests.
 
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use driver_lab::eval::{
+use hwspecs::eval::{
     build_bwrap_args_with_options, check_bank, compile_and_run_tests, export_preambles, load_bank,
     normalize, validate,
 };
@@ -22,11 +22,11 @@ fn fixtures_dir() -> PathBuf {
 }
 
 fn run_eval_cli(args: &[&str]) -> (i32, String, String) {
-    let mut argv = vec!["driver-lab", "eval"];
+    let mut argv = vec!["hwspecs", "eval"];
     argv.extend_from_slice(args);
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    let code = driver_lab::run_from_args(argv, &mut stdout, &mut stderr);
+    let code = hwspecs::run_from_args(argv, &mut stdout, &mut stderr);
     (
         code,
         String::from_utf8_lossy(&stdout).into_owned(),
@@ -142,8 +142,7 @@ fn test_schema_rejects_negative_without_abstain_probe() {
     neg.as_object_mut().unwrap().remove("abstain_probe");
     let bank = json!({ "items": [neg] });
     let errs =
-        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
-            .unwrap();
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap();
     assert!(
         errs.iter().any(|e| e.contains("abstain_probe")),
         "expected abstain_probe error, got {errs:?}"
@@ -160,8 +159,7 @@ fn test_schema_rejects_unknown_extra_property() {
     item["surprise_field"] = json!(123);
     let bank = json!({ "items": [item] });
     let errs =
-        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
-            .unwrap();
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap();
     assert!(
         errs.iter().any(|e| e.contains("surprise_field")),
         "expected surprise_field error, got {errs:?}"
@@ -216,8 +214,7 @@ fn test_bank_findings_clean_on_synthetic_bank() {
         .collect();
     let bank = json!({ "items": items });
     assert_eq!(
-        driver_lab::eval::bank_findings(&bank, &driver_lab::eval::load_schema(None).unwrap())
-            .unwrap(),
+        hwspecs::eval::bank_findings(&bank, &hwspecs::eval::load_schema(None).unwrap()).unwrap(),
         vec![] as Vec<String>
     );
 }
@@ -391,8 +388,8 @@ fn test_end_to_end_grading_and_report_sweep() {
 
 #[test]
 fn test_env5_bwrap_command_line_construction_and_home_masking() {
-    let scratch = Path::new("/tmp/driver-lab-eval-scratch-123");
-    let bin = Path::new("/tmp/driver-lab-eval-scratch-123/cand_test");
+    let scratch = Path::new("/tmp/hwspecs-eval-scratch-123");
+    let bin = Path::new("/tmp/hwspecs-eval-scratch-123/cand_test");
 
     // 1. Standard Linux home under /home/user
     let args_std =
@@ -432,7 +429,7 @@ fn test_env5_bwrap_command_line_construction_and_home_masking() {
 fn test_env5_macos_sandbox_exec_profile_denies_network_and_home() {
     let scratch = std::path::Path::new("/private/tmp/eval-scratch");
     let home = std::path::Path::new("/Users/tester");
-    let profile = driver_lab::eval::build_macos_sandbox_profile(scratch, Some(home));
+    let profile = hwspecs::eval::build_macos_sandbox_profile(scratch, Some(home));
     assert!(profile.contains("(deny network*)"));
     assert!(profile.contains("(deny file-read* (subpath \"/Users/tester\"))"));
     assert!(profile.contains("(deny file-write* (subpath \"/Users/tester\"))"));

@@ -2,7 +2,7 @@
 name: spec-format
 description: >-
   Reference skill: the spec format contract for YAML hardware specs and verification records.
-  Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving driver-lab.
+  Read when authoring or consuming board, SoC, chip, IP or overlay specs, or driving hwspecs.
   Defines evidence classes, references, roots, rendering and freshness; schemas define shapes.
   Also read when asked for a board atlas or spec map (render --format atlas): an interactive map
   of a board's specs.
@@ -139,7 +139,7 @@ holds (names a bitmask, opcode table or enum without its values, or leaves out r
 or footnotes), add `todo: {check: document, text: ...}` saying what was left out and where:
 `Per-bit Function Type encodings (Table 12-47, p. 1857) not extracted.` The Markdown and HTML
 renders show it beside the record (and, for a spec with typed payloads, in the generated open
-questions), and `driver-lab todo --check document` lists it. A record holds one TODO. When it
+questions), and `hwspecs todo --check document` lists it. A record holds one TODO. When it
 already needs one, put the omission on the payload row it concerns if there is one; otherwise
 say both things in the existing TODO's text, which keeps its own `check`, so the
 `--check document` list no longer shows the omission.
@@ -290,7 +290,7 @@ board-expert's shipped `specs/`; loaded skills' `board-spec root: <path>` lines;
 top-level marker; the user's board-specs configuration marker. Skill pointer paths are relative
 to the checkout or user-supplied absolute paths; machine paths never go into specs. Entries in
 a marker's `roots` are relative to that marker file, or absolute, as the root schema defines.
-The reader expands marker `roots` in order; CLI arguments are explicit (`driver-lab` does not expand them).
+The reader expands marker `roots` in order; CLI arguments are explicit (`hwspecs` does not expand them).
 Deduplicate roots and require `format: 2` throughout the composition. No symlinks within or on
 the route to a root, no nested markers.
 
@@ -333,13 +333,13 @@ spec of the root lists to be in the ledger with an agreeing `access` and `sha256
 `access: private` under a `public` layer, and no misnamed ledger (`corpus.yml`). Ledger errors
 fail the check but leave the root trusted, so references into it still resolve; a `sha256`
 mismatch is the exception and makes the root untrusted. A `spec:` disposition that does not
-resolve counts as `unresolved`, not specified. `driver-lab corpus`
+resolve counts as `unresolved`, not specified. `hwspecs corpus`
 also fails a checked root with no ledger and prints its coverage; the repository checks run it
 under `REQUIRE_CORPUS=1`. Leaving a block out is fine; leaving it unlisted is not.
 
 ### Document indexes
 
-`driver-lab index <document> --root <root> --docs-dir <dir>` writes
+`hwspecs index <document> --root <root> --docs-dir <dir>` writes
 `<root>/index/<document>.index.yaml` ([schema](schema/index.schema.json)) from `<dir>/<document>`:
 each section's `number` (when its title starts with one; a lone number followed by a unit, as
 in `12 MHz clock`, is a quantity, not a number), `title` (plain text for Markdown), `level`
@@ -374,7 +374,7 @@ must match. GAP belongs to gap facts only. FAIL carries `correction`; ADJUDICATE
 `readings` until settled to PASS/FAIL, retaining `adjudication` and readings. Every verdict
 states `contrary_evidence` and `citation_precision`.
 
-Use `driver-lab status --json` (adding `--no-fail-on-pending` when specs are still unverified) to
+Use `hwspecs status --json` (adding `--no-fail-on-pending` when specs are still unverified) to
 get each current `basis` and `upstream` map to write a verdict;
 omit `upstream` when empty. `canonical: fact-v1` identifies the hash contract: fact except
 `section`, cited resources, assumptions and referenced facts' bases. Whole cited entries count
@@ -401,7 +401,7 @@ list, not a list of all failed verdicts.
 
 ## Inventory
 
-`driver-lab inventory <file> --headers <path>...` compares structured register offsets and
+`hwspecs inventory <file> --headers <path>...` compares structured register offsets and
 field masks with constants in the cited headers at the immutable source pin. Unknown names
 carry reasons, fail the command even when covered, and still count for omission checks;
 `--strict` also fails on omissions. Prose does not count as coverage.
@@ -450,34 +450,34 @@ output, and its jump links only add a heading anchor to a document URL the spec 
 
 ## Command line
 
-Before running any subcommand, run `driver-lab --version` to verify the compiled CLI is installed
-and embeds a non-`unknown` `DRIVER_LAB_TOOL_COMMIT` (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
-cargo install --locked --path <driver-lab>`). `driver-lab --skill` prints usage.
+Before running any subcommand, run `hwspecs --version` to verify the compiled CLI is installed
+and embeds a non-`unknown` `HWSPECS_TOOL_COMMIT` (`HWSPECS_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <hardware-specs>`). `hwspecs --skill` prints usage.
 
 ```text
-driver-lab validate <file>... [--root <dir>] [--context-root <dir>]... [--json]
-driver-lab check <file.facts.yaml>... --root <dir> [--require-license] [--json]
-driver-lab check <root>... [--context-root <dir>]... [--require-license]
+hwspecs validate <file>... [--root <dir>] [--context-root <dir>]... [--json]
+hwspecs check <file.facts.yaml>... --root <dir> [--require-license] [--json]
+hwspecs check <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stub <SKILL.md>]... [--stubs-from <dir>]...
     [--require-verified pr|main] [--resolve-headings] [--json]
-driver-lab status <root>... [--context-root <dir>]... [--require-license]
+hwspecs status <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stale] [--no-fail-on-pending] [--json]
-driver-lab todo <root>... [--context-root <dir>]... [--require-license]
+hwspecs todo <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--check hardware|document|source] [--json]
-driver-lab corpus <root>... [--context-root <dir>]... [--require-license]
+hwspecs corpus <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--json]
-driver-lab index <document> --root <dir> --docs-dir <dir> [--json]
-driver-lab render <root>... [--context-root <dir>]... [--require-license]
+hwspecs index <document> --root <dir> --docs-dir <dir> [--json]
+hwspecs render <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--spec <id>] [--merged] [--with-status]
     [--source-commit <ROOT=40-hex>]... [--tool-commit <40-hex>] --format md|html|atlas [--json]
-driver-lab resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
+hwspecs resolve <file>... [--repo NAME=CHECKOUT]... [--docs-dir DIR]
     [--root DIR] [--context-root <dir>]... [--timeout SECONDS] [--limit-mb N] [--json]
-driver-lab show <file>... [same resolver options]
-driver-lab drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
-driver-lab inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
-driver-lab fetch <file>... --cache <dir> [--root DIR] [--context-root <dir>]... [--json]
-driver-lab stubgen <domains.yaml> --out <skills-dir> [--check]
-driver-lab publish build|check <root>... --out <site-dir> ...
+hwspecs show <file>... [same resolver options]
+hwspecs drift <commit> <file> [--pin NAME] [--rewrite] [same resolver options]
+hwspecs inventory <file> --headers <path>... [--pin NAME] [--strict] [same resolver options]
+hwspecs fetch <file>... --cache <dir> [--root DIR] [--context-root <dir>]... [--json]
+hwspecs stubgen <domains.yaml> --out <skills-dir> [--check]
+hwspecs publish build|check <root>... --out <site-dir> ...
 ```
 
 Availability: validate/check/status are SF2-1–3; `todo` (issue 112), `corpus` (issue 153) and `index` (issue 155) follow them; Markdown render is SF2-4; HTML render and the
@@ -557,10 +557,10 @@ Two input roots, one contributing root (the roots of `tests/fixtures/worked-exam
 `permissive` is a context root and the view is not merged, so only `docs` is rendered.
 
 ```text
-$ driver-lab render docs --context-root permissive --spec bcm2711 --format md \
+$ hwspecs render docs --context-root permissive --spec bcm2711 --format md \
     --source-commit docs=<40-hex> --source-commit permissive=<40-hex>
 usage error: --source-commit ROOT must name a rendered root directory (rendered: docs)
-$ driver-lab render docs --context-root permissive --spec bcm2711 --format md \
+$ hwspecs render docs --context-root permissive --spec bcm2711 --format md \
     --source-commit docs=<40-hex>
 ```
 

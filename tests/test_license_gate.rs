@@ -6,7 +6,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 fn run_license_gate(args: &[&str]) -> (i32, String, String) {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_driver-lab"));
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_hwspecs"));
     cmd.arg("license-gate");
     for a in args {
         cmd.arg(a);

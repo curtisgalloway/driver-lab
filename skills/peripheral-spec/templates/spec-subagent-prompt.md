@@ -127,13 +127,13 @@ For Arm manuals, retain the developer page and static documentation-service PDF 
 Quote only a few lines when their expression matters. Use inclusive performing lines and
 symbols, or a scoped `search` anchor for negative/global claims. Repeat counts yourself.
 
-Before returning, run `driver-lab --version` to verify the CLI is on `PATH` and run:
+Before returning, run `hwspecs --version` to verify the CLI is on `PATH` and run:
 
 ```bash
-driver-lab check <root> --require-license
-driver-lab resolve <spec> --root <root> --repo linux=<source-checkout>
-driver-lab inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
-driver-lab show <spec> --root <root> --repo linux=<source-checkout>
+hwspecs check <root> --require-license
+hwspecs resolve <spec> --root <root> --repo linux=<source-checkout>
+hwspecs inventory <spec> --root <root> --repo linux=<source-checkout> --pin linux --headers <header> --strict
+hwspecs show <spec> --root <root> --repo linux=<source-checkout>
 ```
 
 Here `<spec>` is the assembled, complete map in `<root>`, not the minimal template alone;

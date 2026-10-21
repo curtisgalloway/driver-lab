@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use driver_lab::render_html;
-use driver_lab::render_md;
+use hwspecs::render_html;
+use hwspecs::render_md;
 use scraper::{Html, Selector};
 
 // Helper for parsing HTML in tests like Python's Tree
@@ -269,9 +269,9 @@ fn test_cli_render_md_html_and_bf_gw_27_merged_context_warning_banner() {
     // 1. Render Markdown via CLI
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let code = driver_lab::run_from_args(
+    let code = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "render",
             good_root.to_str().unwrap(),
             "--format",
@@ -291,9 +291,9 @@ fn test_cli_render_md_html_and_bf_gw_27_merged_context_warning_banner() {
     // 2. Render HTML via CLI
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let code = driver_lab::run_from_args(
+    let code = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "render",
             good_root.to_str().unwrap(),
             "--format",
@@ -343,9 +343,9 @@ fn test_cli_render_md_html_and_bf_gw_27_merged_context_warning_banner() {
 
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let code = driver_lab::run_from_args(
+    let code = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "render",
             overlay_dir.to_str().unwrap(),
             "--context-root",

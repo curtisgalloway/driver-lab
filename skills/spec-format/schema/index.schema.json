@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/index.schema.json",
+  "$id": "https://github.com/curtisgalloway/hardware-specs/spec-format/2/index.schema.json",
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. A document's section index, <root>/index/<name>.index.yaml, written by spec.py index (#155): headings and locators only, never document text, pinned to the document bytes by sha256.",
   "title": "Spec format: document section index (<name>.index.yaml)",
   "type": "object",

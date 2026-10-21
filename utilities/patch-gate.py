@@ -322,14 +322,21 @@ def summary(output):
 
 
 def read_user_config():
-  """Read optional ~/.config/driver-lab/config.toml if present."""
+  """Read optional ~/.config/hwspecs/config.toml (or the pre-rename driver-lab one)."""
   try:
     h = pwd.getpwuid(os.getuid()).pw_dir
-    cfg = os.path.join(h, ".config", "driver-lab", "config.toml")
-    with open(cfg, "rb") as stream:
-      return tomllib.load(stream)
-  except (KeyError, OSError, tomllib.TOMLDecodeError):
+  except KeyError:
     return {}
+  for name in ("hwspecs", "driver-lab"):
+    cfg = os.path.join(h, ".config", name, "config.toml")
+    try:
+      with open(cfg, "rb") as stream:
+        return tomllib.load(stream)
+    except FileNotFoundError:
+      continue
+    except (OSError, tomllib.TOMLDecodeError):
+      return {}
+  return {}
 
 
 def cargo_suite_env(scratch_dir, base_env=None):
@@ -347,8 +354,8 @@ def cargo_suite_env(scratch_dir, base_env=None):
   env["TEMP"] = tmp_dir
   env["TMP"] = tmp_dir
   cfg_data = read_user_config()
-  vendor_dir = env.get("DRIVER_LAB_CARGO_VENDOR") or cfg_data.get("cargo_vendor_dir")
-  rust_bin = env.get("DRIVER_LAB_RUST_BIN") or cfg_data.get("rust_toolchain_bin")
+  vendor_dir = (env.get("HWSPECS_CARGO_VENDOR") or env.get("DRIVER_LAB_CARGO_VENDOR")) or cfg_data.get("cargo_vendor_dir")
+  rust_bin = (env.get("HWSPECS_RUST_BIN") or env.get("DRIVER_LAB_RUST_BIN")) or cfg_data.get("rust_toolchain_bin")
   if isinstance(rust_bin, str) and os.path.isdir(rust_bin):
     env["PATH"] = rust_bin + os.pathsep + env.get("PATH", "")
     toolchain = cfg_data.get("rustup_toolchain")

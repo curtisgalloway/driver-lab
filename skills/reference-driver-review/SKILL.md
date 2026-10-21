@@ -149,16 +149,16 @@ can be read in one context.
 
 ### Check, verify, land
 
-First verify that `driver-lab` is on `PATH` (`driver-lab --version`). Here `<root>` is the review
+First verify that `hwspecs` is on `PATH` (`hwspecs --version`). Here `<root>` is the review
 root and `<review>` is the file. `<impl-checkout>` binds `impl` and `<ref-checkout>` binds `ref`;
 use the actual names, repeating bindings for all cited entries. Commands are tested against
 SF2-7's review fixture and overlay. The fixture's implementation is illustrative: the command
 test creates stand-in bytes to resolve it, not a hardware validation.
 
 ```bash
-driver-lab check <root> --require-license
-driver-lab resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs check <root> --require-license
+hwspecs resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
 ```
 
 Add `--docs-dir DIR` when document bytes are available as `DIR/NAME`. Inspect skipped counts
@@ -173,7 +173,7 @@ fixture recipe, `<register-spec>` is SF2-7's peripheral fixture, `<register-root
 companion uses its own pin and header instead.
 
 ```bash
-driver-lab inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
+hwspecs inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
 ```
 
 Unexplained omissions and mismatches need resolution. Unknown expressions fail with reasons;
@@ -195,8 +195,8 @@ When fixes land, set addressed findings' `resolution: {status: fixed, commit: <f
 then inspect and rewrite the implementation pin:
 
 ```bash
-driver-lab drift <new-commit> <review> --pin impl --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab drift <new-commit> <review> --pin impl --rewrite --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs drift <new-commit> <review> --pin impl --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs drift <new-commit> <review> --pin impl --rewrite --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
 ```
 
 Drift marks changed anchors stale and moves unique relocated ranges. Re-read before clearing

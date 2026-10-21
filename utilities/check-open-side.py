@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Refuse a clean-room mention outside driver-lab's frozen archive.
+"""Refuse a clean-room mention outside hardware-specs's frozen archive.
 
-The license split (docs/LICENSE-SPLIT.md, requirement LS-R20) made driver-lab the open side:
+The license split (docs/LICENSE-SPLIT.md, requirement LS-R20) made hwspecs the open side:
 the clean-room skills, their design text and their instructions moved to a separate repository,
-and driver-lab mentions that method at most once, in one README line pointing to it. Everything
+and hwspecs mentions that method at most once, in one README line pointing to it. Everything
 written before the split stays as a frozen archive. This check keeps the rule from eroding: a
 tracked file outside the allowlist that names a clean-room term fails it.
 

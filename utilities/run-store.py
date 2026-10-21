@@ -8,9 +8,10 @@
 Usage: run-store.py [RUN_ID]
 
 The location is each user's own setting, never recorded in this repository:
-  1. the DRIVER_LAB_RUNS environment variable, if set; otherwise
-  2. `run_store` in $XDG_CONFIG_HOME/driver-lab/config.toml
+  1. the HWSPECS_RUNS environment variable, if set; otherwise
+  2. `run_store` in $XDG_CONFIG_HOME/hwspecs/config.toml
      (XDG_CONFIG_HOME defaults to ~/.config).
+The pre-rename names, DRIVER_LAB_RUNS and driver-lab/config.toml, still work.
 
 Exit status: 0 printed the path; 1 no location is configured or it is not a directory.
 """
@@ -22,8 +23,12 @@ import tomllib
 
 
 def config_path():
-    base = os.environ.get("XDG_CONFIG_HOME") or pathlib.Path.home() / ".config"
-    return pathlib.Path(base) / "driver-lab" / "config.toml"
+    base = pathlib.Path(os.environ.get("XDG_CONFIG_HOME") or pathlib.Path.home() / ".config")
+    current = base / "hwspecs" / "config.toml"
+    legacy = base / "driver-lab" / "config.toml"
+    if not current.is_file() and legacy.is_file():
+        return legacy
+    return current
 
 
 def read_config():
@@ -36,9 +41,10 @@ def read_config():
 
 
 def run_store():
-    env = os.environ.get("DRIVER_LAB_RUNS")
-    if env:
-        return pathlib.Path(env).expanduser(), "DRIVER_LAB_RUNS"
+    for name in ("HWSPECS_RUNS", "DRIVER_LAB_RUNS"):
+        env = os.environ.get(name)
+        if env:
+            return pathlib.Path(env).expanduser(), name
     cfg = config_path()
     value = read_config().get("run_store")
     if value:
@@ -51,7 +57,7 @@ def main():
     if path is None:
         print(
             f"run store not configured: set run_store in {source} "
-            "or DRIVER_LAB_RUNS",
+            "or HWSPECS_RUNS",
             file=sys.stderr,
         )
         return 1

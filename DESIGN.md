@@ -759,7 +759,7 @@ specs and evidence stay inside it, with nothing flowing back to this repository.
   ENC28J60) as worked examples.
 - **A deployment supplies** its sources and a source registry, its spec roots (the existing
   layer mechanism: `product` or `local` roots found through pointers, never by search), its run
-  store (already configured per user, `run_store` in `~/.config/driver-lab/config.toml`), a
+  store (already configured per user, `run_store` in `~/.config/hwspecs/config.toml`), a
   campaign directory for its index and evidence, its models and agent CLIs by role, its
   fixtures and emulators, its implementer sandbox settings, and its publication policy.
 - **Sources are identified by a local ID, a version and a hash.** Change detection compares

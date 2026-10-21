@@ -61,10 +61,10 @@ readers the spec, declared dependencies, this skill and access to sources at the
 Do not give them the author's reasoning, this conversation or earlier verdicts. For delta
 work give selected fact ids and changed upstream references, without previous conclusions.
 
-Before running any subcommand, run `driver-lab --version` first. If `driver-lab` is missing or
-reports an `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing
-precondition with installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD)
-cargo install --locked --path <driver-lab>`) rather than compiling or installing inside a
+Before running any subcommand, run `hwspecs --version` first. If `hwspecs` is missing or
+reports an `unknown` or mismatched `HWSPECS_TOOL_COMMIT`, stop and report the missing
+precondition with installation instructions (`HWSPECS_TOOL_COMMIT=$(git rev-parse HEAD)
+cargo install --locked --path <hardware-specs>`) rather than compiling or installing inside a
 subagent.
 
 1. **Check structure and licenses.** Supply the selected root and every dependency root
@@ -73,9 +73,9 @@ subagent.
    `set -euo pipefail` while still failing on schema, semantic, or license errors):
 
    ```bash
-   driver-lab check <root> --context-root <dependency-root> --require-license
-   driver-lab status <root> --context-root <dependency-root> --require-license --no-fail-on-pending --json
-   driver-lab status <root> --context-root <dependency-root> --require-license --stale --no-fail-on-pending --json
+   hwspecs check <root> --context-root <dependency-root> --require-license
+   hwspecs status <root> --context-root <dependency-root> --require-license --no-fail-on-pending --json
+   hwspecs status <root> --context-root <dependency-root> --require-license --stale --no-fail-on-pending --json
    ```
 
    Repeat `--context-root` for more dependencies; omit it when none are needed. A context
@@ -154,8 +154,8 @@ subagent.
   available document hashes; then read each fact beside its cited source lines:
 
   ```bash
-  driver-lab resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
-  driver-lab show <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  hwspecs resolve <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
+  hwspecs show <spec.spec.yaml> --root <root> --repo <name>=<checkout> --docs-dir <document-dir>
   ```
 
   Repeat `--repo` for named repos; unbound repos are fetched over HTTPS. `--docs-dir` supplies
@@ -331,7 +331,7 @@ share it between files, or keep any record other than a `.verify.yaml` file in a
   source: report the schema limitation and request an identified resource. For a run extract
   without such identity, name it in the verdict note and report the missing source identity.
 - `verdicts`: keyed by **bare fact id**, including instance and variant ids. Copy a new
-  verdict's `basis` from that fact's **`driver-lab status --json`** row, and its `upstream` map
+  verdict's `basis` from that fact's **`hwspecs status --json`** row, and its `upstream` map
   when nonempty; omit `{}` because an empty map is invalid. Null `basis` or `upstream` means
   unknown: repair the cause and rerun status. **Never compute a basis by hand**, use
   `recorded` as today's basis, or update hashes without a reading.
@@ -345,8 +345,8 @@ share it between files, or keep any record other than a `.verify.yaml` file in a
 ## Gate and report
 
 ```bash
-driver-lab check <root> --context-root <dependency-root> --require-license --require-verified pr
-driver-lab check <root> --context-root <dependency-root> --require-license --require-verified main
+hwspecs check <root> --context-root <dependency-root> --require-license --require-verified pr
+hwspecs check <root> --context-root <dependency-root> --require-license --require-verified main
 ```
 
 Use `pr` for a proposed change: stale, upstream-stale, unverified, unknown, a current
@@ -364,7 +364,7 @@ The [example root](examples/widget/board-specs.yaml) describes a **synthetic** W
 not real hardware. Its [spec](examples/widget/widget.spec.yaml) cites a local
 [synthetic manual](examples/widget/resources/widget-trm.txt). Copy this record verbatim to
 `<example-root>/resources/widget.verify.yaml` in scratch and run
-`driver-lab check <example-root> --require-license --require-verified pr`. The reset count is marked
+`hwspecs check <example-root> --require-license --require-verified pr`. The reset count is marked
 critical only to demonstrate the `readers` field, not because real bring-up depends on it.
 The reset-budget inference combines two separately documented phases; no single section
 states their total. The crate's conformance and record test suite

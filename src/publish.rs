@@ -333,7 +333,7 @@ pub fn check(checker: &Checker, args: &PublishOptions) -> Result<(), String> {
     Ok(())
 }
 
-/// Executes `driver-lab publish build|check` (`skills/spec-format/ci/publish.py`, `RT-8`).
+/// Executes `hwspecs publish build|check` (`skills/spec-format/ci/publish.py`, `RT-8`).
 pub fn run_publish_cmd(
     cli: &crate::Cli,
     args: &crate::PublishArgs,

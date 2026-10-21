@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! Hardware specification code and fact evaluation harness (`driver-lab eval`).
+//! Hardware specification code and fact evaluation harness (`hwspecs eval`).
 //!
 //! Replaces `skills/spec-eval/scripts/speceval.py`, `grade_code.py`, and
 //! `rust_check.py`, and implements `ENV-5` candidate test binary containment
@@ -1731,7 +1731,7 @@ pub fn normalize_arm(arm: &str) -> Result<(&'static str, &'static str), EvalErro
     }
 }
 
-/// Build a 4-arm evaluation prompt (`driver-lab eval build-prompt`).
+/// Build a 4-arm evaluation prompt (`hwspecs eval build-prompt`).
 pub fn build_prompt_for_item(
     raw_item: &Value,
     arm: &str,
@@ -2050,12 +2050,12 @@ pub fn grade_facts_sweep(
 }
 
 // ============================================================================
-// 8. CLI Definitions & Dispatcher (`driver-lab eval ...`)
+// 8. CLI Definitions & Dispatcher (`hwspecs eval ...`)
 // ============================================================================
 
-/// Arguments for `driver-lab eval`.
+/// Arguments for `hwspecs eval`.
 #[derive(Debug, Parser)]
-#[command(name = "driver-lab eval", about = "Spec evaluation harness")]
+#[command(name = "hwspecs eval", about = "Spec evaluation harness")]
 pub struct EvalCommand {
     #[command(subcommand)]
     pub subcommand: EvalSubcommand,
@@ -2278,14 +2278,14 @@ fn default_jobs(requested: usize) -> usize {
     }
 }
 
-/// Entry point called by `driver_lab::run_from_args` for `driver-lab eval ...`.
+/// Entry point called by `hwspecs::run_from_args` for `hwspecs eval ...`.
 pub fn run_eval_cmd(
     cli: &crate::Cli,
     eval_args: &crate::EvalArgs,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
-    let argv: Vec<String> = std::iter::once("driver-lab eval".to_string())
+    let argv: Vec<String> = std::iter::once("hwspecs eval".to_string())
         .chain(eval_args.args.iter().cloned())
         .collect();
     let parsed = match EvalCommand::try_parse_from(argv) {
@@ -2312,14 +2312,14 @@ pub fn run_eval_cmd(
     )
 }
 
-/// Dispatch `driver-lab eval <subcommand>` to process stdout/stderr.
+/// Dispatch `hwspecs eval <subcommand>` to process stdout/stderr.
 pub fn run_cli(cmd: &EvalCommand, json_output: bool, scratch_root: Option<&Path>) -> i32 {
     let mut stdout = io::stdout();
     let mut stderr = io::stderr();
     run_cli_with_io(cmd, json_output, scratch_root, &mut stdout, &mut stderr)
 }
 
-/// Dispatch `driver-lab eval <subcommand>`, writing to `stdout` and `stderr` and
+/// Dispatch `hwspecs eval <subcommand>`, writing to `stdout` and `stderr` and
 /// returning the process exit code (`0`, `1`, `2`, or `3`).
 pub fn run_cli_with_io(
     cmd: &EvalCommand,

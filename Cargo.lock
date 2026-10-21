@@ -510,7 +510,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "driver-lab"
+name = "hwspecs"
 version = "0.1.0"
 dependencies = [
  "clap",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/root.schema.json",
+  "$id": "https://github.com/curtisgalloway/hardware-specs/spec-format/2/root.schema.json",
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The spec format root marker, board-specs.yaml (design: Roots, layers, overlays and the license gate; D1, D15).",
   "title": "Spec format: root marker (board-specs.yaml)",
   "type": "object",

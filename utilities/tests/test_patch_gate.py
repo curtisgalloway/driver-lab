@@ -520,7 +520,7 @@ open(idx, "wb").write(data + hashlib.sha1(data).digest())
     old_env = os.environ.copy()
     try:
       os.environ["PATH"] = fake_bin + os.pathsep + old_env.get("PATH", "")
-      os.environ["DRIVER_LAB_CARGO_VENDOR"] = vendor_dir
+      os.environ["HWSPECS_CARGO_VENDOR"] = vendor_dir
       out = io.StringIO()
       with contextlib.redirect_stdout(out):
         code = self.mod.main([self.patch, self.tree, "--refused", self.refused, "--reuse-venv",

@@ -7,19 +7,19 @@
 //! negative tests for `BF-USB-3`, `BF-USB-4`, `BF-IMX-8`, `BF-IMX-9`, `BF-IMX-10`, `BF-ARM-20`,
 //! and `BF-GW-22`.
 
-use driver_lab::diagnostic::{ExitCode, Level};
-use driver_lab::index::{
+use hwspecs::diagnostic::{ExitCode, Level};
+use hwspecs::index::{
     build, check_root_indexes, compute_index_links, dump, extract_section_number, from_html,
     from_markdown, from_pdf, links_for_root_dir, normalize_cited_section, run_index_command,
     scan_root_documents, section, title, validate_index_loaded, DocumentIndex,
     FactDocumentCitation, IndexSection,
 };
-use driver_lab::pdf::{
+use hwspecs::pdf::{
     decode_pdf_string, extract_page_labels, is_pdf_bytes, load_pdf_document, read_pdf_metadata,
     PdfError, DEFAULT_MAX_OUTLINE_DEPTH,
 };
-use driver_lab::sandbox::ScratchResolver;
-use driver_lab::yaml_strict;
+use hwspecs::sandbox::ScratchResolver;
+use hwspecs::yaml_strict;
 use lopdf::encryption::crypt_filters::{
     Aes128CryptFilter, Aes256CryptFilter, CryptFilter, Rc4CryptFilter,
 };
@@ -268,11 +268,11 @@ impl TestFixture {
         fs::write(&soc_path, text.replace(TRM_SNIPPET, &replacement)).unwrap();
     }
 
-    fn run_index(&self, name: &str) -> driver_lab::index::IndexCommandOutcome {
+    fn run_index(&self, name: &str) -> hwspecs::index::IndexCommandOutcome {
         run_index_command(name, &self.root, &self.docs, &self.scratch)
     }
 
-    fn check_indexes(&self) -> Vec<driver_lab::diagnostic::Finding> {
+    fn check_indexes(&self) -> Vec<hwspecs::diagnostic::Finding> {
         let (root_label, _, docs) = scan_root_documents(&self.root).expect("scan root");
         let (_, findings) = check_root_indexes(&self.root, &root_label, &docs);
         findings
@@ -1631,7 +1631,7 @@ fn test_pdf_page_labels_extraction_and_string_decoding() {
 }
 
 #[test]
-fn test_cli_driver_lab_index_subcommand() {
+fn test_cli_hwspecs_index_subcommand() {
     let fx = TestFixture::new();
     fx.install(
         &make_pdf(120, &default_outline()),
@@ -1642,9 +1642,9 @@ fn test_cli_driver_lab_index_subcommand() {
 
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let code = driver_lab::run_from_args(
+    let code = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "--json",
             "index",
             "widget-trm",
@@ -1667,9 +1667,9 @@ fn test_cli_driver_lab_index_subcommand() {
     let custom_out = fx.docs.join("custom.index.yaml");
     out.clear();
     err.clear();
-    let code2 = driver_lab::run_from_args(
+    let code2 = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "index",
             "widget-trm",
             "--root",

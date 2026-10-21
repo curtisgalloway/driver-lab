@@ -31,7 +31,7 @@ pub const EXIT_PRECONDITION: i32 = 3;
 /// Process exit code for unexpected internal tool errors.
 pub const EXIT_INTERNAL: i32 = 100;
 
-/// Exit code classification for `driver-lab` commands.
+/// Exit code classification for `hwspecs` commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum ExitCode {

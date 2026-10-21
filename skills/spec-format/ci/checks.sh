@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The checks CI runs (.github/workflows/checks.yml), runnable locally from the top of the
-# repository. specs/ is a spec format root; the contract is driver-lab's
-# skills/spec-format/SKILL.md and the tool is driver-lab.
+# repository. specs/ is a spec format root; the contract is hardware-specs's
+# skills/spec-format/SKILL.md and the tool is hwspecs.
 #
-#   scripts/checks.sh [--mode pr|main] <step> <driver-lab checkout> [<further root>...]
+#   scripts/checks.sh [--mode pr|main] <step> <hardware-specs checkout> [<further root>...]
 #
 # Steps:
 #   check      check specs (further roots as --context-root, --stubs-from when STUBS_DIR or
@@ -22,7 +22,7 @@
 #   render     render, Markdown view and viewer (--format md and html), each file's own
 #              view and, when further roots are given, the merged views; a view that cannot be
 #              built fails the step
-#   self-test  prove the license gate with this repository's root marker on driver-lab's
+#   self-test  prove the license gate with this repository's root marker on hardware-specs's
 #              spec format fixtures (below)
 #   all        the four in order
 #
@@ -44,16 +44,16 @@
 # license line that disagrees) fails the step. The limit bounds what is kept, not what is
 # transferred. Unset, resolve fetches nothing and says so.
 #
-# Needs bash 3.2 or later and driver-lab (set DRIVER_LAB_BIN, put driver-lab on PATH, or build
-# <driver-lab>/target/release/driver-lab with cargo build --release --locked):
-#   DRIVER_LAB_BIN=<driver-lab>/target/release/driver-lab scripts/checks.sh all <driver-lab>
+# Needs bash 3.2 or later and hwspecs (set HWSPECS_BIN, put hwspecs on PATH, or build
+# <hardware-specs>/target/release/hwspecs with cargo build --release --locked):
+#   HWSPECS_BIN=<hardware-specs>/target/release/hwspecs scripts/checks.sh all <hardware-specs>
 #
 # Exit codes: 0 passed, 1 a check failed, 2 usage error, 3 missing precondition.
 set -euo pipefail
 
 # Copy to scripts/checks.sh; configure this block using ci/README.md.
 REPO=hardware-specs-docs
-# This repository's self-test fixtures, from driver-lab's
+# This repository's self-test fixtures, from hardware-specs's
 # skills/spec-format/tests/fixtures/license-gate/ (its README lists the matrix). Specs for the
 # gate, each alone in a root under this repository's marker:
 FIT=docs-named.spec.yaml
@@ -73,7 +73,7 @@ SRC_FIT=0
 
 usage() {
   echo "usage: scripts/checks.sh [--mode pr|main] check|resolve|render|self-test|all" \
-    "<driver-lab checkout> [<further root>...]" >&2
+    "<hardware-specs checkout> [<further root>...]" >&2
   exit 2
 }
 
@@ -111,18 +111,18 @@ if [ -n "$BOARD_FIT" ]; then
   needed+=("$FIXTURES/board/$BOARD_FIT")
 fi
 
-if [ -n "${DRIVER_LAB_BIN:-}" ]; then
-  if [ ! -x "$DRIVER_LAB_BIN" ]; then
-    echo "missing precondition: $DRIVER_LAB_BIN is not an executable file" >&2
+if [ -n "${HWSPECS_BIN:-}" ]; then
+  if [ ! -x "$HWSPECS_BIN" ]; then
+    echo "missing precondition: $HWSPECS_BIN is not an executable file" >&2
     exit 3
   fi
-  DL_BIN="$DRIVER_LAB_BIN"
-elif [ -x "$dl/target/release/driver-lab" ]; then
-  DL_BIN="$dl/target/release/driver-lab"
-elif command -v driver-lab >/dev/null 2>&1; then
-  DL_BIN="$(command -v driver-lab)"
+  DL_BIN="$HWSPECS_BIN"
+elif [ -x "$dl/target/release/hwspecs" ]; then
+  DL_BIN="$dl/target/release/hwspecs"
+elif command -v hwspecs >/dev/null 2>&1; then
+  DL_BIN="$(command -v hwspecs)"
 else
-  echo "missing precondition: driver-lab binary not found (set DRIVER_LAB_BIN, add driver-lab to PATH, or build $dl/target/release/driver-lab)" >&2
+  echo "missing precondition: hwspecs binary not found (set HWSPECS_BIN, add hwspecs to PATH, or build $dl/target/release/hwspecs)" >&2
   exit 3
 fi
 SPEC_CMD=("$DL_BIN")
@@ -138,7 +138,7 @@ fi
 
 for f in "${needed[@]}"; do
   if [ ! -f "$f" ]; then
-    echo "missing precondition: $f (is $dl a driver-lab checkout at the pinned commit?)" >&2
+    echo "missing precondition: $f (is $dl a hardware-specs checkout at the pinned commit?)" >&2
     exit 3
   fi
 done
@@ -162,7 +162,7 @@ for r in ${further[@]+"${further[@]}"}; do
   ctx+=(--context-root "$r")
 done
 
-# Runs driver-lab and keeps the exit-code contract: 0, 1 and 3 pass through;
+# Runs hwspecs and keeps the exit-code contract: 0, 1 and 3 pass through;
 # anything else (2, a usage error in this script's call, or 100, an internal error) is a failed check.
 spec() {
   local rc=0
@@ -170,7 +170,7 @@ spec() {
   case "$rc" in
     0 | 1 | 3) return "$rc" ;;
     *)
-      echo "error: driver-lab $1 exited $rc (usage or internal error; nothing was judged)"
+      echo "error: hwspecs $1 exited $rc (usage or internal error; nothing was judged)"
       return 1
       ;;
   esac
@@ -199,7 +199,7 @@ check_specs() {
   if [ -n "$stubs_dir" ]; then
     stub_args=(--stubs-from "$stubs_dir")
   fi
-  echo "== driver-lab check specs ${ctx[*]+${ctx[*]} }${stub_args[*]+${stub_args[*]} }--require-license --require-verified $mode"
+  echo "== hwspecs check specs ${ctx[*]+${ctx[*]} }${stub_args[*]+${stub_args[*]} }--require-license --require-verified $mode"
   spec check specs ${ctx[@]+"${ctx[@]}"} ${stub_args[@]+"${stub_args[@]}"} \
     --require-license --require-verified "$mode" || return
   if [ -n "$domains_manifest" ]; then
@@ -207,7 +207,7 @@ check_specs() {
     stubgen "$domains_manifest" --out "${stubs_dir:-skills}" --check || return
   fi
   if [ "${REQUIRE_CORPUS:-0}" = 1 ]; then
-    echo "== driver-lab corpus specs ${ctx[*]+${ctx[*]} }--require-license"
+    echo "== hwspecs corpus specs ${ctx[*]+${ctx[*]} }--require-license"
     spec corpus specs ${ctx[@]+"${ctx[@]}"} --require-license
   fi
 }
@@ -274,7 +274,7 @@ check_resolve() {
       fi
     done <<< "$pins_out"
   fi
-  echo "== driver-lab resolve ${files[*]} ${repo_args[*]+${repo_args[*]} }--root specs --limit-mb ${SRC_FETCH_LIMIT_MB:-50}"
+  echo "== hwspecs resolve ${files[*]} ${repo_args[*]+${repo_args[*]} }--root specs --limit-mb ${SRC_FETCH_LIMIT_MB:-50}"
   spec resolve "${files[@]}" ${repo_args[@]+"${repo_args[@]}"} --root specs --limit-mb "${SRC_FETCH_LIMIT_MB:-50}"
 }
 
@@ -286,7 +286,7 @@ check_render() {
       continue
     fi
     for format in md html; do
-      echo "== driver-lab render specs ${ctx[*]+${ctx[*]} }--require-license --with-status" \
+      echo "== hwspecs render specs ${ctx[*]+${ctx[*]} }--require-license --with-status" \
         "${merged:+$merged }--format $format"
       if spec render specs ${ctx[@]+"${ctx[@]}"} --require-license --with-status \
           ${merged:+"$merged"} --format "$format" > "$out/view.$format"; then

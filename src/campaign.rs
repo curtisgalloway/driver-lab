@@ -1174,16 +1174,22 @@ pub mod deployment {
         "gap",
     ];
 
+    /// `hwspecs/config.toml` under the config directory, or the pre-rename
+    /// `driver-lab/config.toml` when only that one exists.
     pub fn default_config_path() -> PathBuf {
-        if let Ok(xdg) = std::env::var("XDG_CONFIG_HOME") {
-            if !xdg.is_empty() {
-                return PathBuf::from(xdg).join("driver-lab/config.toml");
-            }
+        let base = match std::env::var("XDG_CONFIG_HOME") {
+            Ok(xdg) if !xdg.is_empty() => PathBuf::from(xdg),
+            _ => match std::env::var("HOME") {
+                Ok(home) => PathBuf::from(home).join(".config"),
+                Err(_) => PathBuf::from(".config"),
+            },
+        };
+        let current = base.join("hwspecs/config.toml");
+        let legacy = base.join("driver-lab/config.toml");
+        if !current.exists() && legacy.exists() {
+            return legacy;
         }
-        if let Ok(home) = std::env::var("HOME") {
-            return PathBuf::from(home).join(".config/driver-lab/config.toml");
-        }
-        PathBuf::from(".config/driver-lab/config.toml")
+        current
     }
 
     pub fn expand_user_path(raw: &str) -> PathBuf {
@@ -1431,7 +1437,7 @@ pub fn run_campaign_cmd(
     stdout: &mut dyn std::io::Write,
     stderr: &mut dyn std::io::Write,
 ) -> i32 {
-    let mut parse_args = vec!["driver-lab campaign".to_string()];
+    let mut parse_args = vec!["hwspecs campaign".to_string()];
     parse_args.extend(args.args.iter().cloned());
     let sub = match crate::campaign::campaign_cli::CampaignSubcommands::try_parse_from(parse_args) {
         Ok(s) => s,

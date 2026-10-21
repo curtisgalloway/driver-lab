@@ -2,18 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [package]
-name = "driver-lab"
+name = "hwspecs"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 publish = false
 
 [lib]
-name = "driver_lab"
+name = "hwspecs"
 path = "src/lib.rs"
 
 [[bin]]
-name = "driver-lab"
+name = "hwspecs"
 path = "src/main.rs"
 
 [dependencies]
@@ -33,7 +33,7 @@ toml = "0.8"
 unicode-normalization = "0.1"
 ureq = { version = "2.12", default-features = false, features = ["tls"] }
 
-[profile.dev.package.driver-lab]
+[profile.dev.package.hwspecs]
 opt-level = 2
 
 [profile.dev.package.saphyr-parser]

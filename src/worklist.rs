@@ -418,7 +418,7 @@ fn rel_to_root_given(root_given: &Path, path: &Path) -> String {
         .unwrap_or_else(|_| path.to_string_lossy().into_owned())
 }
 
-/// Executes `driver-lab todo` (`spec.py:cmd_todo`).
+/// Executes `hwspecs todo` (`spec.py:cmd_todo`).
 pub fn run_todo_cmd(
     cli: &Cli,
     args: &TodoArgs,
@@ -573,7 +573,7 @@ pub fn run_todo_cmd(
     exit_code
 }
 
-/// Executes `driver-lab status` (`spec.py:cmd_status`, `BF-ARM-21` `--no-fail-on-pending`).
+/// Executes `hwspecs status` (`spec.py:cmd_status`, `BF-ARM-21` `--no-fail-on-pending`).
 pub fn run_status_cmd(
     cli: &Cli,
     args: &StatusArgs,

@@ -78,7 +78,7 @@ A bug needs document-class `settled_by` or `self_evident: true` with `reason`, n
 reference's difference alone. Benign needs a justification; suspect needs a hardware probe.
 Separate `requirement` (why behavior is needed) from assessment. Attribute comments and
 separate source observation from hardware inference. Findings remain stable ids when fixed;
-record full fixing commit, then inspect/rewrite the impl pin through `driver-lab drift`.
+record full fixing commit, then inspect/rewrite the impl pin through `hwspecs drift`.
 
 Use tight inclusive lines with symbols or scoped search anchors, all `class: src` regardless
 of repo role. List every search scope in that repo entry's `files`, including `dir/` scopes.
@@ -86,13 +86,13 @@ Documents are named resources with matching support class and string locators,
 canonical citation versus retrieval URL, revision, hashes/page counts. Public roots exclude
 confidential and NDA material; applicable public proxies state their limits.
 
-Self-check with `driver-lab --version` and then run:
+Self-check with `hwspecs --version` and then run:
 
 ```bash
-driver-lab check <root> --require-license
-driver-lab resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
-driver-lab inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
+hwspecs check <root> --require-license
+hwspecs resolve <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs show <review> --root <root> --repo impl=<impl-checkout> --repo ref=<ref-checkout>
+hwspecs inventory <register-spec> --root <register-root> --repo linux=<ref-checkout> --pin linux --headers <header> --strict
 ```
 
 `<review>` is the assembled file; tests substitute SF2-7's review fixture. Inspect skipped

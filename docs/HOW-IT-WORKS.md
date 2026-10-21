@@ -3,11 +3,11 @@ SPDX-FileCopyrightText: 2026 contributors
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# How driver-lab works
+# How hardware-specs works
 
 ## What it is for
 
-A device driver is the software an operating system uses to control a piece of hardware. Writing one well takes knowledge scattered across datasheets, existing drivers and device trees (the files that tell an operating system where each device sits on a board). driver-lab is a set of AI agent skills that gathers that knowledge into a **spec**: a structured description of a device or board that a programmer or agent can write a driver from.
+A device driver is the software an operating system uses to control a piece of hardware. Writing one well takes knowledge scattered across datasheets, existing drivers and device trees (the files that tell an operating system where each device sits on a board). hwspecs is a set of AI agent skills that gathers that knowledge into a **spec**: a structured description of a device or board that a programmer or agent can write a driver from.
 
 A spec is made of **facts**. A fact is one statement about the hardware ("this register resets to zero", "wait one millisecond after reset"), together with the exact source it came from.
 

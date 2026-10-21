@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/curtisgalloway/driver-lab/spec-format/2/corpus.schema.json",
+  "$id": "https://github.com/curtisgalloway/hardware-specs/spec-format/2/corpus.schema.json",
   "$comment": "SPDX-FileCopyrightText: 2026 contributors. SPDX-License-Identifier: Apache-2.0. The corpus ledger, corpus.yaml beside a root's board-specs.yaml (#153): every document and hardware block found in discovery, each with a recorded disposition.",
   "title": "Spec format: corpus ledger (corpus.yaml)",
   "type": "object",

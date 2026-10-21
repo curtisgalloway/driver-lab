@@ -527,7 +527,7 @@ fn test_user_config_and_explicit_override_preserve_run_store() {
         settings = deployment.module_at(
             "settings_test", ROOT / "utilities/run-store.py"
         )
-        cfg = self.root / "driver-lab"
+        cfg = self.root / "hwspecs"
         cfg.mkdir()
         self.document["plugins"][3]["model"]["name"] = uuid.uuid4().hex
         (cfg / "selected.yaml").write_text(check.yaml.safe_dump(self.document))
@@ -539,7 +539,7 @@ fn test_user_config_and_explicit_override_preserve_run_store() {
             deployment.load(deployment.REFERENCE),
             deployment.validate(check.read_yaml(deployment.REFERENCE)),
         )
-        with mock.patch.dict(os.environ, {"DRIVER_LAB_RUNS": ""}):
+        with mock.patch.dict(os.environ, {"HWSPECS_RUNS": ""}):
             self.assertEqual(settings.run_store()[0], Path("runs"))
         (cfg / "config.toml").write_text('deployment = "absent.yaml"\n')
         with self.assertRaises(OSError):
@@ -682,7 +682,7 @@ fn test_cli_routes_models_from_config_without_code_changes() {
             if plugin["kind"] == "role":
                 plugin["model"]["name"] = uuid.uuid4().hex
         manifest = self.save()
-        cfg = self.root / "driver-lab"
+        cfg = self.root / "hwspecs"
         cfg.mkdir()
         (cfg / "config.toml").write_text(
             "deployment = " + json.dumps(str(manifest)) + "\n"
@@ -2759,7 +2759,7 @@ fn test_cli_json_skill_and_errors() {
         with tempfile.TemporaryDirectory() as temp:
             # No user config or run store: the reference manifest applies.
             env = dict(os.environ, XDG_CONFIG_HOME=temp)
-            env.pop("DRIVER_LAB_RUNS", None)
+            env.pop("HWSPECS_RUNS", None)
             campaign = Path(temp) / "campaign"
             campaign.mkdir()
             shutil.copy(ROOT / "evals/e1000/claims.yaml", campaign / "claims.yaml")
@@ -2981,7 +2981,7 @@ fn test_duplicate_keys_and_unknown_id() {
 
 #[test]
 fn test_cli_help() {
-    let output = Command::new(env!("CARGO_BIN_EXE_driver-lab"))
+    let output = Command::new(env!("CARGO_BIN_EXE_hwspecs"))
         .args(["campaign", "--help"])
         .output()
         .expect("Failed to execute");
@@ -2990,7 +2990,7 @@ fn test_cli_help() {
 
 #[test]
 fn test_index_check_e1000() {
-    let output = Command::new(env!("CARGO_BIN_EXE_driver-lab"))
+    let output = Command::new(env!("CARGO_BIN_EXE_hwspecs"))
         .args(["campaign", "index-check", "evals/e1000"])
         .output()
         .expect("Failed to execute");

@@ -12,10 +12,10 @@
 //! - `diagnostic` & CLI: `--version` (`ENV-3`, `ENV-6`), global flag placement before and after
 //!   subcommands (`BF-IMX-18`), and exit codes `0`/`1`/`2`/`3`.
 
-use driver_lab::diagnostic::{ExitCode, Finding, Level};
-use driver_lab::sandbox::{run_bounded, AtomicFileWriter, PipeLimits, ScratchResolver};
-use driver_lab::spdx::{self, AttributionEvidence, AttributionStatus, SpdxExpr};
-use driver_lab::yaml_strict::{self, Mark, PathSegment};
+use hwspecs::diagnostic::{ExitCode, Finding, Level};
+use hwspecs::sandbox::{run_bounded, AtomicFileWriter, PipeLimits, ScratchResolver};
+use hwspecs::spdx::{self, AttributionEvidence, AttributionStatus, SpdxExpr};
+use hwspecs::yaml_strict::{self, Mark, PathSegment};
 use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -824,9 +824,9 @@ fn test_license_gate_all_cases_and_bf_imx_iss_5() {
     // 1. Root alone prints accepts list and exits 0
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let rc = driver_lab::run_from_args(
+    let rc = hwspecs::run_from_args(
         [
-            "driver-lab",
+            "hwspecs",
             "license-gate",
             "--root",
             permissive.to_str().unwrap(),
@@ -983,8 +983,8 @@ fn test_sandbox_lazy_scratch_resolver_env_1_env_2() {
 
     // Fails with exit 3 when neither --scratch-dir nor TMPDIR is writable.
     let unwritable = ScratchResolver::with_tmpdir(
-        Some(PathBuf::from("/proc/nonexistent-driver-lab-scratch")),
-        Some(PathBuf::from("/proc/nonexistent-driver-lab-tmpdir")),
+        Some(PathBuf::from("/proc/nonexistent-hwspecs-scratch")),
+        Some(PathBuf::from("/proc/nonexistent-hwspecs-tmpdir")),
     );
     let err = unwritable.ensure_dir().unwrap_err();
     assert_eq!(err.exit_code(), ExitCode::SandboxError);
@@ -1041,18 +1041,18 @@ fn test_cli_version_and_global_flags_in_any_position_bf_imx_18() {
     // 1. Top-level `--version`
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let rc = driver_lab::run_from_args(["driver-lab", "--version"], &mut out, &mut err);
+    let rc = hwspecs::run_from_args(["hwspecs", "--version"], &mut out, &mut err);
     assert_eq!(rc, 0);
     let ver = String::from_utf8(out).unwrap();
     assert!(
-        ver.starts_with("driver-lab 0.1.0 (") && ver.trim_end().ends_with(')'),
+        ver.starts_with("hwspecs 0.1.0 (") && ver.trim_end().ends_with(')'),
         "unexpected version output: {ver:?}"
     );
 
     // 2. `--version` after a subcommand name (`BF-IMX-18`)
     let mut out = Vec::new();
     let mut err = Vec::new();
-    let rc = driver_lab::run_from_args(["driver-lab", "validate", "--version"], &mut out, &mut err);
+    let rc = hwspecs::run_from_args(["hwspecs", "validate", "--version"], &mut out, &mut err);
     assert_eq!(rc, 0);
     assert_eq!(String::from_utf8(out).unwrap(), ver);
 
@@ -1063,7 +1063,7 @@ fn test_cli_version_and_global_flags_in_any_position_bf_imx_18() {
 
     for args in [
         vec![
-            "driver-lab",
+            "hwspecs",
             "--json",
             "--offline",
             "--scratch-dir",
@@ -1074,7 +1074,7 @@ fn test_cli_version_and_global_flags_in_any_position_bf_imx_18() {
             "MIT",
         ],
         vec![
-            "driver-lab",
+            "hwspecs",
             "license-gate",
             "--root",
             permissive.to_str().unwrap(),
@@ -1087,7 +1087,7 @@ fn test_cli_version_and_global_flags_in_any_position_bf_imx_18() {
     ] {
         let mut out = Vec::new();
         let mut err = Vec::new();
-        let rc = driver_lab::run_from_args(&args, &mut out, &mut err);
+        let rc = hwspecs::run_from_args(&args, &mut out, &mut err);
         assert_eq!(
             rc,
             0,

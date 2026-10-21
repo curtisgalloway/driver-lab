@@ -41,7 +41,7 @@ the interview checklist. Author and read specs as YAML.
 | Corpus ledger, `corpus.yaml` beside the marker | [corpus.yaml](templates/corpus.yaml) |
 | Documents-only root marker (`accepts: []`) | [docs-root/board-specs.yaml](templates/docs-root/board-specs.yaml) |
 | `<board>-expert/SKILL.md` | [stub-SKILL.md](templates/stub-SKILL.md) |
-| Domain expert stubs, one per domain (`<board>-usb-expert/SKILL.md`, ...) | [domains.yaml](templates/domains.yaml) manifest, then `driver-lab stubgen` renders [domain-stub-SKILL.md](templates/domain-stub-SKILL.md) |
+| Domain expert stubs, one per domain (`<board>-usb-expert/SKILL.md`, ...) | [domains.yaml](templates/domains.yaml) manifest, then `hwspecs stubgen` renders [domain-stub-SKILL.md](templates/domain-stub-SKILL.md) |
 | `<vendor>-board-tools/SKILL.md` | [vendor-board-tools-SKILL.md](templates/vendor-board-tools-SKILL.md) |
 | `<root>/resources/<name>.verify.yaml`, one per spec file, overlays included | spec-verifier writes it |
 | New spec repository: `scripts/checks.sh`, `.github/workflows/checks.yml` | [Check templates and setup](../spec-format/ci/README.md#repository-checks) |
@@ -58,9 +58,9 @@ When creating a spec repository, install and configure the [repository checks](.
 
 ## Steps
 
-0. **Preflight.** Run `driver-lab --version` first. If `driver-lab` is missing or reports an
-   `unknown` or mismatched `DRIVER_LAB_TOOL_COMMIT`, stop and report the missing precondition with
-   installation instructions (`DRIVER_LAB_TOOL_COMMIT=$(git rev-parse HEAD) cargo install --locked --path <driver-lab>`)
+0. **Preflight.** Run `hwspecs --version` first. If `hwspecs` is missing or reports an
+   `unknown` or mismatched `HWSPECS_TOOL_COMMIT`, stop and report the missing precondition with
+   installation instructions (`HWSPECS_TOOL_COMMIT=$(git rev-parse HEAD) cargo install --locked --path <hardware-specs>`)
    rather than compiling or installing inside a subagent.
 1. **Interview** only for missing choices, in one structured batch following
    [QUESTIONS.md](../board-expert/QUESTIONS.md): identity/kinds, variants, trigger keywords,
@@ -105,7 +105,7 @@ When creating a spec repository, install and configure the [repository checks](.
    For several domain experts on one SoC, write a `domains.yaml` manifest (name, description
    with the delegation triggers, entry spec ids, instance rows, skills to preload, a `split:`
    from the other experts, an optional output profile) and run
-   `driver-lab stubgen domains.yaml --out <skills dir>`; rerun it after editing the
+   `hwspecs stubgen domains.yaml --out <skills dir>`; rerun it after editing the
    manifest, and run it with `--check` in CI so hand edits are caught. In both modes it reports,
    and exits 1 for, an orphan (a stub with this board's `<!-- stubgen: <board> -->` marker that
    the manifest no longer lists) and never deletes it. No addresses, instance
@@ -114,22 +114,22 @@ When creating a spec repository, install and configure the [repository checks](.
    and plugin metadata rather than assuming an obsolete registration script exists. Spec
    files need no separate registry: they are discovered under the chosen roots. Follow the
    target tree's review process; do not change installed agent configuration unasked.
-7. **Check** with `driver-lab`:
-   `driver-lab validate <file>... --root <root>` for shape, then
-   `driver-lab check <new root>... --context-root <dependency root>... --require-license
-   --stubs-from <skills dir>`, and `driver-lab corpus <new root>... --context-root <dependency
+7. **Check** with `hwspecs`:
+   `hwspecs validate <file>... --root <root>` for shape, then
+   `hwspecs check <new root>... --context-root <dependency root>... --require-license
+   --stubs-from <skills dir>`, and `hwspecs corpus <new root>... --context-root <dependency
    root>...` for the ledger's coverage. Include every dependency, and check any other changed roots
-   as checked roots. Run `driver-lab resolve <file>... --root <root> --repo NAME=CHECKOUT
+   as checked roots. Run `hwspecs resolve <file>... --root <root> --repo NAME=CHECKOUT
    --docs-dir <documents dir>` when bytes are available. Confirm anchors ran, not merely
    exit 0; skips and unrepeatable searches remain limits. Render every relevant id using
-   `driver-lab render <root>... --context-root <dependency root>... --spec <id> --merged
+   `hwspecs render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md` and inspect it, then the same with `--format html` (the viewer,
    which repeats the containment checks); both are on main.
 8. **Verify** by following [spec-verifier's procedure](../spec-verifier/SKILL.md).
    If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.
 9. **Report** files produced, ledger coverage (specified, planned, excluded), resolved
-   composition, record status from `driver-lab status`, gaps and review needs. If new stubs require an installation sync, remind the user to run it;
+   composition, record status from `hwspecs status`, gaps and review needs. If new stubs require an installation sync, remind the user to run it;
    do not reconfigure the harness. Follow the repo's commit/push rules.
 
 ## Filling guidance

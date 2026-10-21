@@ -26,19 +26,19 @@ jobs:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          repository: curtisgalloway/driver-lab
+          repository: curtisgalloway/hardware-specs
           ref: ${{ env.TOOL_COMMIT }}
           path: tooling
           persist-credentials: false
-      - name: Build pinned driver-lab renderer
+      - name: Build pinned hwspecs renderer
         working-directory: tooling
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
+          HWSPECS_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
-          if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
+          if [ -z "${HWSPECS_BIN:-}" ] && ! command -v hwspecs >/dev/null 2>&1; then
             cargo build --release --locked
-            target/release/driver-lab --version | grep -F "$TOOL_COMMIT"
-            echo "DRIVER_LAB_BIN=$PWD/target/release/driver-lab" >> "$GITHUB_ENV"
+            target/release/hwspecs --version | grep -F "$TOOL_COMMIT"
+            echo "HWSPECS_BIN=$PWD/target/release/hwspecs" >> "$GITHUB_ENV"
           fi
       - name: Build both views and repeat containment checks
         env:
@@ -46,7 +46,7 @@ jobs:
           VERIFY_POLICY: ${{ github.event_name == 'pull_request' && 'pr' || 'main' }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          dl_bin="${DRIVER_LAB_BIN:-driver-lab}"
+          dl_bin="${HWSPECS_BIN:-hwspecs}"
           "$dl_bin" publish build repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY" --fetch-anchors
           "$dl_bin" publish check repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified "$VERIFY_POLICY"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -78,19 +78,19 @@ jobs:
       # actions/checkout v7.0.1, pinned by SHA.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          repository: curtisgalloway/driver-lab
+          repository: curtisgalloway/hardware-specs
           ref: ${{ env.TOOL_COMMIT }}
           path: tooling
           persist-credentials: false
-      - name: Build pinned driver-lab renderer
+      - name: Build pinned hwspecs renderer
         working-directory: tooling
         env:
-          DRIVER_LAB_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
+          HWSPECS_TOOL_COMMIT: ${{ env.TOOL_COMMIT }}
         run: |
-          if [ -z "${DRIVER_LAB_BIN:-}" ] && ! command -v driver-lab >/dev/null 2>&1; then
+          if [ -z "${HWSPECS_BIN:-}" ] && ! command -v hwspecs >/dev/null 2>&1; then
             cargo build --release --locked
-            target/release/driver-lab --version | grep -F "$TOOL_COMMIT"
-            echo "DRIVER_LAB_BIN=$PWD/target/release/driver-lab" >> "$GITHUB_ENV"
+            target/release/hwspecs --version | grep -F "$TOOL_COMMIT"
+            echo "HWSPECS_BIN=$PWD/target/release/hwspecs" >> "$GITHUB_ENV"
           fi
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -100,7 +100,7 @@ jobs:
         env:
           SOURCE_COMMIT: ${{ github.sha }}
         run: |
-          dl_bin="${DRIVER_LAB_BIN:-driver-lab}"
+          dl_bin="${HWSPECS_BIN:-hwspecs}"
           "$dl_bin" publish check repo/specs --out site --source-commit "repo/specs=$SOURCE_COMMIT" --tool-commit "$TOOL_COMMIT" --require-verified main
       # Prepare the Pages tar locally: upload-pages-artifact nests a mutable
       # upload-artifact@v4 even when the composite itself is pinned by SHA.

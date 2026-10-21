@@ -11,8 +11,8 @@ the script exits 2 at once; the permission rule allows only the -I form.
 
 BASE     A full 40-hex commit of this repository (the one holding this script).
 RUN_DIR  An existing directory directly inside the run store named by `run_store` in
-         <home>/.config/driver-lab/config.toml. The home directory comes from the password
-         database; HOME, XDG_CONFIG_HOME and DRIVER_LAB_RUNS are ignored. `run_store` must be an
+         <home>/.config/hwspecs/config.toml. The home directory comes from the password
+         database; HOME, XDG_CONFIG_HOME and HWSPECS_RUNS are ignored. `run_store` must be an
          absolute path (no `~`, not relative).
 BRIEF    A file directly inside RUN_DIR; Codex is told to read it and carry it out.
 
@@ -30,7 +30,7 @@ the tree Codex wrote, and no tree Codex wrote outlives the script:
      environment: no inherited GIT_* variables, no global or system git config, hooks disabled,
      replace objects ignored) and checks the export against `git ls-tree` blob by blob.
   2. The export goes into a fresh 0700 directory made with mkdtemp under the fixed parent
-     <home>/.cache/driver-lab-codex/ (created 0700; refused if it is a symlink, not owned by the
+     <home>/.cache/hwspecs-codex/ (created 0700; refused if it is a symlink, not owned by the
      user, or open to group or others). TMPDIR, TEMP and TMP of the caller are never consulted.
      The export has no `.git`. Codex gets it as its working directory, plus a sibling scratch
      TMPDIR; the sandbox may write only those two (`writable_roots=[]`, /tmp excluded). The run
@@ -124,7 +124,7 @@ AGENT_FILES = frozenset(n.lower() for n in (
     "AGENTS.md", "AGENTS.override.md", "CLAUDE.md", "CLAUDE.local.md", "GEMINI.md"))
 REPO = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 PROMPT = (
-    "You are working in {work}, an export of commit {base} of the driver-lab repository. It is "
+    "You are working in {work}, an export of commit {base} of the hardware-specs repository. It is "
     "not a git checkout: there is no .git directory and you cannot commit. Read {brief} and carry "
     "it out completely in this tree. When you finish, your changes are turned into a patch that "
     "keeps only regular text files with ordinary names: do not create or edit dotfiles or "
@@ -153,7 +153,7 @@ def stamp():
 
 
 def scratch_parent():
-  return os.path.join(home(), ".cache", "driver-lab-codex")
+  return os.path.join(home(), ".cache", "hwspecs-codex")
 
 
 def under(path, root):
@@ -173,7 +173,7 @@ def clean_path(arg, what):
 
 
 def read_config():
-  cfg = os.path.join(home(), ".config", "driver-lab", "config.toml")
+  cfg = os.path.join(home(), ".config", "hwspecs", "config.toml")
   try:
     with open(cfg, "rb") as stream:
       return cfg, tomllib.load(stream)
@@ -246,24 +246,24 @@ def infer_rustup_toolchain(rust_toolchain_bin):
 
 
 def verify_tool_commit(binary, expected_commit):
-  """Verify `driver-lab --version` reports expected_commit (and never 'unknown'); exit 3 on mismatch."""
+  """Verify `hwspecs --version` reports expected_commit (and never 'unknown'); exit 3 on mismatch."""
   try:
     proc = subprocess.run([binary, "--version"], stdin=subprocess.DEVNULL, capture_output=True,
                           text=True, env={"PATH": SYSTEM_PATH, "HOME": home(), "LANG": "C.UTF-8"},
                           check=False)
   except OSError as exc:
-    fail(f"cannot run driver_lab_binary {binary}: {exc}", 3)
+    fail(f"cannot run hwspecs_binary {binary}: {exc}", 3)
   if proc.returncode != 0:
-    fail(f"driver_lab_binary {binary} --version failed (exit {proc.returncode})", 3)
+    fail(f"hwspecs_binary {binary} --version failed (exit {proc.returncode})", 3)
   out = proc.stdout.strip()
   match = re.search(r"\(([0-9a-f]{40}|unknown)\)", out)
   actual = match.group(1) if match else out
   if actual == "unknown" or actual != expected_commit:
-    fail(f"driver_lab_binary {binary} commit mismatch: expected {expected_commit}, got {out!r}", 3)
+    fail(f"hwspecs_binary {binary} commit mismatch: expected {expected_commit}, got {out!r}", 3)
 
 
 def rust_config(cfg, data, base=None):
-  """Validate optional Rust/Cargo/driver-lab keys from config.toml."""
+  """Validate optional Rust/Cargo/hwspecs keys from config.toml."""
   rust_bin = None
   if "rust_toolchain_bin" in data and data["rust_toolchain_bin"] is not None:
     rust_bin = trusted_path(cfg, "rust_toolchain_bin", data["rust_toolchain_bin"], is_dir=True)
@@ -273,9 +273,9 @@ def rust_config(cfg, data, base=None):
     repo_real = os.path.realpath(REPO)
     if under(vendor_dir, repo_real):
       fail(f"cargo_vendor_dir {vendor_dir} must be outside the repository {repo_real}", 3)
-  driver_lab = None
-  if "driver_lab_binary" in data and data["driver_lab_binary"] is not None:
-    driver_lab = trusted_path(cfg, "driver_lab_binary", data["driver_lab_binary"], is_dir=False)
+  hwspecs = None
+  if "hwspecs_binary" in data and data["hwspecs_binary"] is not None:
+    hwspecs = trusted_path(cfg, "hwspecs_binary", data["hwspecs_binary"], is_dir=False)
   rustup_toolchain = None
   if "rustup_toolchain" in data and data["rustup_toolchain"] is not None:
     tc_name = data["rustup_toolchain"]
@@ -289,15 +289,15 @@ def rust_config(cfg, data, base=None):
     tc = data["tool_commit"]
     if not isinstance(tc, str) or not (tc == "BASE" or COMMIT.fullmatch(tc)):
       fail(f"tool_commit in {cfg} must be a full 40-hex commit (or 'BASE'): {tc!r}", 3)
-    if driver_lab is None:
-      fail(f"tool_commit in {cfg} requires driver_lab_binary to be set", 3)
+    if hwspecs is None:
+      fail(f"tool_commit in {cfg} requires hwspecs_binary to be set", 3)
     tool_commit = base if (tc == "BASE" and base) else tc
     if COMMIT.fullmatch(tool_commit):
-      verify_tool_commit(driver_lab, tool_commit)
+      verify_tool_commit(hwspecs, tool_commit)
   return {
       "rust_toolchain_bin": rust_bin,
       "cargo_vendor_dir": vendor_dir,
-      "driver_lab_binary": driver_lab,
+      "hwspecs_binary": hwspecs,
       "rustup_toolchain": rustup_toolchain,
       "tool_commit": tool_commit,
   }
@@ -721,7 +721,7 @@ def child_env(codex, tmp, rust=None, has_cargo_toml=False):
   rust = rust or {}
   rust_bin = rust.get("rust_toolchain_bin")
   vendor_dir = rust.get("cargo_vendor_dir")
-  driver_lab = rust.get("driver_lab_binary")
+  hwspecs = rust.get("hwspecs_binary")
   rustup_toolchain = rust.get("rustup_toolchain")
   if not rustup_toolchain and rust_bin:
     rustup_toolchain = infer_rustup_toolchain(rust_bin)
@@ -729,8 +729,8 @@ def child_env(codex, tmp, rust=None, has_cargo_toml=False):
   if rust_bin:
     path_parts.append(rust_bin)
   path_parts.extend([SYSTEM_PATH, os.path.dirname(codex)])
-  if driver_lab:
-    dl_dir = os.path.dirname(driver_lab)
+  if hwspecs:
+    dl_dir = os.path.dirname(hwspecs)
     if dl_dir not in path_parts:
       path_parts.append(dl_dir)
   env = {

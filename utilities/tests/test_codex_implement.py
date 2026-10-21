@@ -107,7 +107,7 @@ class CodexImplementTest(unittest.TestCase):
       patcher = mock.patch.object(self.mod, name, return_value=value)
       patcher.start()
       self.addCleanup(patcher.stop)
-    self.parent = os.path.join(self.home, ".cache", "driver-lab-codex")
+    self.parent = os.path.join(self.home, ".cache", "hwspecs-codex")
 
   @staticmethod
   def force_remove(path):
@@ -126,7 +126,7 @@ class CodexImplementTest(unittest.TestCase):
       os.chmod(path, mode)
 
   def config(self, text):
-    self.write(os.path.join(self.home, ".config", "driver-lab", "config.toml"), text)
+    self.write(os.path.join(self.home, ".config", "hwspecs", "config.toml"), text)
 
   def git(self, *args, cwd=None):
     env = {"PATH": os.environ["PATH"], "HOME": self.home, "GIT_CONFIG_NOSYSTEM": "1",
@@ -227,7 +227,7 @@ class CodexImplementTest(unittest.TestCase):
           self.assert_code(2, self.base, self.run_dir, self.brief)
 
   def test_run_store_ignores_the_environment(self):
-    hostile = {"DRIVER_LAB_RUNS": self.tmp, "XDG_CONFIG_HOME": self.tmp, "HOME": self.tmp}
+    hostile = {"HWSPECS_RUNS": self.tmp, "XDG_CONFIG_HOME": self.tmp, "HOME": self.tmp}
     elsewhere = os.path.join(self.tmp, "elsewhere")
     self.write(os.path.join(elsewhere, "brief.md"), "brief\n")
     with mock.patch.dict(os.environ, hostile):
@@ -596,13 +596,13 @@ class CodexImplementTest(unittest.TestCase):
     self.assertEqual(code, 4)
     self.assertIn("cannot remove scratch root", err)
 
-  def test_rust_and_driver_lab_config_validation(self):
+  def test_rust_and_hwspecs_config_validation(self):
     rust_bin = os.path.join(self.tmp, "rustup", "toolchains", "1.85.0-x86_64", "bin")
     vendor_dir = os.path.join(self.tmp, "cargo-vendor")
-    driver_lab = os.path.join(self.tmp, "bin", "driver-lab")
+    hwspecs = os.path.join(self.tmp, "bin", "hwspecs")
     os.makedirs(rust_bin, mode=0o755)
     os.makedirs(vendor_dir, mode=0o755)
-    self.write(driver_lab, f"#!/bin/sh\necho 'driver-lab 0.1.0 ({self.base})'\n", 0o755)
+    self.write(hwspecs, f"#!/bin/sh\necho 'hwspecs 0.1.0 ({self.base})'\n", 0o755)
 
     # Relative, missing, non-dir/non-exec, group-writable, or inside repo/scratch must exit 3.
     loose_dir = os.path.join(self.tmp, "loose-dir")
@@ -613,12 +613,12 @@ class CodexImplementTest(unittest.TestCase):
     bad_configs = [
         f'rust_toolchain_bin = "relative/bin"\n',
         f'rust_toolchain_bin = "{os.path.join(self.tmp, "missing-rust")}"\n',
-        f'rust_toolchain_bin = "{driver_lab}"\n',
+        f'rust_toolchain_bin = "{hwspecs}"\n',
         f'rust_toolchain_bin = "{loose_dir}"\n',
         f'cargo_vendor_dir = "{in_repo_vendor}"\n',
         f'cargo_vendor_dir = "{loose_dir}"\n',
-        f'driver_lab_binary = "{vendor_dir}"\n',
-        f'driver_lab_binary = "{driver_lab}"\ntool_commit = "not-a-sha"\n',
+        f'hwspecs_binary = "{vendor_dir}"\n',
+        f'hwspecs_binary = "{hwspecs}"\ntool_commit = "not-a-sha"\n',
         f'tool_commit = "{self.base}"\n',
     ]
     for extra in bad_configs:
@@ -626,30 +626,30 @@ class CodexImplementTest(unittest.TestCase):
         self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n' + extra)
         self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
 
-    # Mismatched or 'unknown' driver-lab --version must exit 3.
+    # Mismatched or 'unknown' hwspecs --version must exit 3.
     other_commit = "a" * 40
     self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n'
-                f'driver_lab_binary = "{driver_lab}"\ntool_commit = "{other_commit}"\n')
+                f'hwspecs_binary = "{hwspecs}"\ntool_commit = "{other_commit}"\n')
     self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
 
-    self.write(driver_lab, "#!/bin/sh\necho 'driver-lab 0.1.0 (unknown)'\n", 0o755)
+    self.write(hwspecs, "#!/bin/sh\necho 'hwspecs 0.1.0 (unknown)'\n", 0o755)
     self.config(f'run_store = "{self.store}"\ncodex = "{self.codex}"\n'
-                f'driver_lab_binary = "{driver_lab}"\ntool_commit = "{self.base}"\n')
+                f'hwspecs_binary = "{hwspecs}"\ntool_commit = "{self.base}"\n')
     self.assert_code(3, self.base, self.run_dir, self.brief, "--dry-run")
 
   def test_offline_cargo_env_and_vendor_config(self):
     rust_bin = os.path.join(self.tmp, "rustup", "toolchains", "1.85.0-x86_64", "bin")
     vendor_dir = os.path.join(self.tmp, "cargo-vendor")
-    driver_lab = os.path.join(self.tmp, "dl-bin", "driver-lab")
+    hwspecs = os.path.join(self.tmp, "dl-bin", "hwspecs")
     os.makedirs(rust_bin, mode=0o755)
     os.makedirs(vendor_dir, mode=0o755)
-    self.write(driver_lab, f"#!/bin/sh\necho 'driver-lab 0.1.0 ({self.base})'\n", 0o755)
+    self.write(hwspecs, f"#!/bin/sh\necho 'hwspecs 0.1.0 ({self.base})'\n", 0o755)
     self.config(
         f'run_store = "{self.store}"\n'
         f'codex = "{self.codex}"\n'
         f'rust_toolchain_bin = "{rust_bin}"\n'
         f'cargo_vendor_dir = "{vendor_dir}"\n'
-        f'driver_lab_binary = "{driver_lab}"\n'
+        f'hwspecs_binary = "{hwspecs}"\n'
         f'tool_commit = "{self.base}"\n'
     )
     cargo_cfg_copy = os.path.join(self.tmp, "cargo-config-copy.toml")
@@ -668,7 +668,7 @@ class CodexImplementTest(unittest.TestCase):
     self.assertEqual(env["CARGO_NET_OFFLINE"], "true")
     self.assertEqual(env["RUSTUP_TOOLCHAIN"], "1.85.0-x86_64")
     self.assertTrue(env["PATH"].startswith(rust_bin + ":"), env["PATH"])
-    self.assertIn(os.path.dirname(driver_lab), env["PATH"].split(":"))
+    self.assertIn(os.path.dirname(hwspecs), env["PATH"].split(":"))
     cfg_text = self.read(cargo_cfg_copy)
     self.assertIn('[source.crates-io]\nreplace-with = "vendored-sources"', cfg_text)
     self.assertIn(f'directory = "{vendor_dir}"', cfg_text)

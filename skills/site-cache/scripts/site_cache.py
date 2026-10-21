@@ -20,7 +20,7 @@ CLI subcommands:
   info         Show recorded snapshot history or blob metadata.
   prefetch     Politely fetch and verify all pinned documents declared in one or
                more Spec Format 2 YAML files.
-  materialize  Populate a --docs-dir directory (for driver-lab resolve --docs-dir)
+  materialize  Populate a --docs-dir directory (for hwspecs resolve --docs-dir)
                with hash-verified hardlinks or copies, adopting any existing
                valid files into the blob store by copy.
   verify       Re-hash stored blobs (and optional --docs-dir files) to detect
@@ -59,8 +59,8 @@ import urllib.request
 import zlib
 
 DEFAULT_USER_AGENT = (
-    "driver-lab-site-cache/1.0 "
-    "(+https://github.com/curtisgalloway/driver-lab; "
+    "hwspecs-site-cache/1.0 "
+    "(+https://github.com/curtisgalloway/hardware-specs; "
     "polite demand-driven document cache)"
 )
 DEFAULT_MIN_INTERVAL = 2.0
@@ -2205,7 +2205,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_mat = sub.add_parser(
         "materialize",
         parents=[common],
-        help="populate --docs-dir with hash-verified hardlinks/copies for driver-lab resolve",
+        help="populate --docs-dir with hash-verified hardlinks/copies for hwspecs resolve",
     )
     p_mat.add_argument("files", nargs="+", type=Path, help="spec or corpus YAML files")
     p_mat.add_argument(

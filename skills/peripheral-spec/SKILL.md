@@ -254,6 +254,13 @@ take files. Add context roots to `check` when references require them. For docum
 supply `--docs-dir DIR`; bytes must be named `DIR/NAME`. Inspect resolution counts:
 zero errors with skipped anchors is not complete evidence resolution.
 
+When a run store is configured (`python3 utilities/run-store.py <campaign_run>`), the orchestrator
+sets `HWSPECS_AUDIT_RUN=<campaign_run>` and wraps `hwspecs check`, `hwspecs resolve`, and
+`hwspecs status` invocations with `python3 utilities/hwspecs-audit --step <step> -- hwspecs ...`,
+logs any `hwspecs` tool defects via `python3 utilities/hwspecs-audit record-issue`, and records
+subagent completion notices via `python3 utilities/hwspecs-audit record-subagent` (see
+[PROCESS-AUDIT.md](../../docs/PROCESS-AUDIT.md)).
+
 Without a `--repo NAME=CHECKOUT` binding for a repo entry, `resolve` fetches its URL at the
 recorded commit. Only size or time limits produce skipped anchors; fetch or content errors
 fail resolution. Inspect the `claim hex values absent from cited lines` warning: it flags

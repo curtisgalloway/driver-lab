@@ -23,7 +23,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Overlay**: added facts with their own origin, without rewriting a base fact.
 - **Stub**: a short skill naming a spec and handing questions to board-expert.
 
-See the [glossary](../../GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) before writing;
+See the [glossary](../../docs/GLOSSARY.md). Read [spec-format](../spec-format/SKILL.md) before writing;
 its schemas define shapes and its text is the shared contract. QUESTIONS in board-expert is
 the interview checklist. Author and read specs as YAML.
 

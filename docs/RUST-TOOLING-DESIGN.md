@@ -20,7 +20,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Spec, fact record, fact reference, root-qualified reference, support entry, basis hash,
   rendered view, atlas** — see [SPEC-FORMAT.md](SPEC-FORMAT.md#terms),
   [ATLAS-CONNECTIONS-DESIGN.md](ATLAS-CONNECTIONS-DESIGN.md#terms), and the
-  [glossary](../GLOSSARY.md).
+  [glossary](GLOSSARY.md).
 
 Design revision: 2026-10-19 (user approved 2026-10-19 following Claude Opus 5.5 consultation).
 Companion implementation plan: [RUST-TOOLING-PLAN.md](RUST-TOOLING-PLAN.md). Bug traceability
@@ -682,7 +682,7 @@ scope.
   mechanically by `inventory`, so authors only record what the header lacks (`requirement`,
   `conflicts` where datasheet and header disagree, `todo`s, and `sequences` pointing at those
   symbols). Transcribing stand-in facts from a source whose license is outside the target root's
-  `accepts` list remains a user policy decision per [LICENSE-SPLIT-PLAN.md](LICENSE-SPLIT-PLAN.md),
+  `accepts` list remains a user policy decision per [LICENSE-SPLIT-PLAN.md](../notes/plans/LICENSE-SPLIT-PLAN.md),
   regardless of tooling.
 
 ### 5.2 Evidence-first model tiering (`TIER-1`..`TIER-4`)
@@ -690,8 +690,8 @@ scope.
 In verification, the dangerous error is a **false `PASS`** (rubber-stamping a claim that drops a
 hardware condition or protocol ordering constraint). Routing rules that use a smaller model first
 and escalate only `FAIL` verdicts leave false `PASS`es unexamined. Repository evidence
-([CR6b.md](../evidence/CR6b.md), [AF-1.md](../evidence/AF-1.md), and
-[DRIVER-QUALITY.md](../DRIVER-QUALITY.md)) shows that verification quality comes from **cross-family
+([CR6b.md](../notes/evidence/CR6b.md), [AF-1.md](../notes/evidence/AF-1.md), and
+[DRIVER-QUALITY.md](DRIVER-QUALITY.md)) shows that verification quality comes from **cross-family
 reader diversity** (`CR6b` on revision 8 produced 84 upheld or partly upheld non-`PASS` lines,
 including 12 driver-behavior `R` findings, most in kernel protocol order, that earlier readers had
 passed or never read at that grain) and **pre-declared calibration thresholds**:
@@ -702,10 +702,10 @@ passed or never read at that grain) and **pre-declared calibration thresholds**:
 - **`TIER-2` (`T1`, Ground-truth calibration gate before adopting any cheaper reader)**: Before
   adopting a faster/cheaper model for any verification class, run the candidate model blind on the
   exact revision-8 input text and adjudicated non-`PASS` ground truth from
-  [CR6b.md](../evidence/CR6b.md) (84 upheld or partly upheld, 16 rejected; excluding the 19
-  input-limitation items), with [AF-1.md](../evidence/AF-1.md) as a secondary check, measuring its
+  [CR6b.md](../notes/evidence/CR6b.md) (84 upheld or partly upheld, 16 rejected; excluding the 19
+  input-limitation items), with [AF-1.md](../notes/evidence/AF-1.md) as a secondary check, measuring its
   false-`PASS` rate by fact class against a threshold set in advance
-  ([DRIVER-QUALITY.md](../DRIVER-QUALITY.md#L115-L117)).
+  ([DRIVER-QUALITY.md](DRIVER-QUALITY.md#L115-L117)).
 - **`TIER-3` (`T2`, Focused/faster model with mandatory frontier audit sample)**:
   - *Authoring*: `corpus.yaml` drafting from `driver-lab index` outlines and DTS nodes; initial
     drafting of non-critical `registers` / `data-formats` / `instances` descriptions (tracking

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Status: **design, revision 2026-10-05, approved by the user 2026-10-05.** The open decisions of the
 2026-09-30 draft are settled (see [Decisions](#decisions)); requirements carry labels LS-R1 to
-LS-R20 for the [implementation plan](LICENSE-SPLIT-PLAN.md). Built in milestones LS1–LS12 and
+LS-R20 for the [implementation plan](../notes/plans/LICENSE-SPLIT-PLAN.md). Built in milestones LS1–LS12 and
 accepted in LS-G (2026-10-07); the plan's design-coverage table links the evidence for each
 requirement.
 
@@ -28,7 +28,7 @@ requirement.
 - **Placement rule**, **license gate**, **accepts list** — this design's terms; defined in
   [The policy](#the-policy) and LS-R1 to LS-R4.
 
-Full definitions: [GLOSSARY.md](../GLOSSARY.md).
+Full definitions: [GLOSSARY.md](GLOSSARY.md).
 
 ## Problem and outcome
 
@@ -314,7 +314,7 @@ Consequences of these decisions, decided in this revision:
   root. Proven when the overlay is written (regeneration workstream), and with a fixture in
   LS-R12.
 - **Moving history** with `git filter-repo` rewrites hashes in the new repo; the commit-map
-  approach from [TRANSITION.md](../TRANSITION.md) applies.
+  approach from [TRANSITION.md](../notes/history/TRANSITION.md) applies.
 - **Public repos and pushes** are outward-facing: each repo creation and first push happens on
   the user's explicit go.
 

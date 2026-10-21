@@ -12,8 +12,8 @@ SPDX-License-Identifier: Apache-2.0
 - **Fixture** — the board, controller module, wiring, peer, and capture equipment.
 - **Qualification** — demonstrating a check works using reference cases and deliberate defects.
 
-See the [glossary](../../../GLOSSARY.md). This evaluator-only record implements
-[M01](../../../DEFERRED-PLAN.md#m01--make-trial-preparation-executable).
+See the [glossary](../../../docs/GLOSSARY.md). This evaluator-only record implements
+[M01](../../../notes/archive/DEFERRED-PLAN.md#m01--make-trial-preparation-executable).
 Do not supply it, its pin inventory, or its evidence record to an implementer.
 
 ## Identity and custody
@@ -319,4 +319,4 @@ stage blocker, design/inputs/check references pass review, and the reviewed reco
 R1a design freeze, M02 isolation/build qualification, M03 schemas and M07 check qualification
 remain separate gates. Freeze this record's revision plus the final briefs, environment, inputs,
 check definitions, policy and scanner hashes in a later run manifest before implementation.
-Never use M01 completion as launch authorization. See [M01 evidence](../../../evidence/M01.md).
+Never use M01 completion as launch authorization. See [M01 evidence](../../../notes/evidence/M01.md).

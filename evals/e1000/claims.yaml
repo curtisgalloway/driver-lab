@@ -34,9 +34,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-smoke
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q02
   title: Carrier comes up when the interface comes up with a link
@@ -61,9 +61,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-stop-start
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q03
   title: Frames pass both ways
@@ -107,7 +107,7 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: m3
     run_ids:
     - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
@@ -115,9 +115,9 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q04
   title: Frames of 1513 and 1514 bytes are received
@@ -140,9 +140,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-frame-sizes
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q05
   title: Frames of 60 to 1514 bytes are transmitted at their size
@@ -163,9 +163,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-frame-sizes
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q06
   title: Short frames go out padded to 60 bytes
@@ -188,9 +188,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-frame-sizes
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q07
   title: Transmission survives the transmit ring wrapping
@@ -213,9 +213,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-ring-wrap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q08
   title: Reception survives the receive ring wrapping
@@ -238,9 +238,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-ring-wrap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q09
   title: Data arrives intact
@@ -263,9 +263,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-ring-wrap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q10
   title: Reception recovers after the receive ring ran dry
@@ -287,9 +287,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-rx-overrun
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q11
   title: Carrier falls when the link drops
@@ -311,9 +311,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-flap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q12
   title: Carrier returns when the link returns
@@ -335,9 +335,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-flap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q13
   title: Traffic resumes after the link returns
@@ -362,7 +362,7 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-flap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: d08
     run_ids:
     - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
@@ -370,9 +370,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-loss-tx
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q14
   title: The interface works after repeated down/up
@@ -395,9 +395,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-stop-start
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q15
   title: The interface works after going down under traffic
@@ -433,9 +433,9 @@ claims:
     - e1000-l02f2b-20260925-01/h1-ref10
     outcome: detected
     evidence:
-    - evidence/L02f2b.md#requalification
+    - notes/evidence/L02f2b.md#requalification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q16
   title: The module unloads and loads again, repeatedly
@@ -465,9 +465,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-reload
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q17
   title: No kernel warning, call trace, transmit hang or watchdog timeout
@@ -496,7 +496,7 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: m3
     run_ids:
     - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
@@ -504,7 +504,7 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: d06
     run_ids:
     - e1000-l02d3-20260925-01/q1-d06-ring-wrap
@@ -512,7 +512,7 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-ring-wrap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: d08
     run_ids:
     - e1000-l02d3-20260925-01/q1-d08-link-flap
@@ -520,7 +520,7 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-flap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: d08
     run_ids:
     - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
@@ -528,9 +528,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-link-loss-tx
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q18
   title: "At least 1 \xB5s from a global reset to the next register access"
@@ -559,9 +559,9 @@ claims:
     - qf1-20260926-01/q1-ref-smoke-2
     outcome: unobservable
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q19
   title: Ring lengths are nonzero multiples of 128 bytes
@@ -582,7 +582,7 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-ring-wrap
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   - id: m4
     run_ids:
     - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
@@ -590,9 +590,9 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q20
   title: Ring bases are 16-byte aligned
@@ -613,9 +613,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-smoke
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q21
   title: Tail writes stay inside the ring
@@ -634,9 +634,9 @@ claims:
     - e1000-l02d-20260924-01/r010
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q22
   title: Head registers are written only while that direction is disabled
@@ -660,9 +660,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-smoke
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q23
   title: ITR is written with its reserved bits clear
@@ -681,9 +681,9 @@ claims:
     - e1000-l02d3-20260925-01/q1-ref-smoke
     outcome: detected
     evidence:
-    - evidence/L02d3.md#qualification
+    - notes/evidence/L02d3.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q24
   title: The interface comes up, and the module unloads, without error
@@ -712,7 +712,7 @@ claims:
     - qf1-20260926-01/q1-ref-smoke-2
     outcome: detected
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   - id: d20
     run_ids:
     - qf1-20260926-01/q1-d20-smoke-1
@@ -723,9 +723,9 @@ claims:
     - qf1-20260926-01/q1-ref-smoke-2
     outcome: detected
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q25
   title: Frames of 60 and 61 bytes are received
@@ -751,9 +751,9 @@ claims:
     - qf1-20260926-01/q1-ref-frame-sizes-2
     outcome: detected
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q26
   title: The module loads and binds to the device
@@ -780,7 +780,7 @@ claims:
     - qf1-20260926-01/q1-ref-smoke-2
     outcome: detected
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   - id: d18
     run_ids:
     - qf1-20260926-01/q1-d18-smoke-1
@@ -791,9 +791,9 @@ claims:
     - qf1-20260926-01/q1-ref-smoke-2
     outcome: detected
     evidence:
-    - evidence/QF-1.md#qualification
+    - notes/evidence/QF-1.md#qualification
   evidence:
-  - evidence/L02d3.md
+  - notes/evidence/L02d3.md
   - evals/e1000/RECALL-r3.md
 - id: Q27
   title: Frames of 60 and 61 bytes are received and transmitted with their content intact
@@ -820,7 +820,7 @@ claims:
     - fc1-20260926-01/f2-ref-frame-sizes-2
     outcome: detected
     evidence:
-    - evidence/FC-1.md#qualification
+    - notes/evidence/FC-1.md#qualification
   - id: d24
     run_ids:
     - fc1-20260926-01/f2-d24-frame-sizes-1
@@ -830,9 +830,9 @@ claims:
     - fc1-20260926-01/f2-ref-frame-sizes-2
     outcome: detected
     evidence:
-    - evidence/FC-1.md#qualification
+    - notes/evidence/FC-1.md#qualification
   evidence:
-  - evidence/FC-1.md
+  - notes/evidence/FC-1.md
   - evals/e1000/RECALL-r3.md
 - id: Q28
   title: A 1 MiB TCP stream in frames of at most 214 bytes is received and transmitted with
@@ -862,7 +862,7 @@ claims:
     - cs1-20260926-01/c2-ref-frame-sizes-5
     outcome: detected
     evidence:
-    - evidence/CS-1.md#qualification
+    - notes/evidence/CS-1.md#qualification
   - id: d26
     run_ids:
     - cs1-20260926-01/c2-d26-frame-sizes-1
@@ -876,7 +876,7 @@ claims:
     - cs1-20260926-01/c2-ref-frame-sizes-5
     outcome: detected
     evidence:
-    - evidence/CS-1.md#qualification
+    - notes/evidence/CS-1.md#qualification
   evidence:
-  - evidence/CS-1.md
+  - notes/evidence/CS-1.md
   - evals/e1000/RECALL-r3.md

@@ -7,7 +7,7 @@ Fill-in prompt: substitute every angle-bracket placeholder before delegation.
 # Peripheral drafting prompt
 
 **Terms:** a fact is an identified evidence record; a payload holds typed register/sequence/layout
-values; a root declares license policy. See [the glossary](../../../GLOSSARY.md).
+values; a root declares license policy. See [the glossary](../../../docs/GLOSSARY.md).
 
 Produce a spec for <peripheral> (<IP block>, <board and instance>) from <source-checkout> at
 <source-commit>, with integration for <target OS> at <target-checkout>. Destination: <root>;

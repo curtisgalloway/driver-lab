@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # SPDX acceptance tests
 
 **Terms:** SPDX expressions identify licenses and combine them with `OR`, `AND` and `WITH`.
-See the [glossary](../../../GLOSSARY.md).
+See the [glossary](../../../docs/GLOSSARY.md).
 
 ```bash
 cargo test --locked --offline --test test_yaml_spdx

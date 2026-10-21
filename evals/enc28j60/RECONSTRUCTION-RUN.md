@@ -12,8 +12,8 @@ SPDX-License-Identifier: Apache-2.0
 - **Arm** — the with-skill or without-skill specification-generation condition.
 - **SPI fixture** — the physical controller, bus connection, and network test setup.
 
-See the repository [glossary](../../GLOSSARY.md) and the shared
-[reconstruction protocol](../../RECONSTRUCTION.md). This guide supplies pilot-specific
+See the repository [glossary](../../docs/GLOSSARY.md) and the shared
+[reconstruction protocol](../../notes/archive/RECONSTRUCTION.md). This guide supplies pilot-specific
 preparation; it does not duplicate or relax that protocol.
 
 ## Status and scope

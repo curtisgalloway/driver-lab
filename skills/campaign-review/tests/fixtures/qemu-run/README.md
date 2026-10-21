@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Reduced QEMU run
 
 **Terms:** identities are recorded hashes and conditions; verdicts are named check
-outcomes. See the [glossary](../../../../../GLOSSARY.md).
+outcomes. See the [glossary](../../../../../docs/GLOSSARY.md).
 
 Reduced from real run `e1000-cf2-20260926-01`, `runs/a2-ref-itr-2`, read-only
 in CR5. Only identities and verdicts remain: the paths mapping, raw logs,

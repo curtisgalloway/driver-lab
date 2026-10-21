@@ -17,13 +17,13 @@ follows them. Where the body depends on one, it names it (D1–D22).
 - **CommonMark / GFM** — Markdown formatting rules / GitHub's additions, including tables,
   footnotes and automatic links. **Code spans / fences** display inline text / blocks
   literally. **Nesting depth** counts the constructs surrounding text. See the
-  [glossary](../GLOSSARY.md).
+  [glossary](GLOSSARY.md).
 - **Spec** — a hardware description an agent reads instead of the original sources: a board, an
   SoC, a companion chip, an IP block (the *board-spec* kinds), one peripheral's programming model
   (a *peripheral spec*), or a driver compared against a reference driver (a *review*).
 - **OS framework** — the operating system's driver interface for a device class, whose interface
   definitions give each reported value's meaning. **MTU**, frame versus payload, and head or tail
-  room are in the [glossary](../GLOSSARY.md).
+  room are in the [glossary](GLOSSARY.md).
 - **YAML** — a text format for structured data (mappings, lists, strings, numbers). **JSON
   Schema** — a standard language for stating what shape a JSON-like document must have (which
   keys, which types, which values); a **validator** is the library that checks a document against
@@ -58,7 +58,7 @@ follows them. Where the body depends on one, it names it (D1–D22).
   names for one file. Mode bits are Unix permission flags; setuid/setgid can give an executable
   its owner's user/group identity. A data path names a value by keys and list positions.
 
-New terms are in the [glossary](../GLOSSARY.md).
+New terms are in the [glossary](GLOSSARY.md).
 
 ## Why
 
@@ -108,7 +108,7 @@ spec repositories (`hardware-specs-docs`, `hardware-specs-permissive`, `hardware
 placement rule, root markers with `license:` and `accepts:`, overlays across repositories, the
 license gate, and per-file verification records.
 
-Non-goals: changing what the evidence classes mean ([DESIGN.md](../DESIGN.md), "Evidence
+Non-goals: changing what the evidence classes mean ([DESIGN.md](DESIGN.md), "Evidence
 model"); new specs; the viewer's search and navigation beyond the first static version
 ([Rendering](#rendering-and-the-viewer)); the frozen archive (it stays as it is, see
 [Migration](#migration)).
@@ -257,7 +257,7 @@ A **gap fact** has no `support` and must carry a `todo`; it renders as "Gap" and
 
 ### Conflict entries
 
-[DESIGN.md](../DESIGN.md) ("Conflicts are recorded, never overwritten") proposes a conflict entry
+[DESIGN.md](DESIGN.md) ("Conflicts are recorded, never overwritten") proposes a conflict entry
 beside a claim when two classes disagree. The spec format gives it a field (D18):
 
 ```yaml
@@ -1110,12 +1110,12 @@ from units 1-3, nothing here is built. It reshapes issues
 layouts) and [#105](https://github.com/curtisgalloway/hardware-specs/issues/105) (per-field access,
 resets, sequence timeouts), and it answers the precision goal behind
 [#118](https://github.com/curtisgalloway/hardware-specs/issues/118). The survey behind it, with a
-URL for each claim, is [STANDARDS-SURVEY.md](STANDARDS-SURVEY.md); the second survey, on
+URL for each claim, is [STANDARDS-SURVEY.md](../notes/research/STANDARDS-SURVEY.md); the second survey, on
 public JSON register formats and on routing between blocks, is
-[STANDARDS-SURVEY-2.md](STANDARDS-SURVEY-2.md). Both are a research agent's reports of
+[STANDARDS-SURVEY-2.md](../notes/research/STANDARDS-SURVEY-2.md). Both are a research agent's reports of
 2026-10-14; "I" in them is that agent.
 
-**Terms** (also in the [glossary](../GLOSSARY.md)):
+**Terms** (also in the [glossary](GLOSSARY.md)):
 
 - **IP-XACT** — IEEE Std 1685-2022, an XML format for describing hardware blocks, including
   registers and their fields. Accellera publishes its **XSD** (XML Schema Definition, the
@@ -1526,7 +1526,7 @@ citations (D41). CI exports every spec in the fixtures and the three spec reposi
 validation failure fails the build. `xmlschema` is pinned with hashes after a `dep-quality`
 score, and the requirements and CI changes are gate inputs, so the orchestrator lands those
 two files itself. Generated bindings were evaluated and rejected for both the exporter and the
-`ipxact` adapter ([IPX-1](../evidence/IPX-1.md), #152): they keep only the last register of a
+`ipxact` adapter ([IPX-1](../notes/evidence/IPX-1.md), #152): they keep only the last register of a
 block; the adapter decodes with the same xmlschema schema instead.
 
 ### Units of work
@@ -1922,7 +1922,7 @@ format and that format was retired: its tools and the one-time migration command
 and current commands are listed in the [contract](../skills/spec-format/SKILL.md#command-line).
 The verdicts of the earlier records were re-read under the spec format, so every verdict states
 `contrary_evidence` and `citation_precision`. The conversion's history is in
-[SPEC-FORMAT-PLAN.md](SPEC-FORMAT-PLAN.md) and its evidence files. The frozen archive
+[SPEC-FORMAT-PLAN.md](../notes/plans/SPEC-FORMAT-PLAN.md) and its evidence files. The frozen archive
 (`evals/`, `evidence/`, `notebook/`, `history/` and the archive documents listed in
 `utilities/check-open-side.py`) stays as it is, still checked by CI with its own tools, and its
 references to `.spec.md` files and anchors stay as history.
@@ -2671,7 +2671,7 @@ left open, also decided by the user on 2026-10-08.
 ## Implementation outline
 
 Historical outline from the approved design; milestone numbering was refined in the
-[implementation plan](SPEC-FORMAT-PLAN.md). Retired commands below describe the migration,
+[implementation plan](../notes/plans/SPEC-FORMAT-PLAN.md). Retired commands below describe the migration,
 not current tooling. Each
 tooling unit is reviewed by an executing reviewer (break cases including degenerate inputs,
 mutation checks) and a diff reader, the pairing RG-T1 showed finds different holes.
@@ -2713,7 +2713,7 @@ mutation checks) and a diff reader, the pairing RG-T1 showed finds different hol
 - The viewer and search UI (it reads the YAML and records; designed later).
 - A coverage-review record (what a spec leaves out); RG1 showed it is a separate job.
 - Changes to what the provenance classes mean or how much each is trusted.
-- Specs for hardware with no existing driver ([DESIGN.md](../DESIGN.md), "When there is no
+- Specs for hardware with no existing driver ([DESIGN.md](DESIGN.md), "When there is no
   existing driver").
 
 ## How the learnings map to this design
@@ -2750,7 +2750,7 @@ named resource input/output on a node; **provider/consumer** are service roles (
 controller provides interrupt handling); **specifier cells** are ordered unsigned 32-bit
 integers selecting a provider resource. A **configuration** is a named set of documented board
 choices. These are authored claims, never detected wiring or live state. See the
-[glossary](../GLOSSARY.md) for the repository's other terms.
+[glossary](GLOSSARY.md) for the repository's other terms.
 
 AT1 implements validation and references, with no Connections visualization yet. Existing
 Markdown, HTML and atlas fact views retain readable claim text, evidence and TODOs; keep the

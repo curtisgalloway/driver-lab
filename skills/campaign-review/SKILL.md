@@ -16,7 +16,7 @@ SPDX-License-Identifier: Apache-2.0
 
 **Terms:** a claim map connects behavior claims to named checks and planted defects;
 a status index records verdicts, their basis and finding dispositions. See the
-[format](INDEX-FORMAT.md) and [glossary](../../GLOSSARY.md).
+[format](INDEX-FORMAT.md) and [glossary](../../docs/GLOSSARY.md).
 
 Read INDEX-FORMAT.md before editing a campaign's claims.yaml or status.yaml.
 Recover facts from the cited evidence and explicitly supplied run IDs. Keep raw

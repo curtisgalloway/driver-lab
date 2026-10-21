@@ -31,7 +31,7 @@ you stop at the facts and report the evidence limits.
 - **License gate**: checks licenses against the target marker, before evidence reading and
   again on the finished file.
 
-See the [glossary](../../GLOSSARY.md), [spec-format contract](../spec-format/SKILL.md) and
+See the [glossary](../../docs/GLOSSARY.md), [spec-format contract](../spec-format/SKILL.md) and
 [peripheral-spec record types](../peripheral-spec/SKILL.md#record-types-and-requirements).
 
 ## The rule that decides everything

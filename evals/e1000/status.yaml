@@ -78,10 +78,10 @@ scope:
     name: gpt-6-astra
     version: gpt-6-astra
   evidence:
-  - DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
-  - evidence/CR2.md
-  - evidence/CR4.md
-  - evidence/CR6b.md
+  - docs/DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+  - notes/evidence/CR2.md
+  - notes/evidence/CR4.md
+  - notes/evidence/CR6b.md
 revision_range:
 - 3
 - 9
@@ -94,8 +94,8 @@ revisions:
     changed_sections: &cr2_1 []
     items: *cr2_1
     evidence: &cr2_38
-    - evidence/L02b.md
-    - evidence/L02c.md
+    - notes/evidence/L02b.md
+    - notes/evidence/L02c.md
     run_ids:
     - e1000-l02b-20260923-01
     - e1000-l02c-20260924-01
@@ -126,8 +126,8 @@ revisions:
     items:
     - L02c-requirements
     evidence: &cr2_36
-    - evidence/L02c.md
-    - evidence/CR2-provenance.md
+    - notes/evidence/L02c.md
+    - notes/evidence/CR2-provenance.md
     run_ids: &cr2_19
     - e1000-l02c-20260924-01
   '5':
@@ -142,8 +142,8 @@ revisions:
     items:
     - L02e-PSCON
     evidence: &cr2_52
-    - evidence/L02s.md
-    - evidence/CR2-provenance.md
+    - notes/evidence/L02s.md
+    - notes/evidence/CR2-provenance.md
     run_ids: &cr2_51
     - e1000-l02s-20260925-01
   '6':
@@ -168,8 +168,8 @@ revisions:
     items: &cr2_90
     - L02f3-requirements
     evidence: &cr2_60
-    - evidence/L02f3.md
-    - evidence/CR2-provenance.md
+    - notes/evidence/L02f3.md
+    - notes/evidence/CR2-provenance.md
     run_ids: &cr2_59
     - e1000-l02f3-20260925-01
   '7':
@@ -205,8 +205,8 @@ revisions:
     - AF-1-6
     - SF-1-pointers
     evidence: &cr2_78
-    - evidence/SR-7.md
-    - evidence/CR2-provenance.md
+    - notes/evidence/SR-7.md
+    - notes/evidence/CR2-provenance.md
     run_ids: &cr2_68
     - e1000-sr7-20260926-01
   '8':
@@ -231,8 +231,8 @@ revisions:
     - SR-7-2
     - SR-7-3
     evidence: &cr2_85
-    - evidence/SR-8.md
-    - evidence/CR2-provenance.md
+    - notes/evidence/SR-8.md
+    - notes/evidence/CR2-provenance.md
     run_ids: &cr2_84
     - e1000-sr8-20260926-01
   '9':
@@ -297,7 +297,7 @@ revisions:
     - SR-8-3-r9
     - A-RR-1-r9
     evidence:
-    - evidence/CR8.md
+    - notes/evidence/CR8.md
     run_ids:
     - cr8-20260927-01
 bases:
@@ -1484,12 +1484,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d01-smoke
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q01
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q01
@@ -1524,7 +1524,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q01
   round: a2
   qualification: qualification-Q01
@@ -1542,12 +1542,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d02-stop-start
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q02
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q02
@@ -1582,7 +1582,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q02
   round: a2
   qualification: qualification-Q02
@@ -1601,12 +1601,12 @@ entries:
   - e1000-l02d-20260924-01/mut-m2-tx-no-rs-r5
   - e1000-l02d-20260924-01/mut-m3-irq-not-restored-r5
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q03
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q03
@@ -1641,7 +1641,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q03
   round: a2
   qualification: qualification-Q03
@@ -1659,12 +1659,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d03-frame-sizes
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q04
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q04
@@ -1681,7 +1681,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q04
   round: a2
   qualification: qualification-Q04
@@ -1699,12 +1699,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d04-frame-sizes
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q05
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q05
@@ -1721,7 +1721,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q05
   round: a2
   qualification: qualification-Q05
@@ -1739,12 +1739,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d05-frame-sizes
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q06
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q06
@@ -1761,7 +1761,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q06
   round: a2
   qualification: qualification-Q06
@@ -1779,12 +1779,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d06-ring-wrap
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q07
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q07
@@ -1801,7 +1801,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q07
   round: a2
   qualification: qualification-Q07
@@ -1819,12 +1819,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-m5-ring-wrap
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q08
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q08
@@ -1841,7 +1841,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q08
   round: a2
   qualification: qualification-Q08
@@ -1859,12 +1859,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q3-d16b-ring-wrap
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q09
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q09
@@ -1881,7 +1881,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-1
   - e1000-cf2-20260926-01/a2-cand-ring-wrap-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q09
   round: a2
   qualification: qualification-Q09
@@ -1899,12 +1899,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-m5-rx-overrun
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q10
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q10
@@ -1921,7 +1921,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-rx-overrun-1
   - e1000-cf2-20260926-01/a2-cand-rx-overrun-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q10
   round: a2
   qualification: qualification-Q10
@@ -1939,12 +1939,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d07-link-flap
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q11
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q11
@@ -1963,7 +1963,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q11
   round: a2
   qualification: qualification-Q11
@@ -1981,12 +1981,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d02-link-flap
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q12
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q12
@@ -2005,7 +2005,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q12
   round: a2
   qualification: qualification-Q12
@@ -2024,12 +2024,12 @@ entries:
   - e1000-l02d3-20260925-01/q1-d08-link-flap
   - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q13
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q13
@@ -2048,7 +2048,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-1
   - e1000-cf2-20260926-01/a2-cand-link-loss-tx-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q13
   round: a2
   qualification: qualification-Q13
@@ -2066,12 +2066,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q2-d15-stop-start
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q14
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q14
@@ -2088,7 +2088,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-stop-start-1
   - e1000-cf2-20260926-01/a2-cand-stop-start-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q14
   round: a2
   qualification: qualification-Q14
@@ -2109,12 +2109,12 @@ entries:
   - e1000-l02f2b-20260925-01/h1-d15-3
   - e1000-l02f2b-20260925-01/h1-d15-4
   evidence:
-  - evidence/L02f2b.md#requalification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02f2b.md#requalification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q15
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q15
@@ -2131,7 +2131,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-down-during-traffic-1
   - e1000-cf2-20260926-01/a2-cand-down-during-traffic-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q15
   round: a2
   qualification: qualification-Q15
@@ -2149,12 +2149,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d10-reload
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q16
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q16
@@ -2171,7 +2171,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-reload-1
   - e1000-cf2-20260926-01/a2-cand-reload-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q16
   round: a2
   qualification: qualification-Q16
@@ -2193,12 +2193,12 @@ entries:
   - e1000-l02d3-20260925-01/q1-d08-link-flap
   - e1000-l02d3-20260925-01/q1-d08-link-loss-tx
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q17
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q17
@@ -2233,7 +2233,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q17
   round: a2
   qualification: qualification-Q17
@@ -2258,12 +2258,12 @@ entries:
   - qf1-20260926-01/q1-d22-smoke-7
   - qf1-20260926-01/q1-d22-smoke-8
   evidence:
-  - evidence/QF-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/QF-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q18
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
   shortfall:
@@ -2272,7 +2272,7 @@ entries:
   decision:
     who: user
     date: '2026-09-25'
-    link: evidence/L02f3.md#the-two-decisions
+    link: notes/evidence/L02f3.md#the-two-decisions
 - id: result-Q18
   kind: result
   basis: cf2-a2
@@ -2305,7 +2305,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q18
   round: a2
   qualification: qualification-Q18
@@ -2324,12 +2324,12 @@ entries:
   - e1000-l02d3-20260925-01/q1-d06-ring-wrap
   - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q19
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q19
@@ -2364,7 +2364,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q19
   round: a2
   qualification: qualification-Q19
@@ -2382,12 +2382,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d12-smoke
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q20
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q20
@@ -2422,7 +2422,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q20
   round: a2
   qualification: qualification-Q20
@@ -2440,12 +2440,12 @@ entries:
   run_ids:
   - e1000-l02d-20260924-01/mut-m4-rdlen-short-r5
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q21
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q21
@@ -2480,7 +2480,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q21
   round: a2
   qualification: qualification-Q21
@@ -2498,12 +2498,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d13-smoke
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q22
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q22
@@ -2538,7 +2538,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q22
   round: a2
   qualification: qualification-Q22
@@ -2556,12 +2556,12 @@ entries:
   run_ids:
   - e1000-l02d3-20260925-01/q1-d14-smoke
   evidence:
-  - evidence/L02d3.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/L02d3.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q23
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q23
@@ -2596,7 +2596,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q23
   round: a2
   qualification: qualification-Q23
@@ -2619,12 +2619,12 @@ entries:
   - qf1-20260926-01/q1-d20-smoke-2
   - qf1-20260926-01/q1-d20-smoke-3
   evidence:
-  - evidence/QF-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/QF-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q24
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q24
@@ -2659,7 +2659,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q24
   round: a2
   qualification: qualification-Q24
@@ -2679,12 +2679,12 @@ entries:
   - qf1-20260926-01/q2-d21b-frame-sizes-2
   - qf1-20260926-01/q2-d21b-frame-sizes-3
   evidence:
-  - evidence/QF-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/QF-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q25
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q25
@@ -2701,7 +2701,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q25
   round: a2
   qualification: qualification-Q25
@@ -2724,12 +2724,12 @@ entries:
   - qf1-20260926-01/q1-d18-smoke-2
   - qf1-20260926-01/q1-d18-smoke-3
   evidence:
-  - evidence/QF-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/QF-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q26
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q26
@@ -2764,7 +2764,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-itr-1
   - e1000-cf2-20260926-01/a2-cand-itr-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q26
   round: a2
   qualification: qualification-Q26
@@ -2785,12 +2785,12 @@ entries:
   - fc1-20260926-01/f2-d24-frame-sizes-1
   - fc1-20260926-01/f2-d24-frame-sizes-2
   evidence:
-  - evidence/FC-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/FC-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q27
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q27
@@ -2807,7 +2807,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q27
   round: a2
   qualification: qualification-Q27
@@ -2830,12 +2830,12 @@ entries:
   - cs1-20260926-01/c2-d26-frame-sizes-2
   - cs1-20260926-01/c2-d26-frame-sizes-3
   evidence:
-  - evidence/CS-1.md#qualification
-  - evidence/L02f3.md
-  - evidence/QF-1.md
-  - evidence/FC-1.md
-  - evidence/CS-1.md
-  - evidence/CF-2.md
+  - notes/evidence/CS-1.md#qualification
+  - notes/evidence/L02f3.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/FC-1.md
+  - notes/evidence/CS-1.md
+  - notes/evidence/CF-2.md
   claim: Q28
   validated_harness_sha256: a1735b9f4e8622d397c3bfc997f53f79249a8b9629a44f7dfcba69687951393d
 - id: result-Q28
@@ -2852,7 +2852,7 @@ entries:
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-1
   - e1000-cf2-20260926-01/a2-cand-frame-sizes-2
   evidence:
-  - evidence/CF-2.md#run-results-round-a1
+  - notes/evidence/CF-2.md#run-results-round-a1
   claim: Q28
   round: a2
   qualification: qualification-Q28
@@ -2870,9 +2870,9 @@ entries:
   run_ids:
   - e1000-l02f3-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02f1.md
-  - evidence/L02f2.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02f1.md
+  - notes/evidence/L02f2.md
   sections:
   - '4.1'
   - '5.3'
@@ -2891,8 +2891,8 @@ entries:
   run_ids:
   - e1000-l02f1-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02f1.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02f1.md
   sections:
   - '4.1'
   - '12.5'
@@ -2911,9 +2911,9 @@ entries:
   - e1000-l02f2b-20260925-01
   - e1000-l02f3-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02f2b.md
-  - evidence/L02f2.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02f2b.md
+  - notes/evidence/L02f2.md
   sections:
   - '12.5'
   evidence_class: emulated
@@ -2931,9 +2931,9 @@ entries:
   - e1000-l02d3-20260925-01
   - e1000-l02f2-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02d2.md
-  - evidence/L02f2.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02d2.md
+  - notes/evidence/L02f2.md
   sections:
   - '6.3'
   - '12.5'
@@ -2952,9 +2952,9 @@ entries:
   - e1000-l02d-20260924-01
   - e1000-l02f2-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02d2.md
-  - evidence/L02f2.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02d2.md
+  - notes/evidence/L02f2.md
   sections:
   - '12.5'
   evidence_class: emulated
@@ -2971,7 +2971,7 @@ entries:
   run_ids:
   - e1000-l02f3-20260925-01
   evidence:
-  - evidence/L02f3.md
+  - notes/evidence/L02f3.md
   sections:
   - '5.2'
   - '12.5'
@@ -2989,9 +2989,9 @@ entries:
   run_ids:
   - e1000-l02f2-20260925-01
   evidence:
-  - evidence/L02f3.md
-  - evidence/L02f2.md
-  - evidence/SR-7.md
+  - notes/evidence/L02f3.md
+  - notes/evidence/L02f2.md
+  - notes/evidence/SR-7.md
   sections:
   - '12.5'
   evidence_class: emulated
@@ -3008,8 +3008,8 @@ entries:
   run_ids:
   - qf1-20260926-01
   evidence:
-  - evidence/QF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/SR-7.md
   sections:
   - '6.4'
   - '12.5'
@@ -3028,8 +3028,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3050,8 +3050,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3072,8 +3072,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3094,8 +3094,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3116,8 +3116,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3138,8 +3138,8 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3160,8 +3160,8 @@ entries:
   - e1000-sr7-20260926-01
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-7.md
-  - evidence/SR-8.md
+  - notes/evidence/SR-7.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: spec
@@ -3182,8 +3182,8 @@ entries:
   - e1000-sr7-20260926-01
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-7.md
-  - evidence/SR-8.md
+  - notes/evidence/SR-7.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: spec
@@ -3204,8 +3204,8 @@ entries:
   - e1000-sr7-20260926-01
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-7.md
-  - evidence/SR-8.md
+  - notes/evidence/SR-7.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: spec
@@ -3225,7 +3225,7 @@ entries:
   run_ids:
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-8.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: spec
@@ -3246,8 +3246,8 @@ entries:
   - e1000-sr8-20260926-01
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/SR-8.md
-  - evidence/CF-2.md
+  - notes/evidence/SR-8.md
+  - notes/evidence/CF-2.md
   class: W
   source: 3
   target: spec
@@ -3269,7 +3269,7 @@ entries:
   run_ids:
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-8.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: spec
@@ -3289,7 +3289,7 @@ entries:
   run_ids:
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-8.md
+  - notes/evidence/SR-8.md
   class: W
   source: 3
   target: records
@@ -3309,8 +3309,8 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
-  - evidence/DESIGN-2026-09-26.md
+  - notes/evidence/CF-2.md
+  - notes/evidence/DESIGN-2026-09-26.md
   class: W
   source: 1
   target: spec
@@ -3320,7 +3320,7 @@ entries:
   decision:
     who: orchestrator
     date: '2026-09-26'
-    link: DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+    link: docs/DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
 - id: A-RR-2
   kind: item
   basis: cf2-review
@@ -3334,7 +3334,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: R
   source: 1
   target: candidate
@@ -3354,7 +3354,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: R
   source: 1
   target: candidate
@@ -3374,7 +3374,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: E
   source: 1
   target: upstream
@@ -3394,7 +3394,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: R
   source: 1
   target: candidate
@@ -3415,7 +3415,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: R
   source: 1
   target: candidate
@@ -3437,7 +3437,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md#round-1-the-update-and-its-checks
+  - notes/evidence/CF-2.md#round-1-the-update-and-its-checks
   class: W
   source: 1
   target: candidate
@@ -3460,7 +3460,7 @@ entries:
   run_ids:
   - e1000-cf2-20260926-01
   evidence:
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   class: E
   source: 1
   target: spec
@@ -3482,8 +3482,8 @@ entries:
   - e1000-cf2-20260926-01
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/CF-2.md
-  - evidence/SR-8.md
+  - notes/evidence/CF-2.md
+  - notes/evidence/SR-8.md
   class: E
   source: 1
   target: hardware
@@ -3506,8 +3506,8 @@ entries:
   - qf1-20260926-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/QF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/QF-1.md
+  - notes/evidence/SR-7.md
   class: E
   source: 1
   target: upstream
@@ -3527,7 +3527,7 @@ entries:
   run_ids:
   - af1-20260925-01
   evidence:
-  - evidence/AF-1.md
+  - notes/evidence/AF-1.md
   class: E
   source: 3
   target: review
@@ -3547,9 +3547,9 @@ entries:
   run_ids:
   - af1-20260925-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SR-7.md
-  - evidence/CF-2.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SR-7.md
+  - notes/evidence/CF-2.md
   class: E
   source: 3
   target: review
@@ -3570,8 +3570,8 @@ entries:
   run_ids:
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/SR-8.md
-  - evidence/DESIGN-2026-09-26.md
+  - notes/evidence/SR-8.md
+  - notes/evidence/DESIGN-2026-09-26.md
   class: E
   source: 3
   target: review
@@ -3592,9 +3592,9 @@ entries:
   - af1-20260925-01
   - e1000-sr7-20260926-01
   evidence:
-  - evidence/AF-1.md
-  - evidence/SF-1.md
-  - evidence/SR-7.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/SF-1.md
+  - notes/evidence/SR-7.md
   class: W
   source: 3
   target: spec
@@ -3615,7 +3615,7 @@ entries:
   supersedes: *cr2_1
   run_ids: *cr2_19
   evidence: &cr2_21
-  - evidence/L02c.md
+  - notes/evidence/L02c.md
   text: landed
   sections: &cr2_25
   - '1'
@@ -4495,9 +4495,9 @@ entries:
   run_ids: &cr2_47
   - af1-20260925-01
   evidence: &cr2_48
-  - evidence/AF-1.md
-  - evidence/L02c.md
-  - evidence/CR2-provenance.md
+  - notes/evidence/AF-1.md
+  - notes/evidence/L02c.md
+  - notes/evidence/CR2-provenance.md
   text: landed
   sections: *cr2_37
   evidence_classes: *cr2_44
@@ -5096,7 +5096,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5105,7 +5105,7 @@ entries:
   supersedes: *cr2_1
   run_ids: *cr2_68
   evidence: &cr2_69
-  - evidence/SR-7.md
+  - notes/evidence/SR-7.md
   text: landed
   sections: *cr2_25
   evidence_classes: *cr2_61
@@ -5126,7 +5126,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5151,7 +5151,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5176,7 +5176,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5201,7 +5201,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5226,7 +5226,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5251,7 +5251,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5276,7 +5276,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5301,7 +5301,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5326,7 +5326,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5351,7 +5351,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5376,7 +5376,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-7.md
+    - notes/evidence/SR-7.md
   kind: verification
   basis: verify-r6-SR7
   verdict: 77 PASS, 3 FAIL, 3 UNVERIFIABLE, 0 GAP
@@ -5667,7 +5667,7 @@ entries:
     accuracy_failures: 0
     r_items: []
     evidence:
-    - evidence/SR-8.md
+    - notes/evidence/SR-8.md
   kind: verification
   basis: verify-r8-round2
   verdict: 68 PASS, 0 FAIL, 1 UNVERIFIABLE
@@ -5697,7 +5697,7 @@ entries:
     r_items:
     - CR6a-link-down-reading
     evidence:
-    - evidence/CR6a.md
+    - notes/evidence/CR6a.md
   kind: verification
   basis: verify-r8-cr6a
   verdict: 60 PASS, 1 FAIL, 1 UNVERIFIABLE
@@ -5710,7 +5710,7 @@ entries:
   run_ids: &cr6_4
   - cr6-20260926-01
   evidence: &cr6_5
-  - evidence/CR6a.md
+  - notes/evidence/CR6a.md
   text: landed
   sections: *cr2_16
   evidence_classes: *cr2_87
@@ -5731,7 +5731,7 @@ entries:
     r_items:
     - CR6a-link-down-reading
     evidence:
-    - evidence/CR6a.md
+    - notes/evidence/CR6a.md
   kind: verification
   basis: verify-r8-cr6a-adjudication
   verdict: 'FAIL stands: section 4.7 gated-reading clause false under the rule; link-down reading unsupported.'
@@ -5776,7 +5776,7 @@ entries:
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6a.md options a, b, c), deciding SR-8-2 (widened to every
+    destination: User revision decision (notes/evidence/CR6a.md options a, b, c), deciding SR-8-2 (widened to every
       link-down interval) with it; the trigger for CR8.
 - id: CR6a-link-down-reading-decided
   kind: item
@@ -5805,7 +5805,7 @@ entries:
   decision:
     who: user
     date: '2026-09-26'
-    link: evidence/CR6a.md#the-users-decision
+    link: notes/evidence/CR6a.md#the-users-decision
 - id: SR-8-independent-reading-CR6a
   kind: item
   basis: verify-r8-cr6a
@@ -5846,7 +5846,7 @@ entries:
     - CR6b-R-stats-cancel
     - CR6b-R-mtu
     evidence:
-    - evidence/CR6b.md
+    - notes/evidence/CR6b.md
   kind: verification
   basis: verify-r8-cr6b
   verdict: 681 PASS, 98 FAIL, 19 UNVERIFIABLE, 2 GAP
@@ -5858,7 +5858,7 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_7
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   text: landed
   sections: *cr6_6
   evidence_classes:
@@ -5903,7 +5903,7 @@ entries:
     - CR6b-R-stats-cancel
     - CR6b-R-mtu
     evidence:
-    - evidence/CR6b.md
+    - notes/evidence/CR6b.md
   kind: verification
   basis: verify-r8-cr6b-adjudication
   verdict: 'Of 119 non-PASS lines: 84 upheld or partly (14 R, 41 E, 28 W, 1 already recorded), 16 rejected, 19 input limitations.'
@@ -5944,13 +5944,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_RLEC
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-L6-lock
   kind: item
   basis: verify-r8-cr6b
@@ -5963,13 +5963,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_L6_lock
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-PIF
   kind: item
   basis: verify-r8-cr6b
@@ -5982,13 +5982,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_PIF
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-ring-len
   kind: item
   basis: verify-r8-cr6b
@@ -6001,13 +6001,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_ring_len
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-napi-schedule
   kind: item
   basis: verify-r8-cr6b
@@ -6020,13 +6020,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_napi_schedule
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-ndo-open
   kind: item
   basis: verify-r8-cr6b
@@ -6039,13 +6039,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_ndo_open
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-ndo-stop
   kind: item
   basis: verify-r8-cr6b
@@ -6058,13 +6058,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_ndo_stop
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-probe-regions
   kind: item
   basis: verify-r8-cr6b
@@ -6077,13 +6077,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_probe_regions
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-probe-dma
   kind: item
   basis: verify-r8-cr6b
@@ -6096,13 +6096,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_probe_dma
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-remove-order
   kind: item
   basis: verify-r8-cr6b
@@ -6115,13 +6115,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_remove_order
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-stats-cancel
   kind: item
   basis: verify-r8-cr6b
@@ -6134,13 +6134,13 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_stats_cancel
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-R-mtu
   kind: item
   basis: verify-r8-cr6b
@@ -6153,18 +6153,18 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence: &cr6_ev_CR6b_R_mtu
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User revision decision (evidence/CR6b.md); CR8's revision.
+    destination: User revision decision (notes/evidence/CR6b.md); CR8's revision.
 - id: CR6b-evidence-items
   kind: item
   basis: verify-r8-cr6b
   verdict: 41 adjudicated evidence findings (citations, authority, confidence, verification, emulated scope), listed in
-    evidence/CR6b.md.
+    notes/evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
     state: superseded
@@ -6173,7 +6173,7 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence:
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: E
   source: 3
   target: spec
@@ -6187,7 +6187,7 @@ entries:
   kind: item
   basis: verify-r8-cr6b
   verdict: 28 adjudicated form findings (source-observed markers, missing confidence or verification clauses, cross-references),
-    listed in evidence/CR6b.md.
+    listed in notes/evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
     state: superseded
@@ -6196,7 +6196,7 @@ entries:
   supersedes: []
   run_ids: *cr6_4
   evidence:
-  - evidence/CR6b.md
+  - notes/evidence/CR6b.md
   class: W
   source: 3
   target: spec
@@ -6230,7 +6230,7 @@ entries:
   supersedes: *cr2_1
   run_ids: *cr2_51
   evidence:
-  - evidence/L02s.md
+  - notes/evidence/L02s.md
   target: spec
   source: 1
   disposition:
@@ -6246,7 +6246,7 @@ entries:
   supersedes: *cr2_1
   run_ids: *cr2_59
   evidence:
-  - evidence/L02f3.md
+  - notes/evidence/L02f3.md
   target: spec
   source: 1
   disposition:
@@ -6264,8 +6264,8 @@ entries:
   - e1000-cf1-20260925-01
   - e1000-sr8-20260926-01
   evidence:
-  - evidence/CF-1.md
-  - evidence/SR-8.md
+  - notes/evidence/CF-1.md
+  - notes/evidence/SR-8.md
   target: spec
   source: 1
   disposition:
@@ -6278,7 +6278,7 @@ entries:
   decision:
     who: user
     date: '2026-09-26'
-    link: evidence/SR-8.md#the-rule-as-revision-8-writes-it
+    link: notes/evidence/SR-8.md#the-rule-as-revision-8-writes-it
 - id: candidate-CF1-a1
   kind: candidate_round
   basis: cf1-a1
@@ -6292,7 +6292,7 @@ entries:
   run_ids:
   - e1000-cf1-20260925-01
   evidence:
-  - evidence/CF-1.md
+  - notes/evidence/CF-1.md
   round: a1
   applied_items: *cr2_90
   verification:
@@ -6321,7 +6321,7 @@ entries:
   run_ids: &cr2_93
   - e1000-cf2-20260926-01
   evidence: &cr2_94
-  - evidence/CF-2.md
+  - notes/evidence/CF-2.md
   round: a1
   applied_items: &cr2_95
   - CF-1-TNCRS
@@ -6387,7 +6387,7 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   text: verify-r9-round1
   sections:
   - '1'
@@ -6456,7 +6456,7 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   text: verify-r9-round2
   sections:
   - '1'
@@ -6526,7 +6526,7 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   text: verify-r9-round3
   sections:
   - '1'
@@ -6596,8 +6596,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6619,8 +6619,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6643,8 +6643,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6666,8 +6666,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6690,8 +6690,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6713,8 +6713,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6737,8 +6737,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6761,8 +6761,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6784,8 +6784,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6807,8 +6807,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6830,8 +6830,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6854,8 +6854,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
@@ -6866,7 +6866,7 @@ entries:
   kind: item
   basis: verify-r8-cr6b
   verdict: 41 adjudicated evidence findings (citations, authority, confidence, verification, emulated
-    scope), listed in evidence/CR6b.md.
+    scope), listed in notes/evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
     state: current
@@ -6878,8 +6878,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: E
   source: 3
   target: spec
@@ -6893,7 +6893,7 @@ entries:
   kind: item
   basis: verify-r8-cr6b
   verdict: 28 adjudicated form findings (source-observed markers, missing confidence or verification clauses,
-    cross-references), listed in evidence/CR6b.md.
+    cross-references), listed in notes/evidence/CR6b.md.
   rule: C6-item-classification-2026-09-26
   status:
     state: current
@@ -6905,8 +6905,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6b.md
-  - evidence/CR8.md
+  - notes/evidence/CR6b.md
+  - notes/evidence/CR8.md
   class: W
   source: 3
   target: spec
@@ -6929,8 +6929,8 @@ entries:
   - cr6-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CR6a.md
-  - evidence/CR8.md
+  - notes/evidence/CR6a.md
+  - notes/evidence/CR8.md
   class: E
   source: 3
   target: spec
@@ -6943,7 +6943,7 @@ entries:
   decision:
     who: user
     date: '2026-09-26'
-    link: evidence/CR6a.md#the-users-decision
+    link: notes/evidence/CR6a.md#the-users-decision
 - id: SR-8-1-r9
   kind: item
   basis: sr8
@@ -6959,8 +6959,8 @@ entries:
   - e1000-sr8-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/SR-8.md
-  - evidence/CR8.md
+  - notes/evidence/SR-8.md
+  - notes/evidence/CR8.md
   class: W
   source: 3
   target: spec
@@ -6983,9 +6983,9 @@ entries:
   - e1000-cf2-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/SR-8.md
-  - evidence/CF-2.md
-  - evidence/CR8.md
+  - notes/evidence/SR-8.md
+  - notes/evidence/CF-2.md
+  - notes/evidence/CR8.md
   class: W
   source: 3
   target: spec
@@ -7007,8 +7007,8 @@ entries:
   - e1000-sr8-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/SR-8.md
-  - evidence/CR8.md
+  - notes/evidence/SR-8.md
+  - notes/evidence/CR8.md
   class: W
   source: 3
   target: spec
@@ -7030,9 +7030,9 @@ entries:
   - e1000-cf2-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CF-2.md
-  - evidence/DESIGN-2026-09-26.md
-  - evidence/CR8.md
+  - notes/evidence/CF-2.md
+  - notes/evidence/DESIGN-2026-09-26.md
+  - notes/evidence/CR8.md
   class: W
   source: 1
   target: spec
@@ -7042,7 +7042,7 @@ entries:
   decision:
     who: orchestrator
     date: '2026-09-26'
-    link: DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
+    link: docs/DESIGN.md#c6--stopping-rule-sufficient-for-the-declared-scope
 - id: CR8-R-poll-tail-reopen
   kind: item
   basis: verify-r9-round2
@@ -7057,13 +7057,13 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User decision (evidence/CR8.md, remainder list); the next spec revision.
+    destination: User decision (notes/evidence/CR8.md, remainder list); the next spec revision.
 - id: CR8-R-timeout-quiescence
   kind: item
   basis: verify-r9-round2
@@ -7078,13 +7078,13 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   class: R
   source: 3
   target: spec
   disposition:
     state: queued
-    destination: User decision (evidence/CR8.md, remainder list); the next spec revision.
+    destination: User decision (notes/evidence/CR8.md, remainder list); the next spec revision.
 - id: CF-2-AR-10-r9
   impact:
     claims: []
@@ -7104,8 +7104,8 @@ entries:
   - e1000-cf2-20260926-01
   - cr8-20260927-01
   evidence:
-  - evidence/CF-2.md
-  - evidence/CR8.md
+  - notes/evidence/CF-2.md
+  - notes/evidence/CR8.md
   class: E
   source: 1
   target: spec
@@ -7126,7 +7126,7 @@ entries:
   run_ids:
   - cr8-20260927-01
   evidence:
-  - evidence/CR8.md
+  - notes/evidence/CR8.md
   class: W
   source: 3
   target: spec
@@ -7149,8 +7149,8 @@ entries:
   - cr8-20260927-01
   - crg-20260927-01
   evidence:
-  - evidence/CR8.md
-  - evidence/CR-G.md
+  - notes/evidence/CR8.md
+  - notes/evidence/CR-G.md
   class: R
   source: 3
   target: spec
@@ -7161,7 +7161,7 @@ entries:
   decision:
     who: user
     date: '2026-09-27'
-    link: evidence/CR-G.md#the-users-decisions-after-cr8
+    link: notes/evidence/CR-G.md#the-users-decisions-after-cr8
 - id: CR8-R-timeout-quiescence-decided
   kind: item
   basis: verify-r9-round2
@@ -7178,8 +7178,8 @@ entries:
   - cr8-20260927-01
   - crg-20260927-01
   evidence:
-  - evidence/CR8.md
-  - evidence/CR-G.md
+  - notes/evidence/CR8.md
+  - notes/evidence/CR-G.md
   class: R
   source: 3
   target: spec
@@ -7190,4 +7190,4 @@ entries:
   decision:
     who: user
     date: '2026-09-27'
-    link: evidence/CR-G.md#the-users-decisions-after-cr8
+    link: notes/evidence/CR-G.md#the-users-decisions-after-cr8

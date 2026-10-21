@@ -29,7 +29,7 @@ SPDX-License-Identifier: Apache-2.0
 - **Contrary evidence / citation precision** — evidence that might limit or contradict a
   claim / whether its citation identifies the evidence for the whole claim.
 
-See the [glossary](../../GLOSSARY.md), sibling [format contract](../spec-format/SKILL.md)
+See the [glossary](../../docs/GLOSSARY.md), sibling [format contract](../spec-format/SKILL.md)
 and [record schema](../spec-format/schema/verify.schema.json).
 
 ## Validate the spec format

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 **Terms:** facts files contain identified records and structured support, without a spec identity;
 a pin identifies immutable source bytes; a root declares acceptable licenses. See the
-[glossary](../../GLOSSARY.md).
+[glossary](../../docs/GLOSSARY.md).
 
 Everything here is synthetic. This example uses the sources and facts converted in SF2-7,
 and the same target roots. It tests license placement and evidence resolution, not hardware.

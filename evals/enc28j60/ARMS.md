@@ -19,7 +19,7 @@ No paired run has taken place. This is a protocol, not a result.
 - **Reconstruction** — implementing a driver from the frozen spec on the reference OS.
 - **Candidate** — the particular spec or driver being evaluated.
 
-See the repository [glossary](../../GLOSSARY.md).
+See the repository [glossary](../../docs/GLOSSARY.md).
 
 ## What the practice run established about the design
 
@@ -132,7 +132,7 @@ precision ratio of one.
 ## Downstream reconstruction
 
 Both exact frozen spec artifacts feed the [reconstruction run](RECONSTRUCTION-RUN.md), under
-[the shared OS-neutral protocol](../../RECONSTRUCTION.md). Freeze that protocol, scope, inputs,
+[the shared OS-neutral protocol](../../notes/archive/RECONSTRUCTION.md). Freeze that protocol, scope, inputs,
 and independent checks before inspecting paired candidates. Record each spec's hash and opaque
 ID in a separate reconstruction manifest; do not change the documentary lock or review schemas.
 

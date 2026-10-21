@@ -20,7 +20,7 @@ SPDX-License-Identifier: Apache-2.0
   blind requirement list, the claim map and the status index.
 - `deployment.yaml`: the reference deployment manifest for continuous review (CR5).
 - [`EVAL-CONSENSUS-2026-09-18.md`](EVAL-CONSENSUS-2026-09-18.md): the evaluation consensus two
-  reviewers reached on 2026-09-18, the source of [EVAL-PLAN.md](../EVAL-PLAN.md).
+  reviewers reached on 2026-09-18, the source of [EVAL-PLAN.md](../notes/archive/EVAL-PLAN.md).
 
 Terms: a *campaign* is one device's spec, candidate, checks and evidence under one declared
-scope; see the [glossary](../GLOSSARY.md).
+scope; see the [glossary](../docs/GLOSSARY.md).

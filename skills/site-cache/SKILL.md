@@ -37,7 +37,7 @@ origin servers or recursively crawling entire websites.
   and falling back to the last known good snapshot (`stale: true`) on origin
   timeout or `5xx`.
 
-See the [glossary](../../GLOSSARY.md) and [spec-format contract](../spec-format/SKILL.md).
+See the [glossary](../../docs/GLOSSARY.md) and [spec-format contract](../spec-format/SKILL.md).
 
 ## Core rules
 

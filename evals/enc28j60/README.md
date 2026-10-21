@@ -17,7 +17,7 @@ SPDX-License-Identifier: Apache-2.0
 The calibration device for the driver-spec evaluation in `../../EVAL-PLAN.md`. The ENC28J60 is a
 small SPI Ethernet controller with fully public documentation. The pilot gets the ledger format,
 the scoring and the test quality right on something cheap before the method is pointed at a
-complex SoC. Shared terms are in the repository [glossary](../../GLOSSARY.md).
+complex SoC. Shared terms are in the repository [glossary](../../docs/GLOSSARY.md).
 
 ## Status
 
@@ -201,7 +201,7 @@ replay as scored.
 
 ## Reconstruction (planned)
 
-The [shared OS-neutral protocol](../../RECONSTRUCTION.md) adds driver reconstruction from each
+The [shared OS-neutral protocol](../../notes/archive/RECONSTRUCTION.md) adds driver reconstruction from each
 frozen spec. Linux is selected by this pilot's existing corpus; future devices can use another
 reference OS. Results will be separate from the frozen documentary scores, and the paired
 generation/review sequence in [ARMS.md](ARMS.md) remains in force.
@@ -213,7 +213,7 @@ generation/review sequence in [ARMS.md](ARMS.md) remains in force.
   pending launch decisions. The trial precedes preparation of the paired run.
 - The later [M01 preparation manifest](reconstruction/M01-PREPARATION-v1.md) records recovered
   input identities, bounded target/isolation/record investigations, stage blockers and
-  predeclared offline readiness criteria. Its [evidence record](../../evidence/M01.md) tracks
+  predeclared offline readiness criteria. Its [evidence record](../../notes/evidence/M01.md) tracks
   verification and review.
 
 The original R1a draft is preserved; neither record authorizes execution.

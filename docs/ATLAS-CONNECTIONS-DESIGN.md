@@ -14,7 +14,7 @@ SPDX-License-Identifier: Apache-2.0
 - Basis hash: the existing fingerprint of a fact, its evidence, and its referenced dependencies.
 - Specifier cells: ordered 32-bit values selecting a provider resource according to its binding.
 
-See the [glossary](../GLOSSARY.md). Design revision: 2026-10-16. The user delegated design-choice approval to Gemini 4 Argon, which confirmed sections A-L with no remaining objections; the user then selected GPT-6.1 Sol for implementation. The private review is retained under run ID `atlas-design-consult`. This document defines intended behavior, not a claim of implemented views or populated board data. Delivery status is in the [implementation plan](ATLAS-CONNECTIONS-PLAN.md).
+See the [glossary](GLOSSARY.md). Design revision: 2026-10-16. The user delegated design-choice approval to Gemini 4 Argon, which confirmed sections A-L with no remaining objections; the user then selected GPT-6.1 Sol for implementation. The private review is retained under run ID `atlas-design-consult`. This document defines intended behavior, not a claim of implemented views or populated board data. Delivery status is in the [implementation plan](../notes/plans/ATLAS-CONNECTIONS-PLAN.md).
 
 
 ## A. Views

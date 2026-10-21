@@ -78,8 +78,17 @@ target/release/hwspecs campaign index-check evals/e1000
   `spec-verifier` on the changed claims and their dependencies. `review-swarm` only when
   shared execution machinery, access controls or several scenarios change, or whenever the
   reviewer asks for broader review.
-- **Records, one job each** (revised 2026-10-14, user decision): the private run ledger holds
-  identities, commands, artifacts, attempts and reviewer references. A **tooling unit** (a
+- **Records, one job each** (revised 2026-10-21, user decision): the private run ledger holds
+  identities, commands, artifacts, attempts and reviewer references, and the structured process
+  audit trail under `<run_store>/<campaign_run>/audit/` (captured via `utilities/hwspecs-audit`,
+  with `verified.json` round summaries under `<run_store>/<campaign_run>/review/<spec>-r<n>/`; see
+  [PROCESS-AUDIT.md](docs/PROCESS-AUDIT.md)) holds machine-observed `bringup-audit-1` and
+  `hwspecs-diag-1` receipts, gate-close transitions, tool-defect attributions, and subagent/token
+  usage outside published spec roots. Method-level continuous streamlining records live under
+  `notes/`: [notes/process-streamlining.md](notes/process-streamlining.md) (`Mistakes -> rules` and
+  measured process changes), [notes/decision-audit-log.md](notes/decision-audit-log.md) (autonomous
+  orchestrator choices), and [notes/streamlining-pass-brief.md](notes/streamlining-pass-brief.md)
+  (background pass instructions). A **tooling unit** (a
   skill, a check, a format change, an issue fix) writes no evidence file or notebook chapter:
   its pull request body holds the results, the checks run, review findings with their
   resolutions, and dead ends, and its commit message the summary. An **experiment** (a

@@ -11,7 +11,10 @@ Working records: how the project got here and the evidence behind what the
 
 | Folder | What it holds |
 | --- | --- |
-| [`plans/`](plans/) | Implementation plans with milestone status: [atlas connections](plans/ATLAS-CONNECTIONS-PLAN.md), [spec format](plans/SPEC-FORMAT-PLAN.md), [spec regeneration](plans/SPEC-REGEN-PLAN.md), [license split](plans/LICENSE-SPLIT-PLAN.md) |
+| [`plans/`](plans/) | Implementation plans with milestone status: [atlas connections](plans/ATLAS-CONNECTIONS-PLAN.md), [spec format](plans/SPEC-FORMAT-PLAN.md), [spec regeneration](plans/SPEC-REGEN-PLAN.md), [license split](plans/LICENSE-SPLIT-PLAN.md), [process audit](plans/PROCESS-AUDIT-PLAN.md) |
+| [`process-streamlining.md`](process-streamlining.md) | Continuous process streamlining log (`Mistakes -> rules`, measured changes, and baseline) |
+| [`decision-audit-log.md`](decision-audit-log.md) | Autonomous orchestrator decisions and reversal procedures |
+| [`streamlining-pass-brief.md`](streamlining-pass-brief.md) | Background agent brief for running a streamlining pass |
 | [`evidence/`](evidence/README.md) | One file per experiment: conclusions, acceptance table, limitations, findings |
 | [`notebook/`](notebook/index.md) | The lab notebook: one chapter per experiment, with discoveries and dead ends |
 | [`research/`](research/) | Surveys of existing hardware-description standards ([1](research/STANDARDS-SURVEY.md), [2](research/STANDARDS-SURVEY-2.md)) |

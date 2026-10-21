@@ -358,6 +358,15 @@ contrary-evidence limits, PASS verdicts with `contrary_evidence: found` and the 
 names, TODOs, each FAIL's correction and unsettled ADJUDICATE. Commit or
 stage records only when the project calls for it; do not push without authorization.
 
+- **Process audit round summary (`verified.json`):** alongside the verifier report
+  (`review/<spec>-r<n>/report.md`) in the run store, when a campaign run is configured
+  (`python3 utilities/run-store.py <campaign_run>`), the orchestrator also records the
+  machine-readable round summary `review/<spec>-r<n>/verified.json` via
+  `python3 utilities/hwspecs-audit record-verified --run <campaign_run> --spec <spec> --round <n> ...`
+  and wraps `hwspecs check`, `hwspecs resolve`, and `hwspecs status` invocations with
+  `python3 utilities/hwspecs-audit --step <step> -- hwspecs ...` (see
+  [PROCESS-AUDIT.md](../../docs/PROCESS-AUDIT.md)).
+
 ## Complete worked record
 
 The [example root](examples/widget/board-specs.yaml) describes a **synthetic** Widget,

@@ -125,6 +125,14 @@ When creating a spec repository, install and configure the [repository checks](.
    `hwspecs render <root>... --context-root <dependency root>... --spec <id> --merged
    --with-status --format md` and inspect it, then the same with `--format html` (the viewer,
    which repeats the containment checks); both are on main.
+   - **Process audit (`utilities/hwspecs-audit`):** when a run store is configured
+     (`python3 utilities/run-store.py <campaign_run>`), the orchestrator sets
+     `HWSPECS_AUDIT_RUN=<campaign_run>` and wraps `hwspecs check`, `hwspecs resolve`, and
+     `hwspecs status` invocations with
+     `python3 utilities/hwspecs-audit --step <step> -- hwspecs ...`, logs any `hwspecs` tool
+     defects via `python3 utilities/hwspecs-audit record-issue`, and records subagent completion
+     notices via `python3 utilities/hwspecs-audit record-subagent` (see
+     [PROCESS-AUDIT.md](../../docs/PROCESS-AUDIT.md)).
 8. **Verify** by following [spec-verifier's procedure](../spec-verifier/SKILL.md).
    If verification was explicitly deferred, report the spec
    as unverified and leave completion pending.

@@ -1,0 +1,1960 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Preserve this command's hyphenated filename.
+# pylint: disable=invalid-name
+"""Process audit wrapper and reporter for hwspecs campaigns.
+
+Subcommands:
+  run (or default with `--`)
+      Wrap a `hwspecs <subcmd> ...` invocation without mutating argv by default,
+      tee stdout/stderr unchanged, hash target `.spec.yaml` files before and after,
+      parse text or JSON findings into scrubbed `(tool_commit, code_or_slug)` counts,
+      and atomically publish `bringup-audit-1` (`audit/runs/<exec-id>/`) and
+      `hwspecs-diag-1` (`audit/hwspecs/<event-id>-<subcmd>.json`) receipts.
+      Emits `audit/gates/<event-id>/gate-clean.json` once per spec root when
+      `check` or `resolve` transitions from failing (`errors > 0`) to clean
+      (`errors == 0`).
+  record-issue
+      Record a `hwspecs` tool defect or workaround in
+      `audit/issues/<event-id>/tool-issue.json`.
+  record-verified
+      Record a verifier round summary in `review/<spec>-r<n>/verified.json`.
+  record-subagent
+      Append a subagent spawn/completion notice to `audit/subagents.jsonl`.
+  report
+      Aggregate campaign receipts into gate edit cycles, no-op reruns,
+      finding persistence, tool-defect vs. spec-defect cycle attribution,
+      verifier round summaries, subagent token/duration summaries, and
+      explicit coverage disclosure (`unknown` when uncaptured, never `0`).
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import tomllib
+from typing import Any
+import uuid
+
+
+BRINGUP_SCHEMA = "bringup-audit-1"
+DIAG_SCHEMA = "hwspecs-diag-1"
+GATE_CLEAN_SCHEMA = "hwspecs-gate-1"
+TOOL_ISSUE_SCHEMA = "hwspecs-issue-1"
+VERIFIED_SCHEMA = "hwspecs-verified-1"
+SUBAGENT_SCHEMA = "hwspecs-subagent-1"
+REPORT_SCHEMA = "hwspecs-audit-report-1"
+
+ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+HEX64_RE = re.compile(r"[0-9a-fA-F]{64}\Z")
+TEXT_FINDING_RE = re.compile(r"^(.+?):([0-9]+):([0-9]+): (error|warning): (.+)$")
+BARE_ERROR_RE = re.compile(r"^(usage error|missing precondition|error): (.+)$")
+RESOLVE_SUMMARY_RE = re.compile(r"^([0-9]+) anchor\(s\) resolved, ([0-9]+) skipped$")
+DOC_SUMMARY_RE = re.compile(
+    r"^([0-9]+) document citation\(s\) resolved, ([0-9]+) skipped$"
+)
+VERSION_RE = re.compile(r"^hwspecs\s+\S+\s+\(([^)]+)\)")
+HOME_PATH_RE = re.compile(r"/(?:Users|home)/(?!<)([A-Za-z0-9_][A-Za-z0-9_.-]*)/")
+
+VALID_VERDICTS: tuple[str, ...] = (
+    "PASS",
+    "FAIL",
+    "GAP",
+    "UNVERIFIABLE",
+    "ADJUDICATE",
+)
+
+VALID_FAIL_CATEGORIES: tuple[str, ...] = (
+    "locator",
+    "precision",
+    "class",
+    "derivation",
+    "too-broad",
+    "enumeration",
+    "bound",
+    "layer",
+    "duplicate",
+    "todo-method",
+    "other",
+)
+
+TOKEN_KEYS = {"input", "cache_read", "cache_write", "output"}
+
+# Options in hwspecs that consume a following value token when not written with `=`.
+HWSPECS_VALUE_OPTIONS = frozenset(
+    {
+        "--scratch-dir",
+        "--diag-out",
+        "--root",
+        "--context-root",
+        "--stubs-from",
+        "--stub",
+        "--verify",
+        "--require-verified",
+        "--public-skill",
+        "--repo",
+        "--docs-dir",
+        "--timeout",
+        "--limit-mb",
+        "--format",
+        "--output",
+        "-o",
+    }
+)
+
+
+def require(condition: bool, message: str) -> None:
+    """Raise a ValueError when a validation invariant is violated."""
+    if not condition:
+        raise ValueError(message)
+
+
+def validate_identifier(value: str, label: str = "identifier") -> str:
+    """Validate that value conforms to the receipt identifier syntax."""
+    require(
+        isinstance(value, str) and ID_RE.fullmatch(value) is not None,
+        f"invalid {label}: {value!r}",
+    )
+    return value
+
+
+def sanitize_identifier(raw: str, fallback: str = "item") -> str:
+    """Normalize an arbitrary string into a valid receipt identifier."""
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "-", raw.strip()).strip("-_.")
+    if not cleaned or not cleaned[0].isalnum():
+        cleaned = f"{fallback}-{cleaned}" if cleaned else fallback
+    cleaned = cleaned[:128]
+    if not ID_RE.fullmatch(cleaned):
+        return fallback
+    return cleaned
+
+
+def utc_now_iso() -> str:
+    """Return the current UTC timestamp in ISO-8601 format."""
+    return dt.datetime.now(dt.timezone.utc).isoformat()
+
+
+def generate_event_id() -> str:
+    """Generate a collision-free `<YYYYMMDDTHHMMSSffffffZ>-<rand8>` event ID."""
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    rand8 = os.urandom(4).hex()
+    return f"{stamp}-{rand8}"
+
+
+def config_path() -> Path:
+    """Return the user config file path following utilities/run-store.py."""
+    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    current = base / "hwspecs" / "config.toml"
+    legacy = base / "driver-lab" / "config.toml"
+    if not current.is_file() and legacy.is_file():
+        return legacy
+    return current
+
+
+def read_config() -> dict[str, Any]:
+    """Read shared user settings from config.toml if present."""
+    cfg = config_path()
+    if not cfg.is_file():
+        return {}
+    with cfg.open("rb") as stream:
+        return tomllib.load(stream)
+
+
+def resolve_run_store() -> tuple[Path | None, str]:
+    """Locate the configured private run store directory."""
+    for name in ("HWSPECS_RUNS", "DRIVER_LAB_RUNS"):
+        env = os.environ.get(name)
+        if env:
+            return Path(env).expanduser(), name
+    cfg = config_path()
+    value = read_config().get("run_store")
+    if value:
+        return Path(str(value)).expanduser(), str(cfg)
+    return None, str(cfg)
+
+
+def resolve_campaign_run_dir(campaign_run: str | None) -> tuple[str, Path]:
+    """Resolve `<run_store>/<campaign_run>` and validate the run identifier."""
+    run_name = campaign_run or os.environ.get("HWSPECS_AUDIT_RUN")
+    if not run_name:
+        raise ValueError(
+            "campaign run ID required: pass --run <campaign_run> or set HWSPECS_AUDIT_RUN"
+        )
+    validate_identifier(run_name, "campaign run ID")
+    store, source = resolve_run_store()
+    if store is None:
+        raise ValueError(
+            f"run store not configured: set run_store in {source} or HWSPECS_RUNS"
+        )
+    if not store.is_dir():
+        raise ValueError(f"run store {store} (from {source}) is not a directory")
+    store_resolved = store.resolve()
+    run_dir = (store_resolved / run_name).resolve()
+    require(
+        run_dir.is_relative_to(store_resolved) and run_dir != store_resolved,
+        "unsafe campaign run directory",
+    )
+    return run_name, run_dir
+
+
+def encode_json(record: dict[str, Any]) -> bytes:
+    """Deterministically serialize a receipt dictionary to UTF-8 JSON bytes."""
+    return (
+        json.dumps(record, indent=2, sort_keys=True, ensure_ascii=True, allow_nan=False)
+        + "\n"
+    ).encode("utf-8")
+
+
+def _fsync_dir(directory: Path) -> None:
+    """Flush a directory descriptor on POSIX filesystems."""
+    try:
+        descriptor = os.open(directory, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+def atomic_publish(target_path: Path, record: dict[str, Any]) -> bool:
+    """Atomically publish a JSON receipt via temp file + hard link without overwriting.
+
+    Returns True when newly linked, False when an identical receipt already existed,
+    and raises ValueError if the target exists with different content.
+    """
+    folder = target_path.parent
+    folder.mkdir(parents=True, exist_ok=True)
+    data = encode_json(record)
+    fd, staging_str = tempfile.mkstemp(prefix=".pending-", dir=folder)
+    staging = Path(staging_str)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(staging, target_path)
+            changed = True
+        except FileExistsError:
+            require(
+                not target_path.is_symlink() and target_path.read_bytes() == data,
+                f"receipt already exists with different content: {target_path.name}",
+            )
+            changed = False
+        _fsync_dir(folder)
+        if folder.parent.exists():
+            _fsync_dir(folder.parent)
+        return changed
+    finally:
+        try:
+            staging.unlink()
+        except OSError:
+            pass
+
+
+def validate_bringup_receipt(record: dict[str, Any]) -> None:
+    """Validate a `bringup-audit-1` receipt against bringupkit/audit.py rules."""
+    common = {
+        "schema",
+        "kind",
+        "id",
+        "run_id",
+        "lap",
+        "milestone",
+        "step",
+        "attempt",
+        "recorded_at",
+    }
+    require(isinstance(record, dict), "receipt must be an object")
+    kind = record.get("kind")
+    extra = {
+        "start": {"observed_at", "role", "parent_run_id", "retry_of"},
+        "finish": {"observed_at", "outcome", "exit_code", "duration_seconds"},
+        "usage": {"measurement_key", "provider", "model", "tokens", "semantics"},
+        "model": {"measurement_key", "provider", "model", "turn_index", "provenance"},
+    }
+    require(kind in extra, f"unsupported receipt kind: {kind!r}")
+    optional = {"start": {"requested_model"}, "usage": {"provenance"}}
+    allowed = common | extra[kind] | optional.get(kind, set())
+    require(set(common | extra[kind]) <= record.keys(), "missing required receipt fields")
+    require(record.keys() <= allowed, "unknown receipt fields")
+    require(record["schema"] == BRINGUP_SCHEMA, "unsupported receipt schema")
+    for key in ("id", "run_id", "lap", "milestone", "step", "attempt"):
+        validate_identifier(record[key], key)
+    if kind == "start":
+        validate_identifier(record["role"], "role")
+        for key in ("parent_run_id", "retry_of"):
+            if record[key] is not None:
+                validate_identifier(record[key], key)
+                require(record[key] != record["run_id"], "run cannot reference itself")
+    elif kind == "finish":
+        require(
+            record["outcome"] in ("completed", "failed", "interrupted", "unknown"),
+            "invalid process outcome",
+        )
+        require(
+            record["exit_code"] is None or type(record["exit_code"]) is int,
+            "exit_code must be integer or null",
+        )
+        require(
+            record["outcome"] != "completed" or record["exit_code"] == 0,
+            "completed run needs exit code zero",
+        )
+        if record["duration_seconds"] is not None:
+            val = record["duration_seconds"]
+            require(
+                type(val) in (int, float) and math.isfinite(val) and val >= 0,
+                "duration_seconds must be finite and nonnegative",
+            )
+
+
+def publish_bringup_receipt(audit_dir: Path, record: dict[str, Any]) -> bool:
+    """Validate and atomically publish a `bringup-audit-1` receipt under `audit/runs/<run_id>/`."""
+    validate_bringup_receipt(record)
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    folder = audit_dir / "runs" / record["run_id"]
+    folder.mkdir(parents=True, exist_ok=True)
+    require(
+        folder.resolve().is_relative_to(audit_dir.resolve()),
+        "unsafe bringup receipt directory",
+    )
+    target = folder / f"{record['id']}.json"
+    return atomic_publish(target, record)
+
+
+def scrub_text(text: str) -> str:
+    """Scrub any accidental home directory path from a short summary string."""
+    return HOME_PATH_RE.sub("/home/<user>/", text)
+
+
+def normalize_message_slug(message: str) -> str:
+    """Normalize a diagnostic message into a deterministic, path-free template slug.
+
+    Strips single/double/backtick-quoted tokens, path-like tokens, hex literals
+    (`0x[0-9a-fA-F]+`), and bare integers before collapsing words into a slug.
+    """
+    text = message.strip()
+    # Strip quoted substrings (single, double, backtick).
+    text = re.sub(r"'[^']*'|\"[^\"]*\"|`[^`]*`", " ", text)
+    # Strip URL-like tokens.
+    text = re.sub(r"\bhttps?://\S+", " ", text)
+    # Strip path-like tokens (tokens containing `/` or `\`, or ending with known file suffixes).
+    text = re.sub(
+        r"(?:[A-Za-z0-9_.~-]*[/\\][A-Za-z0-9_./\\~-]+|\b[A-Za-z0-9_.-]+\.(?:yaml|yml|md|rs|py|json|pdf|html|txt|toml|lock|sh|c|h)\b)",
+        " ",
+        text,
+    )
+    # Strip hex literals (e.g. 0x1000, 0xdead_beef).
+    text = re.sub(r"\b0[xX][0-9a-fA-F_]+\b", " ", text)
+    # Strip bare integers and numbers.
+    text = re.sub(r"\b[0-9]+\b", " ", text)
+    # Extract remaining lowercase alphabetic words.
+    words = re.findall(r"[a-z]+", text.lower())
+    if not words:
+        return "msg-unknown"
+    slug = "-".join(words[:12])
+    return f"msg-{slug[:64].strip('-')}"
+
+
+def external_path_token(raw_path: str) -> str:
+    """Hash a path outside the spec root into `<external>:<sha256[:12]>`."""
+    digest = hashlib.sha256(raw_path.encode("utf-8")).hexdigest()[:12]
+    return f"<external>:{digest}"
+
+
+def find_spec_root_for_path(path: Path) -> Path:
+    """Find the enclosing spec root directory for a target file or directory."""
+    resolved = path.resolve()
+    start_dir = resolved if resolved.is_dir() else resolved.parent
+    for candidate in (start_dir, *start_dir.parents):
+        if (candidate / "board-specs.yaml").is_file() or (
+            candidate / "corpus.yaml"
+        ).is_file():
+            return candidate
+    return start_dir
+
+
+def discover_roots_and_specs(
+    hwspecs_args: list[str], cwd: Path
+) -> tuple[list[Path], str]:
+    """Identify target spec roots and return `(spec_roots, scrubbed_root_label)`."""
+    explicit_roots: list[Path] = []
+    positional_targets: list[Path] = []
+
+    idx = 0
+    # Skip global options and find the subcommand first.
+    subcmd_idx = None
+    while idx < len(hwspecs_args):
+        token = hwspecs_args[idx]
+        opt, sep, val = token.partition("=")
+        if opt in HWSPECS_VALUE_OPTIONS:
+            if opt == "--root":
+                if sep and val:
+                    explicit_roots.append((cwd / val).resolve())
+                elif idx + 1 < len(hwspecs_args):
+                    explicit_roots.append((cwd / hwspecs_args[idx + 1]).resolve())
+            if not sep:
+                idx += 2
+                continue
+            idx += 1
+            continue
+        if token.startswith("-"):
+            idx += 1
+            continue
+        if subcmd_idx is None:
+            subcmd_idx = idx
+            idx += 1
+            continue
+        positional_targets.append((cwd / token).resolve())
+        idx += 1
+
+    roots: list[Path] = []
+    for r in explicit_roots:
+        if r not in roots:
+            roots.append(r)
+
+    for target in positional_targets:
+        if target.is_dir():
+            root_candidate = find_spec_root_for_path(target)
+            # If the target directory itself contains .spec.yaml files, treat it as a root.
+            if any(target.rglob("*.spec.yaml")) or (
+                target / "board-specs.yaml"
+            ).is_file():
+                root_candidate = target
+            if root_candidate not in roots:
+                roots.append(root_candidate)
+        elif target.exists() or target.name.endswith(
+            (".spec.yaml", ".facts.yaml", ".verify.yaml", "corpus.yaml", "board-specs.yaml")
+        ):
+            root_candidate = find_spec_root_for_path(target)
+            if root_candidate not in roots:
+                roots.append(root_candidate)
+
+    if not roots:
+        default_specs = (cwd / "specs").resolve()
+        if default_specs.is_dir():
+            roots.append(default_specs)
+        else:
+            roots.append(cwd.resolve())
+
+    primary = roots[0]
+    root_label = scrub_root_label(primary, cwd)
+    return roots, root_label
+
+
+def scrub_root_label(root_path: Path, cwd: Path) -> str:
+    """Return a clean, non-private identifier for a spec root directory."""
+    resolved = root_path.resolve()
+    board_specs = resolved / "board-specs.yaml"
+    if board_specs.is_file():
+        try:
+            text = board_specs.read_text(encoding="utf-8")
+            m = re.search(r"(?m)^name:\s*['\"]?([A-Za-z0-9_.-]+)['\"]?\s*$", text)
+            if m:
+                return m.group(1)
+        except OSError:
+            pass
+    cwd_resolved = cwd.resolve()
+    if resolved == cwd_resolved:
+        return "."
+    if resolved.is_relative_to(cwd_resolved):
+        rel = resolved.relative_to(cwd_resolved).as_posix()
+        if not HOME_PATH_RE.search("/" + rel + "/"):
+            return rel
+    if resolved.name and resolved.name not in ("/", "."):
+        return sanitize_identifier(resolved.name, "specs")
+    return external_path_token(str(resolved))
+
+
+def scrub_path(raw_path: str, spec_roots: list[Path], cwd: Path) -> str:
+    """Scrub a finding path to spec-root-relative, or `<external>:<sha256[:12]>` if outside."""
+    cleaned = raw_path.strip()
+    if not cleaned:
+        return ""
+
+    # Never allow raw home paths or explicit parent traversals to pass through un-resolved.
+    has_home = HOME_PATH_RE.search(cleaned) is not None
+    raw_p = Path(cleaned)
+
+    candidates: list[Path] = []
+    if raw_p.is_absolute():
+        candidates.append(raw_p.resolve())
+    elif not has_home and not cleaned.startswith("~"):
+        cwd_cand = (cwd / raw_p).resolve()
+        candidates.append(cwd_cand)
+        for root in spec_roots:
+            root_cand = (root / raw_p).resolve()
+            if root_cand.exists() or (
+                ".." not in raw_p.parts
+                and (
+                     "/" not in cleaned
+                    or cleaned.startswith("resources/")
+                )
+                and cleaned.endswith(
+                    (
+                        ".spec.yaml",
+                        ".verify.yaml",
+                        ".index.yaml",
+                        ".facts.yaml",
+                        "corpus.yaml",
+                        "board-specs.yaml",
+                    )
+                )
+            ):
+                candidates.append(root_cand)
+
+    for cand in candidates:
+        for root in spec_roots:
+            root_res = root.resolve()
+            if cand == root_res:
+                return "."
+            if cand.is_relative_to(root_res):
+                rel = cand.relative_to(root_res).as_posix()
+                if not HOME_PATH_RE.search("/" + rel + "/") and ".." not in Path(rel).parts:
+                    return rel
+
+    return external_path_token(cleaned)
+
+
+def hash_spec_files(spec_roots: list[Path]) -> dict[str, str]:
+    """Hash all `*.spec.yaml` files under `spec_roots`, returning `rel_path -> sha256`."""
+    hashes: dict[str, str] = {}
+    for root in spec_roots:
+        root_res = root.resolve()
+        if not root_res.exists():
+            continue
+        if root_res.is_file() and root_res.name.endswith(".spec.yaml"):
+            hashes[root_res.name] = hashlib.sha256(root_res.read_bytes()).hexdigest()
+            continue
+        if not root_res.is_dir():
+            continue
+        for spec_file in sorted(root_res.rglob("*.spec.yaml")):
+            if not spec_file.is_file():
+                continue
+            try:
+                rel = spec_file.resolve().relative_to(root_res).as_posix()
+                hashes[rel] = hashlib.sha256(spec_file.read_bytes()).hexdigest()
+            except (OSError, ValueError):
+                continue
+    return hashes
+
+
+def split_executable_and_tool_args(cmd: list[str]) -> tuple[list[str], list[str]]:
+    """Split `cmd` into the executable prefix (e.g. `['hwspecs']` or `['python3', 'script.py']`)
+    and the tool arguments passed to `hwspecs`."""
+    if not cmd:
+        raise ValueError("missing command to execute")
+    exe_name = Path(cmd[0]).name.lower()
+    if exe_name.startswith("python") and len(cmd) >= 2 and not cmd[1].startswith("-"):
+        return cmd[:2], cmd[2:]
+    return cmd[:1], cmd[1:]
+
+
+def extract_subcmd_and_flags(tool_args: list[str]) -> tuple[str, bool, bool]:
+    """Return `(subcmd, has_json_flag, has_diag_out_flag)` from `hwspecs` arguments."""
+    has_json = False
+    has_diag_out = False
+    subcmd = "unknown"
+    idx = 0
+    while idx < len(tool_args):
+        token = tool_args[idx]
+        opt, sep, _ = token.partition("=")
+        if opt == "--json":
+            has_json = True
+            idx += 1
+            continue
+        if opt == "--diag-out":
+            has_diag_out = True
+            idx += 1 if sep else 2
+            continue
+        if opt in HWSPECS_VALUE_OPTIONS:
+            idx += 1 if sep else 2
+            continue
+        if token.startswith("-"):
+            idx += 1
+            continue
+        if subcmd == "unknown":
+            subcmd = sanitize_identifier(token.lower(), "unknown")
+        idx += 1
+    return subcmd, has_json, has_diag_out
+
+
+def detect_tool_commit(exe_prefix: list[str]) -> str:
+    """Determine `tool_commit` from `HWSPECS_TOOL_COMMIT` or `<exe> --version`."""
+    env_commit = os.environ.get("HWSPECS_TOOL_COMMIT", "").strip()
+    if env_commit:
+        return sanitize_identifier(env_commit, "unknown")
+    try:
+        proc = subprocess.run(
+            [*exe_prefix, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout:
+            m = VERSION_RE.match(proc.stdout.strip())
+            if m and m.group(1).strip():
+                return sanitize_identifier(m.group(1).strip(), "unknown")
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "unknown"
+
+
+def run_and_tee(cmd: list[str]) -> tuple[int, str, str, bool]:
+    """Execute `cmd`, streaming stdout and stderr unchanged while capturing both."""
+    stdout_chunks: list[bytes] = []
+    stderr_chunks: list[bytes] = []
+    interrupted = False
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    def _pump(pipe: Any, sink: Any, chunks: list[bytes]) -> None:
+        try:
+            while True:
+                data = pipe.read(4096)
+                if not data:
+                    break
+                chunks.append(data)
+                sink.write(data)
+                sink.flush()
+        finally:
+            pipe.close()
+
+    t_out = threading.Thread(
+        target=_pump, args=(proc.stdout, sys.stdout.buffer, stdout_chunks), daemon=True
+    )
+    t_err = threading.Thread(
+        target=_pump, args=(proc.stderr, sys.stderr.buffer, stderr_chunks), daemon=True
+    )
+    t_out.start()
+    t_err.start()
+    try:
+        exit_code = proc.wait()
+    except KeyboardInterrupt:
+        interrupted = True
+        proc.terminate()
+        exit_code = proc.wait()
+    finally:
+        t_out.join()
+        t_err.join()
+
+    stdout_text = b"".join(stdout_chunks).decode("utf-8", errors="replace")
+    stderr_text = b"".join(stderr_chunks).decode("utf-8", errors="replace")
+    return exit_code, stdout_text, stderr_text, interrupted
+
+
+def parse_diagnostics(
+    *,
+    stdout_text: str,
+    stderr_text: str,
+    diag_json_text: str | None,
+    has_json_flag: bool,
+    exit_code: int,
+    tool_commit: str,
+    spec_roots: list[Path],
+    cwd: Path,
+) -> dict[str, Any]:
+    """Parse findings, resolve anchor counts, and tool-bug signals from JSON or text."""
+    raw_findings: list[dict[str, Any]] = []
+    anchors_resolved: int | None = None
+    anchors_skipped: int | None = None
+    documents_resolved: int | None = None
+    documents_skipped: int | None = None
+    envelope_error: str | None = None
+    parsed_json = False
+
+    json_candidate = diag_json_text
+    if json_candidate is None and has_json_flag:
+        json_candidate = stdout_text.strip() or stderr_text.strip()
+
+    if json_candidate:
+        try:
+            doc = json.loads(json_candidate)
+            if isinstance(doc, dict):
+                parsed_json = True
+                if isinstance(doc.get("error"), str):
+                    envelope_error = doc["error"]
+                if isinstance(doc.get("resolved"), int):
+                    anchors_resolved = doc["resolved"]
+                if isinstance(doc.get("skipped"), int):
+                    anchors_skipped = doc["skipped"]
+                if isinstance(doc.get("documents_resolved"), int):
+                    documents_resolved = doc["documents_resolved"]
+                if isinstance(doc.get("documents_skipped"), int):
+                    documents_skipped = doc["documents_skipped"]
+                for item in doc.get("findings", []):
+                    if isinstance(item, dict):
+                        raw_findings.append(item)
+        except ValueError:
+            parsed_json = False
+
+    if not parsed_json:
+        combined_lines = stdout_text.splitlines() + stderr_text.splitlines()
+        for line in combined_lines:
+            m_find = TEXT_FINDING_RE.match(line)
+            if m_find:
+                raw_findings.append(
+                    {
+                        "path": m_find.group(1),
+                        "line": int(m_find.group(2)),
+                        "column": int(m_find.group(3)),
+                        "level": m_find.group(4),
+                        "message": m_find.group(5),
+                    }
+                )
+                continue
+            m_res = RESOLVE_SUMMARY_RE.match(line.strip())
+            if m_res:
+                anchors_resolved = int(m_res.group(1))
+                anchors_skipped = int(m_res.group(2))
+                continue
+            m_doc = DOC_SUMMARY_RE.match(line.strip())
+            if m_doc:
+                documents_resolved = int(m_doc.group(1))
+                documents_skipped = int(m_doc.group(2))
+                continue
+
+        if not raw_findings and exit_code != 0:
+            for line in stderr_text.splitlines() + stdout_text.splitlines():
+                m_bare = BARE_ERROR_RE.match(line.strip())
+                if m_bare:
+                    raw_findings.append(
+                        {
+                            "path": "",
+                            "line": 0,
+                            "column": 0,
+                            "level": "error",
+                            "message": m_bare.group(2),
+                        }
+                    )
+
+    scrubbed_findings: list[dict[str, Any]] = []
+    by_code_map: dict[tuple[str, str, str], dict[str, Any]] = {}
+    errors = 0
+    warnings = 0
+
+    for item in raw_findings:
+        level = str(item.get("level") or "error").lower()
+        if level not in ("error", "warning", "note"):
+            level = "error"
+        if level == "error":
+            errors += 1
+        elif level == "warning":
+            warnings += 1
+
+        raw_code = item.get("code")
+        msg = str(item.get("message") or "")
+        if isinstance(raw_code, str) and raw_code.strip():
+            code_or_slug = raw_code.strip()
+        else:
+            code_or_slug = normalize_message_slug(msg)
+
+        raw_path = str(item.get("path") or "")
+        s_path = scrub_path(raw_path, spec_roots, cwd)
+        line_no = int(item.get("line") or 0)
+        col_no = int(
+            item.get("column") if item.get("column") is not None else (item.get("col") or 0)
+        )
+        fp_input = f"{s_path}:{line_no}:{col_no}:{level}:{tool_commit}:{code_or_slug}"
+        fingerprint = hashlib.sha256(fp_input.encode("utf-8")).hexdigest()[:16]
+
+        scrubbed_findings.append(
+            {
+                "path": s_path,
+                "line": line_no,
+                "column": col_no,
+                "level": level,
+                "tool_commit": tool_commit,
+                "code_or_slug": code_or_slug,
+                "fingerprint": fingerprint,
+            }
+        )
+
+        key = (tool_commit, code_or_slug, level)
+        bucket = by_code_map.setdefault(
+            key,
+            {
+                "tool_commit": tool_commit,
+                "code_or_slug": code_or_slug,
+                "level": level,
+                "count": 0,
+                "paths": set(),
+            },
+        )
+        bucket["count"] += 1
+        if s_path:
+            bucket["paths"].add(s_path)
+
+    # If the command exited non-zero with 0 parsed error findings (e.g. panic or internal error),
+    # ensure `errors` reflects the failure so gate-clean never triggers on a failed process.
+    if exit_code != 0 and errors == 0:
+        errors = 1
+
+    by_code = [
+        {
+            "tool_commit": entry["tool_commit"],
+            "code_or_slug": entry["code_or_slug"],
+            "level": entry["level"],
+            "count": entry["count"],
+            "paths": sorted(entry["paths"]),
+        }
+        for _, entry in sorted(by_code_map.items())
+    ]
+
+    finding_codes: dict[str, int] = {}
+    for entry in by_code:
+        ckey = f"{entry['tool_commit']}:{entry['code_or_slug']}"
+        finding_codes[ckey] = finding_codes.get(ckey, 0) + int(entry["count"])
+
+    findings_by_spec_map: dict[str, dict[str, Any]] = {}
+    for sf in scrubbed_findings:
+        sp = sf["path"]
+        if not sp:
+            continue
+        sb = findings_by_spec_map.setdefault(
+            sp, {"errors": 0, "warnings": 0, "codes": []}
+        )
+        if sf["level"] == "error":
+            sb["errors"] += 1
+        elif sf["level"] == "warning":
+            sb["warnings"] += 1
+        if sf["code_or_slug"] not in sb["codes"]:
+            sb["codes"].append(sf["code_or_slug"])
+
+    combined_lower = (stdout_text + "\n" + stderr_text).lower()
+    is_panic = (
+        "panicked at" in combined_lower
+        or "thread 'main' panicked" in combined_lower
+        or "internal error:" in combined_lower
+    )
+    is_internal_envelope = envelope_error in ("internal", "internal-error")
+    tool_bug_candidate = bool(exit_code == 100 or is_internal_envelope or is_panic)
+
+    return {
+        "ok": exit_code == 0 and errors == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "envelope_error": envelope_error,
+        "anchors_resolved": anchors_resolved,
+        "anchors_skipped": anchors_skipped,
+        "documents_resolved": documents_resolved,
+        "documents_skipped": documents_skipped,
+        "tool_bug_candidate": tool_bug_candidate,
+        "finding_codes": finding_codes,
+        "findings_by_spec": findings_by_spec_map,
+        "by_code": by_code,
+        "findings": scrubbed_findings,
+    }
+
+
+def load_json_files(directory: Path, pattern: str = "*.json") -> list[dict[str, Any]]:
+    """Load and return all JSON object files matching `pattern` under `directory`."""
+    if not directory.is_dir():
+        return []
+    out: list[dict[str, Any]] = []
+    for path in sorted(directory.glob(pattern)):
+        if path.name.startswith(".pending-") or not path.is_file():
+            continue
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(doc, dict):
+                out.append(doc)
+        except (OSError, ValueError):
+            continue
+    return out
+
+
+def compute_gate_metrics(
+    diag_receipts: list[dict[str, Any]],
+    tool_issues: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Compute per-spec `gate_edit_cycles`, `noop_reruns`, and tool-defect vs. spec-defect splits."""
+    tool_issues = tool_issues or []
+    tool_issue_by_code: dict[str, str] = {}
+    for issue_doc in tool_issues:
+        issue_id = str(issue_doc.get("issue") or "")
+        for code in issue_doc.get("codes", []):
+            if isinstance(code, str) and code:
+                tool_issue_by_code[code] = issue_id
+
+    gate_receipts = [
+        r
+        for r in sorted(
+            diag_receipts,
+            key=lambda x: (str(x.get("recorded_at") or ""), str(x.get("event_id") or "")),
+        )
+        if r.get("subcmd") in ("check", "resolve")
+    ]
+
+    # Collect all known spec paths across receipts.
+    all_specs: set[str] = set()
+    for r in gate_receipts:
+        for sp in (r.get("spec_hashes_before") or {}).keys():
+            if sp.endswith(".spec.yaml"):
+                all_specs.add(sp)
+        for sp in (r.get("spec_hashes_after") or {}).keys():
+            if sp.endswith(".spec.yaml"):
+                all_specs.add(sp)
+        for f in r.get("findings") or []:
+            p = str(f.get("path") or "")
+            if p.endswith(".spec.yaml"):
+                all_specs.add(p)
+
+    # Top-level no-op reruns: consecutive invocations of the same (subcmd, root, tool_commit)
+    # with identical non-empty `spec_hashes_before`.
+    total_noop_reruns = 0
+    last_state_by_subcmd_root: dict[tuple[str, str], tuple[str, dict[str, str]]] = {}
+    for r in gate_receipts:
+        subcmd = str(r.get("subcmd") or "")
+        root = str(r.get("root") or "")
+        t_commit = str(r.get("tool_commit") or "unknown")
+        hashes_before = dict(r.get("spec_hashes_before") or {})
+        key = (subcmd, root)
+        prev = last_state_by_subcmd_root.get(key)
+        if prev is not None and hashes_before and prev == (t_commit, hashes_before):
+            total_noop_reruns += 1
+        last_state_by_subcmd_root[key] = (t_commit, hashes_before)
+
+    per_spec: dict[str, dict[str, Any]] = {}
+    total_spec_defect_cycles = 0
+    total_tool_defect_cycles = 0
+
+    for spec in sorted(all_specs):
+        # Identify receipts that touch this spec.
+        first_fail_idx: int | None = None
+        first_clean_after_fail_idx: int | None = None
+        spec_noop_reruns = 0
+        failing_invocations = 0
+        prev_fail_hash_and_commit: tuple[str, str] | None = None
+
+        for idx, r in enumerate(gate_receipts):
+            hashes_before = r.get("spec_hashes_before") or {}
+            spec_hash = hashes_before.get(spec)
+            t_commit = str(r.get("tool_commit") or "unknown")
+            spec_error_findings = [
+                f
+                for f in (r.get("findings") or [])
+                if f.get("level") == "error" and f.get("path") == spec
+            ]
+            has_spec_error = len(spec_error_findings) > 0
+
+            if has_spec_error:
+                failing_invocations += 1
+                if first_fail_idx is None:
+                    first_fail_idx = idx
+                if (
+                    spec_hash
+                    and prev_fail_hash_and_commit == (t_commit, spec_hash)
+                ):
+                    spec_noop_reruns += 1
+                if spec_hash:
+                    prev_fail_hash_and_commit = (t_commit, spec_hash)
+            else:
+                if (
+                    first_fail_idx is not None
+                    and first_clean_after_fail_idx is None
+                    and int(r.get("errors") or 0) == 0
+                    and int(r.get("exit_code") or 0) == 0
+                ):
+                    first_clean_after_fail_idx = idx
+
+        if first_fail_idx is None:
+            per_spec[spec] = {
+                "gate_edit_cycles": 0,
+                "distinct_hashes": 1
+                if any(spec in (r.get("spec_hashes_before") or {}) for r in gate_receipts)
+                else 0,
+                "noop_reruns": 0,
+                "failing_invocations": 0,
+                "spec_defect_cycles": 0,
+                "tool_defect_cycles": 0,
+                "status": "clean",
+            }
+            continue
+
+        end_idx = (
+            first_clean_after_fail_idx
+            if first_clean_after_fail_idx is not None
+            else len(gate_receipts) - 1
+        )
+        window = gate_receipts[first_fail_idx : end_idx + 1]
+
+        # Track distinct hashes across failing runs and across the full window.
+        window_hashes: list[str] = []
+        failing_hashes: dict[str, dict[str, Any]] = {}
+        for idx_w, r in enumerate(window):
+            hashes_before = r.get("spec_hashes_before") or {}
+            h = hashes_before.get(spec) or f"unhashed-{idx_w}"
+            if h not in window_hashes:
+                window_hashes.append(h)
+
+            spec_error_findings = [
+                f
+                for f in (r.get("findings") or [])
+                if f.get("level") == "error" and f.get("path") == spec
+            ]
+            if spec_error_findings:
+                codes = [str(f.get("code_or_slug") or "") for f in spec_error_findings]
+                is_tool_bug = bool(r.get("tool_bug_candidate")) or (
+                    bool(codes) and all(c in tool_issue_by_code for c in codes)
+                )
+                entry = failing_hashes.setdefault(
+                    h, {"is_tool_defect": True, "codes": set()}
+                )
+                if not is_tool_bug:
+                    entry["is_tool_defect"] = False
+                entry["codes"].update(codes)
+
+        # Each distinct failing spec hash before reaching clean represents one gate edit cycle
+        # (and equals `len(window_hashes) - 1` when the clean run introduces a new edited hash).
+        edit_cycles = len(failing_hashes)
+        tool_cycles = sum(1 for v in failing_hashes.values() if v["is_tool_defect"])
+        spec_cycles = edit_cycles - tool_cycles
+        total_tool_defect_cycles += tool_cycles
+        total_spec_defect_cycles += spec_cycles
+
+        per_spec[spec] = {
+            "gate_edit_cycles": edit_cycles,
+            "distinct_hashes": len(window_hashes),
+            "noop_reruns": spec_noop_reruns,
+            "failing_invocations": failing_invocations,
+            "spec_defect_cycles": spec_cycles,
+            "tool_defect_cycles": tool_cycles,
+            "status": "clean" if first_clean_after_fail_idx is not None else "failing",
+        }
+
+    return {
+        "per_spec": per_spec,
+        "total_gate_edit_cycles": sum(
+            v["gate_edit_cycles"] for v in per_spec.values()
+        ),
+        "total_noop_reruns": total_noop_reruns,
+        "total_spec_defect_cycles": total_spec_defect_cycles,
+        "total_tool_defect_cycles": total_tool_defect_cycles,
+    }
+
+
+def maybe_emit_gate_clean(
+    *,
+    audit_dir: Path,
+    campaign_run: str,
+    event_id: str,
+    subcmd: str,
+    root: str,
+    tool_commit: str,
+    errors: int,
+    exit_code: int,
+) -> Path | None:
+    """Emit `audit/gates/<event-id>/gate-clean.json` when `check` or `resolve` transitions
+    from at least one prior failing receipt for `root` (since the last `gate-clean.json`)
+    to `errors == 0`."""
+    if subcmd not in ("check", "resolve") or errors != 0 or exit_code != 0:
+        return None
+
+    hwspecs_dir = audit_dir / "hwspecs"
+    gates_dir = audit_dir / "gates"
+
+    all_diag = [
+        r
+        for r in load_json_files(hwspecs_dir, "*.json")
+        if r.get("root") == root and r.get("subcmd") in ("check", "resolve")
+    ]
+    all_diag.sort(
+        key=lambda x: (str(x.get("recorded_at") or ""), str(x.get("event_id") or ""))
+    )
+
+    existing_gates = [
+        g
+        for g in load_json_files(gates_dir, "*/gate-clean.json")
+        if g.get("root") == root
+    ]
+    existing_gates.sort(
+        key=lambda x: (str(x.get("recorded_at") or ""), str(x.get("event_id") or ""))
+    )
+    last_gate_key = (
+        (
+            str(existing_gates[-1].get("recorded_at") or ""),
+            str(existing_gates[-1].get("event_id") or ""),
+        )
+        if existing_gates
+        else None
+    )
+
+    window_diag = [
+        r
+        for r in all_diag
+        if last_gate_key is None
+        or (str(r.get("recorded_at") or ""), str(r.get("event_id") or ""))
+        > last_gate_key
+    ]
+    prior_failing = [
+        r
+        for r in window_diag
+        if r.get("event_id") != event_id
+        and (int(r.get("errors") or 0) > 0 or int(r.get("exit_code") or 0) != 0)
+    ]
+    if not prior_failing:
+        return None
+
+    tool_issues = load_json_files(audit_dir / "issues", "*/tool-issue.json")
+    metrics = compute_gate_metrics(window_diag, tool_issues)
+    gate_record = {
+        "schema": GATE_CLEAN_SCHEMA,
+        "run_id": f"{campaign_run}.gate.{event_id}",
+        "campaign_run": campaign_run,
+        "event_id": event_id,
+        "recorded_at": utc_now_iso(),
+        "root": root,
+        "subcmd": subcmd,
+        "tool_commit": tool_commit,
+        "failing_invocations": len(prior_failing),
+        "gate_edit_cycles": {
+            sp: info["gate_edit_cycles"] for sp, info in metrics["per_spec"].items()
+        },
+        "noop_reruns": metrics["total_noop_reruns"],
+    }
+    target = gates_dir / event_id / "gate-clean.json"
+    atomic_publish(target, gate_record)
+    return target
+
+
+def cmd_run(argv: list[str]) -> int:
+    """Handle `hwspecs-audit [run] [--run ...] [--step ...] -- hwspecs <subcmd> ...`."""
+    if "--" in argv:
+        sep_idx = argv.index("--")
+        wrapper_argv = argv[:sep_idx]
+        child_cmd = argv[sep_idx + 1 :]
+    else:
+        # Allow `hwspecs-audit run [--flags] hwspecs ...` when `--` is omitted.
+        wrapper_argv = []
+        child_cmd = []
+        idx = 0
+        while idx < len(argv):
+            tok = argv[idx]
+            if tok in ("--run", "--step", "--attempt", "--lap", "--milestone", "--role"):
+                wrapper_argv.extend(argv[idx : idx + 2])
+                idx += 2
+            elif tok.startswith(
+                ("--run=", "--step=", "--attempt=", "--lap=", "--milestone=", "--role=")
+            ) or tok == "--use-diag-out":
+                wrapper_argv.append(tok)
+                idx += 1
+            else:
+                child_cmd = argv[idx:]
+                break
+
+    parser = argparse.ArgumentParser(prog="hwspecs-audit run", add_help=True)
+    parser.add_argument("--run", dest="campaign_run", default=None)
+    parser.add_argument("--step", default=None)
+    parser.add_argument("--attempt", default=None)
+    parser.add_argument("--lap", default=None)
+    parser.add_argument("--milestone", default=None)
+    parser.add_argument("--role", default=None)
+    parser.add_argument("--use-diag-out", action="store_true")
+    args = parser.parse_args(wrapper_argv)
+
+    if not child_cmd:
+        print("hwspecs-audit run: missing command after `--`", file=sys.stderr)
+        return 2
+
+    try:
+        campaign_run, run_dir = resolve_campaign_run_dir(args.campaign_run)
+    except ValueError as exc:
+        print(f"hwspecs-audit: {exc}", file=sys.stderr)
+        return 2
+
+    audit_dir = run_dir / "audit"
+    cwd = Path.cwd()
+    exe_prefix, tool_args = split_executable_and_tool_args(child_cmd)
+    subcmd, has_json_flag, has_diag_out_flag = extract_subcmd_and_flags(tool_args)
+    spec_roots, root_label = discover_roots_and_specs(tool_args, cwd)
+    tool_commit = detect_tool_commit(exe_prefix)
+
+    event_id = generate_event_id()
+    exec_id = f"exec-{event_id}"
+    step = sanitize_identifier(
+        args.step or os.environ.get("HWSPECS_AUDIT_STEP") or f"hwspecs-{subcmd}",
+        f"hwspecs-{subcmd}",
+    )
+    attempt = sanitize_identifier(
+        args.attempt or os.environ.get("HWSPECS_AUDIT_ATTEMPT") or "1",
+        "1",
+    )
+    lap = sanitize_identifier(
+        args.lap or os.environ.get("HWSPECS_AUDIT_LAP") or campaign_run,
+        campaign_run,
+    )
+    milestone = sanitize_identifier(
+        args.milestone or os.environ.get("HWSPECS_AUDIT_MILESTONE") or "spec-gate",
+        "spec-gate",
+    )
+    role = sanitize_identifier(
+        args.role or os.environ.get("HWSPECS_AUDIT_ROLE") or "hwspecs-cli",
+        "hwspecs-cli",
+    )
+
+    spec_hashes_before = hash_spec_files(spec_roots)
+
+    start_record = {
+        "schema": BRINGUP_SCHEMA,
+        "kind": "start",
+        "id": f"{exec_id}-start",
+        "run_id": exec_id,
+        "lap": lap,
+        "milestone": milestone,
+        "step": step,
+        "attempt": attempt,
+        "recorded_at": utc_now_iso(),
+        "observed_at": utc_now_iso(),
+        "role": role,
+        "parent_run_id": None,
+        "retry_of": None,
+    }
+    publish_bringup_receipt(audit_dir, start_record)
+
+    diag_tmp_dir: str | None = None
+    diag_tmp_path: Path | None = None
+    actual_cmd = list(child_cmd)
+    if args.use_diag_out and not has_diag_out_flag:
+        diag_tmp_dir = tempfile.mkdtemp(prefix="hwspecs-diag-")
+        diag_tmp_path = Path(diag_tmp_dir) / "diag.json"
+        actual_cmd = [*exe_prefix, "--diag-out", str(diag_tmp_path), *tool_args]
+
+    started_mono = time.monotonic()
+    try:
+        exit_code, stdout_text, stderr_text, interrupted = run_and_tee(actual_cmd)
+        duration_seconds = max(0.0, time.monotonic() - started_mono)
+
+        diag_json_text: str | None = None
+        if diag_tmp_path is not None and diag_tmp_path.is_file():
+            try:
+                content = diag_tmp_path.read_text(encoding="utf-8").strip()
+                if content:
+                    diag_json_text = content
+            except OSError:
+                pass
+    finally:
+        if diag_tmp_dir is not None:
+            try:
+                if diag_tmp_path is not None and diag_tmp_path.exists():
+                    diag_tmp_path.unlink()
+                os.rmdir(diag_tmp_dir)
+            except OSError:
+                pass
+
+    outcome = (
+        "interrupted"
+        if interrupted
+        else ("completed" if exit_code == 0 else "failed")
+    )
+    finish_record = {
+        "schema": BRINGUP_SCHEMA,
+        "kind": "finish",
+        "id": f"{exec_id}-finish",
+        "run_id": exec_id,
+        "lap": lap,
+        "milestone": milestone,
+        "step": step,
+        "attempt": attempt,
+        "recorded_at": utc_now_iso(),
+        "observed_at": utc_now_iso(),
+        "outcome": outcome,
+        "exit_code": exit_code,
+        "duration_seconds": duration_seconds,
+    }
+    publish_bringup_receipt(audit_dir, finish_record)
+
+    spec_hashes_after = hash_spec_files(spec_roots)
+    parsed = parse_diagnostics(
+        stdout_text=stdout_text,
+        stderr_text=stderr_text,
+        diag_json_text=diag_json_text,
+        has_json_flag=has_json_flag,
+        exit_code=exit_code,
+        tool_commit=tool_commit,
+        spec_roots=spec_roots,
+        cwd=cwd,
+    )
+
+    diag_record = {
+        "schema": DIAG_SCHEMA,
+        "event_id": event_id,
+        "exec_id": exec_id,
+        "campaign_run": campaign_run,
+        "step": step,
+        "attempt": attempt,
+        "started_at": start_record["observed_at"],
+        "finished_at": finish_record["observed_at"],
+        "recorded_at": utc_now_iso(),
+        "duration_seconds": duration_seconds,
+        "duration_ms": int(round(duration_seconds * 1000)),
+        "subcmd": subcmd,
+        "tool_commit": tool_commit,
+        "root": root_label,
+        "exit_code": exit_code,
+        "ok": parsed["ok"],
+        "errors": parsed["errors"],
+        "warnings": parsed["warnings"],
+        "envelope_error": parsed["envelope_error"],
+        "anchors_resolved": parsed["anchors_resolved"],
+        "anchors_skipped": parsed["anchors_skipped"],
+        "documents_resolved": parsed["documents_resolved"],
+        "documents_skipped": parsed["documents_skipped"],
+        "tool_bug_candidate": parsed["tool_bug_candidate"],
+        "spec_hashes_before": spec_hashes_before,
+        "spec_hashes_after": spec_hashes_after,
+        "finding_codes": parsed["finding_codes"],
+        "findings_by_spec": parsed["findings_by_spec"],
+        "by_code": parsed["by_code"],
+        "findings": parsed["findings"],
+    }
+    diag_target = audit_dir / "hwspecs" / f"{event_id}-{subcmd}.json"
+    atomic_publish(diag_target, diag_record)
+
+    maybe_emit_gate_clean(
+        audit_dir=audit_dir,
+        campaign_run=campaign_run,
+        event_id=event_id,
+        subcmd=subcmd,
+        root=root_label,
+        tool_commit=tool_commit,
+        errors=parsed["errors"],
+        exit_code=exit_code,
+    )
+
+    return exit_code
+
+
+def cmd_record_issue(argv: list[str]) -> int:
+    """Handle `hwspecs-audit record-issue`."""
+    parser = argparse.ArgumentParser(prog="hwspecs-audit record-issue")
+    parser.add_argument("--run", dest="campaign_run", default=None)
+    parser.add_argument("--issue", required=True, help="Issue identifier (e.g. #197)")
+    parser.add_argument("--subcmd", required=True, help="hwspecs subcommand (e.g. check)")
+    parser.add_argument(
+        "--code",
+        "--codes",
+        dest="codes",
+        action="append",
+        default=[],
+        help="Associated finding code(s) or template slug(s); repeatable",
+    )
+    parser.add_argument("--summary", required=True, help="Short scrubbed issue summary")
+    args = parser.parse_args(argv)
+
+    try:
+        campaign_run, run_dir = resolve_campaign_run_dir(args.campaign_run)
+        subcmd = sanitize_identifier(args.subcmd.lower(), "unknown")
+        issue_str = args.issue.strip()
+        require(bool(issue_str), "issue cannot be empty")
+        codes: list[str] = []
+        for item in args.codes:
+            for part in item.split(","):
+                cleaned = part.strip()
+                if cleaned and cleaned not in codes:
+                    codes.append(cleaned)
+        summary = scrub_text(args.summary.strip())
+        require(bool(summary), "summary cannot be empty")
+    except ValueError as exc:
+        print(f"hwspecs-audit record-issue: {exc}", file=sys.stderr)
+        return 2
+
+    event_id = generate_event_id()
+    record = {
+        "schema": TOOL_ISSUE_SCHEMA,
+        "run_id": f"{campaign_run}.issue.{event_id}",
+        "campaign_run": campaign_run,
+        "event_id": event_id,
+        "recorded_at": utc_now_iso(),
+        "issue": issue_str,
+        "subcmd": subcmd,
+        "codes": codes,
+        "summary": summary,
+    }
+    target = run_dir / "audit" / "issues" / event_id / "tool-issue.json"
+    atomic_publish(target, record)
+    return 0
+
+
+def _parse_kv_counts(
+    items: list[str], allowed_keys: tuple[str, ...], label: str
+) -> dict[str, int]:
+    """Parse `KEY=INT` arguments and validate against `allowed_keys`."""
+    counts = {k: 0 for k in allowed_keys}
+    for raw in items:
+        key, sep, val_str = raw.partition("=")
+        require(bool(sep), f"expected KEY=COUNT for {label}, got {raw!r}")
+        key = key.strip()
+        require(
+            key in allowed_keys,
+            f"unknown {label} {key!r} (allowed: {', '.join(allowed_keys)})",
+        )
+        try:
+            count = int(val_str.strip())
+        except ValueError as exc:
+            raise ValueError(f"invalid integer count in {raw!r}") from exc
+        require(count >= 0, f"{label} count must be nonnegative: {raw!r}")
+        counts[key] += count
+    return counts
+
+
+def cmd_record_verified(argv: list[str]) -> int:
+    """Handle `hwspecs-audit record-verified`."""
+    parser = argparse.ArgumentParser(prog="hwspecs-audit record-verified")
+    parser.add_argument("--run", dest="campaign_run", default=None)
+    parser.add_argument("--spec", required=True, help="Spec name (e.g. gw9200-board)")
+    parser.add_argument("--round", type=int, required=True, help="1-based round number")
+    parser.add_argument("--spec-sha256", required=True, help="SHA-256 of the verified spec")
+    parser.add_argument(
+        "--stale-checked",
+        "--stale-facts-checked",
+        dest="stale_checked",
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
+        "--critical-second-read",
+        "--critical-facts-second-read",
+        dest="critical_second_read",
+        type=int,
+        required=True,
+    )
+    parser.add_argument("--verdict", action="append", default=[])
+    parser.add_argument("--fail-category", action="append", default=[])
+    args = parser.parse_args(argv)
+
+    try:
+        campaign_run, run_dir = resolve_campaign_run_dir(args.campaign_run)
+        spec_name = args.spec.strip()
+        if spec_name.endswith(".spec.yaml"):
+            spec_name = spec_name[: -len(".spec.yaml")]
+        validate_identifier(spec_name, "spec")
+        require(args.round >= 1, "round must be >= 1")
+        sha = args.spec_sha256.strip().lower()
+        require(bool(sha) and re.fullmatch(r"[0-9a-f]{8,64}", sha) is not None, "invalid spec_sha256")
+        require(args.stale_checked >= 0, "stale_checked must be >= 0")
+        require(args.critical_second_read >= 0, "critical_second_read must be >= 0")
+        verdicts = _parse_kv_counts(args.verdict, VALID_VERDICTS, "verdict")
+        fail_categories = _parse_kv_counts(
+            args.fail_category, VALID_FAIL_CATEGORIES, "fail category"
+        )
+    except ValueError as exc:
+        print(f"hwspecs-audit record-verified: {exc}", file=sys.stderr)
+        return 2
+
+    record = {
+        "schema": VERIFIED_SCHEMA,
+        "run_id": f"{campaign_run}.{spec_name}.r{args.round}",
+        "campaign_run": campaign_run,
+        "recorded_at": utc_now_iso(),
+        "spec": spec_name,
+        "round": args.round,
+        "spec_sha256": sha,
+        "stale_facts_checked": args.stale_checked,
+        "critical_facts_second_read": args.critical_second_read,
+        "verdicts": verdicts,
+        "fail_categories": fail_categories,
+    }
+    target = run_dir / "review" / f"{spec_name}-r{args.round}" / "verified.json"
+    atomic_publish(target, record)
+    return 0
+
+
+def cmd_record_subagent(argv: list[str]) -> int:
+    """Handle `hwspecs-audit record-subagent`."""
+    parser = argparse.ArgumentParser(prog="hwspecs-audit record-subagent")
+    parser.add_argument("--run", dest="campaign_run", default=None)
+    parser.add_argument("--role", required=True)
+    parser.add_argument("--shard", default=None)
+    parser.add_argument("--model", default=None)
+    parser.add_argument("--reported-tokens", type=int, default=None)
+    parser.add_argument("--reported-duration-ms", type=int, default=None)
+    parser.add_argument("--run-id", "--exec-id", dest="exec_run_id", default=None)
+    parser.add_argument("--step", default=None)
+    parser.add_argument("--attempt", default=None)
+    args = parser.parse_args(argv)
+
+    try:
+        campaign_run, run_dir = resolve_campaign_run_dir(args.campaign_run)
+        role = validate_identifier(args.role.strip(), "role")
+        shard = args.shard.strip() if args.shard else None
+        if shard is not None:
+            validate_identifier(shard, "shard")
+        model = args.model.strip() if args.model else None
+        if model is not None:
+            validate_identifier(model, "model")
+        if args.reported_tokens is not None:
+            require(args.reported_tokens >= 0, "reported-tokens must be >= 0")
+        if args.reported_duration_ms is not None:
+            require(args.reported_duration_ms >= 0, "reported-duration-ms must be >= 0")
+        event_id = generate_event_id()
+        exec_run_id = (
+            validate_identifier(args.exec_run_id.strip(), "run-id")
+            if args.exec_run_id
+            else f"subagent-{event_id}"
+        )
+    except ValueError as exc:
+        print(f"hwspecs-audit record-subagent: {exc}", file=sys.stderr)
+        return 2
+
+    entry: dict[str, Any] = {
+        "schema": SUBAGENT_SCHEMA,
+        "event_id": event_id,
+        "campaign_run": campaign_run,
+        "run_id": exec_run_id,
+        "recorded_at": utc_now_iso(),
+        "role": role,
+        "shard": shard,
+        "model": model,
+        "provenance": "harness-notice",
+        "reported_tokens": args.reported_tokens,
+        "reported_duration_ms": args.reported_duration_ms,
+    }
+    if args.step:
+        entry["step"] = sanitize_identifier(args.step, "step")
+    if args.attempt:
+        entry["attempt"] = sanitize_identifier(args.attempt, "attempt")
+
+    audit_dir = run_dir / "audit"
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    jsonl_path = audit_dir / "subagents.jsonl"
+    line = json.dumps(entry, sort_keys=True, ensure_ascii=True) + "\n"
+    with jsonl_path.open("a", encoding="utf-8") as stream:
+        stream.write(line)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return 0
+
+
+def build_report(campaign_run: str, run_dir: Path) -> dict[str, Any]:
+    """Aggregate all campaign receipts into a deterministic report dictionary."""
+    audit_dir = run_dir / "audit"
+    review_dir = run_dir / "review"
+
+    diag_receipts = load_json_files(audit_dir / "hwspecs", "*.json")
+    gate_receipts = load_json_files(audit_dir / "gates", "*/gate-clean.json")
+    tool_issues = load_json_files(audit_dir / "issues", "*/tool-issue.json")
+    verified_rounds = load_json_files(review_dir, "*/verified.json")
+
+    subagents: list[dict[str, Any]] = []
+    subagents_path = audit_dir / "subagents.jsonl"
+    if subagents_path.is_file():
+        for raw_line in subagents_path.read_text(encoding="utf-8").splitlines():
+            raw_line = raw_line.strip()
+            if not raw_line:
+                continue
+            try:
+                obj = json.loads(raw_line)
+                if isinstance(obj, dict):
+                    subagents.append(obj)
+            except ValueError:
+                continue
+
+    # Load bringup-audit-1 receipts from audit/runs/*/*.json.
+    bringup_receipts = load_json_files(audit_dir / "runs", "*/*.json")
+    exact_usage_by_run: dict[str, list[dict[str, Any]]] = {}
+    exact_finish_by_run: dict[str, dict[str, Any]] = {}
+    exact_start_by_run: dict[str, dict[str, Any]] = {}
+    seen_measurement_keys: dict[tuple[str, str], dict[str, Any]] = {}
+
+    for rec in bringup_receipts:
+        if rec.get("schema") != BRINGUP_SCHEMA:
+            continue
+        r_id = str(rec.get("run_id") or "")
+        kind = rec.get("kind")
+        if kind == "usage":
+            m_key = (str(rec.get("provider") or ""), str(rec.get("measurement_key") or ""))
+            if m_key not in seen_measurement_keys:
+                seen_measurement_keys[m_key] = rec
+                exact_usage_by_run.setdefault(r_id, []).append(rec)
+        elif kind == "finish":
+            exact_finish_by_run[r_id] = rec
+        elif kind == "start":
+            exact_start_by_run[r_id] = rec
+
+    gate_metrics = compute_gate_metrics(diag_receipts, tool_issues)
+
+    # Recurring (tool_commit, code_or_slug) persistence across hwspecs receipts.
+    tool_issue_by_code: dict[str, str] = {}
+    for issue_doc in tool_issues:
+        issue_id = str(issue_doc.get("issue") or "")
+        for code in issue_doc.get("codes", []):
+            if isinstance(code, str) and code:
+                tool_issue_by_code[code] = issue_id
+
+    persistence_map: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in diag_receipts:
+        event_id = str(r.get("event_id") or "")
+        for f in r.get("findings") or []:
+            t_commit = str(f.get("tool_commit") or r.get("tool_commit") or "unknown")
+            code_or_slug = str(f.get("code_or_slug") or "msg-unknown")
+            level = str(f.get("level") or "error")
+            path = str(f.get("path") or "")
+            key = (t_commit, code_or_slug)
+            entry = persistence_map.setdefault(
+                key,
+                {
+                    "tool_commit": t_commit,
+                    "code_or_slug": code_or_slug,
+                    "level": level,
+                    "occurrences": 0,
+                    "receipts": set(),
+                    "paths": set(),
+                    "tool_issue": tool_issue_by_code.get(code_or_slug),
+                },
+            )
+            entry["occurrences"] += 1
+            if event_id:
+                entry["receipts"].add(event_id)
+            if path:
+                entry["paths"].add(path)
+
+    finding_persistence = [
+        {
+            "tool_commit": item["tool_commit"],
+            "code_or_slug": item["code_or_slug"],
+            "level": item["level"],
+            "occurrences": item["occurrences"],
+            "receipt_count": len(item["receipts"]),
+            "paths": sorted(item["paths"]),
+            "tool_issue": item["tool_issue"],
+        }
+        for _, item in sorted(
+            persistence_map.items(),
+            key=lambda kv: (-len(kv[1]["receipts"]), -kv[1]["occurrences"], kv[0]),
+        )
+    ]
+
+    # Verifier round aggregation.
+    verdict_totals = {k: 0 for k in VALID_VERDICTS}
+    fail_category_totals = {k: 0 for k in VALID_FAIL_CATEGORIES}
+    stale_total = 0
+    critical_total = 0
+    verified_specs: set[str] = set()
+
+    for vr in verified_rounds:
+        if vr.get("spec"):
+            verified_specs.add(str(vr["spec"]))
+        stale_total += int(vr.get("stale_facts_checked") or 0)
+        critical_total += int(vr.get("critical_facts_second_read") or 0)
+        for k, v in (vr.get("verdicts") or {}).items():
+            if k in verdict_totals and isinstance(v, int):
+                verdict_totals[k] += v
+        for k, v in (vr.get("fail_categories") or {}).items():
+            if k in fail_category_totals and isinstance(v, int):
+                fail_category_totals[k] += v
+
+    # Subagent & token usage aggregation (exact bringup-audit-1 `usage` receipts supersede
+    # Tier 1 `reported_*` for the same run; never sum both).
+    exact_tokens_by_bucket = {k: 0 for k in sorted(TOKEN_KEYS)}
+    exact_tokens_by_provider_model: dict[str, dict[str, int]] = {}
+    for usage_list in exact_usage_by_run.values():
+        for u in usage_list:
+            pm = f"{u.get('provider', 'unknown')}/{u.get('model', 'unknown')}"
+            pm_totals = exact_tokens_by_provider_model.setdefault(pm, {})
+            for bucket, amount in (u.get("tokens") or {}).items():
+                if bucket in exact_tokens_by_bucket and isinstance(amount, int):
+                    exact_tokens_by_bucket[bucket] += amount
+                    pm_totals[bucket] = pm_totals.get(bucket, 0) + amount
+
+    has_any_exact_usage = bool(exact_usage_by_run)
+
+    subagent_rows: list[dict[str, Any]] = []
+    unsuperseded_reported_tokens = 0
+    has_unsuperseded_reported_tokens = False
+    subagents_missing_usage = 0
+
+    for sub in subagents:
+        s_run_id = str(sub.get("run_id") or "")
+        # Match exact usage either by `run_id` directly or, if only campaign-wide exact usage
+        # was imported under a matching step/attempt, by `(step, attempt)`.
+        matched_usage = exact_usage_by_run.get(s_run_id)
+        if not matched_usage and sub.get("step"):
+            for r_id, s_rec in exact_start_by_run.items():
+                if s_rec.get("step") == sub.get("step") and (
+                    not sub.get("attempt") or s_rec.get("attempt") == sub.get("attempt")
+                ):
+                    matched_usage = exact_usage_by_run.get(r_id)
+                    if matched_usage:
+                        s_run_id = r_id
+                        break
+
+        if matched_usage:
+            exact_sum = sum(
+                int(amt)
+                for u in matched_usage
+                for amt in (u.get("tokens") or {}).values()
+                if isinstance(amt, int)
+            )
+            fin = exact_finish_by_run.get(s_run_id)
+            exact_dur_ms = (
+                int(round(float(fin["duration_seconds"]) * 1000))
+                if fin and isinstance(fin.get("duration_seconds"), (int, float))
+                else sub.get("reported_duration_ms")
+            )
+            subagent_rows.append(
+                {
+                    "run_id": s_run_id,
+                    "role": sub.get("role"),
+                    "shard": sub.get("shard"),
+                    "model": sub.get("model"),
+                    "usage_source": "exact-usage",
+                    "superseded_reported_tokens": sub.get("reported_tokens"),
+                    "tokens": exact_sum,
+                    "duration_ms": exact_dur_ms,
+                }
+            )
+        else:
+            rep_tok = sub.get("reported_tokens")
+            if isinstance(rep_tok, int):
+                unsuperseded_reported_tokens += rep_tok
+                has_unsuperseded_reported_tokens = True
+                u_source = "harness-notice"
+                tok_val: int | str = rep_tok
+            else:
+                subagents_missing_usage += 1
+                u_source = "unknown"
+                tok_val = "unknown"
+            subagent_rows.append(
+                {
+                    "run_id": s_run_id,
+                    "role": sub.get("role"),
+                    "shard": sub.get("shard"),
+                    "model": sub.get("model"),
+                    "usage_source": u_source,
+                    "superseded_reported_tokens": None,
+                    "tokens": tok_val,
+                    "duration_ms": sub.get("reported_duration_ms")
+                    if sub.get("reported_duration_ms") is not None
+                    else "unknown",
+                }
+            )
+
+    if not has_any_exact_usage and not has_unsuperseded_reported_tokens:
+        token_coverage = "unknown"
+    elif subagents_missing_usage > 0:
+        token_coverage = "partial"
+    else:
+        token_coverage = "partial" if not subagents and has_any_exact_usage else "complete"
+
+    effective_total_tokens: int | str
+    if has_any_exact_usage or has_unsuperseded_reported_tokens:
+        effective_total_tokens = (
+            sum(exact_tokens_by_bucket.values()) + unsuperseded_reported_tokens
+        )
+    else:
+        effective_total_tokens = "unknown"
+
+    tool_bug_candidates = [
+        r["event_id"] for r in diag_receipts if r.get("tool_bug_candidate")
+    ]
+
+    return {
+        "schema": REPORT_SCHEMA,
+        "campaign_run": campaign_run,
+        "generated_at": utc_now_iso(),
+        "hwspecs_invocations": len(diag_receipts),
+        "gate_clean_events": len(gate_receipts),
+        "tool_issues_logged": len(tool_issues),
+        "tool_bug_candidates": tool_bug_candidates,
+        "gate_metrics": {
+            "total_gate_edit_cycles": gate_metrics["total_gate_edit_cycles"],
+            "total_noop_reruns": gate_metrics["total_noop_reruns"],
+            "spec_defect_cycles": gate_metrics["total_spec_defect_cycles"],
+            "tool_defect_cycles": gate_metrics["total_tool_defect_cycles"],
+            "specs": gate_metrics["per_spec"],
+        },
+        "finding_persistence": finding_persistence,
+        "tool_issues": tool_issues,
+        "verifier": {
+            "total_rounds": len(verified_rounds),
+            "specs_verified": len(verified_specs),
+            "stale_facts_checked": stale_total,
+            "critical_facts_second_read": critical_total,
+            "verdicts": verdict_totals,
+            "fail_categories": fail_category_totals,
+            "rounds": verified_rounds,
+        },
+        "subagents": {
+            "recorded_subagents": len(subagents),
+            "runs_with_exact_usage": len(exact_usage_by_run),
+            "subagents_missing_usage": subagents_missing_usage,
+            "exact_tokens_by_bucket": exact_tokens_by_bucket
+            if has_any_exact_usage
+            else "unknown",
+            "exact_tokens_by_provider_model": exact_tokens_by_provider_model
+            if has_any_exact_usage
+            else "unknown",
+            "unsuperseded_reported_tokens": unsuperseded_reported_tokens
+            if has_unsuperseded_reported_tokens
+            else ("unknown" if subagents_missing_usage > 0 and not has_any_exact_usage else 0),
+            "effective_total_tokens": effective_total_tokens,
+            "entries": subagent_rows,
+        },
+        "coverage": {
+            "wrapper_coverage": "captured-invocations-only"
+            if diag_receipts
+            else "unknown",
+            "uncaptured_hwspecs_calls": "unknown",
+            "token_usage_coverage": token_coverage,
+            "note": (
+                "Unwrapped hwspecs calls and unimported agent sessions are reported as "
+                "unknown, never 0. Exact bringup-audit-1 usage receipts supersede "
+                "harness-notice reported_tokens for the same run."
+            ),
+        },
+    }
+
+
+def format_report_markdown(report: dict[str, Any]) -> str:
+    """Render a human-readable Markdown summary of the campaign audit report."""
+    gm = report["gate_metrics"]
+    ver = report["verifier"]
+    sub = report["subagents"]
+    cov = report["coverage"]
+    lines = [
+        f"# Process Audit Report — `{report['campaign_run']}`",
+        "",
+        "## Gate Metrics (`check` / `resolve`)",
+        f"- Captured `hwspecs` invocations: `{report['hwspecs_invocations']}`",
+        f"- Gate-clean transitions: `{report['gate_clean_events']}`",
+        f"- Total gate edit cycles: `{gm['total_gate_edit_cycles']}` "
+        f"(spec-defect: `{gm['spec_defect_cycles']}`, tool-defect: `{gm['tool_defect_cycles']}`)",
+        f"- Total no-op reruns: `{gm['total_noop_reruns']}`",
+        f"- Logged `hwspecs` tool issues: `{report['tool_issues_logged']}`",
+        "",
+        "### Per-Spec Gate Cycles",
+    ]
+    if gm["specs"]:
+        lines.append(
+            "| Spec | Status | Edit Cycles | Spec-Defect | Tool-Defect | No-op Reruns | Failing Runs |"
+        )
+        lines.append("| :--- | :--- | ---: | ---: | ---: | ---: | ---: |")
+        for sp, info in sorted(gm["specs"].items()):
+            lines.append(
+                f"| `{sp}` | `{info['status']}` | {info['gate_edit_cycles']} | "
+                f"{info['spec_defect_cycles']} | {info['tool_defect_cycles']} | "
+                f"{info['noop_reruns']} | {info['failing_invocations']} |"
+            )
+    else:
+        lines.append("- None recorded.")
+
+    lines.extend(["", "## Recurring Finding Persistence"])
+    if report["finding_persistence"]:
+        lines.append("| Tool Commit | Code / Slug | Level | Receipts | Occurrences | Tool Issue |")
+        lines.append("| :--- | :--- | :--- | ---: | ---: | :--- |")
+        for fp in report["finding_persistence"]:
+            issue_str = fp["tool_issue"] or "none"
+            lines.append(
+                f"| `{fp['tool_commit']}` | `{fp['code_or_slug']}` | `{fp['level']}` | "
+                f"{fp['receipt_count']} | {fp['occurrences']} | `{issue_str}` |"
+            )
+    else:
+        lines.append("- No findings recorded.")
+
+    lines.extend(
+        [
+            "",
+            "## Verifier Rounds",
+            f"- Completed rounds: `{ver['total_rounds']}` across `{ver['specs_verified']}` spec(s)",
+            f"- Stale facts checked: `{ver['stale_facts_checked']}`",
+            f"- Critical facts second-read: `{ver['critical_facts_second_read']}`",
+            f"- Verdicts: `PASS={ver['verdicts']['PASS']}`, `FAIL={ver['verdicts']['FAIL']}`, "
+            f"`GAP={ver['verdicts']['GAP']}`, `UNVERIFIABLE={ver['verdicts']['UNVERIFIABLE']}`, "
+            f"`ADJUDICATE={ver['verdicts']['ADJUDICATE']}`",
+            "",
+            "## Subagents & Token Usage",
+            f"- Recorded subagent notices: `{sub['recorded_subagents']}`",
+            f"- Runs with exact `bringup-audit-1` usage: `{sub['runs_with_exact_usage']}`",
+            f"- Effective total tokens: `{sub['effective_total_tokens']}`",
+            "",
+            "## Coverage Disclosure",
+            f"- Wrapper capture coverage: `{cov['wrapper_coverage']}`",
+            f"- Uncaptured `hwspecs` calls: `{cov['uncaptured_hwspecs_calls']}`",
+            f"- Token usage coverage: `{cov['token_usage_coverage']}`",
+            f"- Note: {cov['note']}",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def cmd_report(argv: list[str]) -> int:
+    """Handle `hwspecs-audit report`."""
+    parser = argparse.ArgumentParser(prog="hwspecs-audit report")
+    parser.add_argument("positional_run", nargs="?", default=None)
+    parser.add_argument("--run", dest="campaign_run", default=None)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+
+    run_arg = args.campaign_run or args.positional_run
+    try:
+        campaign_run, run_dir = resolve_campaign_run_dir(run_arg)
+    except ValueError as exc:
+        print(f"hwspecs-audit report: {exc}", file=sys.stderr)
+        return 2
+
+    report = build_report(campaign_run, run_dir)
+    if args.json:
+        print(json.dumps(report, indent=2, sort_keys=True, ensure_ascii=True))
+    else:
+        sys.stdout.write(format_report_markdown(report))
+    return 0
+
+
+SUBCOMMANDS = {
+    "run": cmd_run,
+    "record-issue": cmd_record_issue,
+    "record-verified": cmd_record_verified,
+    "record-subagent": cmd_record_subagent,
+    "report": cmd_report,
+}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Entry point for `utilities/hwspecs-audit`."""
+    args = list(sys.argv[1:] if argv is None else argv)
+    if not args or args[0] in ("-h", "--help"):
+        if len(args) == 1:
+            print(__doc__.strip())
+            return 0
+        if not args:
+            print(__doc__.strip(), file=sys.stderr)
+            return 2
+
+    if args[0] in SUBCOMMANDS:
+        return SUBCOMMANDS[args[0]](args[1:])
+
+    # Default mode when invoked directly with wrapper flags + `-- hwspecs ...`
+    if "--" in args or args[0].startswith("-"):
+        return cmd_run(args)
+
+    print(
+        f"hwspecs-audit: unknown subcommand {args[0]!r} "
+        f"(choose from {', '.join(SUBCOMMANDS)})",
+        file=sys.stderr,
+    )
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -37,9 +37,10 @@ user can inspect and reverse any entry later.
   - **Outward actions and destructive operations:** pushing branches, opening or merging pull
     requests, filing issues without standing authorization, or any tier-2 campaign change that
     requires a recorded user decision per `AGENTS.md`.
-- **Every entry records:** date, decision title, actor (`orchestrator` or `*user*`), options
-  considered with their consequences, the chosen option and reason, where it is applied, how to
-  reverse it, and status (`active` or `reversed`).
+- **Every entry records:** UTC ISO-8601 date and time (`YYYY-MM-DDTHH:MM:SSZ`) on new entries,
+  decision title, actor (`orchestrator` or `*user*`), options considered with their consequences,
+  the chosen option and reason, where it is applied, how to reverse it, and status (`active` or
+  `reversed`).
 
 ## Entries
 

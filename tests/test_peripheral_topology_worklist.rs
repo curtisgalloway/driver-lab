@@ -1519,6 +1519,12 @@ facts:
             target: "#reg-status.state"
             until: {equals: idle}
             timeout: {unit: ms, max: 10}
+          - id: interval-inverted
+            op: poll
+            target: "#reg-status"
+            until: {bitsSet: "0x1"}
+            interval: {unit: us, min: 20, max: 10}
+            timeout: {unit: ms, max: 10}
     support:
       - {class: databook, doc: trm, at: [{page: "12"}]}
 "##,
@@ -1539,12 +1545,31 @@ facts:
         assert_eq!(errors(&res, Some(needle)).len(), 1, "{needle}: {all:?}");
     }
     assert!(errors(&res, Some("'read-meaning'")).is_empty(), "{all:?}");
+    // The poll interval is a quantity, checked like duration and timeout.
+    let inverted = errors(&res, Some("quantity min exceeds max"));
+    assert_eq!(inverted.len(), 1, "{all:?}");
+    let spec_text = fs::read_to_string(root.join("widget.spec.yaml")).unwrap();
+    let line = usize::try_from(inverted[0]["line"].as_u64().unwrap()).unwrap();
+    assert!(
+        spec_text
+            .lines()
+            .nth(line - 1)
+            .unwrap()
+            .contains("interval:"),
+        "finding must point at the interval: {inverted:?}"
+    );
 
+    // Schema-valid quantities (levels min/nom/typ/max) render every level present.
     let poll = serde_json::json!({
         "id": "w", "op": "poll", "target": "#reg-status.state",
-        "until": {"bitsClear": "0x1"}, "interval": {"unit": "us", "value": 10}
+        "until": {"bitsClear": "0x1"}, "interval": {"unit": "us", "nom": 10}
     });
     let text = hwspecs::peripheral::step_text(&poll);
     assert!(text.contains("until bits 0x1 clear"), "{text}");
-    assert!(text.contains("every 10 us"), "{text}");
+    assert!(text.contains("every nom 10 us"), "{text}");
+    let q = serde_json::json!({"unit": "s", "min": 60, "typ": 70, "max": 90});
+    assert_eq!(
+        hwspecs::peripheral::quantity_text(&q),
+        "min 60 s, typ 70 s, max 90 s"
+    );
 }

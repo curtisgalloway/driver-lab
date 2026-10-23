@@ -1791,7 +1791,8 @@ fn check_step_mask(
     }
 }
 
-/// Formats a quantity object into human-readable text (`peripheral.py:quantity_text`).
+/// Formats a quantity object into human-readable text (`peripheral.py:quantity_text`):
+/// `min 60 s, nom 60 s, max 90 s`, the levels present in the order min, nom, typ, max.
 #[must_use]
 pub fn quantity_text(q: &Value) -> String {
     let unit = as_str(q, "unit").unwrap_or("");
@@ -1799,24 +1800,15 @@ pub fn quantity_text(q: &Value) -> String {
         let v = q.get(k)?;
         if let Some(s) = v.as_str() {
             Some(s.to_string())
-        } else if let Some(n) = v.as_i64() {
-            Some(n.to_string())
         } else {
-            v.as_u64().map(|u| u.to_string())
+            Some(v.to_string())
         }
     };
-    if let Some(v) = val_str("value") {
-        let mut base = format!("{v} {unit}");
-        if q.get("min").is_some() || q.get("max").is_some() {
-            let mn = val_str("min").unwrap_or_else(|| "..".to_string());
-            let mx = val_str("max").unwrap_or_else(|| "..".to_string());
-            base.push_str(&format!(" ({mn}..{mx} {unit})"));
-        }
-        return base;
-    }
-    let mn = val_str("min").unwrap_or_else(|| "..".to_string());
-    let mx = val_str("max").unwrap_or_else(|| "..".to_string());
-    format!("{mn}..{mx} {unit}")
+    ["min", "nom", "typ", "max"]
+        .iter()
+        .filter_map(|level| val_str(level).map(|v| format!("{level} {v} {unit}")))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Formats a sequence step into human-readable text (`peripheral.py:step_text`).

@@ -62,7 +62,8 @@ do beyond moving and renaming them; new evaluation rounds.
    the sources it anchors to.
 3. **Placement rule:** a spec lives in the most restrictive repo among the sources it anchors to.
    Specs may reference repos with less restrictive licenses, never ones with more restrictive
-   licenses.
+   licenses. Hardware and emulated run `artifacts` reference local run-store files by relative
+   bundle path (`{run, path, lines?, sha256?}`), never embedding proprietary blobs in the spec.
 
 ## The repos
 

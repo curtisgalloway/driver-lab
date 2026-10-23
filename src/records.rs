@@ -500,6 +500,103 @@ pub fn subrecords(data: &Value, base: &[PathElem]) -> Vec<(Value, Vec<PathElem>)
     out
 }
 
+/// A file reference inside a local hardware or emulated run bundle (`$defs.runArtifact`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunArtifact {
+    pub run: String,
+    pub path: String,
+    pub lines: Option<(i64, i64)>,
+    pub sha256: Option<String>,
+}
+
+/// Returns `true` when `path` is a valid relative bundle path without leading `'/'` or `'..'`
+/// segments.
+#[must_use]
+pub fn is_valid_run_artifact_path(path: &str) -> bool {
+    if path.is_empty()
+        || path.starts_with('/')
+        || path.ends_with('/')
+        || path.starts_with('-')
+        || path.contains('\\')
+        || path.chars().any(char::is_whitespace)
+    {
+        return false;
+    }
+    path.split('/').all(|seg| {
+        !seg.is_empty()
+            && seg != "."
+            && seg != ".."
+            && !seg.eq_ignore_ascii_case(".git")
+            && seg.chars().all(|c| {
+                c.is_ascii_alphanumeric()
+                    || matches!(c, '.' | '_' | '+' | '@' | ',' | ':' | '=' | '-')
+            })
+    })
+}
+
+/// Parses optional `artifacts` on a `hardware` or `emulated` support entry.
+#[must_use]
+pub fn parse_support_artifacts(entry: &Value) -> Vec<RunArtifact> {
+    if !matches!(
+        entry.get("class").and_then(Value::as_str),
+        Some("hardware" | "emulated")
+    ) {
+        return Vec::new();
+    }
+    let Some(arr) = entry.get("artifacts").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    arr.iter()
+        .filter_map(|item| {
+            let obj = item.as_object()?;
+            let run = obj.get("run")?.as_str()?.to_string();
+            let path = obj.get("path")?.as_str()?.to_string();
+            let lines = obj.get("lines").and_then(Value::as_array).and_then(|l| {
+                if l.len() == 2 {
+                    Some((l[0].as_i64()?, l[1].as_i64()?))
+                } else {
+                    None
+                }
+            });
+            let sha256 = obj
+                .get("sha256")
+                .and_then(Value::as_str)
+                .map(ToString::to_string);
+            Some(RunArtifact {
+                run,
+                path,
+                lines,
+                sha256,
+            })
+        })
+        .collect()
+}
+
+fn normalize_support_artifacts(val: &mut Value) {
+    match val {
+        Value::Object(map) => {
+            if matches!(
+                map.get("class").and_then(Value::as_str),
+                Some("hardware" | "emulated")
+            ) && map
+                .get("artifacts")
+                .is_some_and(|a| a.is_null() || a.as_array().is_some_and(Vec::is_empty))
+            {
+                map.remove("artifacts");
+            }
+            for child in map.values_mut() {
+                normalize_support_artifacts(child);
+            }
+        }
+        Value::Array(arr) => {
+            for item in arr {
+                normalize_support_artifacts(item);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// D16 projection: independent children, effective requirement and parent identity
 /// (`peripheral.py:basis_data`).
 #[must_use]
@@ -568,6 +665,7 @@ pub fn basis_data(rec_data: &Value, parent_data: Option<&Value>) -> Value {
             }
         }
     }
+    normalize_support_artifacts(&mut data);
     data
 }
 
@@ -3709,6 +3807,69 @@ impl Checker {
         for (entry, path) in supports(data, base) {
             if entry.get("doc").is_some() {
                 self.check_citation(file_idx, what, &entry, &path);
+            }
+            if matches!(
+                entry.get("class").and_then(Value::as_str),
+                Some("hardware" | "emulated")
+            ) {
+                let _parsed = parse_support_artifacts(&entry);
+                if let Some(artifacts) = entry.get("artifacts").and_then(Value::as_array) {
+                    for (i, art) in artifacts.iter().enumerate() {
+                        if art
+                            .get("run")
+                            .and_then(Value::as_str)
+                            .is_none_or(|r| r.trim().is_empty())
+                        {
+                            let mut p = path.clone();
+                            p.push(PathElem::from("artifacts"));
+                            p.push(PathElem::from(i));
+                            p.push(PathElem::from("run"));
+                            self.reject(
+                                file_idx,
+                                &p,
+                                format!("{what}: artifact run must be a non-empty string"),
+                                true,
+                            );
+                        }
+                        if let Some(apath) = art.get("path").and_then(Value::as_str) {
+                            if !is_valid_run_artifact_path(apath) {
+                                let mut p = path.clone();
+                                p.push(PathElem::from("artifacts"));
+                                p.push(PathElem::from(i));
+                                p.push(PathElem::from("path"));
+                                self.reject(
+                                    file_idx,
+                                    &p,
+                                    format!(
+                                        "{what}: artifact path '{apath}' must be a relative bundle path without leading '/' or '..' segments"
+                                    ),
+                                    true,
+                                );
+                            }
+                        }
+                        if let Some(lines) = art.get("lines").and_then(Value::as_array) {
+                            if lines.len() == 2 {
+                                if let (Some(l0), Some(l1)) = (lines[0].as_i64(), lines[1].as_i64())
+                                {
+                                    if l0 > l1 {
+                                        let mut p = path.clone();
+                                        p.push(PathElem::from("artifacts"));
+                                        p.push(PathElem::from(i));
+                                        p.push(PathElem::from("lines"));
+                                        self.reject(
+                                            file_idx,
+                                            &p,
+                                            format!(
+                                                "{what}: lines [{l0}, {l1}] run backwards; write [first, last]"
+                                            ),
+                                            true,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         for (anchor, path) in anchors(data, base) {

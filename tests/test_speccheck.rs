@@ -953,3 +953,104 @@ description: Domain expert stub over widgetsoc for Widget USB Expert
         warnings(&res, None)
     );
 }
+
+#[test]
+fn test_hardware_and_emulated_run_artifacts_validation() {
+    let tmp = TempDir::new().unwrap();
+    let sha = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let marker_content = "format: 2\nlayer: public\nname: r\nlicense: CC-BY-4.0\naccepts: []\n";
+    let make_chip_spec = |facts: &str| -> String {
+        format!(
+            "format: 2\nkind: chip\nid: widgetchip\nname: Widget\ntriggers: [widgetchip]\nresources:\n  documents:\n    - {{name: trm, class: databook, title: Widget TRM, url: \"https://example.invalid/trm.pdf\", pages: 80, verified: 2026-10-01, fetch: ok}}\nfacts:\n{facts}"
+        )
+    };
+
+    // 1. Valid hardware and emulated support entries with artifacts
+    let r_ok = tmp.path().join("r_ok");
+    let facts_ok = format!(
+        concat!(
+            "  - id: hw-fact\n",
+            "    section: quick-facts\n",
+            "    title: T hw\n",
+            "    claim: C hw.\n",
+            "    support:\n",
+            "      - class: hardware\n",
+            "        board: board-a\n",
+            "        method: serial console capture\n",
+            "        date: 2026-01-01\n",
+            "        runs: [run-2026-01-01]\n",
+            "        artifacts:\n",
+            "          - {{run: run-2026-01-01, path: logs/uart0.log, lines: [1, 20], sha256: \"{sha}\"}}\n",
+            "  - id: emu-fact\n",
+            "    section: quick-facts\n",
+            "    title: T emu\n",
+            "    claim: C emu.\n",
+            "    support:\n",
+            "      - class: databook\n",
+            "        doc: trm\n",
+            "        at: [{{section: \"1\"}}]\n",
+            "      - class: emulated\n",
+            "        model: qemu-system-aarch64\n",
+            "        version: 9.2.0\n",
+            "        runs: [run-2026-01-01]\n",
+            "        artifacts:\n",
+            "          - {{run: run-2026-01-01, path: traces/mmio.log}}\n",
+            "    todo: {{check: hardware, text: check on board-a.}}\n",
+        ),
+        sha = sha
+    );
+    write_file(&r_ok.join("board-specs.yaml"), marker_content);
+    write_file(&r_ok.join("w.spec.yaml"), &make_chip_spec(&facts_ok));
+    let (rc, res) = check_json(&[r_ok.to_str().unwrap()]);
+    assert_eq!(rc, 0, "expected valid artifacts to pass: {res}");
+
+    // 2. Reject leading '/' or '..' segments or backwards lines in artifact paths
+    for (label, bad_art, needle) in [
+        (
+            "leading_slash",
+            "{run: run-2026-01-01, path: /abs/uart0.log}",
+            "path",
+        ),
+        (
+            "dotdot_segment",
+            "{run: run-2026-01-01, path: ../secret/uart0.log}",
+            "path",
+        ),
+        (
+            "nested_dotdot",
+            "{run: run-2026-01-01, path: logs/../uart0.log}",
+            "path",
+        ),
+        (
+            "backwards_lines",
+            "{run: run-2026-01-01, path: logs/uart0.log, lines: [20, 10]}",
+            "lines [20, 10] run backwards",
+        ),
+    ] {
+        let r_bad = tmp.path().join(format!("r_{label}"));
+        let facts_bad = format!(
+            concat!(
+                "  - id: hw-fact\n",
+                "    section: quick-facts\n",
+                "    title: T hw\n",
+                "    claim: C hw.\n",
+                "    support:\n",
+                "      - class: hardware\n",
+                "        board: board-a\n",
+                "        method: serial console capture\n",
+                "        date: 2026-01-01\n",
+                "        artifacts:\n",
+                "          - {bad_art}\n",
+            ),
+            bad_art = bad_art
+        );
+        write_file(&r_bad.join("board-specs.yaml"), marker_content);
+        write_file(&r_bad.join("w.spec.yaml"), &make_chip_spec(&facts_bad));
+        let (rc, res) = check_json(&[r_bad.to_str().unwrap()]);
+        assert_eq!(rc, 1, "expected {label} to fail check: {res}");
+        assert!(
+            !errors(&res, Some(needle)).is_empty(),
+            "expected error containing {needle:?} for {label}: {res}"
+        );
+    }
+}

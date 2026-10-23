@@ -1386,3 +1386,182 @@ fn test_worked_example_status_and_upstream_edit() {
     );
     assert_eq!(rep.exit_code, 1);
 }
+
+#[test]
+fn test_hardware_and_emulated_artifacts_basis_and_validation() {
+    use hwspecs::records::{
+        basis_data, is_valid_run_artifact_path, parse_support_artifacts, RunArtifact,
+    };
+
+    assert!(is_valid_run_artifact_path("uart.log"));
+    assert!(is_valid_run_artifact_path(
+        "logs/run-2026-01-01/capture.txt"
+    ));
+    assert!(!is_valid_run_artifact_path(""));
+    assert!(!is_valid_run_artifact_path("/abs/uart.log"));
+    assert!(!is_valid_run_artifact_path("../uart.log"));
+    assert!(!is_valid_run_artifact_path("logs/../uart.log"));
+    assert!(!is_valid_run_artifact_path("./uart.log"));
+    assert!(!is_valid_run_artifact_path("logs/"));
+
+    let entry = json!({
+        "class": "hardware",
+        "board": "board-a",
+        "method": "uart capture",
+        "date": "2026-01-01",
+        "artifacts": [
+            {
+                "run": "run-2026-01-01",
+                "path": "logs/uart0.log",
+                "lines": [10, 20],
+                "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+            }
+        ]
+    });
+    assert_eq!(
+        parse_support_artifacts(&entry),
+        vec![RunArtifact {
+            run: "run-2026-01-01".to_string(),
+            path: "logs/uart0.log".to_string(),
+            lines: Some((10, 20)),
+            sha256: Some(
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string()
+            ),
+        }]
+    );
+
+    // Empty artifacts in memory are stripped by basis_data so basis matches omitted artifacts.
+    let without_artifacts = json!({
+        "id": "hw-obs",
+        "title": "T hw-obs",
+        "claim": "C hw-obs.",
+        "support": [{
+            "class": "hardware",
+            "board": "board-a",
+            "method": "logic analyzer",
+            "date": "2026-01-01",
+            "runs": ["run-2026-01-01"]
+        }]
+    });
+    let with_empty_artifacts = json!({
+        "id": "hw-obs",
+        "title": "T hw-obs",
+        "claim": "C hw-obs.",
+        "support": [{
+            "class": "hardware",
+            "board": "board-a",
+            "method": "logic analyzer",
+            "date": "2026-01-01",
+            "runs": ["run-2026-01-01"],
+            "artifacts": []
+        }]
+    });
+    assert_eq!(
+        canonical(&basis_data(&without_artifacts, None)).unwrap(),
+        canonical(&basis_data(&with_empty_artifacts, None)).unwrap()
+    );
+
+    // End-to-end basis hash check on a spec root:
+    let tmp = TempDir::new().unwrap();
+    let r_no_art = tmp.path().join("r_no_art");
+    let hw_no_art = fact(
+        "hw-obs",
+        None,
+        "",
+        Some(
+            "    support:\n      - class: hardware\n        board: board-a\n        method: logic analyzer\n        date: 2026-01-01\n        runs: [run-2026-01-01]\n",
+        ),
+        "quick-facts",
+    );
+    write_files(
+        &r_no_art,
+        &[
+            ("board-specs.yaml", &marker_default("r")),
+            ("w.spec.yaml", &chip("widgetchip", &hw_no_art, "", "", TRM)),
+        ],
+    );
+    let b_no_art = bases(&[r_no_art.to_str().unwrap()]);
+    let expected_no_art = sha256_str(&format!(
+        "fact-v1\n{}\n{}\n{{}}\n",
+        canonical(&without_artifacts).unwrap(),
+        canonical(&json!({"documents": {}, "repos": {}})).unwrap(),
+    ));
+    assert_eq!(
+        b_no_art["widgetchip@r#hw-obs"].as_deref(),
+        Some(expected_no_art.as_str())
+    );
+
+    // With non-empty artifacts, basis hash canonically includes artifacts and changes on edits:
+    let sha_a = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let sha_b = "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+    let r_with_art = tmp.path().join("r_with_art");
+    let hw_with_art = fact(
+        "hw-obs",
+        None,
+        "",
+        Some(&format!(
+            "    support:\n      - class: hardware\n        board: board-a\n        method: logic analyzer\n        date: 2026-01-01\n        runs: [run-2026-01-01]\n        artifacts:\n          - {{run: run-2026-01-01, path: logs/trace.csv, lines: [1, 15], sha256: \"{sha_a}\"}}\n"
+        )),
+        "quick-facts",
+    );
+    write_files(
+        &r_with_art,
+        &[
+            ("board-specs.yaml", &marker_default("r")),
+            (
+                "w.spec.yaml",
+                &chip("widgetchip", &hw_with_art, "", "", TRM),
+            ),
+        ],
+    );
+    let (code, check_res) = check_json(&[r_with_art.to_str().unwrap()]);
+    assert_eq!(code, 0, "expected valid hardware artifacts: {check_res}");
+    let b_with_art = bases(&[r_with_art.to_str().unwrap()]);
+    let expected_with_art_fact = json!({
+        "id": "hw-obs",
+        "title": "T hw-obs",
+        "claim": "C hw-obs.",
+        "support": [{
+            "class": "hardware",
+            "board": "board-a",
+            "method": "logic analyzer",
+            "date": "2026-01-01",
+            "runs": ["run-2026-01-01"],
+            "artifacts": [{
+                "run": "run-2026-01-01",
+                "path": "logs/trace.csv",
+                "lines": [1, 15],
+                "sha256": sha_a
+            }]
+        }]
+    });
+    let expected_with_art = sha256_str(&format!(
+        "fact-v1\n{}\n{}\n{{}}\n",
+        canonical(&expected_with_art_fact).unwrap(),
+        canonical(&json!({"documents": {}, "repos": {}})).unwrap(),
+    ));
+    assert_eq!(
+        b_with_art["widgetchip@r#hw-obs"].as_deref(),
+        Some(expected_with_art.as_str())
+    );
+    assert_ne!(expected_no_art, expected_with_art);
+
+    // Changing artifact sha256 changes basis hash:
+    let r_with_art_b = tmp.path().join("r_with_art_b");
+    let hw_with_art_b = hw_with_art.replace(sha_a, sha_b);
+    write_files(
+        &r_with_art_b,
+        &[
+            ("board-specs.yaml", &marker_default("r")),
+            (
+                "w.spec.yaml",
+                &chip("widgetchip", &hw_with_art_b, "", "", TRM),
+            ),
+        ],
+    );
+    let b_with_art_b = bases(&[r_with_art_b.to_str().unwrap()]);
+    assert_ne!(
+        b_with_art["widgetchip@r#hw-obs"],
+        b_with_art_b["widgetchip@r#hw-obs"]
+    );
+}

@@ -478,6 +478,25 @@ fn test_resolve_step_auto_binds_valid_cache_repo_and_skips_partial_or_missing() 
         "{m_out}"
     );
     assert!(!m_out.contains("--repo tools=cache/tools"), "{m_out}");
+
+    // #198: cache/<name> may be a symlink to a shared checkout; resolve refuses a symlinked
+    // --repo path, so checks.sh passes the physical directory.
+    fs::write(
+        repo_dir.join("specs/widgetchip-src-overlay.spec.yaml"),
+        &overlay,
+    )
+    .unwrap();
+    let shared = h.root.join("shared checkouts/tools");
+    fs::create_dir_all(shared.parent().unwrap()).unwrap();
+    fs::rename(&cache_repo, &shared).unwrap();
+    symlink(&shared, &cache_repo).unwrap();
+    let (s_code, s_out) = h.invoke("permissive", "resolve", None, "", "1", &[]);
+    assert_eq!(s_code, 0, "{s_out}");
+    assert!(
+        s_out.contains(&format!("--repo tools={}", shared.display())),
+        "{s_out}"
+    );
+    assert!(s_out.contains("1 anchor(s) resolved, 0 skipped"), "{s_out}");
 }
 
 #[test]

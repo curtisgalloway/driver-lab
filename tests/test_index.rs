@@ -1692,3 +1692,55 @@ fn test_cli_hwspecs_index_subcommand() {
     assert!(String::from_utf8_lossy(&out).contains("5 section(s) from pdf"));
     assert!(custom_out.is_file());
 }
+
+// ===============================================================================================
+// #200: index.schema.json bounds section.level to 1..=6, matching the semantic check
+// ===============================================================================================
+
+#[test]
+fn test_issue_200_index_schema_bounds_section_level() {
+    let tmp = TempDir::new().unwrap();
+    let validate = |level: u32| -> (i32, String) {
+        let path = tmp.path().join(format!("guide{level}.index.yaml"));
+        fs::write(
+            &path,
+            format!(
+                "# SPDX-FileCopyrightText: 2026 contributors\n\
+                 # SPDX-License-Identifier: Apache-2.0\n\
+                 format: 2\n\
+                 document: guide\n\
+                 sha256: \"{}\"\n\
+                 source: markdown\n\
+                 lines: 40\n\
+                 sections:\n  - {{title: Widget setup, level: {level}, lines: [1, 40]}}\n",
+                "a".repeat(64)
+            ),
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = hwspecs::run_from_args(
+            ["hwspecs", "validate", path.to_str().unwrap()],
+            &mut out,
+            &mut err,
+        );
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&out),
+            String::from_utf8_lossy(&err)
+        );
+        (code, text)
+    };
+    for level in [1, 6] {
+        let (code, text) = validate(level);
+        assert_eq!(code, 0, "level {level} must validate: {text}");
+    }
+    let (code, text) = validate(7);
+    assert_ne!(code, 0, "level 7 must fail schema validation: {text}");
+    assert!(
+        text.contains("sections[0].level: 7 is greater than the maximum of 6"),
+        "{text}"
+    );
+    let (code, text) = validate(0);
+    assert_ne!(code, 0, "level 0 must fail schema validation: {text}");
+}

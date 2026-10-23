@@ -31,7 +31,7 @@
       "properties": {
         "number": {"$comment": "The section number the title starts with, when it has one.", "$ref": "spec.schema.json#/$defs/line"},
         "title": {"$ref": "spec.schema.json#/$defs/line"},
-        "level": {"type": "integer", "minimum": 1},
+        "level": {"type": "integer", "minimum": 1, "maximum": 6},
         "pages": {"$ref": "#/$defs/range"},
         "lines": {"$ref": "#/$defs/range"}
       },

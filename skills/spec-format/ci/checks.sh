@@ -219,7 +219,7 @@ discover_repo_pins() {
 
 check_resolve() {
   local files=() f listing repo_args=() pins_out line name commit partial promisor ok
-  local seen_names=() n commits_for_name
+  local seen_names=() n commits_for_name repo_path
   if [ "${RESOLVE_SRC:-0}" != 1 ]; then
     echo "resolve: not run (RESOLVE_SRC is not 1, so no pinned repository is fetched)"
     return 0
@@ -270,7 +270,16 @@ check_resolve() {
         fi
       done <<< "$pins_out"
       if [ "$ok" -eq 1 ]; then
-        repo_args+=(--repo "$name=cache/$name")
+        # hwspecs resolve refuses a --repo path that is itself a symlink, so pass the
+        # physical directory when cache/<name> links to a shared checkout (#198).
+        repo_path="cache/$name"
+        if [ -L "$repo_path" ]; then
+          if ! repo_path=$(cd "$repo_path" && pwd -P); then
+            echo "resolve: skipping cache/$name (cannot resolve symlink); falling back to remote fetch"
+            continue
+          fi
+        fi
+        repo_args+=(--repo "$name=$repo_path")
       fi
     done <<< "$pins_out"
   fi

@@ -625,6 +625,19 @@ pub fn classify_check_finding_code(message: &str) -> &'static str {
 pub fn classify_resolve_finding_code(message: &str) -> &'static str {
     let lower = message.to_ascii_lowercase();
 
+    if lower.contains("claim hex values not bound to a cited line") {
+        return crate::claimbind::CODE_HEX_UNBOUND;
+    }
+    if lower.contains("claim identifier range") && lower.contains("end identifier") {
+        return crate::claimbind::CODE_RANGE_END;
+    }
+    if lower.contains("claim identifier range") && lower.contains("successor") {
+        return crate::claimbind::CODE_RANGE_SUCCESSOR;
+    }
+    if lower.contains("claim ngpios = <") {
+        return crate::claimbind::CODE_NGPIOS;
+    }
+
     if lower.contains("precondition")
         || lower.contains("offline")
         || lower.contains("scratch")

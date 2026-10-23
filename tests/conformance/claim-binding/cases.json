@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "description": "Claim-to-citation binding conformance cases for `hwspecs resolve` (synthetic widget device). Each case is one fact in widget.spec.yaml.in; findings lists the expected findings for that fact in order, without --strict-claims and with it. A finding's message is '<fact id>: ' followed by text matching message_pattern.",
+  "fixture": {
+    "spec": "widget.spec.yaml.in",
+    "commit_placeholder": "@COMMIT@",
+    "repo": "widget",
+    "files": [
+      "widget.c",
+      "widget.dts"
+    ]
+  },
+  "cases": [
+    {
+      "id": "bind-ok",
+      "description": "Hex literal on a cited line that shares an identifier with its sentence.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "unrelated-hex",
+      "description": "Unrelated-hex false match: 0x40 is in the cited lines, but only on a line about another device.",
+      "findings": [
+        {
+          "code": "RES-CLAIM-HEX-UNBOUND",
+          "message_pattern": "claim hex values not bound to a cited line sharing an identifier with their sentence: 0x40$",
+          "level": "warning"
+        }
+      ],
+      "strict_findings": [
+        {
+          "code": "RES-CLAIM-HEX-UNBOUND",
+          "message_pattern": "claim hex values not bound to a cited line sharing an identifier with their sentence: 0x40$",
+          "level": "error"
+        }
+      ]
+    },
+    {
+      "id": "block-context",
+      "description": "The nearest preceding line ending in '{' supplies the shared identifier.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "symbol-bind",
+      "description": "The anchor symbol supplies the shared identifier.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "range-ok",
+      "description": "Range end present and its successor absent.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "range-off-by-one",
+      "description": "Off-by-one range end: the backticked end identifier is absent.",
+      "findings": [
+        {
+          "code": "RES-CLAIM-RANGE-END",
+          "level": "error",
+          "message_pattern": "claim identifier range WPIN0\\.\\.WPIN4: end identifier WPIN4 absent from cited text$"
+        }
+      ],
+      "strict_findings": [
+        {
+          "code": "RES-CLAIM-RANGE-END",
+          "level": "error",
+          "message_pattern": "claim identifier range WPIN0\\.\\.WPIN4: end identifier WPIN4 absent from cited text$"
+        }
+      ]
+    },
+    {
+      "id": "range-successor",
+      "description": "Successor present: the identifier after the range end is in the cited text.",
+      "findings": [
+        {
+          "code": "RES-CLAIM-RANGE-SUCCESSOR",
+          "level": "error",
+          "message_pattern": "claim identifier range WPIN0\\.\\.WPIN2: successor WPIN3 present in cited text$"
+        }
+      ],
+      "strict_findings": [
+        {
+          "code": "RES-CLAIM-RANGE-SUCCESSOR",
+          "level": "error",
+          "message_pattern": "claim identifier range WPIN0\\.\\.WPIN2: successor WPIN3 present in cited text$"
+        }
+      ]
+    },
+    {
+      "id": "range-continued",
+      "description": "Successor finding suppressed when another range in the claim starts there.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "ngpios-ok",
+      "description": "ngpios value appears literally in the cited DT lines.",
+      "findings": [],
+      "strict_findings": []
+    },
+    {
+      "id": "ngpios-mismatch",
+      "description": "ngpios mismatch between claim and cited DT lines.",
+      "findings": [
+        {
+          "code": "RES-CLAIM-NGPIOS",
+          "level": "error",
+          "message_pattern": "claim ngpios = <18> absent from cited text$"
+        }
+      ],
+      "strict_findings": [
+        {
+          "code": "RES-CLAIM-NGPIOS",
+          "level": "error",
+          "message_pattern": "claim ngpios = <18> absent from cited text$"
+        }
+      ]
+    }
+  ]
+}

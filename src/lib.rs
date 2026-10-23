@@ -7,6 +7,7 @@
 
 pub mod author;
 pub mod campaign;
+pub mod claimbind;
 pub mod corpus;
 pub mod diagnostic;
 pub mod docresolve;
@@ -241,6 +242,10 @@ pub struct ResolveArgs {
     /// Print `<name>\t<commit>` lines for all `resources.repos` entries in the target files (`BF-GW-23`).
     #[arg(long = "list-repos")]
     pub list_repos: bool,
+    /// Report a claim hex literal that no single cited line binds to its sentence
+    /// (`RES-CLAIM-HEX-UNBOUND`) as an error instead of a warning.
+    #[arg(long = "strict-claims")]
+    pub strict_claims: bool,
 }
 
 /// Arguments for `hwspecs index`.

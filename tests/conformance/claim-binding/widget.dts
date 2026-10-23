@@ -1,0 +1,6 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR MIT)
+widget_gpio: gpio@1000 {
+	compatible = "acme,widget-gpio";
+	reg = <0x1000 0x100>;
+	ngpios = <16>;
+};

@@ -665,6 +665,38 @@
       "description": "Anchor or document resolution skipped due to time or size limit"
     },
     {
+      "code": "RES-CLAIM-HEX-UNBOUND",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "claim hex values not bound to a cited line sharing an identifier with their sentence",
+      "description": "Claim hex literal appears in the cited lines, but no line of a single citation (nor its nearest preceding '{' line or the anchor symbol) shares an identifier token with the claim sentence holding it; an error under --strict-claims"
+    },
+    {
+      "code": "RES-CLAIM-RANGE-END",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "claim identifier range .*: end identifier .* absent from cited text",
+      "description": "End identifier of a claim range PREFIX<n><suffix>..PREFIX<m><suffix> absent from the fact's cited text"
+    },
+    {
+      "code": "RES-CLAIM-RANGE-SUCCESSOR",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "claim identifier range .*: successor .* present in cited text",
+      "description": "PREFIX<m+1> present in the fact's cited text, so the claim range ends early; suppressed when another range in the claim starts there"
+    },
+    {
+      "code": "RES-CLAIM-NGPIOS",
+      "module": "resolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "claim ngpios = <.*> absent from cited text",
+      "description": "Claim 'ngpios = <N>' does not appear in the fact's cited text"
+    },
+    {
       "code": "DOC-HASH-MISMATCH",
       "module": "docresolve.py",
       "category": "diagnostic",

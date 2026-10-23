@@ -1438,3 +1438,113 @@ facts:
         errors(&sem_res, None)
     );
 }
+
+// ---------------------------------------------------------------------------
+// #197: `op: poll` steps take `until`, not `value`
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_issue_197_poll_steps_check_until_not_value() {
+    let fixture = fixtures_dir().join("precise-payloads");
+    let (rc, res) = check_json(&[fixture.to_str().unwrap()]);
+    assert_eq!(rc, 0, "precise-payloads fixture must pass check: {res}");
+    assert!(errors(&res, None).is_empty(), "{:?}", errors(&res, None));
+
+    let tmp = TempDir::new().unwrap();
+    let root = tmp.path().join("root");
+    write_file(
+        &root.join("board-specs.yaml"),
+        "format: 2\nname: proot\nlayer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0]\n",
+    );
+    write_file(
+        &root.join("widget.spec.yaml"),
+        r##"format: 2
+kind: peripheral
+id: widget
+name: Widget
+resources:
+  documents:
+    - name: trm
+      class: databook
+      title: Widget TRM
+      url: "https://example.invalid/trm.pdf"
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+      pages: 80
+areas:
+  - {area: registers, level: document-and-code, note: Read from TRM.}
+facts:
+  - id: reg-status
+    section: registers
+    data:
+      register: {name: STATUS, offset: "0x0", width: 8, access: read-write, reset: "0x0"}
+      fields:
+        - id: state
+          name: STATE
+          bits: [0, 1]
+          meaning: block state
+          enumeratedValues:
+            - {name: idle, value: "0x0"}
+            - {name: kick, value: "0x1", usage: write}
+    support:
+      - {class: databook, doc: trm, at: [{page: "10"}]}
+  - id: seq-wait
+    section: sequences
+    title: Wait
+    claim: Software waits for the block.
+    data:
+      sequence:
+        steps:
+          - id: eq-too-wide
+            op: poll
+            target: "#reg-status.state"
+            until: {equals: "0x7"}
+            timeout: {unit: ms, max: 10}
+          - id: set-too-wide
+            op: poll
+            target: "#reg-status"
+            until: {bitsSet: "0x100"}
+            timeout: {unit: ms, max: 10}
+          - id: clear-too-wide
+            op: poll
+            target: "#reg-status"
+            until: {bitsClear: "0x200"}
+            timeout: {unit: ms, max: 10}
+          - id: write-meaning
+            op: poll
+            target: "#reg-status.state"
+            until: {equals: kick}
+            timeout: {unit: ms, max: 10}
+          - id: read-meaning
+            op: poll
+            target: "#reg-status.state"
+            until: {equals: idle}
+            timeout: {unit: ms, max: 10}
+    support:
+      - {class: databook, doc: trm, at: [{page: "12"}]}
+"##,
+    );
+    let (rc, res) = check_json(&[root.to_str().unwrap()]);
+    assert_ne!(rc, 0, "bad poll steps must fail check: {res}");
+    let all = errors(&res, None);
+    assert!(
+        errors(&res, Some("requires an expected value")).is_empty(),
+        "{all:?}"
+    );
+    for needle in [
+        "step 'eq-too-wide': value 0x7 exceeds target width 2",
+        "step 'set-too-wide': mask 0x100 exceeds target width 8",
+        "step 'clear-too-wide': mask 0x200 exceeds target width 8",
+        "step 'write-meaning': value 'kick' is a write meaning",
+    ] {
+        assert_eq!(errors(&res, Some(needle)).len(), 1, "{needle}: {all:?}");
+    }
+    assert!(errors(&res, Some("'read-meaning'")).is_empty(), "{all:?}");
+
+    let poll = serde_json::json!({
+        "id": "w", "op": "poll", "target": "#reg-status.state",
+        "until": {"bitsClear": "0x1"}, "interval": {"unit": "us", "value": 10}
+    });
+    let text = hwspecs::peripheral::step_text(&poll);
+    assert!(text.contains("until bits 0x1 clear"), "{text}");
+    assert!(text.contains("every 10 us"), "{text}");
+}

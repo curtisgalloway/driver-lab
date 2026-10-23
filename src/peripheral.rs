@@ -1556,11 +1556,11 @@ fn check_step(
             true,
         );
     }
-    if op == Some("poll") && step.get("value").is_none() {
+    if op == Some("poll") && step.get("until").is_none() {
         checker.add_file(
             file_idx,
             spath,
-            format!("{what}: op 'poll' requires an expected value"),
+            format!("{what}: op 'poll' requires an until condition"),
             "error",
             false,
             true,
@@ -1578,7 +1578,7 @@ fn check_step(
             true,
         );
     }
-    for key in ["duration", "timeout"] {
+    for key in ["duration", "timeout", "interval"] {
         if let Some(q) = step.get(key) {
             let mut p = spath.to_vec();
             p.push(PathElem::from(key));
@@ -1637,10 +1637,35 @@ fn check_step_value(
     width: Option<u64>,
     spath: &[PathElem],
 ) {
-    let Some(val) = step.get("value") else {
-        check_step_mask(checker, file_idx, what, step, width, spath);
-        return;
-    };
+    if let Some(val) = step.get("value") {
+        let mut p = spath.to_vec();
+        p.push(PathElem::from("value"));
+        check_value_literal(checker, file_idx, what, step, val, field, width, &p);
+    }
+    // A poll compares against `until.equals`, never a top-level `value` (#197).
+    if let Some(val) = step.get("until").and_then(|u| u.get("equals")) {
+        let mut p = spath.to_vec();
+        p.push(PathElem::from("until"));
+        p.push(PathElem::from("equals"));
+        check_value_literal(checker, file_idx, what, step, val, field, width, &p);
+    }
+    check_step_mask(checker, file_idx, what, step, width, spath);
+}
+
+/// Checks one step value (`value` or `until.equals`): a number fits the target width, a name
+/// is an enumerated value of the target field, and a poll does not compare against a
+/// write-only meaning.
+#[allow(clippy::too_many_arguments)]
+fn check_value_literal(
+    checker: &mut Checker,
+    file_idx: usize,
+    what: &str,
+    step: &Value,
+    val: &Value,
+    field: Option<&Value>,
+    width: Option<u64>,
+    path: &[PathElem],
+) {
     let val_str = val.as_str().unwrap_or("");
     let is_hex_or_int = val.is_number()
         || val_str.starts_with("0x")
@@ -1649,11 +1674,9 @@ fn check_step_value(
     if is_hex_or_int {
         if let (Some(w), Some(ival)) = (width, parse_int(Some(val))) {
             if bit_length(ival) > w {
-                let mut p = spath.to_vec();
-                p.push(PathElem::from("value"));
                 checker.add_file(
                     file_idx,
-                    &p,
+                    path,
                     format!("{what}: value {val_str} exceeds target width {w}"),
                     "error",
                     false,
@@ -1663,13 +1686,18 @@ fn check_step_value(
             }
         }
     } else if let Some(fld) = field {
-        let mut names: HashSet<String> = HashSet::new();
-        if let Some(evs) = as_array(fld, "enumeratedValues") {
-            for r in evs {
+        // name -> usage ("read-write" when the entry gives none).
+        let mut entries: HashMap<String, String> = HashMap::new();
+        let mut collect = |vals: &[Value]| {
+            for r in vals {
                 if let Some(n) = as_str(r, "name") {
-                    names.insert(n.to_string());
+                    let usage = as_str(r, "usage").unwrap_or("read-write");
+                    entries.insert(n.to_string(), usage.to_string());
                 }
             }
+        };
+        if let Some(evs) = as_array(fld, "enumeratedValues") {
+            collect(evs);
         }
         if let Some(eref) = as_str(fld, "enumerationDefinitionRef") {
             if let Some((ed_entry, _)) = checker.files[file_idx]
@@ -1680,29 +1708,38 @@ fn check_step_value(
                 if let Some(vals) =
                     as_array(ed_entry, "enumeratedValues").or_else(|| as_array(ed_entry, "values"))
                 {
-                    for r in vals {
-                        if let Some(n) = as_str(r, "name") {
-                            names.insert(n.to_string());
-                        }
-                    }
+                    collect(vals);
                 }
             }
         }
-        if !names.is_empty() && !names.contains(val_str) {
-            let mut p = spath.to_vec();
-            p.push(PathElem::from("value"));
-            checker.add_file(
-                file_idx,
-                &p,
-                format!("{what}: value '{val_str}' is not an enumerated name of target field"),
-                "error",
-                false,
-                true,
-                true,
-            );
+        match entries.get(val_str) {
+            None if !entries.is_empty() => {
+                checker.add_file(
+                    file_idx,
+                    path,
+                    format!("{what}: value '{val_str}' is not an enumerated name of target field"),
+                    "error",
+                    false,
+                    true,
+                    true,
+                );
+            }
+            Some(usage) if usage == "write" && as_str(step, "op") == Some("poll") => {
+                checker.add_file(
+                    file_idx,
+                    path,
+                    format!(
+                        "{what}: value '{val_str}' is a write meaning of the target field; a poll compares a read value"
+                    ),
+                    "error",
+                    false,
+                    true,
+                    true,
+                );
+            }
+            _ => {}
         }
     }
-    check_step_mask(checker, file_idx, what, step, width, spath);
 }
 
 fn check_step_mask(
@@ -1713,11 +1750,34 @@ fn check_step_mask(
     width: Option<u64>,
     spath: &[PathElem],
 ) {
-    if let (Some(w), Some(mval)) = (width, parse_int(step.get("mask"))) {
+    let Some(w) = width else {
+        return;
+    };
+    let until = step.get("until");
+    let masks = [
+        ("mask", None, step.get("mask")),
+        (
+            "until",
+            Some("bitsSet"),
+            until.and_then(|u| u.get("bitsSet")),
+        ),
+        (
+            "until",
+            Some("bitsClear"),
+            until.and_then(|u| u.get("bitsClear")),
+        ),
+    ];
+    for (key, sub, mask) in masks {
+        let Some(mval) = parse_int(mask) else {
+            continue;
+        };
         if bit_length(mval) > w {
-            let mask_str = as_str(step, "mask").unwrap_or("");
+            let mask_str = mask.and_then(Value::as_str).unwrap_or("");
             let mut p = spath.to_vec();
-            p.push(PathElem::from("mask"));
+            p.push(PathElem::from(key));
+            if let Some(sub) = sub {
+                p.push(PathElem::from(sub));
+            }
             checker.add_file(
                 file_idx,
                 &p,
@@ -1779,6 +1839,18 @@ pub fn step_text(step: &Value) -> String {
     }
     if let Some(mask) = as_str(step, "mask") {
         parts.push(format!("(mask {mask})"));
+    }
+    if let Some(until) = step.get("until") {
+        if let Some(v) = as_str(until, "equals") {
+            parts.push(format!("until = {v}"));
+        } else if let Some(m) = as_str(until, "bitsSet") {
+            parts.push(format!("until bits {m} set"));
+        } else if let Some(m) = as_str(until, "bitsClear") {
+            parts.push(format!("until bits {m} clear"));
+        }
+    }
+    if let Some(iv) = step.get("interval") {
+        parts.push(format!("every {}", quantity_text(iv)));
     }
     if let Some(dur) = step.get("duration") {
         parts.push(format!("for {}", quantity_text(dur)));

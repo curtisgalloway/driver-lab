@@ -476,8 +476,10 @@ facts:
         findings.is_empty(),
         "expected no PDF-skip warnings for non-PDF docs, got: {findings:?}"
     );
-    assert_eq!(res["documents_resolved"], 0);
-    assert_eq!(res["documents_skipped"], 2);
+    // The pinned wiki page is Markdown, so its heading locator resolves; the unpinned one is
+    // skipped without a warning.
+    assert_eq!(res["documents_resolved"], 1);
+    assert_eq!(res["documents_skipped"], 1);
 
     // Corrupting the local pinned non-PDF file must still fail sha256 verification
     fs::write(docs_dir.join("gw-wiki-pinned"), "tampered content").unwrap();

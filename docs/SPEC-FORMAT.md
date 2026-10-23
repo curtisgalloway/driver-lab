@@ -1595,6 +1595,7 @@ Each is one session and one pull request, in this order:
 | Anchors resolve at the pin: path, line range, symbol near the range | | | yes |
 | Cited files' SPDX lines fit the entry's license | | | yes |
 | Document files hash to `sha256` (`--docs-dir`) | | | yes |
+| Document locators resolve (`--docs-dir`): PDF `page`/`pages` text; Markdown `section`/`heading` match a heading (numeric prefix optional, `{#anchor}` and case ignored), else an error; `--fail-on-skipped-documents` makes a skipped citation an error | | | yes |
 | Values in a claim appear in the cited lines (warning); `inventory` against headers | | | yes |
 
 Everything in the schema column is declarative and can be read by people and other tools; the

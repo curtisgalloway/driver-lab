@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: widget-guide-good
+name: Synthetic Widget (Markdown citations that resolve)
+triggers: [synthetic widget markdown good]
+orientation: This fixture exercises Markdown document resolution; it describes no real hardware.
+resources:
+  documents:
+    - name: widget-guide.md
+      class: doc
+      title: Synthetic Widget programming guide
+      url: https://example.invalid/widget-guide.md
+      sha256: fa2b119b00cd4a081f3f82a14051ba1814a2fafa7be657b7169054ebf0b932fd
+      access: public
+facts:
+  - id: ctrl-start
+    section: quick-facts
+    title: Starting a conversion
+    claim: Writing 0x1 to the control register at offset 0x10 starts a conversion in the synthetic Widget.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{heading: "Control register", table: "2-1"}]
+  - id: status-offset
+    section: quick-facts
+    title: Status register offset
+    claim: The synthetic Widget's status register sits at offset 0x14.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{section: "2.2"}]
+  - id: reset-cycles
+    section: quick-facts
+    title: Reset cycles
+    claim: Reset completes in 10 clock cycles in the synthetic Widget.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{section: "3. reset behavior"}]

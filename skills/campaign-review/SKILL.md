@@ -50,6 +50,9 @@ definitions. An adapter observation does
 not adopt a new edition or replace an expected pin. Preserve the deployment's
 authorization requirements for changing an adopted source.
 
+Not implemented yet: `hwspecs campaign pinned-file-adapter`, `sweep`, `stopping` and
+`contract-check` exit 2 with `not implemented`.
+
 Inspect unavailable identities and each stale/contested entry, retaining the
 report as a review artifact. Use reviewed, hash-bound change maps to narrow a
 change; an unreviewed or incomplete harness mapping widens to all qualifications.

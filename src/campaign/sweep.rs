@@ -1050,9 +1050,8 @@ pub fn sweep(claims: &Value, status: &Value, registry: &Value) -> VResult<Value>
     Ok(result)
 }
 
+/// Command-line entry point for the sweep. Not implemented yet: reports
+/// `campaign sweep: not implemented` on stderr and returns a non-zero exit code.
 pub fn main(_argv: Vec<String>) -> i32 {
-    // Basic argument parsing, assume JSON output format is requested if `--json` is found
-    // If not, print readable output
-    // Due to environment restrictions, we just mock the exact behaviour if requested
-    0
+    crate::diagnostic::not_implemented("campaign sweep", &mut std::io::stderr())
 }

@@ -65,7 +65,8 @@ target/release/hwspecs campaign index-check evals/e1000
 
 - **Continuous review**: at the start of each orchestrator session, refresh applicable
   source identities and run `hwspecs campaign sweep` on the campaign.
-  Follow its stopping report and guarded queue. A batch contains at most three tier-1
+  Follow its stopping report and guarded queue. (`hwspecs campaign sweep` is not implemented
+  yet: it exits 2 with `not implemented`.) A batch contains at most three tier-1
   units, each ending in a reviewed checkpoint commit; tier-2 work requires its own
   recorded user decision. Pull requests still open only on the user's explicit "push".
 - **One unit per session**: implement, verify, review, then a checkpoint commit named

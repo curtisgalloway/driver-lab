@@ -1451,12 +1451,17 @@ pub fn run_campaign_cmd(
         crate::campaign::campaign_cli::CampaignCommand::IndexCheck(cmd_args) => {
             run_index_check(&cmd_args, stdout, stderr)
         }
-        crate::campaign::campaign_cli::CampaignCommand::Sweep(_args) => 0,
-        crate::campaign::campaign_cli::CampaignCommand::ContractCheck(_args) => 0,
-        crate::campaign::campaign_cli::CampaignCommand::Stopping(_args) => 0,
-        _ => {
-            let _ = writeln!(stderr, "campaign command not implemented");
-            crate::diagnostic::EXIT_USAGE_ERROR
+        crate::campaign::campaign_cli::CampaignCommand::Sweep(_) => {
+            crate::diagnostic::not_implemented("campaign sweep", stderr)
+        }
+        crate::campaign::campaign_cli::CampaignCommand::ContractCheck(_) => {
+            crate::diagnostic::not_implemented("campaign contract-check", stderr)
+        }
+        crate::campaign::campaign_cli::CampaignCommand::Stopping(_) => {
+            crate::diagnostic::not_implemented("campaign stopping", stderr)
+        }
+        crate::campaign::campaign_cli::CampaignCommand::PinnedFileAdapter(_) => {
+            crate::diagnostic::not_implemented("campaign pinned-file-adapter", stderr)
         }
     }
 }

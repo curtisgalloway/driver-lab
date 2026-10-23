@@ -500,6 +500,8 @@ hwspecs campaign pinned-file-adapter evals/e1000/sources.yaml spec --json
 hwspecs campaign sweep evals/e1000 --json
 ```
 
+Not implemented yet: both commands exit 2 with `not implemented`.
+
 The adapter supports `--root`, `--run-store`, `--write` and `--dry-run`. With no
 explicit run store it reuses `utilities/run-store.py` configuration; it never
 searches. It wraps `corpus_check.check_blob` for hashing and pin comparison.
@@ -580,6 +582,8 @@ isolated run directory:
 hwspecs campaign contract-check \
   --source-json adapter-output.json --run-dir isolated-run --json
 ```
+
+Not implemented yet: `hwspecs campaign contract-check` exits 2 with `not implemented`.
 
 With neither output flag, check only the manifest. With either or both, check
 those artifacts as well. Missing inputs exit 3; structural findings exit 1;

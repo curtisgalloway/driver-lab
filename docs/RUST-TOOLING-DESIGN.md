@@ -247,6 +247,9 @@ Every subcommand preserves the exit code contract: `0` pass, `1` spec/verificati
   - `driver-lab verify submit-blind --packet <packet.json> --input <blind.yaml>`
   - `driver-lab verify assemble <root> [--spec <id>] --packet <packet.json> --primary <r1.yaml>... [--second <r2.yaml>...]`
 
+Not implemented yet: `assemble`, `verify prepare|submit-blind|assemble` and `campaign
+sweep|contract-check|stopping|pinned-file-adapter` print `<command>: not implemented` and exit 2.
+
 ---
 
 ## 3. Isolated subagent environment contracts (`ENV-1`..`ENV-6`)
@@ -774,6 +777,7 @@ passed or never read at that grain) and **pre-declared calibration thresholds**:
    (`evals/enc28j60`, `evals/e1000`) all pass.
 5. **Automation and model-tiering verification (`AC-5`)**: `resource pin-files|pin-doc`,
    `assemble`, two-phase `verify prepare --phase blind|claims`, `verify assemble` (with TOCTOU
-   basis protection and `ADJUDICATE` construction), canonical register-source references, and the
+   basis protection and `ADJUDICATE` construction; `assemble` and `verify` are not implemented
+   yet), canonical register-source references, and the
    `CR6b` revision-8 calibration benchmark (`AUTO-1`..`AUTO-6`, `TIER-1`..`TIER-4`) pass their
    acceptance suites.

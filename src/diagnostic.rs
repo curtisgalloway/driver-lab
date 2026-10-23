@@ -30,6 +30,17 @@ pub const EXIT_ENV_ERROR: i32 = 3;
 pub const EXIT_PRECONDITION: i32 = 3;
 /// Process exit code for unexpected internal tool errors.
 pub const EXIT_INTERNAL: i32 = 100;
+/// Process exit code when a subcommand exists in the CLI surface but has no implementation yet.
+///
+/// Equal to [`EXIT_USAGE_ERROR`], as for a subcommand the CLI does not know, so the documented
+/// `0`–`3` exit contract holds and no caller mistakes the missing work for success.
+pub const EXIT_NOT_IMPLEMENTED: i32 = EXIT_USAGE_ERROR;
+
+/// Writes `<command>: not implemented` to `stderr` and returns [`EXIT_NOT_IMPLEMENTED`].
+pub fn not_implemented(command: &str, stderr: &mut dyn std::io::Write) -> i32 {
+    let _ = writeln!(stderr, "{command}: not implemented");
+    EXIT_NOT_IMPLEMENTED
+}
 
 /// Exit code classification for `hwspecs` commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

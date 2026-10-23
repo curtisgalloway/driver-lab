@@ -149,13 +149,15 @@ pub enum Command {
     LicenseGate(LicenseGateArgs),
     /// Spec evaluation prompt builder, fact/code graders, and runner (`RT-10`).
     Eval(EvalArgs),
-    /// Campaign review sweep, contract check, index check, and stopping rules (`RT-10`).
+    /// Campaign review index check (`RT-10`); `sweep`, `contract-check`, `stopping` and
+    /// `pinned-file-adapter` are not implemented yet.
     Campaign(CampaignArgs),
     /// Pin repository files or documents into a spec root (`AUTO-1`, `AUTO-2`).
     Resource(ResourceArgs),
-    /// Merge parallel `.facts.yaml` slices into a target `.spec.yaml` (`AUTO-3`).
+    /// Merge parallel `.facts.yaml` slices into a target `.spec.yaml` (`AUTO-3`; not implemented yet).
     Assemble(AssembleArgs),
-    /// Two-phase blind and claim verification packet preparation and assembly (`AUTO-4`).
+    /// Two-phase blind and claim verification packet preparation and assembly (`AUTO-4`; not
+    /// implemented yet).
     Verify(VerifyArgs),
 }
 
@@ -521,7 +523,8 @@ pub struct EvalArgs {
 /// Arguments for `hwspecs campaign`.
 #[derive(Debug, Clone, Args)]
 pub struct CampaignArgs {
-    /// Campaign subcommand (`sweep`, `contract-check`, `index-check`, `stopping`) and arguments.
+    /// Campaign subcommand (`sweep`, `contract-check`, `index-check`, `stopping`,
+    /// `pinned-file-adapter`) and arguments.
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     pub args: Vec<String>,
 }
@@ -535,13 +538,14 @@ pub struct ResourceArgs {
 }
 
 /// Arguments for `hwspecs assemble`.
+///
+/// The command is not implemented yet, so it accepts any arguments and every invocation reaches
+/// the not-implemented report. The planned form is `assemble <target.spec.yaml> --from <slice>...`.
 #[derive(Debug, Clone, Args)]
 pub struct AssembleArgs {
-    /// Target `.spec.yaml` file.
-    pub target_spec: PathBuf,
-    /// Input `.facts.yaml` slices to merge.
-    #[arg(long = "from", value_name = "SLICE", required = true)]
-    pub from: Vec<PathBuf>,
+    /// Arguments (ignored until the command is implemented).
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
 }
 
 /// Arguments for `hwspecs verify`.

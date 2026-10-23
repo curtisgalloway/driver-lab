@@ -174,7 +174,7 @@ subcommand; grouped by job:
 | Follow evidence | `resolve`, `show`, `drift`, `inventory`, `fetch`, `resource`, `index` |
 | Track verification | `verify`, `status`, `todo`, `corpus` |
 | Build and publish views | `render` (`md`, `html`, `atlas`), `publish`, `stubgen` |
-| Author in parallel | `assemble` (merge `.facts.yaml` slices into a spec) |
+| Author in parallel | `assemble` (merge `.facts.yaml` slices into a spec; not implemented yet) |
 | Evaluate | `eval`, `campaign` |
 
 `--json` and `--offline` are global flags. Exit codes: 0 passed, 1 a check failed, 2 usage

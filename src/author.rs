@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::diagnostic::{EXIT_OK, EXIT_USAGE_ERROR};
+use crate::diagnostic::{not_implemented, EXIT_OK, EXIT_USAGE_ERROR};
 use crate::sandbox::ScratchResolver;
 use crate::{AssembleArgs, ResourceArgs};
 use clap::Parser;
-use serde_json::{json, Value};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Write;
@@ -238,27 +238,15 @@ fn pin_doc(args: PinDocArgs, stdout: &mut dyn Write, stderr: &mut dyn Write) -> 
     EXIT_OK
 }
 
+/// `hwspecs assemble` is not implemented yet: it reads no slice, writes
+/// nothing, and reports `assemble: not implemented` with a non-zero exit.
 pub fn run_assemble_cmd(
-    args: &AssembleArgs,
+    _args: &AssembleArgs,
     _scratch: &ScratchResolver,
     _stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> i32 {
-    let mut merged_facts = serde_json::Map::new();
-    for slice_path in &args.from {
-        let content = fs::read_to_string(slice_path).unwrap();
-        let val: Value = serde_json::from_str(&content).unwrap();
-        if let Some(facts) = val.get("facts").and_then(|f| f.as_object()) {
-            for (k, v) in facts {
-                if merged_facts.contains_key(k) {
-                    let _ = writeln!(stderr, "error: ID collision {}", k);
-                    return EXIT_USAGE_ERROR;
-                }
-                merged_facts.insert(k.clone(), v.clone());
-            }
-        }
-    }
-    EXIT_OK
+    not_implemented("assemble", stderr)
 }
 
 pub fn check_auto5_warnings(fact: &serde_json::Value) -> Vec<String> {

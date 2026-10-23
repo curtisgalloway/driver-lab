@@ -1,28 +1,31 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::diagnostic::{EXIT_OK, EXIT_USAGE_ERROR};
+use crate::diagnostic::{not_implemented, EXIT_USAGE_ERROR};
 use crate::sandbox::ScratchResolver;
 use crate::VerifyArgs;
 use clap::Parser;
 use std::io::Write;
 
+// `hwspecs verify` subcommands. None is implemented yet: each reports
+// `verify <subcommand>: not implemented` and exits non-zero.
 #[derive(Debug, Parser)]
 #[command(name = "verify")]
 pub enum VerifyCmd {
-    Prepare(PrepareArgs),
-    SubmitBlind,
-    Assemble,
+    /// Emit a blind or claims work packet (not implemented yet).
+    Prepare(UnimplementedArgs),
+    /// Record a reader's blind derivations (not implemented yet).
+    SubmitBlind(UnimplementedArgs),
+    /// Assemble reader verdicts into a verify record (not implemented yet).
+    Assemble(UnimplementedArgs),
 }
 
-#[derive(Debug, Parser)]
-pub struct PrepareArgs {
-    #[arg(long = "phase")]
-    pub phase: String,
-    #[arg(long = "shard")]
-    pub shard: Option<String>,
-    #[arg(long = "second-reader")]
-    pub second_reader: bool,
+/// Accepts any arguments, so every invocation of an unimplemented subcommand reaches the
+/// not-implemented report instead of a usage error about flags that do nothing.
+#[derive(Debug, clap::Args)]
+pub struct UnimplementedArgs {
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
 }
 
 pub fn run_verify_cmd(
@@ -40,16 +43,10 @@ pub fn run_verify_cmd(
             return EXIT_USAGE_ERROR;
         }
     };
-    match cmd {
-        VerifyCmd::Prepare(p) => {
-            if p.phase == "blind" {
-                // emit blind packet
-            } else if p.phase == "claims" {
-                // emit claims packet
-            }
-            EXIT_OK
-        }
-        VerifyCmd::SubmitBlind => EXIT_OK,
-        VerifyCmd::Assemble => EXIT_OK,
-    }
+    let command = match cmd {
+        VerifyCmd::Prepare(_) => "verify prepare",
+        VerifyCmd::SubmitBlind(_) => "verify submit-blind",
+        VerifyCmd::Assemble(_) => "verify assemble",
+    };
+    not_implemented(command, stderr)
 }

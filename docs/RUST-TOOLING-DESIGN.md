@@ -221,7 +221,7 @@ Every subcommand preserves the exit code contract: `0` pass, `1` spec/verificati
 - **Spec Format 2 subcommands**:
   - `driver-lab validate <targets...> [--root <dir>] [--context-root <dir>...] [--require-license]`
   - `driver-lab check <targets...> [--root <dir>] [--context-root <dir>...] [--stubs-from <dir>] [--require-license] [--verify <file>...] [--resolve-headings]`
-  - `driver-lab resolve <targets...> [--root <dir>] [--context-root <dir>...] [--repo <name>=<path>...] [--docs-dir <dir>] [--require-license]`
+  - `driver-lab resolve <targets...> [--root <dir>] [--context-root <dir>...] [--repo <name>=<path>...] [--docs-dir <dir> [--fail-on-skipped-documents]] [--require-license]`
   - `driver-lab index <doc-id> --root <dir> --docs-dir <dir>`
   - `driver-lab status <targets...> [--root <dir>] [--context-root <dir>...] [--require-license] [--no-fail-on-pending]`
   - `driver-lab todo <targets...> [--root <dir>] [--context-root <dir>...] [--require-license]`

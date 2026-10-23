@@ -3,7 +3,9 @@
 
 use crate::claimbind::{claim_findings, CitedSpan};
 use crate::diagnostic::{ExitCode, Finding};
-use crate::docresolve::{citations_with_status, DocReader, PdfPages, DOC_CLASSES};
+use crate::docresolve::{
+    citations_with_options, DocReader, DocResolveOptions, PdfPages, DOC_CLASSES,
+};
 use crate::git_source::{
     collect_spec_files_from_targets, display_line, is_valid_commit_oid, node_range, symbol_in,
     GitError, OperationalError, PreconditionError, Resolver,
@@ -230,7 +232,17 @@ pub fn run_resolve_cmd(
         }
     };
 
-    match run_impl(cli, false, args.strict_claims, &target_files, &mut resolver) {
+    let doc_opts = DocResolveOptions {
+        fail_on_skipped: args.fail_on_skipped_documents,
+    };
+    match run_impl(
+        cli,
+        false,
+        args.strict_claims,
+        &target_files,
+        &mut resolver,
+        doc_opts,
+    ) {
         Ok((code, res)) => {
             print_result(&res, cli.json, diag_out, stdout, stderr);
             code
@@ -301,7 +313,14 @@ pub fn run_show_cmd(
         }
     };
 
-    match run_impl(cli, true, false, &target_files, &mut resolver) {
+    match run_impl(
+        cli,
+        true,
+        false,
+        &target_files,
+        &mut resolver,
+        DocResolveOptions::default(),
+    ) {
         Ok((code, res)) => {
             print_result(&res, cli.json, diag_out, stdout, stderr);
             code
@@ -418,6 +437,7 @@ fn run_impl(
     strict_claims: bool,
     target_files: &[PathBuf],
     resolver: &mut Resolver,
+    doc_opts: DocResolveOptions,
 ) -> Result<(i32, Value), PreconditionError> {
     let mut findings_out = Vec::new();
     let mut anchors_out = Vec::new();
@@ -793,10 +813,11 @@ fn run_impl(
             }
 
             let has_unextracted_own_doc = if resolver.docs_dir.is_some() {
-                let doc_res = citations_with_status(
+                let doc_res = citations_with_options(
                     record,
                     base.clone(),
                     &mut documents,
+                    doc_opts,
                     |where_at, msg, level| {
                         let mark = mark_for_at(&loaded, &where_at);
                         let code = crate::diagnostic::classify_resolve_finding_code(&msg);
@@ -816,18 +837,25 @@ fn run_impl(
                 own_lines.extend(doc_res.own_lines);
                 pdf_own_lines.extend(doc_res.pdf_own_lines);
                 for di in doc_res.items {
-                    let source_json: Vec<Value> = di
+                    let mut source_json: Vec<Value> = di
                         .source
                         .into_iter()
                         .map(|(page, lineno, line)| json!([page, lineno, line]))
                         .collect();
-                    let ci_val = json!({
+                    source_json.extend(di.lines.into_iter().map(|(n, line)| json!([n, line])));
+                    let mut ci_val = json!({
                         "doc": di.doc,
                         "locator": di.locator,
                         "fact": di.fact,
                         "status": di.status,
                         "source": source_json
                     });
+                    if !di.format.is_empty() {
+                        ci_val["format"] = json!(di.format);
+                    }
+                    if !di.headings.is_empty() {
+                        ci_val["headings"] = json!(di.headings);
+                    }
                     document_citations_out.push(ci_val.clone());
                     citations.push(ci_val);
                 }
@@ -966,11 +994,12 @@ fn run_impl(
 
     let mut documents_resolved = 0;
     let mut documents_skipped = 0;
+    let mut documents_failed = 0;
     for d in &document_citations_out {
-        if d.get("status").and_then(|v| v.as_str()) == Some("resolved") {
-            documents_resolved += 1;
-        } else if d.get("status").and_then(|v| v.as_str()) == Some("skipped") {
-            documents_skipped += 1;
+        match d.get("status").and_then(|v| v.as_str()) {
+            Some("resolved") => documents_resolved += 1,
+            Some("skipped") => documents_skipped += 1,
+            _ => documents_failed += 1,
         }
     }
 
@@ -993,6 +1022,7 @@ fn run_impl(
         "document_citations": document_citations_out,
         "documents_resolved": documents_resolved,
         "documents_skipped": documents_skipped,
+        "documents_failed": documents_failed,
         "resolved": resolved,
         "skipped": skipped,
     });
@@ -1025,6 +1055,12 @@ fn run_impl(
                                         arr[0].as_u64().unwrap_or(0),
                                         arr[1].as_u64().unwrap_or(0),
                                         display_line(arr[2].as_str().unwrap_or(""))
+                                    ));
+                                } else if arr.len() == 2 {
+                                    text_lines.push(format!(
+                                        "  line {}: {}",
+                                        arr[0].as_u64().unwrap_or(0),
+                                        display_line(arr[1].as_str().unwrap_or(""))
                                     ));
                                 }
                             }
@@ -1069,10 +1105,7 @@ fn run_impl(
         ));
     }
     text_lines.push(format!("{resolved} anchor(s) resolved, {skipped} skipped"));
-    if !result
-        .get("document_citations")
-        .and_then(|v| v.as_array())
-        .is_none_or(Vec::is_empty)
+    if resolver.docs_dir.is_some() || documents_resolved + documents_skipped + documents_failed > 0
     {
         text_lines.push(format!(
             "{documents_resolved} document citation(s) resolved, {documents_skipped} skipped"

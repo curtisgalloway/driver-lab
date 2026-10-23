@@ -7,6 +7,7 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
 
 pub struct PdfPages {
     path: PathBuf,
@@ -127,7 +128,37 @@ pub struct CitationItem {
     pub locator: Value,
     pub fact: String,
     pub status: String,
+    /// PDF evidence as `(pdf_page, line_on_page, text)`.
     pub source: Vec<(usize, usize, String)>,
+    /// Format the citation was resolved against: `"pdf"`, `"markdown"`, or empty when it was not
+    /// resolved.
+    pub format: &'static str,
+    /// Markdown evidence as `(line_in_document, text)`, one entry per line of each matched section.
+    pub lines: Vec<(usize, String)>,
+    /// Text of each Markdown heading a `section` or `heading` locator matched.
+    pub headings: Vec<String>,
+}
+
+impl CitationItem {
+    fn new(doc: String, locator: Value, fact: String) -> Self {
+        Self {
+            doc,
+            locator,
+            fact,
+            status: "failed".to_string(),
+            source: Vec::new(),
+            format: "",
+            lines: Vec::new(),
+            headings: Vec::new(),
+        }
+    }
+}
+
+/// Options for [`citations_with_options`].
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DocResolveOptions {
+    /// Report every skipped document citation as an error (`--fail-on-skipped-documents`).
+    pub fail_on_skipped: bool,
 }
 
 pub const DOC_CLASSES: &[&str] = &[
@@ -183,10 +214,309 @@ pub fn supports<'a>(
     }
 }
 
+/// One Markdown heading: its 0-based line index, level (1-6) and raw text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarkdownHeading {
+    pub line: usize,
+    pub level: usize,
+    pub text: String,
+}
+
+fn fence_marker(line: &str) -> Option<(char, usize)> {
+    let indent = line.len() - line.trim_start_matches(' ').len();
+    if indent > 3 {
+        return None;
+    }
+    let rest = &line[indent..];
+    let ch = rest.chars().next()?;
+    if ch != '`' && ch != '~' {
+        return None;
+    }
+    let run = rest.chars().take_while(|c| *c == ch).count();
+    if run < 3 {
+        return None;
+    }
+    if ch == '`' && rest[run..].contains('`') {
+        return None;
+    }
+    Some((ch, run))
+}
+
+fn atx_heading(line: &str) -> Option<(usize, String)> {
+    let indent = line.len() - line.trim_start_matches(' ').len();
+    if indent > 3 {
+        return None;
+    }
+    let rest = &line[indent..];
+    let level = rest.chars().take_while(|c| *c == '#').count();
+    if level == 0 || level > 6 {
+        return None;
+    }
+    let after = &rest[level..];
+    if !(after.is_empty() || after.starts_with(' ') || after.starts_with('\t')) {
+        return None;
+    }
+    let mut text = after.trim();
+    // Optional closing sequence: a run of `#` preceded by whitespace (or the whole text).
+    let without_hashes = text.trim_end_matches('#');
+    if without_hashes.len() != text.len()
+        && (without_hashes.is_empty() || without_hashes.ends_with([' ', '\t']))
+    {
+        text = without_hashes.trim_end();
+    }
+    Some((level, text.to_string()))
+}
+
+fn setext_level(line: &str) -> Option<usize> {
+    let indent = line.len() - line.trim_start_matches(' ').len();
+    if indent > 3 {
+        return None;
+    }
+    let body = line.trim();
+    if body.is_empty() {
+        return None;
+    }
+    if body.chars().all(|c| c == '=') {
+        Some(1)
+    } else if body.chars().all(|c| c == '-') {
+        Some(2)
+    } else {
+        None
+    }
+}
+
+fn could_be_setext_text(line: &str) -> bool {
+    let t = line.trim();
+    if t.is_empty() || line.len() - line.trim_start_matches(' ').len() > 3 {
+        return false;
+    }
+    !(t.starts_with("- ")
+        || t.starts_with("* ")
+        || t.starts_with("+ ")
+        || t.starts_with('>')
+        || t.starts_with('|')
+        || t.starts_with('<')
+        || ordered_list_marker(t))
+}
+
+fn ordered_list_marker(t: &str) -> bool {
+    let digits = t.chars().take_while(char::is_ascii_digit).count();
+    (1..=9).contains(&digits)
+        && t[digits..].starts_with(['.', ')'])
+        && t[digits + 1..]
+            .chars()
+            .next()
+            .is_none_or(char::is_whitespace)
+}
+
+/// Lists the ATX (`# Title`) and setext (`Title` over `===`/`---`) headings of a Markdown
+/// document, ignoring a leading YAML front matter block, HTML comments, and fenced code blocks.
+pub fn markdown_headings(lines: &[String]) -> Vec<MarkdownHeading> {
+    let mut out = Vec::new();
+    let mut fence: Option<(char, usize)> = None;
+    let mut in_comment = false;
+    let mut prev_blank_or_heading = true;
+    let mut i = 0;
+    if lines
+        .first()
+        .is_some_and(|l| l.trim_start_matches('\u{feff}').trim_end() == "---")
+    {
+        if let Some(close) = lines[1..]
+            .iter()
+            .position(|l| matches!(l.trim_end(), "---" | "..."))
+        {
+            i = close + 2;
+        }
+    }
+    while i < lines.len() {
+        let line = lines[i].trim_start_matches('\u{feff}');
+        if fence.is_none() && (in_comment || line.trim_start().starts_with("<!--")) {
+            let after_open = if in_comment {
+                line
+            } else {
+                &line[line.find("<!--").unwrap_or(0) + 4..]
+            };
+            in_comment = !after_open.contains("-->");
+            i += 1;
+            prev_blank_or_heading = true;
+            continue;
+        }
+        if let Some((ch, run)) = fence {
+            if let Some((c2, r2)) = fence_marker(line) {
+                if c2 == ch && r2 >= run && line.trim().chars().all(|c| c == ch) {
+                    fence = None;
+                }
+            }
+            i += 1;
+            prev_blank_or_heading = true;
+            continue;
+        }
+        if let Some(marker) = fence_marker(line) {
+            fence = Some(marker);
+            i += 1;
+            prev_blank_or_heading = true;
+            continue;
+        }
+        if let Some((level, text)) = atx_heading(line) {
+            out.push(MarkdownHeading {
+                line: i,
+                level,
+                text,
+            });
+            i += 1;
+            prev_blank_or_heading = true;
+            continue;
+        }
+        if prev_blank_or_heading && could_be_setext_text(line) {
+            if let Some(level) = lines.get(i + 1).and_then(|l| setext_level(l)) {
+                out.push(MarkdownHeading {
+                    line: i,
+                    level,
+                    text: line.trim().to_string(),
+                });
+                i += 2;
+                prev_blank_or_heading = true;
+                continue;
+            }
+        }
+        prev_blank_or_heading = line.trim().is_empty();
+        i += 1;
+    }
+    out
+}
+
+/// Normalizes heading or locator text for comparison: drops a trailing `{#anchor}`, backticks,
+/// a leading `Section`/`§`, and trailing `.`/`:`; collapses whitespace; folds case.
+pub fn markdown_heading_key(text: &str) -> String {
+    static ANCHOR_RE: OnceLock<Regex> = OnceLock::new();
+    let anchor_re =
+        ANCHOR_RE.get_or_init(|| Regex::new(r"\s*\{#[^}]*\}\s*$").expect("valid regex"));
+    static PREFIX_RE: OnceLock<Regex> = OnceLock::new();
+    let prefix_re =
+        PREFIX_RE.get_or_init(|| Regex::new(r"(?i)^(?:section\s+|§\s*)(\d)").expect("valid regex"));
+    let stripped = anchor_re.replace(text, "");
+    let collapsed = stripped
+        .replace('`', "")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
+    let unprefixed = prefix_re.replace(&collapsed, "$1");
+    unprefixed.trim_end_matches(['.', ':']).trim().to_string()
+}
+
+/// Splits a normalized key into an optional numeric prefix (`9`, `9.2.1`) and an optional title.
+///
+/// A number is a section number when it is dotted (`9.2 Foo`), punctuated (`9. Foo`, `9) Foo`),
+/// or the whole key (`9`). A bare leading integer followed by words (`64 KiB SRAM`) is part of
+/// the title.
+fn split_numeric_prefix(key: &str) -> (Option<String>, Option<String>) {
+    static NUM_RE: OnceLock<Regex> = OnceLock::new();
+    let num_re = NUM_RE
+        .get_or_init(|| Regex::new(r"^(\d+(?:\.\d+)*)([.:)])?(?:\s+(.*))?$").expect("valid regex"));
+    let whole_title = || (None, Some(key.to_string()).filter(|t| !t.is_empty()));
+    let Some(caps) = num_re.captures(key) else {
+        return whole_title();
+    };
+    let num = &caps[1];
+    let punctuated = caps.get(2).is_some();
+    let title = caps
+        .get(3)
+        .map(|m| m.as_str().trim().to_string())
+        .filter(|t| !t.is_empty());
+    if title.is_some() && !punctuated && !num.contains('.') {
+        return whole_title();
+    }
+    (Some(num.to_string()), title)
+}
+
+/// How a locator matched a heading.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HeadingMatch {
+    None,
+    /// The normalized texts are equal.
+    Exact,
+    /// Equal once a numeric prefix present on only one side, or the title, is set aside: `Foo`
+    /// matches `9. Foo`, and `9.2` matches `9.2 Bar`. Two different numbers never match.
+    NumericPrefix,
+}
+
+pub fn match_markdown_heading(locator: &str, heading: &str) -> HeadingMatch {
+    let lk = markdown_heading_key(locator);
+    let hk = markdown_heading_key(heading);
+    if lk.is_empty() {
+        return HeadingMatch::None;
+    }
+    if lk == hk {
+        return HeadingMatch::Exact;
+    }
+    let (ln, lt) = split_numeric_prefix(&lk);
+    let (hn, ht) = split_numeric_prefix(&hk);
+    let numbers_agree = match (&ln, &hn) {
+        (Some(a), Some(b)) => a == b,
+        _ => true,
+    };
+    let matched = match (&lt, &ht) {
+        (Some(a), Some(b)) => a == b && numbers_agree,
+        (None, _) => ln.is_some() && ln == hn,
+        (Some(_), None) => false,
+    };
+    if matched {
+        HeadingMatch::NumericPrefix
+    } else {
+        HeadingMatch::None
+    }
+}
+
+/// Finds the section a `section` or `heading` locator names: the first heading that matches
+/// exactly, else the first that matches ignoring a numeric prefix. Returns the heading, the
+/// 0-based, end-exclusive line range up to the next heading of the same or a higher level, and
+/// how many headings matched equally well (more than one means the locator is ambiguous).
+pub fn find_markdown_section<'a>(
+    headings: &'a [MarkdownHeading],
+    total_lines: usize,
+    locator: &str,
+) -> Option<(&'a MarkdownHeading, usize, usize, usize)> {
+    let pick = |want: HeadingMatch| -> Vec<usize> {
+        headings
+            .iter()
+            .enumerate()
+            .filter(|(_, h)| match_markdown_heading(locator, &h.text) == want)
+            .map(|(i, _)| i)
+            .collect()
+    };
+    let mut found = pick(HeadingMatch::Exact);
+    if found.is_empty() {
+        found = pick(HeadingMatch::NumericPrefix);
+    }
+    let idx = *found.first()?;
+    let heading = &headings[idx];
+    let end = headings[idx + 1..]
+        .iter()
+        .find(|h| h.level <= heading.level)
+        .map_or(total_lines, |h| h.line);
+    Some((heading, heading.line, end, found.len()))
+}
+
+fn locator_text(v: &Value) -> Option<String> {
+    match v {
+        Value::String(s) => Some(s.clone()),
+        Value::Number(n) => Some(n.to_string()),
+        _ => None,
+    }
+}
+
+fn path_is_markdown(s: &str) -> bool {
+    let path_part = s.split(['?', '#']).next().unwrap_or(s).to_ascii_lowercase();
+    path_part.ends_with(".md") || path_part.ends_with(".markdown")
+}
+
 pub struct DocCitationsResult {
     pub items: Vec<CitationItem>,
     pub own_lines: Vec<String>,
     pub pdf_own_lines: Vec<String>,
+    /// Lines of the Markdown sections the record's own `support` resolved.
+    pub markdown_own_lines: Vec<String>,
     pub has_unextracted_own_doc: bool,
 }
 
@@ -207,14 +537,42 @@ pub fn citations_with_status<F>(
     record: &Value,
     base: Vec<String>,
     documents: &mut HashMap<String, (Value, DocReader)>,
+    add: F,
+) -> DocCitationsResult
+where
+    F: FnMut(Vec<String>, String, &str),
+{
+    citations_with_options(record, base, documents, DocResolveOptions::default(), add)
+}
+
+/// Resolves a record's document citations against the pinned files in `documents`.
+///
+/// PDF citations resolve by page; Markdown citations resolve by `section` or `heading` locator
+/// against the document's headings. A document counts as Markdown when its name or URL ends in
+/// `.md`/`.markdown` or its text has a heading; a locator matching no heading is an error for a
+/// document declared as Markdown and a skip (with a warning) for one recognized by its text. Skips are reported through `add` as warnings (errors with
+/// [`DocResolveOptions::fail_on_skipped`]); a skip that is expected for the document's format
+/// (a non-PDF, non-Markdown file, a locator with no section or heading) is reported only with
+/// that option.
+pub fn citations_with_options<F>(
+    record: &Value,
+    base: Vec<String>,
+    documents: &mut HashMap<String, (Value, DocReader)>,
+    opts: DocResolveOptions,
     mut add: F,
 ) -> DocCitationsResult
 where
     F: FnMut(Vec<String>, String, &str),
 {
+    let skip_level = if opts.fail_on_skipped {
+        "error"
+    } else {
+        "warning"
+    };
     let mut items = Vec::new();
     let mut own_lines = Vec::new();
     let mut pdf_own_lines = Vec::new();
+    let mut markdown_own_lines: Vec<String> = Vec::new();
     let mut has_unextracted_own_doc = false;
     let mut supports_list = Vec::new();
     supports(record, base.clone(), false, &mut supports_list);
@@ -259,13 +617,7 @@ where
             where_at.push("at".to_string());
             where_at.push(index.to_string());
 
-            let mut item = CitationItem {
-                doc: name.clone(),
-                locator: locator.clone(),
-                fact: fact_id.clone(),
-                status: "failed".to_string(),
-                source: Vec::new(),
-            };
+            let mut item = CitationItem::new(name.clone(), locator.clone(), fact_id.clone());
 
             let doc_entry = documents.get_mut(&name);
             let (doc_info, reader_state) = match doc_entry {
@@ -281,7 +633,7 @@ where
                             "{}: {}: PDF evidence skipped: document is not declared",
                             fact_id, name
                         ),
-                        "warning",
+                        skip_level,
                     );
                     items.push(item);
                     continue;
@@ -298,6 +650,13 @@ where
                 || doc_info.get("pages").is_some()
                 || has_pdf_url;
             let has_page_locator = locator.get("page").is_some() || locator.get("pages").is_some();
+            let declared_markdown = path_is_markdown(&name)
+                || ["url", "retrieval"].iter().any(|k| {
+                    doc_info
+                        .get(*k)
+                        .and_then(|v| v.as_str())
+                        .is_some_and(path_is_markdown)
+                });
 
             let mut extracted_own = false;
             let result: Result<(), String> = (|| {
@@ -313,20 +672,108 @@ where
                         if is_pdf_doc || has_page_locator {
                             return Err("LimitExceeded: document has no sha256 pin".to_string());
                         }
-                        item.status = "skipped".to_string();
-                        return Ok(());
+                        return Err("Skipped: document has no sha256 pin".to_string());
                     }
                     DocReader::NonPdf { lines } => {
                         if is_pdf_doc || has_page_locator {
                             return Err("LimitExceeded: document is not a PDF".to_string());
                         }
-                        if let Some(doc_lines) = lines {
+                        let Some(doc_lines) = lines else {
+                            return Err("Skipped: document is not UTF-8 text within the size cap"
+                                .to_string());
+                        };
+                        let headings = markdown_headings(doc_lines);
+                        let is_markdown = declared_markdown || !headings.is_empty();
+                        let wanted: Vec<(&str, String)> = ["heading", "section"]
+                            .iter()
+                            .filter_map(|k| locator.get(*k).and_then(locator_text).map(|v| (*k, v)))
+                            .collect();
+                        if !is_markdown || wanted.is_empty() {
                             if is_own_support {
                                 own_lines.extend(doc_lines.iter().cloned());
                                 extracted_own = true;
                             }
+                            return Err(if is_markdown {
+                                "Skipped: locator names no section or heading".to_string()
+                            } else {
+                                "Skipped: document is neither a PDF nor Markdown".to_string()
+                            });
                         }
-                        item.status = "skipped".to_string();
+                        let mut spans: Vec<(usize, usize, String)> = Vec::new();
+                        for (kind, value) in &wanted {
+                            let Some((heading, start, end, candidates)) =
+                                find_markdown_section(&headings, doc_lines.len(), value)
+                            else {
+                                // Only a document declared as Markdown (by name or URL) fails;
+                                // one recognized by its headings alone may be another format.
+                                let prefix = if declared_markdown {
+                                    "ResolutionError"
+                                } else {
+                                    "SkippedWarn"
+                                };
+                                return Err(format!(
+                                    "{prefix}: {kind} {value:?} matches no Markdown heading"
+                                ));
+                            };
+                            if candidates > 1 {
+                                let mut warn_where = where_at.clone();
+                                warn_where.push(kind.to_string());
+                                add(
+                                    warn_where,
+                                    format!(
+                                        "{}: {}: {} {:?} is ambiguous: it matches {} Markdown headings; using the first, at line {}",
+                                        fact_id,
+                                        name,
+                                        kind,
+                                        value,
+                                        candidates,
+                                        start + 1
+                                    ),
+                                    "warning",
+                                );
+                            }
+                            // Keep only spans not already covered by another (a heading
+                            // inside a cited section adds nothing).
+                            if spans.iter().any(|&(s, e, _)| s <= start && end <= e) {
+                                continue;
+                            }
+                            spans.retain(|&(s, e, _)| !(start <= s && e <= end));
+                            spans.push((start, end, heading.text.clone()));
+                        }
+                        spans.sort_unstable();
+                        item.headings = spans.iter().map(|(_, _, h)| h.clone()).collect();
+                        let mut section_lines: Vec<String> = Vec::new();
+                        for &(start, end, _) in &spans {
+                            for (n, line) in doc_lines[start..end].iter().enumerate() {
+                                item.lines.push((start + n + 1, line.clone()));
+                                section_lines.push(line.clone());
+                            }
+                        }
+                        let text = section_lines.join("\n");
+                        for kind in ["table", "figure"] {
+                            if let Some(value) = locator.get(kind).and_then(locator_text) {
+                                if locator_pattern(kind, &value).is_match(&text) {
+                                    continue;
+                                }
+                                let mut warn_where = where_at.clone();
+                                warn_where.push(kind.to_string());
+                                add(
+                                    warn_where,
+                                    format!(
+                                        "{}: {}: {} {:?} absent from cited Markdown section",
+                                        fact_id, name, kind, value
+                                    ),
+                                    "warning",
+                                );
+                            }
+                        }
+                        item.format = "markdown";
+                        item.status = "resolved".to_string();
+                        if is_own_support {
+                            markdown_own_lines.extend(section_lines.iter().cloned());
+                            own_lines.extend(section_lines);
+                            extracted_own = true;
+                        }
                         return Ok(());
                     }
                 };
@@ -440,6 +887,7 @@ where
                     }
                 }
 
+                item.format = "pdf";
                 item.status = "resolved".to_string();
 
                 if is_own_support {
@@ -458,7 +906,34 @@ where
             match result {
                 Ok(_) => {}
                 Err(e) => {
-                    if e.starts_with("LimitExceeded:") {
+                    if let Some(reason) = e.strip_prefix("SkippedWarn:") {
+                        item.status = "skipped".to_string();
+                        add(
+                            where_at.clone(),
+                            format!(
+                                "{}: {}: document evidence skipped: {}",
+                                fact_id,
+                                name,
+                                reason.trim()
+                            ),
+                            skip_level,
+                        );
+                    } else if let Some(reason) = e.strip_prefix("Skipped:") {
+                        // Expected for the document's format: silent unless skips must fail.
+                        item.status = "skipped".to_string();
+                        if opts.fail_on_skipped {
+                            add(
+                                where_at.clone(),
+                                format!(
+                                    "{}: {}: document evidence skipped: {}",
+                                    fact_id,
+                                    name,
+                                    reason.trim()
+                                ),
+                                "error",
+                            );
+                        }
+                    } else if e.starts_with("LimitExceeded:") {
                         item.status = "skipped".to_string();
                         add(
                             where_at.clone(),
@@ -468,7 +943,7 @@ where
                                 name,
                                 e.trim_start_matches("LimitExceeded: ").trim()
                             ),
-                            "warning",
+                            skip_level,
                         );
                     } else if e.starts_with("ResolutionError:") {
                         add(
@@ -486,7 +961,7 @@ where
                         add(
                             where_at.clone(),
                             format!("{}: {}: PDF evidence skipped: {}", fact_id, name, e),
-                            "warning",
+                            skip_level,
                         );
                     }
                 }
@@ -496,10 +971,33 @@ where
         }
     }
 
+    // The register-offset check the PDF path gets in `resolve`, for Markdown sections.
+    if !markdown_own_lines.is_empty() {
+        if let Some(offset_str) = record
+            .get("data")
+            .and_then(|d| d.get("register"))
+            .and_then(|r| r.get("offset"))
+            .and_then(Value::as_str)
+        {
+            let offset_hex = crate::resolve::hex_values(offset_str);
+            let section_hex = crate::resolve::hex_values(&markdown_own_lines.join("\n"));
+            if !offset_hex.is_subset(&section_hex) {
+                let mut off_at = base.clone();
+                off_at.extend(["data", "register", "offset"].map(String::from));
+                add(
+                    off_at,
+                    format!("register offset absent from cited Markdown sections: {offset_str}"),
+                    "warning",
+                );
+            }
+        }
+    }
+
     DocCitationsResult {
         items,
         own_lines,
         pdf_own_lines,
+        markdown_own_lines,
         has_unextracted_own_doc,
     }
 }

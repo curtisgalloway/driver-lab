@@ -721,6 +721,30 @@
       "description": "Cited locator absent on cited page but present on adjacent page"
     },
     {
+      "code": "DOC-MARKDOWN-HEADING-ABSENT",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "error",
+      "pattern": "(section|heading) .* matches no Markdown heading",
+      "description": "A section or heading locator on a document declared as Markdown (.md or .markdown name or URL) matches none of its headings (numeric-prefix-insensitive, case-folded, {#anchor} stripped)"
+    },
+    {
+      "code": "DOC-MARKDOWN-HEADING-AMBIGUOUS",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "is ambiguous: it matches [0-9]+ Markdown headings",
+      "description": "A section or heading locator matches several Markdown headings equally well; the first is used"
+    },
+    {
+      "code": "DOC-SKIPPED",
+      "module": "docresolve.py",
+      "category": "diagnostic",
+      "level": "warning",
+      "pattern": "document evidence skipped:",
+      "description": "A document citation was not resolved (a non-PDF, non-Markdown document, a locator with no section or heading, or a heading-sniffed document whose locator matches no heading). Silent or a warning by default; an error under --fail-on-skipped-documents, which also makes PDF evidence skips errors"
+    },
+    {
       "code": "IDX-NOT-INDEXABLE",
       "module": "index.py",
       "category": "diagnostic",

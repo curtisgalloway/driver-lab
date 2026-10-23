@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Language-neutral conformance test expectations (ok, level, code, path, line, message/pattern) for existing spec-format fixtures and the 31 BF-* target regression cases.",
+  "description": "Language-neutral conformance test expectations (ok, level, code, path, line, message/pattern) for existing spec-format fixtures and the 31 BF-* target regression cases. Cases of kind fixture_resolve run `hwspecs --json resolve <targets> --docs-dir <docs_dir>` (plus `--fail-on-skipped-documents` when that option is true) and are checked by tests/test_docresolve_markdown.rs.",
   "fixture_cases": [
     {
       "id": "fixture-check-good-root",
@@ -2108,6 +2108,124 @@
           "column": 19,
           "message": "fact 'low-mode': reference 'widgetchip#addressing' resolves to nothing: spec 'widgetchip' has no fact 'addressing' in root ref-gpl; it is in root ref-docs, and a reference into another root names it: widgetchip@ref-docs#addressing",
           "message_pattern": "reference .* resolves to nothing"
+        }
+      ]
+    },
+    {
+      "id": "fixture-resolve-markdown-good",
+      "kind": "fixture_resolve",
+      "description": "Markdown section and heading locators resolve: numeric-prefix-insensitive, {#anchor} stripped, case-folded, fenced '#' lines ignored",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/good"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": false
+      },
+      "ok": true,
+      "exit_code": 0,
+      "error_count": 0,
+      "warning_count": 0,
+      "documents_resolved": 3,
+      "documents_skipped": 0,
+      "documents_failed": 0,
+      "findings": []
+    },
+    {
+      "id": "fixture-resolve-markdown-bad",
+      "kind": "fixture_resolve",
+      "description": "A locator matching no Markdown heading is an error; a different section number never matches; claim hex is checked against the matched section only; a locator without section or heading is skipped",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/bad"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": false
+      },
+      "ok": false,
+      "exit_code": 1,
+      "error_count": 2,
+      "warning_count": 1,
+      "documents_resolved": 1,
+      "documents_skipped": 1,
+      "documents_failed": 2,
+      "findings": [
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 25,
+          "column": 14,
+          "message": "missing-heading: widget-guide.md: heading \"Interrupt register\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 33,
+          "column": 14,
+          "message": "wrong-number: widget-guide.md: section \"4. Registers\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-ANCHOR-MISMATCH",
+          "level": "warning",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 37,
+          "column": 12,
+          "message": "claim hex values absent from cited lines: 0x14"
+        }
+      ]
+    },
+    {
+      "id": "fixture-resolve-markdown-bad-fail-on-skipped",
+      "kind": "fixture_resolve",
+      "description": "--fail-on-skipped-documents turns each skipped document citation into an error",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/bad"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": true
+      },
+      "ok": false,
+      "exit_code": 1,
+      "error_count": 3,
+      "warning_count": 1,
+      "documents_resolved": 1,
+      "documents_skipped": 1,
+      "documents_failed": 2,
+      "findings": [
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 25,
+          "column": 14,
+          "message": "missing-heading: widget-guide.md: heading \"Interrupt register\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 33,
+          "column": 14,
+          "message": "wrong-number: widget-guide.md: section \"4. Registers\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-ANCHOR-MISMATCH",
+          "level": "warning",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 37,
+          "column": 12,
+          "message": "claim hex values absent from cited lines: 0x14"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 49,
+          "column": 14,
+          "message": "no-section-locator: widget-guide.md: document evidence skipped: locator names no section or heading"
         }
       ]
     }
@@ -4624,6 +4742,124 @@
           "column": 19,
           "message": "fact 'low-mode': reference 'widgetchip#addressing' resolves to nothing: spec 'widgetchip' has no fact 'addressing' in root ref-gpl; it is in root ref-docs, and a reference into another root names it: widgetchip@ref-docs#addressing",
           "message_pattern": "reference .* resolves to nothing"
+        }
+      ]
+    },
+    {
+      "id": "fixture-resolve-markdown-good",
+      "kind": "fixture_resolve",
+      "description": "Markdown section and heading locators resolve: numeric-prefix-insensitive, {#anchor} stripped, case-folded, fenced '#' lines ignored",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/good"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": false
+      },
+      "ok": true,
+      "exit_code": 0,
+      "error_count": 0,
+      "warning_count": 0,
+      "documents_resolved": 3,
+      "documents_skipped": 0,
+      "documents_failed": 0,
+      "findings": []
+    },
+    {
+      "id": "fixture-resolve-markdown-bad",
+      "kind": "fixture_resolve",
+      "description": "A locator matching no Markdown heading is an error; a different section number never matches; claim hex is checked against the matched section only; a locator without section or heading is skipped",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/bad"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": false
+      },
+      "ok": false,
+      "exit_code": 1,
+      "error_count": 2,
+      "warning_count": 1,
+      "documents_resolved": 1,
+      "documents_skipped": 1,
+      "documents_failed": 2,
+      "findings": [
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 25,
+          "column": 14,
+          "message": "missing-heading: widget-guide.md: heading \"Interrupt register\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 33,
+          "column": 14,
+          "message": "wrong-number: widget-guide.md: section \"4. Registers\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-ANCHOR-MISMATCH",
+          "level": "warning",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 37,
+          "column": 12,
+          "message": "claim hex values absent from cited lines: 0x14"
+        }
+      ]
+    },
+    {
+      "id": "fixture-resolve-markdown-bad-fail-on-skipped",
+      "kind": "fixture_resolve",
+      "description": "--fail-on-skipped-documents turns each skipped document citation into an error",
+      "targets": [
+        "skills/spec-format/tests/fixtures/docresolve-markdown/bad"
+      ],
+      "docs_dir": "skills/spec-format/tests/fixtures/docresolve-markdown/docs",
+      "options": {
+        "fail_on_skipped_documents": true
+      },
+      "ok": false,
+      "exit_code": 1,
+      "error_count": 3,
+      "warning_count": 1,
+      "documents_resolved": 1,
+      "documents_skipped": 1,
+      "documents_failed": 2,
+      "findings": [
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 25,
+          "column": 14,
+          "message": "missing-heading: widget-guide.md: heading \"Interrupt register\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 33,
+          "column": 14,
+          "message": "wrong-number: widget-guide.md: section \"4. Registers\" matches no Markdown heading"
+        },
+        {
+          "code": "RES-ANCHOR-MISMATCH",
+          "level": "warning",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 37,
+          "column": 12,
+          "message": "claim hex values absent from cited lines: 0x14"
+        },
+        {
+          "code": "RES-DOC-INDEX",
+          "level": "error",
+          "path": "skills/spec-format/tests/fixtures/docresolve-markdown/bad/widget-guide.spec.yaml",
+          "line": 49,
+          "column": 14,
+          "message": "no-section-locator: widget-guide.md: document evidence skipped: locator names no section or heading"
         }
       ]
     },

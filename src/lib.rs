@@ -246,6 +246,10 @@ pub struct ResolveArgs {
     /// (`RES-CLAIM-HEX-UNBOUND`) as an error instead of a warning.
     #[arg(long = "strict-claims")]
     pub strict_claims: bool,
+    /// Report every document citation that could not be resolved (skipped) as an error, so the
+    /// command fails unless every document citation resolves. Requires `--docs-dir`.
+    #[arg(long = "fail-on-skipped-documents", requires = "docs_dir")]
+    pub fail_on_skipped_documents: bool,
 }
 
 /// Arguments for `hwspecs index`.

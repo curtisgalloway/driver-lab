@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: chip
+id: widget-guide-bad
+name: Synthetic Widget (Markdown citations that fail or skip)
+triggers: [synthetic widget markdown bad]
+orientation: This fixture exercises Markdown document resolution; it describes no real hardware.
+resources:
+  documents:
+    - name: widget-guide.md
+      class: doc
+      title: Synthetic Widget programming guide
+      url: https://example.invalid/widget-guide.md
+      sha256: fa2b119b00cd4a081f3f82a14051ba1814a2fafa7be657b7169054ebf0b932fd
+      access: public
+facts:
+  - id: missing-heading
+    section: quick-facts
+    title: Interrupt register
+    claim: The synthetic Widget has no interrupt register section to cite.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{heading: "Interrupt register"}]
+  - id: wrong-number
+    section: quick-facts
+    title: Registers under the wrong number
+    claim: The synthetic Widget documents its registers in a numbered section.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{section: "4. Registers"}]
+  - id: hex-outside-section
+    section: quick-facts
+    title: Status offset cited to the overview
+    claim: The synthetic Widget's status register sits at offset 0x14.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{heading: "Overview"}]
+  - id: no-section-locator
+    section: quick-facts
+    title: Control fields table
+    claim: The synthetic Widget lists its control register fields in a table.
+    support:
+      - class: doc
+        doc: widget-guide.md
+        at: [{table: "2-1"}]

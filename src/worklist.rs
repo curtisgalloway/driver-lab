@@ -5,13 +5,13 @@
 
 use crate::diagnostic::{visible_name, EXIT_DOMAIN_FAILURE, EXIT_OK, EXIT_USAGE_ERROR};
 use crate::records::{
-    has_support, load_schemas, Checker, PathElem, RootInfo, SpecFile, SpecRecord, SpecStatusEntry,
-    StatusReport, STATUSES, SUMMARY,
+    has_support, load_schemas, supports, Checker, FreshnessEngine, PathElem, RecordKey, RootInfo,
+    SpecFile, SpecRecord, SpecStatusEntry, StatusReport, STATUSES, SUMMARY,
 };
 use crate::{Cli, StatusArgs, TodoArgs};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::io::Write;
 use std::ops::Not;
 use std::path::{Path, PathBuf};
@@ -60,6 +60,15 @@ pub struct Item {
     /// `true` when `check == "hardware"` and `method` is absent (omitted from JSON when `false`).
     #[serde(skip_serializing_if = "Not::not", default)]
     pub missing_method: bool,
+    /// Transitive count of distinct dependent records, excluding the owning record itself.
+    #[serde(default)]
+    pub dependents: usize,
+    /// Direct (depth-1) dependent record count, excluding self-loops.
+    #[serde(default)]
+    pub direct_dependents: usize,
+    /// Transitive dependent records that carry `critical: true`.
+    #[serde(default)]
+    pub critical_dependents: usize,
 }
 
 fn row_kind(path: &[PathElem]) -> String {
@@ -122,7 +131,53 @@ fn build_item(
         scope,
         instance,
         missing_method,
+        dependents: 0,
+        direct_dependents: 0,
+        critical_dependents: 0,
     }
+}
+
+fn bfs_dependents(
+    seeds: &[RecordKey],
+    exclude_self: Option<&RecordKey>,
+    reverse_map: &HashMap<RecordKey, Vec<RecordKey>>,
+    critical_records: &HashSet<RecordKey>,
+) -> (usize, usize, usize) {
+    let mut visited: HashSet<RecordKey> = HashSet::new();
+    if let Some(self_key) = exclude_self {
+        visited.insert(self_key.clone());
+    }
+    let mut queue: VecDeque<RecordKey> = VecDeque::new();
+    let mut dependents = 0usize;
+    let mut direct_dependents = 0usize;
+    let mut critical_dependents = 0usize;
+
+    for seed in seeds {
+        if visited.insert(seed.clone()) {
+            direct_dependents += 1;
+            dependents += 1;
+            if critical_records.contains(seed) {
+                critical_dependents += 1;
+            }
+            queue.push_back(seed.clone());
+        }
+    }
+
+    while let Some(cur) = queue.pop_front() {
+        if let Some(nexts) = reverse_map.get(&cur) {
+            for next in nexts {
+                if visited.insert(next.clone()) {
+                    dependents += 1;
+                    if critical_records.contains(next) {
+                        critical_dependents += 1;
+                    }
+                    queue.push_back(next.clone());
+                }
+            }
+        }
+    }
+
+    (dependents, direct_dependents, critical_dependents)
 }
 
 /// Collects child-row TODO items for a top-level record (`worklist.py:row_items`).
@@ -194,8 +249,79 @@ pub fn page_rows(
 /// Collects all TODO items across checked roots in `checker` (`worklist.py:collect`).
 #[must_use]
 pub fn collect(checker: &Checker) -> Vec<Item> {
+    let mut fresh = FreshnessEngine::new(checker, None, None);
+    let mut reverse_map: HashMap<RecordKey, Vec<RecordKey>> = HashMap::new();
+    let mut critical_records: HashSet<RecordKey> = HashSet::new();
+    let mut assumption_dependents: HashMap<(usize, String), Vec<RecordKey>> = HashMap::new();
+
+    for (f_idx, f) in checker.files.iter().enumerate() {
+        for (_, rec) in &f.records {
+            if let Some(ref pid) = rec.parent_id {
+                if let Some(parent_rec) = f.get_record(pid) {
+                    let top_key = RecordKey {
+                        file_idx: f_idx,
+                        id: parent_rec.id.clone(),
+                        full: parent_rec.full.clone(),
+                    };
+                    let sub_key = RecordKey {
+                        file_idx: f_idx,
+                        id: rec.id.clone(),
+                        full: rec.full.clone(),
+                    };
+                    for (_, target_opt, _) in fresh.edges(&sub_key) {
+                        if let Some(target) = target_opt {
+                            reverse_map.entry(target).or_default().push(top_key.clone());
+                        }
+                    }
+                }
+                continue;
+            }
+            let top_key = RecordKey {
+                file_idx: f_idx,
+                id: rec.id.clone(),
+                full: rec.full.clone(),
+            };
+            if rec
+                .data
+                .get("critical")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+            {
+                critical_records.insert(top_key.clone());
+            }
+            for (_, target_opt, _) in fresh.edges(&top_key) {
+                if let Some(target) = target_opt {
+                    reverse_map.entry(target).or_default().push(top_key.clone());
+                }
+            }
+            if let Some(assumes) = rec.data.get("assumes").and_then(Value::as_array) {
+                for a in assumes {
+                    if let Some(aid) = a.as_str() {
+                        assumption_dependents
+                            .entry((f_idx, aid.to_string()))
+                            .or_default()
+                            .push(top_key.clone());
+                    }
+                }
+            }
+            for (entry, _) in supports(&rec.data, &[]) {
+                if let Some(premises) = entry.get("premises").and_then(Value::as_array) {
+                    for p in premises {
+                        if let Some(aid) = p.get("assumption").and_then(Value::as_str) {
+                            assumption_dependents
+                                .entry((f_idx, aid.to_string()))
+                                .or_default()
+                                .push(top_key.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut memo: HashMap<RecordKey, (usize, usize, usize)> = HashMap::new();
     let mut items = Vec::new();
-    for f in &checker.files {
+    for (f_idx, f) in checker.files.iter().enumerate() {
         if checker.roots[f.root_idx].context {
             continue;
         }
@@ -210,6 +336,7 @@ pub fn collect(checker: &Checker) -> Vec<Item> {
                 .get("critical")
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
+            let mut top_item = None;
             if let Some(PathElem::Key(top)) = rec.path.first() {
                 let kind = if top == "facts" {
                     if has_support(data) {
@@ -226,7 +353,7 @@ pub fn collect(checker: &Checker) -> Vec<Item> {
                 };
 
                 if let Some(todo) = data.get("todo") {
-                    items.push(build_item(
+                    top_item = Some(build_item(
                         checker,
                         f,
                         rec.full.clone(),
@@ -244,13 +371,37 @@ pub fn collect(checker: &Checker) -> Vec<Item> {
                     ));
                 }
             }
-            items.extend(row_items(checker, f, rec));
+            let mut rows = row_items(checker, f, rec);
+            if top_item.is_some() || !rows.is_empty() {
+                let rkey = RecordKey {
+                    file_idx: f_idx,
+                    id: rec.id.clone(),
+                    full: rec.full.clone(),
+                };
+                let &mut (dependents, direct_dependents, critical_dependents) =
+                    memo.entry(rkey.clone()).or_insert_with(|| {
+                        let seeds = reverse_map.get(&rkey).map(Vec::as_slice).unwrap_or(&[]);
+                        bfs_dependents(seeds, Some(&rkey), &reverse_map, &critical_records)
+                    });
+                if let Some(mut item) = top_item {
+                    item.dependents = dependents;
+                    item.direct_dependents = direct_dependents;
+                    item.critical_dependents = critical_dependents;
+                    items.push(item);
+                }
+                for row_item in &mut rows {
+                    row_item.dependents = dependents;
+                    row_item.direct_dependents = direct_dependents;
+                    row_item.critical_dependents = critical_dependents;
+                }
+                items.extend(rows);
+            }
         }
         if let Some(assumptions) = f.data.get("assumptions").and_then(Value::as_array) {
             for entry in assumptions {
                 if let Some(todo) = entry.get("todo") {
                     let id = entry.get("id").and_then(Value::as_str).unwrap_or("");
-                    items.push(build_item(
+                    let mut item = build_item(
                         checker,
                         f,
                         format!("{spec_id}@{root_label}#{id}"),
@@ -259,12 +410,85 @@ pub fn collect(checker: &Checker) -> Vec<Item> {
                         false,
                         None,
                         None,
-                    ));
+                    );
+                    let seeds = assumption_dependents
+                        .get(&(f_idx, id.to_string()))
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]);
+                    let (dependents, direct_dependents, critical_dependents) =
+                        bfs_dependents(seeds, None, &reverse_map, &critical_records);
+                    item.dependents = dependents;
+                    item.direct_dependents = direct_dependents;
+                    item.critical_dependents = critical_dependents;
+                    items.push(item);
                 }
             }
         }
     }
     items
+}
+
+/// Sorts worklist items in place by downstream impact:
+/// `critical` desc, then `critical_dependents` desc, then `dependents` desc, preserving
+/// discovery order on ties.
+pub fn sort_by_impact(items: &mut [Item]) {
+    items.sort_by(|a, b| {
+        b.critical
+            .cmp(&a.critical)
+            .then_with(|| b.critical_dependents.cmp(&a.critical_dependents))
+            .then_with(|| b.dependents.cmp(&a.dependents))
+    });
+}
+
+/// Formats human-readable worklist lines as a flat impact-ranked list (`--by-impact`).
+#[must_use]
+pub fn lines_by_impact(items: &[Item]) -> Vec<String> {
+    let mut out = Vec::new();
+    for item in items {
+        out.extend(show_by_impact(item, "  "));
+    }
+    out
+}
+
+fn show_by_impact(item: &Item, indent: &str) -> Vec<String> {
+    let impact = if item.critical_dependents > 0 {
+        format!(
+            "[{} dependents, {} critical]",
+            item.dependents, item.critical_dependents
+        )
+    } else {
+        format!("[{} dependents]", item.dependents)
+    };
+    let mut notes = vec![impact];
+    if item.critical {
+        notes.push("critical".to_string());
+    }
+    if let Some(inst) = &item.instance {
+        notes.push(format!("instance {inst}"));
+    }
+    if let Some(scope) = &item.scope {
+        notes.push(format!("scope: {}", scope_str(scope)));
+    }
+    if item.missing_method {
+        notes.push("(no method)".to_string());
+    }
+
+    let mut head = format!(
+        "{}{:<8} {:<19} {}",
+        indent, item.check, item.kind, item.fact
+    );
+    if !notes.is_empty() {
+        head.push_str("  ");
+        head.push_str(&notes.join("; "));
+    }
+
+    let text = item.text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out = vec![head, format!("{indent}    {text}")];
+    if let Some(m) = &item.method {
+        let m_str = m.split_whitespace().collect::<Vec<_>>().join(" ");
+        out.push(format!("{indent}    method: {m_str}"));
+    }
+    out
 }
 
 /// Computes summary counts over `items` (`worklist.py:counts`).
@@ -493,6 +717,9 @@ pub fn run_todo_cmd(
     if let Some(ref spec_filter) = args.spec {
         items.retain(|i| &i.spec == spec_filter);
     }
+    if args.by_impact {
+        sort_by_impact(&mut items);
+    }
     let summary = counts(&items);
 
     let mut root_given_by_label: HashMap<String, PathBuf> = HashMap::new();
@@ -500,13 +727,17 @@ pub fn run_todo_cmd(
         root_given_by_label.insert(r.label(), r.given.clone());
     }
 
-    let mut text = lines(&items, |i| {
-        let rel = root_given_by_label
-            .get(&i.root)
-            .map(|rg| rel_to_root_given(rg, Path::new(&i.file)))
-            .unwrap_or_else(|| i.file.clone());
-        format!("{}:{rel} ({})", i.root, i.spec)
-    });
+    let mut text = if args.by_impact {
+        lines_by_impact(&items)
+    } else {
+        lines(&items, |i| {
+            let rel = root_given_by_label
+                .get(&i.root)
+                .map(|rg| rel_to_root_given(rg, Path::new(&i.file)))
+                .unwrap_or_else(|| i.file.clone());
+            format!("{}:{rel} ({})", i.root, i.spec)
+        })
+    };
     for f in &ordered {
         if f.level == "error" {
             text.push(f.to_string());

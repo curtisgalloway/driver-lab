@@ -554,6 +554,268 @@ fn test_worklist_status_bf_arm_21_and_todo() {
     assert_eq!(res_hw["counts"]["total"].as_u64().unwrap(), total_todos);
 }
 
+#[test]
+fn test_todo_by_impact_and_dependent_counts() {
+    let impact_dir = fixtures_dir().join("worklist-impact");
+    let impact_str = impact_dir.to_str().unwrap();
+
+    // Fixture must pass `check --require-license` with zero errors.
+    let (rc_chk, res_chk) = check_json(&[impact_str, "--require-license"]);
+    assert_eq!(
+        rc_chk, 0,
+        "fixtures/worklist-impact must pass check --require-license: {res_chk}"
+    );
+    assert!(errors(&res_chk, None).is_empty());
+
+    // 1. Default `todo --json` (without `--by-impact`) preserves discovery order.
+    let (rc_default, res_default) = todo_json(&[impact_str, "--require-license"]);
+    assert_eq!(
+        rc_default, 0,
+        "todo on worklist-impact failed: {res_default}"
+    );
+    let todos_default = res_default["todos"].as_array().unwrap();
+    let default_facts: Vec<&str> = todos_default
+        .iter()
+        .map(|t| t["fact"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        default_facts,
+        vec![
+            "impact@worklist-impact#g",
+            "impact@worklist-impact#a",
+            "impact@worklist-impact#a.en",
+            "impact@worklist-impact#b",
+            "impact@worklist-impact#c",
+            "impact@worklist-impact#f",
+        ],
+        "without --by-impact, todos order must equal discovery order"
+    );
+
+    let by_fact: std::collections::HashMap<&str, &Value> = todos_default
+        .iter()
+        .map(|t| (t["fact"].as_str().unwrap(), t))
+        .collect();
+
+    // `A` and child row `A.en`: direct_dependents == 3 (B, D, F), dependents == 5 (B, C, D, E, F), critical_dependents == 1 (C).
+    for key in ["impact@worklist-impact#a", "impact@worklist-impact#a.en"] {
+        let item = by_fact[key];
+        assert_eq!(
+            item["direct_dependents"].as_u64(),
+            Some(3),
+            "{key} direct_dependents"
+        );
+        assert_eq!(item["dependents"].as_u64(), Some(5), "{key} dependents");
+        assert_eq!(
+            item["critical_dependents"].as_u64(),
+            Some(1),
+            "{key} critical_dependents"
+        );
+    }
+
+    // `G`: leaf fact with a todo; all three counts are 0.
+    let g_item = by_fact["impact@worklist-impact#g"];
+    assert_eq!(g_item["direct_dependents"].as_u64(), Some(0));
+    assert_eq!(g_item["dependents"].as_u64(), Some(0));
+    assert_eq!(g_item["critical_dependents"].as_u64(), Some(0));
+
+    // Cycle termination & bound: no count exceeds the total number of top-level records (7).
+    let num_records = 7u64;
+    for t in todos_default {
+        assert!(
+            t["dependents"].as_u64().unwrap() <= num_records,
+            "dependent count exceeded total record count: {t}"
+        );
+        assert!(
+            t["direct_dependents"].as_u64().unwrap() <= t["dependents"].as_u64().unwrap(),
+            "direct_dependents exceeded dependents: {t}"
+        );
+        assert!(
+            t["critical_dependents"].as_u64().unwrap() <= t["dependents"].as_u64().unwrap(),
+            "critical_dependents exceeded dependents: {t}"
+        );
+    }
+
+    // 2. With `--by-impact`, items are sorted by (critical desc, critical_dependents desc, dependents desc, discovery order).
+    let (rc_impact, res_impact) = todo_json(&[impact_str, "--require-license", "--by-impact"]);
+    assert_eq!(rc_impact, 0, "todo --by-impact failed: {res_impact}");
+    let todos_impact = res_impact["todos"].as_array().unwrap();
+    let impact_facts: Vec<&str> = todos_impact
+        .iter()
+        .map(|t| t["fact"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        impact_facts,
+        vec![
+            "impact@worklist-impact#c",
+            "impact@worklist-impact#a",
+            "impact@worklist-impact#a.en",
+            "impact@worklist-impact#b",
+            "impact@worklist-impact#f",
+            "impact@worklist-impact#g",
+        ],
+        "--by-impact must rank critical first, then by critical_dependents, then dependents, then discovery order"
+    );
+    let pos_a = impact_facts
+        .iter()
+        .position(|&f| f == "impact@worklist-impact#a")
+        .unwrap();
+    let pos_g = impact_facts
+        .iter()
+        .position(|&f| f == "impact@worklist-impact#g")
+        .unwrap();
+    assert!(pos_a < pos_g, "--by-impact must place A before G");
+
+    // 3. Text output with `--by-impact` emits a flat ranked list with inline dependent counts,
+    // while default text output preserves per-file grouping.
+    let (rc_txt_def, out_txt_def, err_txt_def) =
+        run_cli(&["todo", impact_str, "--require-license"]);
+    assert_eq!(rc_txt_def, 0, "err={err_txt_def}");
+    assert!(
+        out_txt_def.contains("worklist-impact:impact.spec.yaml (impact): 6 TODO(s)"),
+        "default text output must keep per-file header:\n{out_txt_def}"
+    );
+    assert!(
+        !out_txt_def.contains("dependents"),
+        "default text output must not contain impact tags:\n{out_txt_def}"
+    );
+
+    let (rc_txt_imp, out_txt_imp, err_txt_imp) =
+        run_cli(&["todo", impact_str, "--require-license", "--by-impact"]);
+    assert_eq!(rc_txt_imp, 0, "err={err_txt_imp}");
+    assert!(
+        !out_txt_imp.contains("worklist-impact:impact.spec.yaml (impact):"),
+        "--by-impact text output must be a flat list without per-file grouping:\n{out_txt_imp}"
+    );
+    assert!(
+        out_txt_imp.contains("[5 dependents, 1 critical]"),
+        "--by-impact text output must show inline dependent and critical counts for A:\n{out_txt_imp}"
+    );
+    assert!(
+        out_txt_imp.contains("[0 dependents]"),
+        "--by-impact text output must show [0 dependents] for leaf todos:\n{out_txt_imp}"
+    );
+    let txt_pos_a = out_txt_imp.find("impact@worklist-impact#a ").unwrap();
+    let txt_pos_g = out_txt_imp.find("impact@worklist-impact#g ").unwrap();
+    assert!(
+        txt_pos_a < txt_pos_g,
+        "--by-impact text output must list A before G:\n{out_txt_imp}"
+    );
+
+    // 4. Assumption todos and cross-root (`--context-root`) dependents.
+    let tmp = TempDir::new().unwrap();
+    let checked = tmp.path().join("checked");
+    let ctx = tmp.path().join("ctx");
+    write_file(
+        &checked.join("board-specs.yaml"),
+        "format: 2\nname: base-root\nlayer: public\nlicense: Apache-2.0\naccepts: [Apache-2.0]\n",
+    );
+    write_file(
+        &checked.join("base.spec.yaml"),
+        r##"format: 2
+kind: peripheral
+id: base-periph
+name: Base Peripheral
+resources:
+  documents:
+    - name: trm
+      class: databook
+      title: Base TRM
+      url: "https://example.invalid/base.pdf"
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+      pages: 20
+areas:
+  - {area: registers, level: document-only, note: From TRM.}
+assumptions:
+  - id: ref-clk
+    text: Reference clock is 24 MHz.
+    todo:
+      check: hardware
+      text: Measure reference clock frequency on board.
+      method: Probe oscillator pin with frequency counter.
+facts:
+  - id: base-fact
+    section: open-questions
+    claim: Base fact with open todo.
+    todo:
+      check: hardware
+      text: Check base fact on hardware.
+      method: Read base register.
+  - id: assumes-user
+    section: gotchas
+    claim: Fact resting on ref-clk assumption.
+    assumes: [ref-clk]
+    support:
+      - {class: databook, doc: trm, at: [{page: "2"}]}
+"##,
+    );
+    write_file(
+        &ctx.join("board-specs.yaml"),
+        "format: 2\nname: ctx-root\nlayer: product\nlicense: Apache-2.0\naccepts: [Apache-2.0]\n",
+    );
+    write_file(
+        &ctx.join("consumer.spec.yaml"),
+        r##"format: 2
+kind: peripheral
+id: ctx-periph
+name: Context Peripheral
+resources:
+  documents:
+    - name: trm
+      class: databook
+      title: Context TRM
+      url: "https://example.invalid/ctx.pdf"
+      sha256: "2222222222222222222222222222222222222222222222222222222222222222"
+      pages: 20
+areas:
+  - {area: registers, level: document-only, note: From TRM.}
+facts:
+  - id: ctx-consumer
+    section: gotchas
+    claim: Context fact that depends on base-fact and assumes-user.
+    critical: true
+    relates:
+      - {fact: "base-periph@base-root#assumes-user", relation: refines}
+    support:
+      - class: inference
+        premises:
+          - {fact: "base-periph@base-root#base-fact"}
+        derivation: Derived from base-fact in base-root.
+    todo:
+      check: hardware
+      text: Check context consumer on hardware.
+      method: Read context register.
+"##,
+    );
+
+    let (rc_with_ctx, res_with_ctx) = todo_json(&[
+        checked.to_str().unwrap(),
+        "--context-root",
+        ctx.to_str().unwrap(),
+        "--require-license",
+    ]);
+    assert_eq!(
+        rc_with_ctx, 0,
+        "todo with context root failed: {res_with_ctx}"
+    );
+    let ctx_todos = res_with_ctx["todos"].as_array().unwrap();
+    let ctx_by_fact: std::collections::HashMap<&str, &Value> = ctx_todos
+        .iter()
+        .map(|t| (t["fact"].as_str().unwrap(), t))
+        .collect();
+
+    // `base-fact` is referenced by `ctx-consumer` (critical) in `--context-root`.
+    let bf = ctx_by_fact["base-periph@base-root#base-fact"];
+    assert_eq!(bf["direct_dependents"].as_u64(), Some(1));
+    assert_eq!(bf["dependents"].as_u64(), Some(1));
+    assert_eq!(bf["critical_dependents"].as_u64(), Some(1));
+
+    // `ref-clk` assumption has 1 direct dependent (`assumes-user`) and 2 transitive dependents (`assumes-user` -> `ctx-consumer` critical).
+    let rc_assump = ctx_by_fact["base-periph@base-root#ref-clk"];
+    assert_eq!(rc_assump["direct_dependents"].as_u64(), Some(1));
+    assert_eq!(rc_assump["dependents"].as_u64(), Some(2));
+    assert_eq!(rc_assump["critical_dependents"].as_u64(), Some(1));
+}
+
 // ---------------------------------------------------------------------------
 // 4. Corpus (`hwspecs corpus` + BF-IMX-12 / BF-GW-24 placeholder detection)
 // ---------------------------------------------------------------------------

@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+layer: public
+name: worklist-impact
+license: Apache-2.0
+accepts: [Apache-2.0]

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::claimbind::{claim_findings, CitedSpan};
 use crate::diagnostic::{ExitCode, Finding};
 use crate::docresolve::{citations_with_status, DocReader, PdfPages, DOC_CLASSES};
 use crate::git_source::{
@@ -10,31 +11,18 @@ use crate::git_source::{
 use crate::sandbox::ScratchResolver;
 use crate::yaml_strict::{load_file, Loaded, PathSegment};
 use crate::{Cli, ResolveArgs, ShowArgs};
-use regex::Regex;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
 
 pub fn hex_values(text: &str) -> BTreeSet<u64> {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| {
-        Regex::new(r"(?i)\b0x([0-9a-f](?:[0-9a-f_']*[0-9a-f])?)(?:u(?:ll|l)?|(?:ll|l)u?)?\b")
-            .unwrap()
-    });
-    let mut set = BTreeSet::new();
-    for cap in re.captures_iter(text) {
-        if let Some(m) = cap.get(1) {
-            let s = m.as_str().replace(['_', '\''], "");
-            if let Ok(v) = u64::from_str_radix(&s, 16) {
-                set.insert(v);
-            }
-        }
-    }
-    set
+    crate::claimbind::hex_occurrences(text)
+        .into_iter()
+        .map(|(_, v)| v)
+        .collect()
 }
 
 pub fn anchors(data: &Value, base: Vec<String>) -> Vec<(&Map<String, Value>, Vec<String>)> {
@@ -242,7 +230,7 @@ pub fn run_resolve_cmd(
         }
     };
 
-    match run_impl(cli, false, &target_files, &mut resolver) {
+    match run_impl(cli, false, args.strict_claims, &target_files, &mut resolver) {
         Ok((code, res)) => {
             print_result(&res, cli.json, diag_out, stdout, stderr);
             code
@@ -313,7 +301,7 @@ pub fn run_show_cmd(
         }
     };
 
-    match run_impl(cli, true, &target_files, &mut resolver) {
+    match run_impl(cli, true, false, &target_files, &mut resolver) {
         Ok((code, res)) => {
             print_result(&res, cli.json, diag_out, stdout, stderr);
             code
@@ -427,6 +415,7 @@ fn mark_for_at(loaded: &Loaded, at: &[String]) -> crate::yaml_strict::Mark {
 fn run_impl(
     _cli: &Cli,
     is_show: bool,
+    strict_claims: bool,
     target_files: &[PathBuf],
     resolver: &mut Resolver,
 ) -> Result<(i32, Value), PreconditionError> {
@@ -588,6 +577,7 @@ fn run_impl(
                 .unwrap();
             let mut own_lines: Vec<String> = Vec::new();
             let mut pdf_own_lines: Vec<String> = Vec::new();
+            let mut own_spans: Vec<CitedSpan> = Vec::new();
 
             for (anchor, at) in anchors(record, base.clone()) {
                 let repo_name = anchor.get("repo").and_then(Value::as_str).unwrap_or("");
@@ -726,6 +716,18 @@ fn run_impl(
                                                                         .iter()
                                                                         .cloned(),
                                                                 );
+                                                                own_spans.push(
+                                                                    CitedSpan::from_file(
+                                                                        &lines,
+                                                                        start,
+                                                                        end,
+                                                                        anchor
+                                                                            .get("symbol")
+                                                                            .and_then(
+                                                                                Value::as_str,
+                                                                            ),
+                                                                    ),
+                                                                );
                                                             }
                                                             item["status"] = json!("resolved");
                                                             item["commit"] = json!(commit);
@@ -808,6 +810,9 @@ fn run_impl(
                         }));
                     },
                 );
+                if !doc_res.own_lines.is_empty() {
+                    own_spans.push(CitedSpan::from_lines(&doc_res.own_lines));
+                }
                 own_lines.extend(doc_res.own_lines);
                 pdf_own_lines.extend(doc_res.pdf_own_lines);
                 for di in doc_res.items {
@@ -864,6 +869,24 @@ fn run_impl(
                         "level": "warning",
                         "code": code,
                         "message": msg
+                    }));
+                }
+                for cf in claim_findings(claim_str, &own_spans) {
+                    let mut claim_at = base.clone();
+                    claim_at.push("claim".to_string());
+                    let mark = mark_for_at(&loaded, &claim_at);
+                    let level = if cf.always_error || strict_claims {
+                        "error"
+                    } else {
+                        "warning"
+                    };
+                    findings_out.push(json!({
+                        "path": path_str,
+                        "line": mark.line,
+                        "column": mark.column,
+                        "level": level,
+                        "code": cf.code,
+                        "message": format!("{record_id}: {}", cf.message)
                     }));
                 }
             }

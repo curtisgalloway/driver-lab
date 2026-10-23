@@ -1,0 +1,121 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+# Synthetic fixture for the claim-binding conformance cases; @COMMIT@ is replaced by the
+# commit of a scratch repository holding widget.c and widget.dts.
+format: 2
+kind: chip
+id: widget-claims
+name: Widget Claim Binding Fixture
+resources:
+  repos:
+    - name: widget
+      url: https://example.invalid/widget
+      commit: "@COMMIT@"
+      license: BSD-3-Clause
+      files:
+        - path: widget.c
+          license_from: spdx-line
+        - path: widget.dts
+          license_from: spdx-line
+facts:
+  - id: bind-ok
+    section: identity
+    title: bind-ok
+    claim: "The widget control register is at offset 0x10."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [2, 4]
+  - id: unrelated-hex
+    section: identity
+    title: unrelated-hex
+    claim: "The widget timeout default is 0x40."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [2, 4]
+  - id: block-context
+    section: identity
+    title: block-context
+    claim: "The widget default delay is 0x200."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [7, 7]
+  - id: symbol-bind
+    section: identity
+    title: symbol-bind
+    claim: "Probe returns 0x3."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [19, 19]
+            symbol: widget_probe
+  - id: range-ok
+    section: identity
+    title: range-ok
+    claim: "Pins WPIN0..WPIN3 are defined."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [10, 15]
+  - id: range-off-by-one
+    section: identity
+    title: range-off-by-one
+    claim: "Pins `WPIN0`..`WPIN4` are defined."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [10, 15]
+  - id: range-successor
+    section: identity
+    title: range-successor
+    claim: "Pins WPIN0..WPIN2 are defined."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [10, 15]
+  - id: range-continued
+    section: identity
+    title: range-continued
+    claim: "Pins WPIN0..WPIN1 and WPIN2..WPIN3 are defined."
+    support:
+      - class: src
+        anchors:
+          - repo: widget
+            path: widget.c
+            lines: [10, 15]
+  - id: ngpios-ok
+    section: identity
+    title: ngpios-ok
+    claim: "The widget GPIO controller has ngpios = <16>."
+    support:
+      - class: DT
+        anchors:
+          - repo: widget
+            path: widget.dts
+            lines: [2, 6]
+  - id: ngpios-mismatch
+    section: identity
+    title: ngpios-mismatch
+    claim: "The widget GPIO controller has ngpios = <18>."
+    support:
+      - class: DT
+        anchors:
+          - repo: widget
+            path: widget.dts
+            lines: [2, 6]

@@ -265,6 +265,13 @@ Without a `--repo NAME=CHECKOUT` binding for a repo entry, `resolve` fetches its
 recorded commit. Only size or time limits produce skipped anchors; fetch or content errors
 fail resolution. Inspect the `claim hex values absent from cited lines` warning: it flags
 hex values in a claim that do not appear in its cited source lines and need review.
+`RES-CLAIM-HEX-UNBOUND` flags a claim hex value that appears in the cited lines but only on
+lines that share no identifier with the claim sentence holding it (the line, its nearest
+preceding line ending in `{`, or the anchor's `symbol`); `--strict-claims` makes it an
+error. `RES-CLAIM-RANGE-END` and `RES-CLAIM-RANGE-SUCCESSOR` fail an identifier range
+`PREFIX<n>..PREFIX<m>` whose end is absent from the cited text or whose successor
+`PREFIX<m+1>` is present, and `RES-CLAIM-NGPIOS` fails an `ngpios = <N>` the cited text
+does not contain.
 
 Inventory compares structured register offsets and field masks, not prose; cover omissions
 or explicitly record scope limitations. Unsupported, conditional or ambiguous header

@@ -313,12 +313,15 @@ pub struct TodoArgs {
     /// Public skill names for skill containment checks.
     #[arg(long = "public-skill", value_name = "SKILL")]
     pub public_skills: Vec<String>,
-    /// Filter by todo check kind (`hardware`, `doc`, `code`, `driver`).
+    /// Filter by todo check kind (`hardware`, `document`, `source`).
     #[arg(long = "check", value_name = "KIND")]
     pub check: Option<String>,
     /// Restrict output to one spec id or `id@root`.
     #[arg(long = "spec", value_name = "SPEC")]
     pub spec: Option<String>,
+    /// Rank open todos by downstream impact (`critical` desc, `critical_dependents` desc, `dependents` desc, then discovery order) and emit a flat ranked list. Counts only declared dependencies (`premises`, `relates`, `emulated` observations, `assumes`; `relates` kinds are unweighted), and cross-root counts depend on which `--context-root`s are passed.
+    #[arg(long = "by-impact")]
+    pub by_impact: bool,
 }
 
 /// Arguments for `hwspecs corpus`.

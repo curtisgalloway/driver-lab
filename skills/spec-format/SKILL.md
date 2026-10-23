@@ -463,7 +463,8 @@ hwspecs check <root>... [--context-root <dir>]... [--require-license]
 hwspecs status <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--stale] [--no-fail-on-pending] [--json]
 hwspecs todo <root>... [--context-root <dir>]... [--require-license]
-    [--public-skill <name>]... [--check hardware|document|source] [--json]
+    [--public-skill <name>]... [--check hardware|document|source]
+    [--spec <id>] [--by-impact] [--json]
 hwspecs corpus <root>... [--context-root <dir>]... [--require-license]
     [--public-skill <name>]... [--json]
 hwspecs index <document> --root <dir> --docs-dir <dir> [--json]
@@ -506,10 +507,21 @@ Without the flag there are no heading requests. Wiki content is current, not imm
 `todo` lists the TODOs of the checked roots as a readback worklist: gap facts, supported facts
 that also carry a `todo`, and the instance, variant, assumption and payload-row TODOs the schema
 allows (`kind` names which). Each item has the full `fact` reference, `file`, `kind`, `check`,
-`text`, `method`, `critical`, `scope` and `instance`; a payload row's `fact` is its parent's
-reference plus `.<row id>` (`.order[<index>]` for an order row, which has no id). `--check`
-keeps one `todo.check`. Output is
-grouped by spec file, then instance. A `hardware` TODO with no `method` is marked `(no method)`
+`text`, `method`, `critical`, `scope`, `instance`, and three downstream-dependent counts over the
+loaded roots (checked and context): `dependents` (transitive dependent records, excluding the
+record itself), `direct_dependents` (depth-1 dependents only) and `critical_dependents`
+(transitive dependents marked `critical: true`). A payload row's `fact` is its parent's
+reference plus `.<row id>` (`.order[<index>]` for an order row, which has no id) and inherits its
+parent record's dependent counts; an `assumption` item counts the records whose `assumes` or
+inference `premises[].assumption` names it and their transitive dependents. `--check`
+keeps one `todo.check`. By default, output is in discovery order and grouped by spec file, then
+instance. `--by-impact` sorts items by `critical` desc, `critical_dependents` desc, `dependents`
+desc, then discovery order, and prints one flat ranked list with inline `[N dependents, M
+critical]` tags instead of grouping by file. Dependent counts only see **declared** dependencies
+(inference premises, `relates`, emulated observations, topology references and `assumes`, with
+all `relates` kinds unweighted), so a low count means "few declared dependents," not "safe to
+defer"; cross-root counts also depend on which `--context-root`s are passed. A `hardware` TODO
+with no `method` is marked `(no method)`
 (`"missing_method": true` in `--json`, which prints `{"todos", "counts", ...}`): a readback
 phase cannot plan it. Exit codes are `status`'s: a missing method never changes them. `todo
 --check hardware` is the input to a readback plan; a narrow follow-up question names one fact id

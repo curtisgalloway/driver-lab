@@ -1,0 +1,95 @@
+# SPDX-FileCopyrightText: 2026 contributors
+# SPDX-License-Identifier: Apache-2.0
+format: 2
+kind: peripheral
+id: impact
+name: Impact Ranking Test Peripheral
+resources:
+  documents:
+    - name: trm
+      class: databook
+      title: Impact Peripheral TRM
+      url: https://example.invalid/impact-trm.pdf
+      sha256: "1111111111111111111111111111111111111111111111111111111111111111"
+      pages: 50
+areas:
+  - {area: registers, level: document-only, note: Extracted from TRM.}
+  - {area: initialization, level: document-only, note: Open questions tracked for readback.}
+facts:
+  - id: g
+    section: open-questions
+    claim: Does writing STATUS clear the sticky error bit?
+    todo:
+      check: hardware
+      text: Trigger an error, write STATUS, and read STATUS back.
+      method: Read and write STATUS over MMIO.
+  - id: a
+    section: registers
+    title: CTRL
+    data:
+      register: {name: IMPACT_CTRL, offset: "0x0", width: 32, access: read-write}
+      fields:
+        - id: en
+          name: IMPACT_CTRL_EN
+          bits: [0, 0]
+          meaning: block enable
+          todo:
+            check: document
+            text: Confirm reset state of IMPACT_CTRL_EN in TRM table.
+    todo:
+      check: hardware
+      text: Confirm IMPACT_CTRL is readable before clock enable.
+      method: Read offset 0x0 before enabling the peripheral clock.
+  - id: b
+    section: gotchas
+    claim: Enabling IMPACT_CTRL_EN starts the internal divider.
+    support:
+      - class: inference
+        premises:
+          - {fact: "#a"}
+        derivation: Derived from IMPACT_CTRL register definition.
+    todo:
+      check: hardware
+      text: Observe divider output after setting IMPACT_CTRL_EN.
+      method: Probe divider status after setting bit 0 of IMPACT_CTRL.
+  - id: c
+    section: gotchas
+    claim: Boot console output requires the internal divider running.
+    critical: true
+    support:
+      - class: inference
+        premises:
+          - {fact: "#b"}
+        derivation: Console baud rate clock comes from the internal divider.
+    todo:
+      check: hardware
+      text: Verify console output appears once the divider is running.
+      method: Observe TX activity on the console UART after enabling IMPACT_CTRL_EN.
+  - id: d
+    section: gotchas
+    claim: IMPACT_CTRL bit [31:1] are reserved zero on reset.
+    relates:
+      - {fact: "#a", relation: refines}
+    support:
+      - {class: databook, doc: trm, at: [{page: "10"}]}
+  - id: e
+    section: gotchas
+    claim: Soft reset clears the divider counter alongside IMPACT_CTRL.
+    relates:
+      - {fact: "#f", relation: qualifies}
+    support:
+      - {class: databook, doc: trm, at: [{page: "12"}]}
+  - id: f
+    section: gotchas
+    claim: Writing IMPACT_CTRL while active resets the divider phase.
+    relates:
+      - {fact: "#e", relation: qualifies}
+    support:
+      - class: inference
+        premises:
+          - {fact: "#a"}
+        derivation: Inferred from IMPACT_CTRL enable behavior and soft-reset qualification.
+    todo:
+      check: hardware
+      text: Check whether writing IMPACT_CTRL mid-transfer glitches the divider phase.
+      method: Write IMPACT_CTRL with identical value during active TX and check framing.

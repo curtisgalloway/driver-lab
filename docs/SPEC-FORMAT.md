@@ -354,8 +354,8 @@ one `if`/`then` per class (an excerpt is in [Validation](#validation-schema-and-
 | `rtl` | `design`, `revision`, `module`, and `doc` or `anchors` | `note` | no | anchors only | strongest for digital register behavior on the revision named |
 | `DT` | `anchors` (each: `repo`, `path`, and `lines` for a source `.dts`/`.dtsi`, or `node` for a decompiled blob) | `node`, `comment` per anchor | no | yes | a value read out of a device tree; a blob anchor names the repos entry it came from |
 | `src` | `anchors` (each: `repo`, `path`, `lines`, `symbol`) | `comment`, `search` per anchor | no | yes | what the cited code defines or does; never a hardware requirement on its own |
-| `hardware` | `board`, `method`, `date` | `revision`, `firmware`, `conditions`, `runs` | no | no | measured on a live board |
-| `emulated` | `model`, `version`, and `runs` or `observation` (a fact id holding a numbered observation) | `note` | yes | no | never the only class of a fact; phrased as an observation from outside the model |
+| `hardware` | `board`, `method`, `date` | `revision`, `firmware`, `conditions`, `runs`, `artifacts` | no | no | measured on a live board; `artifacts` (`[{run, path, lines?, sha256?}]`) reference files inside a local run-store bundle by relative path (no leading `/` or `..`) and enter the `fact-v1` basis hash when non-empty |
+| `emulated` | `model`, `version`, and `runs` or `observation` (a fact id holding a numbered observation) | `artifacts`, `note` | yes | no | never the only class of a fact; phrased as an observation from outside the model |
 | `press` | `title`, `url` | `date`, `note` | yes | no | third-party reporting; a lead |
 | `inference` | `premises`, `derivation` | `confidence` (`high`, `medium`, `low`) | yes | through its premises | concluded rather than read; stands alone in `support` |
 | `source-observed` | defined by the extension that uses it; never the citation fields `repo`, `path`, `doc`, `anchors`, `lines`, `symbol`, `node`, `url`, at any depth (SF2-2 review: the gate reads citations only from core fields) | | yes | per the extension | kept as the one extension class in use (D15) |

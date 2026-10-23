@@ -1308,6 +1308,68 @@ fn check_support_full(
         if entry.get("doc").is_some() {
             check_citation_full(checker, file_idx, what, &entry, &path);
         }
+        if matches!(
+            entry.get("class").and_then(Value::as_str),
+            Some("hardware" | "emulated")
+        ) {
+            let _parsed = crate::records::parse_support_artifacts(&entry);
+            if let Some(artifacts) = entry.get("artifacts").and_then(Value::as_array) {
+                for (i, art) in artifacts.iter().enumerate() {
+                    if art
+                        .get("run")
+                        .and_then(Value::as_str)
+                        .is_none_or(|r| r.trim().is_empty())
+                    {
+                        let mut p = path.clone();
+                        p.push(PathElem::from("artifacts"));
+                        p.push(PathElem::from(i));
+                        p.push(PathElem::from("run"));
+                        checker.reject(
+                            file_idx,
+                            &p,
+                            format!("{what}: artifact run must be a non-empty string"),
+                            true,
+                        );
+                    }
+                    if let Some(apath) = art.get("path").and_then(Value::as_str) {
+                        if !crate::records::is_valid_run_artifact_path(apath) {
+                            let mut p = path.clone();
+                            p.push(PathElem::from("artifacts"));
+                            p.push(PathElem::from(i));
+                            p.push(PathElem::from("path"));
+                            checker.reject(
+                                file_idx,
+                                &p,
+                                format!(
+                                    "{what}: artifact path '{apath}' must be a relative bundle path without leading '/' or '..' segments"
+                                ),
+                                true,
+                            );
+                        }
+                    }
+                    if let Some(lines) = art.get("lines").and_then(Value::as_array) {
+                        if lines.len() == 2 {
+                            if let (Some(l0), Some(l1)) = (lines[0].as_i64(), lines[1].as_i64()) {
+                                if l0 > l1 {
+                                    let mut p = path.clone();
+                                    p.push(PathElem::from("artifacts"));
+                                    p.push(PathElem::from(i));
+                                    p.push(PathElem::from("lines"));
+                                    checker.reject(
+                                        file_idx,
+                                        &p,
+                                        format!(
+                                            "{what}: lines [{l0}, {l1}] run backwards; write [first, last]"
+                                        ),
+                                        true,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     for (anchor, path) in anchors(data, base) {
         if anchor.get("stale").is_some() {

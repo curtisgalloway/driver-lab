@@ -182,8 +182,8 @@ Field shapes are in `$defs.support` and its referenced definitions, not prose ta
 | `rtl` | Digital design on the named revision/module; cite a document with locators or source anchors. Says nothing about analog behavior or wiring. |
 | `DT` | Device-tree values from source (`.dts`/`.dtsi`) at a pinned commit; cite source lines and optionally a node. Takes the tree's license and is gated like `src`. |
 | `src` | What code defines or does at an exact commit; source anchors required. No hardware TODO is needed for a claim about that code. |
-| `hardware` | Measurement on a named board by a stated method/date; retain revision, firmware, conditions and run IDs when relevant. |
-| `emulated` | Observation from outside a named/versioned device model, with runs or an observation fact reference. Never the only support class; requires a TODO. |
+| `hardware` | Measurement on a named board by a stated method/date; retain revision, firmware, conditions, run IDs and optional `artifacts` (`[{run, path, lines?, sha256?}]` referencing local run-store bundle files by relative path) when relevant. |
+| `emulated` | Observation from outside a named/versioned device model, with runs or an observation fact reference (and optional `artifacts`). Never the only support class; requires a TODO. |
 | `press` | Third-party reporting, a lead requiring a TODO. Vendor documentation belongs in `doc`. |
 | `inference` | Conclusion with explicit premises and derivation, optionally confidence; alone in support, with a TODO. |
 | `source-observed` | Extension-defined class needing a TODO and root-declared schema fragment; never a substitute for core source citations. |
